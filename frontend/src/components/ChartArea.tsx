@@ -18,8 +18,8 @@ export function ChartArea({ className }: ChartAreaProps) {
         <ChartCandlestick size={40} strokeWidth={1.25} aria-hidden="true" />
         <p className={styles.emptyTitle}>No chart yet</p>
         <p className={styles.emptyText}>
-          The candlestick chart arrives in R2. Market data is already live: see the watchlist on
-          the right.
+          The candlestick chart arrives in R2. Market data is already live: see the watchlist on the
+          right.
         </p>
       </div>
     </main>
