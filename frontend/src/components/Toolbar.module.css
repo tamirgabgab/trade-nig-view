@@ -1,0 +1,58 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 var(--space-1);
+  background: var(--color-bg);
+  min-width: 0;
+}
+
+.vertical {
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: var(--space-1) 0;
+  gap: 2px;
+}
+
+.separator {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-1);
+  background: var(--color-border-strong);
+}
+
+.vertical .separator {
+  width: 28px;
+  height: 1px;
+  margin: var(--space-1) 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.symbolButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 28px;
+  min-width: 120px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text-strong);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.symbolButton:hover {
+  background: var(--color-hover);
+}
+
+.layoutName {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: 0 var(--space-2);
+}

@@ -1,0 +1,80 @@
+import {
+  BellPlus,
+  Camera,
+  ChartCandlestick,
+  ChartSpline,
+  Maximize2,
+  Plus,
+  Redo2,
+  Rewind,
+  Save,
+  Search,
+  Settings,
+  Undo2,
+} from 'lucide-react';
+
+import { IconButton } from './IconButton.tsx';
+import styles from './Toolbar.module.css';
+
+const ICON_SIZE = 18;
+
+interface TopToolbarProps {
+  className?: string | undefined;
+}
+
+/** Top bar: symbol, interval, chart type, indicators, alert, replay, undo/redo, layout actions. */
+export function TopToolbar({ className }: TopToolbarProps) {
+  return (
+    <header className={[styles.bar, className].join(' ')} role="toolbar" aria-label="Chart toolbar">
+      <button
+        type="button"
+        className={styles.symbolButton}
+        aria-label="Symbol search: AAPL"
+        aria-disabled="true"
+        title="Symbol search — coming in R2"
+      >
+        <Search size={16} aria-hidden="true" />
+        AAPL
+      </button>
+      <IconButton label="Compare or add symbol" icon={<Plus size={ICON_SIZE} />} comingIn="R2" />
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton label="Interval" text="D" comingIn="R2" />
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton label="Chart type" icon={<ChartCandlestick size={ICON_SIZE} />} comingIn="R2" />
+      <IconButton
+        label="Indicators"
+        text="Indicators"
+        shortcut="/"
+        icon={<ChartSpline size={ICON_SIZE} />}
+        comingIn="R3"
+      />
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton
+        label="Create alert"
+        text="Alert"
+        icon={<BellPlus size={ICON_SIZE} />}
+        comingIn="a later phase"
+      />
+      <IconButton
+        label="Bar replay"
+        text="Replay"
+        icon={<Rewind size={ICON_SIZE} />}
+        comingIn="R7"
+      />
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton label="Undo" shortcut="Ctrl+Z" icon={<Undo2 size={ICON_SIZE} />} comingIn="R6" />
+      <IconButton label="Redo" shortcut="Ctrl+Y" icon={<Redo2 size={ICON_SIZE} />} comingIn="R6" />
+      <span className={styles.spacer} />
+      <span className={styles.layoutName}>Unnamed</span>
+      <IconButton label="Save layout" icon={<Save size={ICON_SIZE} />} comingIn="R6" />
+      <IconButton label="Chart settings" icon={<Settings size={ICON_SIZE} />} comingIn="R6" />
+      <IconButton label="Fullscreen" icon={<Maximize2 size={ICON_SIZE} />} comingIn="R6" />
+      <IconButton
+        label="Take a snapshot"
+        icon={<Camera size={ICON_SIZE} />}
+        comingIn="R6"
+        tooltipSide="left"
+      />
+    </header>
+  );
+}

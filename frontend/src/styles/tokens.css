@@ -1,0 +1,81 @@
+/*
+ * Design tokens. The chart canvas reads the same values via getComputedStyle (chart/theme.ts, R2),
+ * so DOM and canvas stay in sync. Spacing follows a 4px grid.
+ */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0f0f0f;
+  --color-surface: #161616;
+  --color-surface-raised: #1e1e1e;
+  --color-hover: #2a2a2a;
+  --color-active: #2e2e2e;
+  --color-border: #2a2a2a;
+  --color-border-strong: #3a3a3a;
+
+  --color-text: #d1d4dc;
+  --color-text-strong: #f0f3fa;
+  --color-text-muted: #8a8d96;
+
+  --color-accent: #2962ff;
+  --color-accent-soft: rgb(41 98 255 / 18%);
+  --color-up: #089981;
+  --color-down: #f23645;
+  --color-warning: #f7a600;
+  --color-focus: #2962ff;
+
+  --color-tooltip-bg: #e9e9ea;
+  --color-tooltip-text: #0f0f0f;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  --size-topbar: 38px;
+  --size-bottombar: 34px;
+  --size-toolbar-left: 52px;
+  --size-widgetbar: 46px;
+  --size-sidebar: 300px;
+  --size-icon-button: 32px;
+
+  --duration-fast: 120ms;
+  --z-tooltip: 100;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg: #ffffff;
+  --color-surface: #f8f9fd;
+  --color-surface-raised: #ffffff;
+  --color-hover: #f0f3fa;
+  --color-active: #e0e3eb;
+  --color-border: #e0e3eb;
+  --color-border-strong: #d1d4dc;
+
+  --color-text: #131722;
+  --color-text-strong: #000000;
+  --color-text-muted: #6a6d78;
+
+  --color-tooltip-bg: #131722;
+  --color-tooltip-text: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+  }
+}

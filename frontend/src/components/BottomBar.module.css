@@ -1,0 +1,74 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 var(--space-2);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  min-width: 0;
+}
+
+.range {
+  min-width: 28px;
+  height: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.range:hover {
+  background: var(--color-hover);
+}
+
+.range[aria-pressed='true'] {
+  color: var(--color-accent);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--space-1);
+  background: var(--color-border-strong);
+}
+
+.clock {
+  padding: 0 var(--space-2);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.ok .dot {
+  background: var(--color-up);
+}
+
+.down .dot {
+  background: var(--color-down);
+}
+
+.down {
+  color: var(--color-down);
+}

@@ -1,0 +1,48 @@
+.area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  min-width: 0;
+  min-height: 0;
+}
+
+.legend {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-md);
+}
+
+.title {
+  color: var(--color-text-strong);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.emptyTitle {
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0;
+}
+
+.emptyText {
+  margin: 0;
+  max-width: 420px;
+}
