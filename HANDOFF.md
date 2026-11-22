@@ -96,4 +96,9 @@
   - אחרי התיקונים: `dev.ps1` עובד (Backend is up, health 200, ה-shell מוצג), ו-**`test.ps1` עבר 8/8 על המחשב של המשתמש** (pyright 0 errors, 11 backend tests, 19 frontend tests), עם SAC דלוק. R0 אומת במלואו ב-Windows.
 - המשתמש ביקש "ללחוץ על לינק ושהאפליקציה תיפתח". נוסף `scripts/install-shortcut.ps1`, שיוצר אייקון ChartLab בשולחן העבודה וב-Start. האייקון מריץ את `dev.ps1 -Open`: מפעיל backend ו-frontend ופותח דפדפן, ואם האפליקציה כבר רצה, רק פותח דפדפן. אפשרות של אתר בענן נדחתה לסוף Phase 1 (עלות, ו-Yahoo חוסם כתובות של שרתי ענן).
 - ✅ המשתמש אישר: האייקון בשולחן העבודה עובד, והדפדפן נפתח לבד עם האפליקציה.
+
+### 2026-11-22 — R1 (שלב 0: בדיקה מקדימה)
+- `scripts/check_native.py` על המחשב של המשתמש: **ALL REQUIRED OK**. numpy 2.5.5, pandas 3.1.1, curl_cffi 0.17.0, protobuf 7.36.2 (upb), yfinance 1.8.0, lxml ו-ta-lib נטענים כולם עם SAC דלוק. הטעינה הראשונה של pandas איטית (Defender סורק), ובפעמים הבאות היא מהירה.
+- Yahoo עונה מה-IP של המשתמש: AAPL close ב-2026-11-20 = **342.56**, זהה לצילום של TradingView.
+- R1 פוצל ל-R1a (מנוע נתונים, API ומחירים ב-Watchlist) ו-R1b (Tiingo, 1h, OpenAPI types).
 - הבא: R1 אחרי אישור.
