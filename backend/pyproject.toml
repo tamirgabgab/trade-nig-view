@@ -7,7 +7,9 @@ requires-python = ">=3.12"
 license = { text = "Proprietary - personal use" }
 dependencies = [
     "fastapi>=0.165,<1",
-    "uvicorn[standard]>=0.54",
+    # Plain uvicorn (pure Python, h11). The [standard] extras add unsigned native modules
+    # (httptools, watchfiles, websockets) that Windows Smart App Control may block.
+    "uvicorn>=0.54",
     "pydantic>=2.14,<3",
     "pydantic-settings>=2.7,<3",
 ]

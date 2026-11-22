@@ -49,6 +49,12 @@ Copy-Item .env.example .env        # optional API keys
 .\scripts\test.ps1                 # all tests, lint, typecheck
 ```
 
+> **Windows with Smart App Control on:** use the official, signed Python from python.org instead of uv's
+> downloaded Python (SAC blocks its unsigned `.pyd` files):
+> `winget install -e --id Python.Python.3.13`, then
+> `[Environment]::SetEnvironmentVariable('UV_PYTHON_PREFERENCE','only-system','User')`, open a new PowerShell,
+> delete `backend\.venv` and run `.\scripts\setup.ps1` again.
+
 ### macOS / Linux
 
 ```bash

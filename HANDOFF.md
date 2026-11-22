@@ -52,7 +52,7 @@
 | 2026-11-22 | `httpx2` כ-HTTP client (ל-tests ול-providers) | Starlette 1.x הוציא את `httpx` ל-deprecation | [0001 amendment](docs/adr/0001-stack.md) |
 | 2026-11-22 | `lucide-react` לאייקונים | קל ו-tree-shaken, בלי assets קנייניים | [0001 amendment](docs/adr/0001-stack.md) |
 | 2026-11-22 | Defaults לשאלות הפתוחות (עד שתשנה): Python 3.13; CI ubuntu ו-windows; Futures ו-Forex ב-universe; בלי PR ל-`main` עד שתבקש; fixtures ייוצרו בענן ב-R1 | ענית "בוא נתחיל" בלי לבחור | — |
-| 2026-11-22 | במחשב של המשתמש: הסביבה המקומית תרוץ בתוך **WSL2 (Ubuntu)**, ו-Smart App Control יישאר דלוק | SAC חוסם קבצי `.pyd` ו-`.exe` לא חתומים של Python (`_socket.pyd`); המשתמש לא רוצה להחליש את האבטחה. WSL שומר על SAC ותואם ל-CI | — |
+| 2026-11-22 | במחשב של המשתמש: הכול נשאר ב-Windows ו-Smart App Control דלוק. משתמשים ב-**Python הרשמי מ-python.org** (חתום על ידי PSF) במקום ה-Python של uv, עם `UV_PYTHON_PREFERENCE=only-system`; ו-`uvicorn` בלי `[standard]` | SAC חסם את `_socket.pyd` של ה-Python של uv ואת ה-launcher `uvicorn.exe`. WSL נשקל ונדחה על ידי המשתמש (רוצה הכול ב-Windows). פתוח: האם SAC יאפשר `.pyd` של צד שלישי (`pydantic_core`, בהמשך `numpy`) | — |
 
 ## שאלות פתוחות אליך
 1. **Tiingo key** (נדרש רק ל-R1, ולא חוסם): יש לך, או שתפתח חשבון חינמי?
