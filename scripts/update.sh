@@ -5,6 +5,34 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Older installs were cloned from a work branch (claude/...). New versions are published on 'main':
+# move there once, only when nothing can be lost (clean tracked files, every commit on origin/main).
+switch_to_main() {
+  local branch
+  branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)" || return 0
+  [ "$branch" = "main" ] && return 0
+  git -C "$ROOT" fetch --quiet origin main || return 0
+  if ! git -C "$ROOT" merge-base --is-ancestor HEAD origin/main; then
+    echo "WARNING: staying on branch '$branch': it has commits that are not on 'main'."
+    return 0
+  fi
+  if [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]; then
+    echo "WARNING: staying on branch '$branch': it has local changes."
+    return 0
+  fi
+  if git -C "$ROOT" show-ref --verify --quiet refs/heads/main; then
+    if ! git -C "$ROOT" merge-base --is-ancestor main origin/main; then
+      echo "WARNING: staying on branch '$branch': the local 'main' has commits that are not on GitHub."
+      return 0
+    fi
+    git -C "$ROOT" branch --force main origin/main || return 0
+  else
+    git -C "$ROOT" branch --track main origin/main || return 0
+  fi
+  git -C "$ROOT" switch main && echo "==> Moved from branch '$branch' to 'main' (where new versions are published)"
+  return 0
+}
+
 changed=""
 if ! command -v git >/dev/null; then
   echo "WARNING: git is not installed: skipping the update."
@@ -12,7 +40,9 @@ elif ! before="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)"; then
   echo "WARNING: this folder is not a git checkout: skipping the update."
 else
   echo "==> Checking GitHub for updates..."
-  if ! GIT_TERMINAL_PROMPT=0 git -C "$ROOT" pull --ff-only; then
+  export GIT_TERMINAL_PROMPT=0
+  switch_to_main
+  if ! git -C "$ROOT" pull --ff-only; then
     echo "WARNING: could not download updates (see above). Keeping the version on disk."
   else
     after="$(git -C "$ROOT" rev-parse HEAD)"

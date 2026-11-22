@@ -50,16 +50,31 @@ function Start-ChartLab {
     Write-Host '==> Backend on http://127.0.0.1:8000 (API docs: /api/docs)' -ForegroundColor Cyan
     # 'python -m uvicorn' instead of the uvicorn.exe launcher: Windows Smart App Control /
     # Application Control blocks the unsigned launcher .exe files that uv generates in .venv.
+    $uvicornArgs = @('run', 'python', '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000')
+    if (-not $Open) {
+        # Auto-reload only for development from a terminal. On Windows the uvicorn reloader restarts
+        # the server with a console Ctrl+C event, which also reaches this PowerShell window and
+        # closed the desktop-shortcut window without any error message.
+        $uvicornArgs += '--reload'
+    }
     $backend = Start-Process -FilePath 'uv' -NoNewWindow -PassThru -WorkingDirectory $BackendDir `
-        -ArgumentList @('run', 'python', '-m', 'uvicorn', 'app.main:app', '--reload', '--host', '127.0.0.1', '--port', '8000')
+        -ArgumentList $uvicornArgs
 
     # Wait until the API answers, and stop early with a clear message if the backend dies.
-    $deadline = (Get-Date).AddSeconds(30)
+    # The first start after an update can take a minute: Windows Defender scans pandas/numpy.
+    $started = Get-Date
+    $deadline = $started.AddSeconds(180)
+    $nextNote = $started.AddSeconds(15)
     $ready = $false
     while ((Get-Date) -lt $deadline -and -not $backend.HasExited) {
         if (Test-Url $HealthUrl) {
             $ready = $true
             break
+        }
+        if ((Get-Date) -gt $nextNote) {
+            $waited = [int]((Get-Date) - $started).TotalSeconds
+            Write-Host "    still starting ($waited s)... the first start after an update can take a minute" -ForegroundColor DarkGray
+            $nextNote = (Get-Date).AddSeconds(15)
         }
         Start-Sleep -Milliseconds 500
     }
@@ -76,6 +91,10 @@ function Start-ChartLab {
         $viteArgs = @()
         if ($Open) { $viteArgs += '--open' }
         npm run dev -- @viteArgs
+        $frontendCode = $LASTEXITCODE
+        if ($frontendCode -ne 0) {
+            throw "Frontend stopped with exit code $frontendCode (see the error above)."
+        }
     } finally {
         Pop-Location
         if (-not $backend.HasExited) {

@@ -64,6 +64,16 @@
 - שינויים ב-`dev.ps1` עצמו נכנסים לתוקף רק בהפעלה שאחרי ה-pull (PowerShell כבר קרא את הקובץ).
 - נבדק: `update.sh` ב-7 תרחישים על clone זמני עם `uv`/`npm` מזויפים (נמצא ותוקן באג: תבנית ריקה ב-`grep` גרמה ל-`npm ci` מיותר). `update.ps1` נבדק ב-CI על Windows PowerShell 5.1 (checkout רגיל ו-remote לא זמין), כי בענן אין PowerShell.
 
+## תיקון: האייקון נסגר מיד (2026-11-22, ערב)
+- **תסמין אצל המשתמש:** חלון שחור מופיע לרגע ונסגר. בצילום: ה-backend עולה עד `Application startup complete`, ואז החלון נסגר בלי `Backend is up` ובלי `ERROR`.
+- **סיבה (הסבר סביר, לא אומת על Windows):** `uvicorn --reload` ב-Windows מפעיל את השרת מחדש עם `os.kill(pid, CTRL_C_EVENT)` (`uvicorn/supervisors/basereload.py`). אירוע Ctrl+C של הקונסולה מגיע גם ל-PowerShell שחולק איתו את החלון, ולכן הסקריפט נעצר בלי לעבור ב-`catch`.
+- **תיקון ב-`dev.ps1`:**
+  - `-Open` (האייקון) מריץ את ה-backend בלי `--reload`. `dev.ps1` רגיל מהטרמינל נשאר עם reload.
+  - זמן ההמתנה ל-backend הוגדל מ-30 ל-180 שניות, עם הודעת "still starting" כל 15 שניות, כי Defender סורק את pandas בהפעלה הראשונה.
+  - אם ה-frontend יוצא עם קוד שגיאה, נזרקת שגיאה והחלון נשאר פתוח.
+- **branch:** העבודה עברה ל-`main`. `update.ps1`/`update.sh` מעבירים checkout ישן מ-`claude/...` ל-`main` פעם אחת, רק כשאין שינויים מקומיים וכל ה-commits המקומיים כבר ב-`origin/main`. אחרת: אזהרה צהובה ונשארים במקום.
+- **בדיקות:** 6 תרחישים של המעבר ל-`main` ב-bash (scratchpad); ב-CI ב-Windows: תרחישי המעבר תחת PowerShell 5.1, ובדיקת parse לכל קבצי `.ps1`.
+
 ## R1b — מה נבנה (2026-11-22)
 - **Intervals:** `1h` (מ-Yahoo) ו-`4h` (resample מ-1h). `Interval` ב-backend: `1h`, `4h`, `1D`, `1W`, `1M`.
   - Yahoo שומר 1h רק ל-730 יום אחורה. ההורדה הראשונה מתחילה 729 ימים אחורה, וה-cache שומר גם היסטוריה ישנה יותר שכבר ירדה. רענון: 5 הימים האחרונים.

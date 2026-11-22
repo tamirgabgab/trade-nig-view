@@ -24,6 +24,42 @@ function Get-Head {
     return "$head".Trim()
 }
 
+function Switch-ToMain {
+    # Older installs were cloned from a work branch (claude/...). New versions are published on
+    # 'main', so move the checkout to 'main' once, and only when nothing can be lost: no local
+    # changes to tracked files, and every local commit is already on origin/main.
+    $branch = "$(git -C $RepoRoot rev-parse --abbrev-ref HEAD)".Trim()
+    if ($LASTEXITCODE -ne 0 -or $branch -eq 'main') { return }
+    git -C $RepoRoot fetch --quiet origin main
+    if ($LASTEXITCODE -ne 0) { return }
+    git -C $RepoRoot merge-base --is-ancestor HEAD origin/main
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "Staying on branch '$branch': it has commits that are not on 'main'."
+        return
+    }
+    $dirty = @(git -C $RepoRoot status --porcelain --untracked-files=no)
+    if ($dirty.Count -gt 0) {
+        Write-Warn "Staying on branch '$branch': it has local changes."
+        return
+    }
+    git -C $RepoRoot show-ref --verify --quiet refs/heads/main
+    if ($LASTEXITCODE -eq 0) {
+        git -C $RepoRoot merge-base --is-ancestor main origin/main
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warn "Staying on branch '$branch': the local 'main' has commits that are not on GitHub."
+            return
+        }
+        git -C $RepoRoot branch --force main origin/main | Out-Host
+    } else {
+        git -C $RepoRoot branch --track main origin/main | Out-Host
+    }
+    if ($LASTEXITCODE -ne 0) { return }
+    git -C $RepoRoot switch main | Out-Host
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "==> Moved from branch '$branch' to 'main' (where new versions are published)" -ForegroundColor Green
+    }
+}
+
 function Update-Code {
     # Returns the list of changed files ($null when nothing was pulled).
     if (-not (Get-Command 'git' -ErrorAction SilentlyContinue)) {
@@ -38,6 +74,7 @@ function Update-Code {
 
     Write-Host '==> Checking GitHub for updates...' -ForegroundColor Cyan
     $env:GIT_TERMINAL_PROMPT = '0'  # never hang on a credentials prompt
+    Switch-ToMain
     git -C $RepoRoot pull --ff-only | Out-Host
     if ($LASTEXITCODE -ne 0) {
         Write-Warn 'Could not download updates (see the message above). Starting the version already on this computer.'
