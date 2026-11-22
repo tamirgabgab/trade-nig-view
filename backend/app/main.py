@@ -11,11 +11,38 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import health
+from app.api import bars, health, quotes, symbols
 from app.config import Settings, get_settings
+from app.data.bar_service import BarService
+from app.data.cache.bar_cache import BarCache
+from app.data.providers.base import DataProvider
+from app.data.providers.fixtures import FixtureProvider
+from app.data.providers.tiingo import TiingoProvider
+from app.data.providers.yahoo import YahooProvider
+from app.data.universe import Universe
 from app.errors import register_error_handlers
 
 API_PREFIX = "/api"
+
+logger = logging.getLogger(__name__)
+
+
+def build_providers(settings: Settings) -> list[DataProvider]:
+    """Provider chain from ``DATA_PROVIDERS``; OFFLINE=1 serves committed fixtures only."""
+    if settings.offline:
+        return [FixtureProvider(settings.fixtures_dir)]
+    providers: list[DataProvider] = []
+    for provider_id in settings.data_providers:
+        if provider_id == "yahoo":
+            providers.append(YahooProvider())
+        elif provider_id == "tiingo":
+            if settings.tiingo_api_key is None:
+                logger.info("Tiingo disabled: TIINGO_API_KEY is not set")
+                continue
+            providers.append(TiingoProvider(settings.tiingo_api_key.get_secret_value()))
+        else:
+            logger.warning("Ignoring unknown data provider '%s' in DATA_PROVIDERS", provider_id)
+    return providers
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -38,7 +65,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
     register_error_handlers(app)
-    app.include_router(health.router, prefix=API_PREFIX)
+
+    universe = Universe.load(settings.universe_file)
+    app.state.universe = universe
+    app.state.bar_service = BarService(
+        universe,
+        BarCache(settings.chartlab_data_dir / "bars.db"),
+        build_providers(settings),
+        refresh_ttl_s=settings.refresh_ttl_s,
+    )
+
+    for router in (health.router, symbols.router, bars.router, quotes.router):
+        app.include_router(router, prefix=API_PREFIX)
     return app
 
 

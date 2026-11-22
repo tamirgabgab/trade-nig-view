@@ -8,13 +8,15 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from app import __version__
+from app.api.deps import get_bar_service
 from app.config import Settings, get_settings
+from app.data.bar_service import BarService
 
 router = APIRouter(tags=["health"])
 
 
 class ProviderStatus(BaseModel):
-    """Availability of one market-data provider (populated from R1 on)."""
+    """One market-data provider in the active chain (in priority order)."""
 
     id: str
     enabled: bool
@@ -30,6 +32,14 @@ class HealthResponse(BaseModel):
 
 
 @router.get("/health", response_model=HealthResponse)
-def health(settings: Annotated[Settings, Depends(get_settings)]) -> HealthResponse:
-    """Report that the API is up, its version, and whether it runs in offline mode."""
-    return HealthResponse(status="ok", version=__version__, offline=settings.offline, providers=[])
+def health(
+    settings: Annotated[Settings, Depends(get_settings)],
+    service: Annotated[BarService, Depends(get_bar_service)],
+) -> HealthResponse:
+    """Report that the API is up, its version, offline mode and the active data providers."""
+    return HealthResponse(
+        status="ok",
+        version=__version__,
+        offline=settings.offline,
+        providers=[ProviderStatus(id=pid, enabled=True) for pid in service.provider_ids],
+    )

@@ -1,0 +1,217 @@
+# ChartLab symbol universe. Edit freely: order defines the watchlist order and sections.
+# symbol   = provider symbol (Yahoo format)      display = short name shown in the UI
+# type     = index | etf | stock | future | forex  group   = watchlist section
+# has_volume = false for indices/forex (no real traded volume; use ETFs for volume work)
+# Continuous futures (=F) contain roll gaps between contracts: expect artificial price gaps.
+
+[[symbols]]
+symbol = "^GSPC"
+display = "SPX"
+name = "S&P 500 Index"
+type = "index"
+group = "Indices"
+exchange = "SNP"
+has_volume = false
+
+[[symbols]]
+symbol = "^NDX"
+display = "NDX"
+name = "Nasdaq-100 Index"
+type = "index"
+group = "Indices"
+exchange = "NASDAQ"
+has_volume = false
+
+[[symbols]]
+symbol = "^IXIC"
+display = "IXIC"
+name = "Nasdaq Composite Index"
+type = "index"
+group = "Indices"
+exchange = "NASDAQ"
+has_volume = false
+
+[[symbols]]
+symbol = "^DJI"
+display = "DJI"
+name = "Dow Jones Industrial Average"
+type = "index"
+group = "Indices"
+exchange = "DJI"
+has_volume = false
+
+[[symbols]]
+symbol = "^VIX"
+display = "VIX"
+name = "CBOE Volatility Index"
+type = "index"
+group = "Indices"
+exchange = "CBOE"
+has_volume = false
+
+[[symbols]]
+symbol = "SPY"
+display = "SPY"
+name = "SPDR S&P 500 ETF Trust"
+type = "etf"
+group = "ETFs"
+exchange = "NYSE Arca"
+
+[[symbols]]
+symbol = "QQQ"
+display = "QQQ"
+name = "Invesco QQQ Trust"
+type = "etf"
+group = "ETFs"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "DIA"
+display = "DIA"
+name = "SPDR Dow Jones Industrial Average ETF"
+type = "etf"
+group = "ETFs"
+exchange = "NYSE Arca"
+
+[[symbols]]
+symbol = "IWM"
+display = "IWM"
+name = "iShares Russell 2000 ETF"
+type = "etf"
+group = "ETFs"
+exchange = "NYSE Arca"
+
+[[symbols]]
+symbol = "AAPL"
+display = "AAPL"
+name = "Apple Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "NVDA"
+display = "NVDA"
+name = "NVIDIA Corporation"
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "GOOGL"
+display = "GOOGL"
+name = "Alphabet Inc. Class A"
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "MSFT"
+display = "MSFT"
+name = "Microsoft Corporation"
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "AMZN"
+display = "AMZN"
+name = "Amazon.com, Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "META"
+display = "META"
+name = "Meta Platforms, Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "TSLA"
+display = "TSLA"
+name = "Tesla, Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "NFLX"
+display = "NFLX"
+name = "Netflix, Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "AMD"
+display = "AMD"
+name = "Advanced Micro Devices, Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "AVGO"
+display = "AVGO"
+name = "Broadcom Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "CL=F"
+display = "USOIL"
+name = "Crude Oil (continuous front-month future)"
+type = "future"
+group = "Futures"
+exchange = "NYMEX"
+
+[[symbols]]
+symbol = "GC=F"
+display = "GOLD"
+name = "Gold (continuous front-month future)"
+type = "future"
+group = "Futures"
+exchange = "COMEX"
+
+[[symbols]]
+symbol = "SI=F"
+display = "SILVER"
+name = "Silver (continuous front-month future)"
+type = "future"
+group = "Futures"
+exchange = "COMEX"
+decimals = 3
+
+[[symbols]]
+symbol = "DX-Y.NYB"
+display = "DXY"
+name = "US Dollar Index"
+type = "index"
+group = "Indices"
+exchange = "ICE"
+has_volume = false
+decimals = 3
+
+[[symbols]]
+symbol = "JPY=X"
+display = "USDJPY"
+name = "US Dollar / Japanese Yen"
+type = "forex"
+group = "Forex"
+exchange = "FX"
+has_volume = false
+decimals = 3
+
+[[symbols]]
+symbol = "GBPUSD=X"
+display = "GBPUSD"
+name = "British Pound / US Dollar"
+type = "forex"
+group = "Forex"
+exchange = "FX"
+has_volume = false
+decimals = 5

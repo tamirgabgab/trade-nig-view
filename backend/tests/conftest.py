@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import socket
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
@@ -12,6 +13,8 @@ from pydantic_settings import SettingsConfigDict
 
 from app.config import Settings
 from app.main import create_app
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 # Loopback must stay allowed: on Windows, asyncio builds its self-pipe with socket.socketpair(),
 # which connects to 127.0.0.1 internally.
@@ -66,9 +69,14 @@ class IsolatedSettings(Settings):
 
 
 @pytest.fixture
-def settings() -> Settings:
-    """Deterministic settings that ignore the developer's ``.env`` file."""
-    return IsolatedSettings(offline=True)
+def settings(tmp_path: Path) -> Settings:
+    """Deterministic offline settings: test universe, test fixtures, a fresh cache per test."""
+    return IsolatedSettings(
+        offline=True,
+        chartlab_data_dir=tmp_path / "data",
+        universe_file=FIXTURES_DIR / "universe.toml",
+        fixtures_dir=FIXTURES_DIR / "daily",
+    )
 
 
 @pytest.fixture

@@ -1,0 +1,25 @@
+# Test universe (tests only). AAA and ^IDX have offline fixtures in daily/; BBB has none.
+[[symbols]]
+symbol = "AAA"
+display = "AAA"
+name = "Alpha Test Corp"
+type = "stock"
+group = "Stocks"
+exchange = "TEST"
+
+[[symbols]]
+symbol = "^IDX"
+display = "IDX"
+name = "Test Index"
+type = "index"
+group = "Indices"
+exchange = "TEST"
+has_volume = false
+
+[[symbols]]
+symbol = "BBB"
+display = "BBB"
+name = "Beta Test ETF"
+type = "etf"
+group = "ETFs"
+exchange = "TEST"

@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -29,9 +29,26 @@ class Settings(BaseSettings):
     )
     log_level: str = "INFO"
 
-    @field_validator("chartlab_cors_origins", mode="before")
+    # Market data
+    data_providers: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["yahoo", "tiingo"]
+    )
+    tiingo_api_key: SecretStr | None = None
+    universe_file: Path = REPO_ROOT / "backend" / "config" / "universe.toml"
+    fixtures_dir: Path = REPO_ROOT / "backend" / "fixtures" / "daily"
+    refresh_ttl_s: float = 900.0
+
+    @field_validator("tiingo_api_key", mode="before")
     @classmethod
-    def _split_origins(cls, value: object) -> object:
+    def _empty_key_is_none(cls, value: object) -> object:
+        """``TIINGO_API_KEY=`` (empty, as in .env.example) means "no key"."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("chartlab_cors_origins", "data_providers", mode="before")
+    @classmethod
+    def _split_csv(cls, value: object) -> object:
         """Accept a comma-separated string (as written in ``.env``) as well as a list."""
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]

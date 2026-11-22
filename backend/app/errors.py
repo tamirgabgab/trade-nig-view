@@ -33,6 +33,18 @@ class ChartLabError(Exception):
         self.detail = detail
 
 
+class SymbolNotFoundError(ChartLabError):
+    status = HTTPStatus.NOT_FOUND
+    code = "symbol_not_found"
+
+
+class DataUnavailableError(ChartLabError):
+    """No provider could deliver data and nothing is cached."""
+
+    status = HTTPStatus.SERVICE_UNAVAILABLE
+    code = "data_unavailable"
+
+
 def problem(
     request: Request,
     status: int,

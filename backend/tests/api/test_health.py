@@ -13,7 +13,7 @@ def test_health_reports_ok_and_version(client: TestClient) -> None:
         "status": "ok",
         "version": __version__,
         "offline": True,
-        "providers": [],
+        "providers": [{"id": "fixtures", "enabled": True}],
     }
 
 

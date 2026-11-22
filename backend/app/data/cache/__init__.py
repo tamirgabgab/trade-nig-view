@@ -1,0 +1,1 @@
+"""Local bar cache (SQLite)."""
