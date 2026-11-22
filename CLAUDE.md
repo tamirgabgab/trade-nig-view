@@ -1,7 +1,13 @@
 # CLAUDE.md — ChartLab operating manual
 
+> **ALWAYS ANSWER THE USER IN HEBREW.** Every reply, every time, with no exceptions: summaries, tables, plans,
+> explanations, questions, error reports, and short answers. This holds even when the user writes in English, when the
+> source material (docs, `PLAN.md`, logs) is English, and after a context summary or a new session. (User's explicit
+> request, 2026-11-22.)
+
 ## 1. Language policy (HARD RULE, every session)
-- Reply to the user **in Hebrew**: chat, plans, round summaries, demo checklists, questions.
+- Reply to the user **in Hebrew**: chat, plans, round summaries, demo checklists, questions, tables.
+- When asked to summarise an English file (e.g. `PLAN.md`, `ROADMAP.md`), the summary is written in Hebrew.
 - **This includes every user-visible interim message**: short progress notes between tool calls ("reading the CI
   log...", "found the bug..."), reasoning shared while working, and the one-line descriptions of tool calls / commands.
   Nothing the user sees during a session is in English except code, commands, identifiers and tool output.
