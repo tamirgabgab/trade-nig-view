@@ -2,7 +2,7 @@ import type { Bar } from '../api/bars.ts';
 
 /** Values shown in the OHLC legend for one bar. */
 export interface LegendValues {
-  time: string;
+  time: Bar['time'];
   open: number;
   high: number;
   low: number;

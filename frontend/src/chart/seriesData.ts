@@ -3,9 +3,13 @@
  * the math is unit-testable without a canvas.
  */
 import type { Bar } from '../api/bars.ts';
+import { toZoneSeconds } from './timeZone.ts';
+
+/** 'YYYY-MM-DD' (daily and longer) or display-zone seconds (intraday, see `chartTimes`). */
+export type ChartTime = string | number;
 
 export interface CandlePoint {
-  time: string;
+  time: ChartTime;
   open: number;
   high: number;
   low: number;
@@ -13,7 +17,7 @@ export interface CandlePoint {
 }
 
 export interface VolumePoint {
-  time: string;
+  time: ChartTime;
   value: number;
   color: string;
 }
@@ -28,17 +32,45 @@ export const INITIAL_VISIBLE_BARS = 150;
 /** Empty bar slots kept right of the last bar, as in TradingView. */
 export const RIGHT_OFFSET_BARS = 5;
 
-export function toCandles(bars: readonly Bar[]): CandlePoint[] {
-  return bars.map(({ time, open, high, low, close }) => ({ time, open, high, low, close }));
+/** True when the bars are intraday (their times are UTC epoch seconds). */
+export function hasIntradayTimes(bars: readonly Bar[]): boolean {
+  return typeof bars[0]?.time === 'number';
+}
+
+/**
+ * Chart time of each bar. Session dates pass through; intraday UTC seconds are shifted to
+ * wall-clock seconds in `timeZone`, because the chart formats every timestamp as UTC.
+ */
+export function chartTimes(bars: readonly Bar[], timeZone: string): ChartTime[] {
+  if (!hasIntradayTimes(bars)) return bars.map((bar) => bar.time);
+  return toZoneSeconds(
+    bars.map((bar) => Number(bar.time)),
+    timeZone,
+  );
+}
+
+export function toCandles(bars: readonly Bar[], times: readonly ChartTime[]): CandlePoint[] {
+  return bars.map(({ open, high, low, close }, i) => ({
+    time: times[i] ?? '',
+    open,
+    high,
+    low,
+    close,
+  }));
 }
 
 /**
  * Volume histogram colored by bar direction: `up` when close >= open, else `down`
  * (TradingView's default volume coloring).
  */
-export function toVolume(bars: readonly Bar[], up: string, down: string): VolumePoint[] {
-  return bars.map((bar) => ({
-    time: bar.time,
+export function toVolume(
+  bars: readonly Bar[],
+  times: readonly ChartTime[],
+  up: string,
+  down: string,
+): VolumePoint[] {
+  return bars.map((bar, i) => ({
+    time: times[i] ?? '',
     value: bar.volume,
     color: bar.close >= bar.open ? up : down,
   }));

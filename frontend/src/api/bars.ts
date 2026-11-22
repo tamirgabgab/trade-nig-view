@@ -2,23 +2,25 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 
-/** Bar intervals the chart offers (the backend also knows them; `1h` arrives in R1b). */
-export const INTERVALS = ['1D', '1W', '1M'] as const satisfies readonly Schemas['Interval'][];
+/** Bar intervals the chart offers, shortest first. */
+export const INTERVALS = [
+  '1h',
+  '4h',
+  '1D',
+  '1W',
+  '1M',
+] as const satisfies readonly Schemas['Interval'][];
 export type Interval = (typeof INTERVALS)[number];
 
 export function isInterval(value: unknown): value is Interval {
   return typeof value === 'string' && (INTERVALS as readonly string[]).includes(value);
 }
 
-/** One OHLCV bar. Daily and longer bars carry the session date as 'YYYY-MM-DD'. */
-export interface Bar {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
+/**
+ * One OHLCV bar. Daily and longer bars carry the session date as 'YYYY-MM-DD'; intraday bars
+ * (1h, 4h) carry UTC epoch seconds of the bar start.
+ */
+export type Bar = Schemas['Bar'];
 
 /** GET /api/bars response (camelCase on the client side). */
 export interface BarsData {
@@ -48,7 +50,9 @@ function parseBar(item: unknown): Bar {
   if (!isRecord(item)) throw new Error('Unexpected bar entry');
   const field = fieldsOf<Schemas['Bar']>(item);
   const time = field('time');
-  if (typeof time !== 'string') throw new Error('Unexpected bar entry');
+  if (typeof time !== 'string' && !(typeof time === 'number' && Number.isInteger(time))) {
+    throw new Error('Unexpected bar time');
+  }
   return {
     time,
     open: num(field('open'), 'open'),

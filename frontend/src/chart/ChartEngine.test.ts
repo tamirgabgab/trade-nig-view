@@ -12,6 +12,7 @@ interface FakeSeries {
 const lwc = vi.hoisted(() => {
   const state = {
     chartOptions: undefined as unknown,
+    appliedOptions: [] as unknown[],
     series: [] as FakeSeries[],
     crosshair: undefined as ((param: { time?: unknown; logical?: number }) => void) | undefined,
     priceScaleOptions: new Map<string, unknown>(),
@@ -38,6 +39,7 @@ const lwc = vi.hoisted(() => {
       state.crosshair = handler;
     },
     unsubscribeCrosshairMove: state.unsubscribe,
+    applyOptions: (options: unknown) => state.appliedOptions.push(options),
     remove: state.remove,
   };
   const createChart = (_container: HTMLElement, options: unknown) => {
@@ -70,6 +72,7 @@ beforeEach(() => {
   lwc.state.series = [];
   lwc.state.crosshair = undefined;
   lwc.state.priceScaleOptions.clear();
+  lwc.state.appliedOptions = [];
   lwc.state.setVisibleLogicalRange.mockClear();
   lwc.state.remove.mockClear();
   frames = [];
@@ -134,6 +137,29 @@ describe('ChartEngine', () => {
     expect(volumeData[0]?.color).toBe('rgba(8, 153, 129, 0.5)');
     expect(volumeData[1]?.color).toBe('rgba(242, 54, 69, 0.5)');
     expect(lwc.state.setVisibleLogicalRange).toHaveBeenCalledWith({ from: 50, to: 204 });
+  });
+
+  it('shows dates only for daily bars', () => {
+    const { engine: chart } = engine();
+    chart.setBars(BARS, { decimals: 2, hasVolume: true, resetView: true });
+    expect(lwc.state.appliedOptions).toEqual([{ timeScale: { timeVisible: false } }]);
+  });
+
+  it('shows intraday bars in the display time zone with the time of day', () => {
+    const { engine: chart, candles, volume } = engine();
+    // 2026-07-06 13:30 UTC = 09:30 New York (EDT) = 16:30 Israel (IDT, UTC+3).
+    const hourly: Bar[] = [{ ...BARS[0], time: 1_783_344_600 } as Bar];
+    chart.setBars(hourly, { decimals: 2, hasVolume: true, resetView: true });
+
+    const israel = 1_783_344_600 + 3 * 3600;
+    expect(lwc.state.appliedOptions).toEqual([{ timeScale: { timeVisible: true } }]);
+    expect(candles.setData).toHaveBeenCalledWith([expect.objectContaining({ time: israel })]);
+    expect(volume.setData).toHaveBeenCalledWith([expect.objectContaining({ time: israel })]);
+
+    chart.setBars(hourly, { decimals: 2, hasVolume: true, resetView: false, timeZone: 'UTC' });
+    expect(candles.setData).toHaveBeenLastCalledWith([
+      expect.objectContaining({ time: 1_783_344_600 }),
+    ]);
   });
 
   it('keeps the viewport when the same data set is refreshed', () => {

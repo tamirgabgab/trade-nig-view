@@ -135,6 +135,48 @@ describe('ChartArea', () => {
     expect(useChartStore.getState().symbol).toBe('^GSPC');
   });
 
+  it('shows 1h bars after switching to the 1 hour interval', async () => {
+    const user = userEvent.setup();
+    const hourly = AAPL_BARS.map((bar, i) => ({ ...bar, time: 1_770_301_800 + i * 3600 }));
+    stubApi({
+      '/api/symbols': { body: SYMBOLS },
+      '/api/bars': (url) => {
+        const interval = url.searchParams.get('interval') ?? '';
+        requested.push(`AAPL ${interval}`);
+        return jsonResponse(barsBody('AAPL', interval, interval === '1h' ? hourly : AAPL_BARS));
+      },
+    });
+    renderWithQuery(
+      <>
+        <IntervalSwitcher />
+        <ChartArea />
+      </>,
+    );
+    await within(legend()).findByText('Apple Inc. · 1D · NASDAQ');
+
+    await user.click(screen.getByRole('button', { name: '1 hour' }));
+    expect(await within(legend()).findByText('Apple Inc. · 1h · NASDAQ')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1 hour' })).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      liveEngine()
+        .calls.at(-1)
+        ?.bars.map((bar) => bar.time),
+    ).toEqual(hourly.map((bar) => bar.time));
+    expect(field('C')).toBe('342.56');
+    expect(requested).toEqual(['AAPL 1D', 'AAPL 1h']);
+  });
+
+  it('falls back to the default symbol when the remembered one left the universe', async () => {
+    useChartStore.setState({ symbol: 'GOLD' });
+    stubBars();
+    renderWithQuery(<ChartArea />);
+
+    await waitFor(() => {
+      expect(useChartStore.getState().symbol).toBe('AAPL');
+    });
+    expect(await within(legend()).findByText('Apple Inc. · 1D · NASDAQ')).toBeInTheDocument();
+  });
+
   it('hides volume and uses the symbol decimals for forex', async () => {
     useChartStore.setState({ symbol: 'GBPUSD=X' });
     stubBars();

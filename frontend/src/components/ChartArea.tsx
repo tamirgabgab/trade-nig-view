@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useBars } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
-import { useChartStore } from '../store/chartStore.ts';
+import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView } from './ChartView.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
@@ -18,6 +18,7 @@ const DEFAULT_DECIMALS = 2;
 export function ChartArea({ className }: ChartAreaProps) {
   const symbol = useChartStore((s) => s.symbol);
   const interval = useChartStore((s) => s.interval);
+  const setSymbol = useChartStore((s) => s.setSymbol);
   const symbols = useSymbols().data;
   const barsQuery = useBars(symbol, interval);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -29,6 +30,13 @@ export function ChartArea({ className }: ChartAreaProps) {
   const bars = data?.bars ?? [];
   const decimals = info?.decimals ?? DEFAULT_DECIMALS;
   const hasVolume = info?.hasVolume ?? true;
+
+  // A symbol remembered from an older universe (renamed or removed) falls back to the default.
+  useEffect(() => {
+    if (symbols === undefined || symbols.length === 0) return;
+    if (symbols.some((s) => s.symbol === symbol)) return;
+    setSymbol(symbols.find((s) => s.symbol === DEFAULT_SYMBOL)?.symbol ?? symbols[0]?.symbol ?? '');
+  }, [symbols, symbol, setSymbol]);
 
   let status: string | undefined;
   if (barsQuery.isFetching && (barsQuery.isPlaceholderData || data === undefined)) {

@@ -31,7 +31,21 @@ describe('barsPath', () => {
 describe('isInterval', () => {
   it('accepts only the chart intervals', () => {
     expect(isInterval('1M')).toBe(true);
-    expect(isInterval('1h')).toBe(false);
+    expect(isInterval('4h')).toBe(true);
+    expect(isInterval('5m')).toBe(false);
     expect(isInterval(7)).toBe(false);
+  });
+});
+
+describe('parseBars (intraday)', () => {
+  it('keeps UTC epoch seconds of intraday bars', () => {
+    const bar = { time: 1_770_301_800, open: 1, high: 2, low: 0.5, close: 1.5, volume: 10 };
+    expect(parseBars(barsBody('AAPL', '1h', [bar])).bars[0]).toEqual(bar);
+  });
+
+  it('rejects fractional or missing times', () => {
+    const bar = { open: 1, high: 2, low: 0.5, close: 1.5, volume: 10 };
+    expect(() => parseBars(barsBody('AAPL', '1h', [{ ...bar, time: 1.5 }]))).toThrow('bar time');
+    expect(() => parseBars(barsBody('AAPL', '1h', [bar]))).toThrow('bar time');
   });
 });

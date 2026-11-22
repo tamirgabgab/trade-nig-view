@@ -11,12 +11,24 @@ import {
   type IChartApi,
   type ISeriesApi,
   type MouseEventParams,
+  type Time,
+  type UTCTimestamp,
 } from 'lightweight-charts';
 
 import type { Bar } from '../api/bars.ts';
 import { rafLatest, type RafLatest } from './rafLatest.ts';
-import { crosshairIndex, initialRange, priceFormat, toCandles, toVolume } from './seriesData.ts';
+import {
+  chartTimes,
+  crosshairIndex,
+  hasIntradayTimes,
+  initialRange,
+  priceFormat,
+  toCandles,
+  toVolume,
+  type ChartTime,
+} from './seriesData.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
+import { DISPLAY_TIME_ZONE } from './timeZone.ts';
 
 /** Price pane margins: candles keep the top 75%, leaving room for volume below. */
 const CANDLE_MARGINS = { top: 0.08, bottom: 0.22 };
@@ -25,6 +37,16 @@ const VOLUME_MARGINS = { top: 0.8, bottom: 0 };
 const VOLUME_ALPHA = 0.5;
 const VOLUME_SCALE_ID = 'volume';
 
+/** lightweight-charts brands timestamps; our display-zone seconds are exactly that number. */
+function withTime<P extends { time: ChartTime }>(
+  points: P[],
+): (Omit<P, 'time'> & { time: Time })[] {
+  return points.map((point) => ({
+    ...point,
+    time: typeof point.time === 'number' ? (point.time as UTCTimestamp) : point.time,
+  }));
+}
+
 export interface SetBarsOptions {
   /** Decimal places of the instrument's prices (universe `decimals`). */
   decimals: number;
@@ -32,6 +54,8 @@ export interface SetBarsOptions {
   hasVolume: boolean;
   /** Jump to the latest bars (new symbol or interval); false keeps the user's viewport. */
   resetView: boolean;
+  /** IANA zone intraday bars are shown in (default: Israel time). */
+  timeZone?: string;
 }
 
 export type CrosshairListener = (index: number | null) => void;
@@ -67,7 +91,7 @@ export class ChartEngine {
         horzLine: { color: theme.crosshair, labelBackgroundColor: theme.labelBackground },
       },
       rightPriceScale: { borderColor: theme.border, scaleMargins: CANDLE_MARGINS },
-      timeScale: { borderColor: theme.border, rightOffset: 5 },
+      timeScale: { borderColor: theme.border, rightOffset: 5, secondsVisible: false },
     });
 
     this.candles = this.chart.addSeries(CandlestickSeries, {
@@ -94,18 +118,27 @@ export class ChartEngine {
   }
 
   /** Replace the displayed bars (oldest first, as the API returns them). */
-  setBars(bars: readonly Bar[], { decimals, hasVolume, resetView }: SetBarsOptions): void {
+  setBars(
+    bars: readonly Bar[],
+    { decimals, hasVolume, resetView, timeZone = DISPLAY_TIME_ZONE }: SetBarsOptions,
+  ): void {
     this.barCount = bars.length;
+    const times = chartTimes(bars, timeZone);
+    // Intraday bars need the time of day on the axis; daily and longer bars show dates only.
+    this.chart.applyOptions({ timeScale: { timeVisible: hasIntradayTimes(bars) } });
     this.candles.applyOptions({ priceFormat: { type: 'price', ...priceFormat(decimals) } });
-    this.candles.setData(toCandles(bars));
+    this.candles.setData(withTime(toCandles(bars, times)));
 
     this.volume.applyOptions({ visible: hasVolume });
     this.volume.setData(
       hasVolume
-        ? toVolume(
-            bars,
-            withAlpha(this.theme.up, VOLUME_ALPHA),
-            withAlpha(this.theme.down, VOLUME_ALPHA),
+        ? withTime(
+            toVolume(
+              bars,
+              times,
+              withAlpha(this.theme.up, VOLUME_ALPHA),
+              withAlpha(this.theme.down, VOLUME_ALPHA),
+            ),
           )
         : [],
     );
