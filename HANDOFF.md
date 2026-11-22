@@ -3,7 +3,7 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0 הושלם ואושר. **R1a הושלם**: שכבת הנתונים, API, ו-Watchlist עם מחירים אמיתיים. ממתין לדמו אצל המשתמש. **אחריו: R1b** (fixtures אמיתיים, 1h, OpenAPI types).
+- **שלב:** Phase 1. R0 הושלם ואושר. **R1a הושלם ואומת על המחשב של המשתמש** (2026-11-22): ה-Watchlist מציג מחירים אמיתיים מ-Yahoo. **אחריו: R1b** (fixtures אמיתיים, 1h, OpenAPI types).
 - **הסבב הבא:** סיום R1 (R1b), ואחריו **R2 — Chart core**.
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
@@ -75,6 +75,8 @@
 2. **מקור ה-"Moving average crossover 9/21"** מהצילום (נדרש ל-R3).
 
 ## בעיות ידועות / tech debt
+- **GOLD, SILVER ו-USOIL שונים מ-TradingView.** אצל המשתמש ב-TradingView אלה מחירי spot (CFD), ואצלנו חוזים עתידיים רציפים של Yahoo (`GC=F`, `SI=F`, `CL=F`). ב-20.11: GOLD אצלנו 3,515.40 (-4.62%) מול 3,537.83 (-2.41%) ב-TV. בימי roll השינוי היומי מעוות. ל-R1b: לבדוק מקור spot, או לשנות את התווית ל-"Gold futures".
+- הבדלים קטנים ב-DJI (0.01%), ב-DXY וב-Forex (Yahoo ו-TV חותכים את היום בשעות שונות). מניות, ETFs, SPX, NDX ו-VIX זהים ל-TV עד הסנט.
 - **אין גישה ל-Yahoo מסביבת הענן של Claude** (ה-proxy מחזיר `403`). ה-fixtures וה-recorded responses ייווצרו על המחשב של המשתמש באמצעות סקריפט שירוץ אצלו.
 - **ה-fixtures עדיין לא בריפו.** הבדיקות משתמשות כרגע בנתונים קטנים שנבנו ידנית (`backend/tests/fixtures/`). מצב `OFFLINE=1` עם ה-universe האמיתי לא יעבוד עד שה-fixtures ייווצרו.
 - הגישה ל-Yahoo מתבצעת רק מהמחשב של המשתמש. כאן בענן היא חסומה, ולכן בדקתי את `YahooProvider` עם DataFrame מזויף בפורמט של yfinance.
@@ -117,3 +119,8 @@
 - Yahoo עונה מה-IP של המשתמש: AAPL close ב-2026-11-20 = **342.56**, זהה לצילום של TradingView.
 - R1 פוצל ל-R1a (מנוע נתונים, API ומחירים ב-Watchlist) ו-R1b (Tiingo, 1h, OpenAPI types).
 - הבא: R1 אחרי אישור.
+
+### 2026-11-22 — R1a: דמו אצל המשתמש
+- `git pull` ו-`setup.ps1` עברו. הטעינה הראשונה של המחירים (25 סימבולים, כולל טעינה ראשונה של yfinance ו-pandas תחת SAC) נמשכה בערך דקה, והסתיימה ב-`GET /api/quotes 200 OK`.
+- השוואה ל-TradingView (20.11): SPX, NDX, VIX, AAPL, TSLA ו-NFLX זהים. DJI, DXY ו-Forex שונים מעט. GOLD, SILVER ו-USOIL שונים משמעותית (futures מול spot, ראה בעיות ידועות).
+- המשתמש שאל אם אפשר לעבוד מהטלפון כשהמחשב כבוי. התשובה: כן לפיתוח ולבדיקות (הסשן רץ בענן); הדמו ונתוני Yahoo דורשים את המחשב שלו.
