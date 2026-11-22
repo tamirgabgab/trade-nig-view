@@ -1,0 +1,64 @@
+[project]
+name = "chartlab-backend"
+version = "0.1.0"
+description = "ChartLab backend: market data, indicators and analysis API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary - personal use" }
+dependencies = [
+    "fastapi>=0.165,<1",
+    "uvicorn[standard]>=0.54",
+    "pydantic>=2.14,<3",
+    "pydantic-settings>=2.7,<3",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16",
+    "mypy>=2.4",
+    "pytest>=9.2",
+    "pytest-cov>=6",
+    "hypothesis>=6.170",
+    "ruff>=0.17",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "UP", "N", "SIM", "C4", "RUF", "PT", "PL", "NPY", "PERF", "ANN", "S",
+]
+ignore = [
+    "PLR0913",  # many-args: indicator functions take several params by design
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "ANN401"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+pretty = true
+files = ["app", "tests"]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
