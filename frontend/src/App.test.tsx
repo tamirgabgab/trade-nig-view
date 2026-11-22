@@ -2,10 +2,14 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
-import { renderWithQuery, stubFetchJson } from './test/render.tsx';
+import { HEALTH_OK, QUOTES, renderWithQuery, stubApi, SYMBOLS } from './test/render.tsx';
 
 beforeEach(() => {
-  stubFetchJson(200, { status: 'ok', version: '0.1.0', offline: false, providers: [] });
+  stubApi({
+    '/api/health': { body: HEALTH_OK },
+    '/api/symbols': { body: SYMBOLS },
+    '/api/quotes': { body: QUOTES },
+  });
 });
 
 afterEach(() => {
@@ -84,11 +88,11 @@ describe('App shell', () => {
     expect(pressed.map((button) => button.textContent)).toEqual(['5Y']);
   });
 
-  it('lists the default watchlist sections', () => {
+  it('lists watchlist sections from the API', async () => {
     renderWithQuery(<App />);
-    const table = within(screen.getByRole('complementary')).getByRole('table');
+    const table = await within(screen.getByRole('complementary')).findByRole('table');
 
-    for (const title of ['Indices', 'ETFs', 'Stocks', 'Futures', 'Forex']) {
+    for (const title of ['Indices', 'Stocks', 'Forex']) {
       expect(within(table).getByText(title)).toBeInTheDocument();
     }
     expect(within(table).getByText('AAPL')).toBeInTheDocument();

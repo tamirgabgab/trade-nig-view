@@ -1,15 +1,14 @@
 import { Bell, CalendarRange, Layers, List } from 'lucide-react';
-import { Fragment } from 'react';
 
 import { IconButton } from './IconButton.tsx';
 import styles from './RightSidebar.module.css';
-import { DEFAULT_WATCHLIST } from './watchlist.ts';
+import { Watchlist } from './Watchlist.tsx';
 
 interface RightSidebarProps {
   className?: string | undefined;
 }
 
-/** Watchlist panel plus the narrow widget bar on the far right. Quotes are wired in R2. */
+/** Watchlist panel plus the narrow widget bar on the far right. */
 export function RightSidebar({ className }: RightSidebarProps) {
   return (
     <aside className={[styles.sidebar, className].join(' ')} aria-label="Watchlist and details">
@@ -18,33 +17,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
           <span id="watchlist-title">Watchlist</span>
         </div>
         <div className={styles.scroll}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">Symbol</th>
-                <th scope="col">Last</th>
-                <th scope="col">Chg</th>
-                <th scope="col">Chg%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {DEFAULT_WATCHLIST.map((section) => (
-                <Fragment key={section.title}>
-                  <tr className={styles.section}>
-                    <td colSpan={4}>{section.title}</td>
-                  </tr>
-                  {section.symbols.map(({ symbol, display }) => (
-                    <tr key={symbol} className={styles.row} title={symbol}>
-                      <td className={styles.symbol}>{display}</td>
-                      <td className={styles.dash}>—</td>
-                      <td className={styles.dash}>—</td>
-                      <td className={styles.dash}>—</td>
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+          <Watchlist />
         </div>
       </section>
       <div
