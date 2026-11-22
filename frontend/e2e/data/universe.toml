@@ -1,0 +1,42 @@
+# Universe of the Playwright tests (frontend/e2e). Synthetic data from generate.py, not real prices.
+
+[[symbols]]
+symbol = "^GSPC"
+display = "SPX"
+name = "S&P 500 Index"
+type = "index"
+group = "Indices"
+exchange = "SNP"
+has_volume = false
+
+[[symbols]]
+symbol = "SPY"
+display = "SPY"
+name = "SPDR S&P 500 ETF"
+type = "etf"
+group = "ETFs"
+exchange = "NYSEARCA"
+
+[[symbols]]
+symbol = "AAPL"
+display = "AAPL"
+name = "Apple Inc."
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "NVDA"
+display = "NVDA"
+name = "NVIDIA Corporation"
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
+
+[[symbols]]
+symbol = "MSFT"
+display = "MSFT"
+name = "Microsoft Corporation"
+type = "stock"
+group = "Stocks"
+exchange = "NASDAQ"
