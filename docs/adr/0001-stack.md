@@ -28,3 +28,10 @@ dense, interactive single-page app.
   in Python anyway (ML). Rejected.
 - Poetry/conda: heavier on Windows than uv. Rejected.
 - pyright instead of mypy: faster, but needs Node in the Python toolchain and mypy has better pandas-stubs support. Revisit if mypy is slow.
+
+## Amendment 1 (2026-11-22, R0)
+- Test HTTP client: **`httpx2`** (maintained by the pydantic org). Starlette 1.x's `TestClient` deprecates `httpx` in
+  favour of `httpx2`. Provider HTTP calls in R1 use `httpx2` as well.
+- Icons: **`lucide-react`** (ISC/MIT, tree-shaken per icon, ~1 KB per icon). No proprietary icon assets.
+- Network blocking in tests is implemented in `backend/tests/conftest.py` (patches `socket.getaddrinfo`,
+  `socket.socket.connect`, `connect_ex`; loopback allowed) instead of adding `pytest-socket`; it is itself tested.

@@ -5,9 +5,9 @@
 
 | Round | Title | Size | Status |
 |---|---|---|---|
-| Stage A | Research, architecture, docs | M | ✅ Done (2026-11-22) — awaiting approval |
-| R0 | Scaffolding & quality gates | M | ⏳ Next |
-| R1 | Market data layer | L | |
+| Stage A | Research, architecture, docs | M | ✅ Done (2026-11-22) |
+| R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) — awaiting approval |
+| R1 | Market data layer | L | ⏳ Next |
 | R2 | Chart core | L | |
 | R3 | Indicator engine v1 | L | |
 | R4 | Drawing tools v1 | L | |
@@ -27,15 +27,15 @@
 **Out of scope**: any data, chart or indicator code.
 
 Tasks
-- [ ] `backend/pyproject.toml` (uv, Python ≥3.12, ruff, mypy strict, pytest, hypothesis config), `uv.lock`, `.python-version` = 3.13
-- [ ] `backend/app/main.py` (`create_app`), `config.py` (pydantic-settings), `api/health.py`, problem+json error handler
-- [ ] `backend/tests/api/test_health.py`; pytest plugin/fixture that **blocks network sockets** in all tests
-- [ ] `frontend/` via Vite React-TS template: TS 6.0.x strict, ESLint flat config + typescript-eslint + react-hooks, Prettier, Vitest + RTL (jsdom)
-- [ ] Shell components with CSS Modules + `tokens.css` dark theme: `TopToolbar`, `DrawingToolbar`, `ChartArea` (placeholder), `RightSidebar`, `BottomBar`; icon buttons with tooltips, keyboard focusable
-- [ ] Health badge in the bottom bar (calls `/api/health` via TanStack Query; Vite dev proxy `/api → :8000`)
-- [ ] `scripts/dev.ps1` + `dev.sh` (backend + frontend together, Ctrl+C stops both), `test.ps1`/`test.sh`, `lint.ps1`/`lint.sh`, `setup.ps1`/`setup.sh`
-- [ ] `.github/workflows/ci.yml`: backend (ruff, mypy, pytest) + frontend (eslint, prettier --check, tsc, vitest, build) on ubuntu + windows
-- [ ] README quick start verified on Windows commands
+- [x] `backend/pyproject.toml` (uv, Python ≥3.12, ruff, mypy strict, pytest, hypothesis config), `uv.lock`, `.python-version` = 3.13
+- [x] `backend/app/main.py` (`create_app`), `config.py` (pydantic-settings), `api/health.py`, problem+json error handler
+- [x] `backend/tests/api/test_health.py`; pytest plugin/fixture that **blocks network sockets** in all tests
+- [x] `frontend/` via Vite React-TS template: TS 6.0.x strict, ESLint flat config + typescript-eslint + react-hooks, Prettier, Vitest + RTL (jsdom)
+- [x] Shell components with CSS Modules + `tokens.css` dark theme: `TopToolbar`, `DrawingToolbar`, `ChartArea` (placeholder), `RightSidebar`, `BottomBar`; icon buttons with tooltips, keyboard focusable
+- [x] Health badge in the bottom bar (calls `/api/health` via TanStack Query; Vite dev proxy `/api → :8000`)
+- [x] `scripts/dev.ps1` + `dev.sh` (backend + frontend together, Ctrl+C stops both), `test.ps1`/`test.sh`, `lint.ps1`/`lint.sh`, `setup.ps1`/`setup.sh`
+- [x] `.github/workflows/ci.yml`: backend (ruff, mypy, pytest) + frontend (eslint, prettier --check, tsc, vitest, build) on ubuntu + windows
+- [ ] README quick start verified on Windows (CI `windows-latest` runs `setup.ps1` + `test.ps1`; user confirms locally)
 
 DoD
 - `scripts/setup.ps1` then `scripts/dev.ps1` brings up both apps; `http://localhost:5173` shows the shell; health badge green.

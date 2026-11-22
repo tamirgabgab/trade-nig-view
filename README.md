@@ -4,18 +4,18 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** Stage A (research & architecture) complete. Implementation starts with Round 0.
+> **Status:** Round 0 (scaffolding & quality gates) complete — the app shell runs; data and charts come next.
 > See [HANDOFF.md](HANDOFF.md) for the live status and [docs/ROADMAP.md](docs/ROADMAP.md) for the plan.
 
-![ChartLab screenshot](docs/img/screenshot.png)
-<!-- Screenshot placeholder: added in R2. -->
+![ChartLab shell (R0)](docs/img/shell-r0.png)
+<!-- Replaced with a chart screenshot in R2. -->
 
 ## Features
 
 | Feature | Status |
 |---|---|
 | Research, architecture, ADRs | ✅ Done |
-| Scaffolding, CI, quality gates (R0) | ⏳ Planned |
+| Scaffolding, CI, quality gates, dark app shell (R0) | ✅ Done |
 | Market data: yfinance + Tiingo fallback, SQLite cache, offline fixtures (R1) | ⏳ Planned |
 | Chart: candles/bars/hollow/line/area/Heikin Ashi, volume, legend, log/% scale, watchlist (R2) | ⏳ Planned |
 | Indicators: SMA, EMA, WMA, MA Cross, BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3) | ⏳ Planned |
@@ -26,8 +26,6 @@ trading agent can plug in later.
 | Learn pages, custom indicators, backtesting, paper agent (Phases 2–5) | 🗺️ Roadmap |
 
 ## Quick start
-
-> The commands below become available in Round 0.
 
 Prerequisites: [uv](https://docs.astral.sh/uv/) (installs Python 3.13 for you), Node.js 22+, Git.
 
@@ -57,7 +55,9 @@ cp .env.example .env
 ./scripts/test.sh
 ```
 
-Pip fallback (no uv): `cd backend; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -e ".[dev]"`.
+Pip fallback (no uv): `cd backend; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -e . httpx2 mypy pytest pytest-cov hypothesis ruff`.
+
+Then open http://localhost:5173 (app) and http://127.0.0.1:8000/api/docs (API docs).
 
 Offline mode: set `OFFLINE=1` in `.env` to serve committed fixture data only (no network).
 
