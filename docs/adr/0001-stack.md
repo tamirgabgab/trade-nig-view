@@ -35,3 +35,15 @@ dense, interactive single-page app.
 - Icons: **`lucide-react`** (ISC/MIT, tree-shaken per icon, ~1 KB per icon). No proprietary icon assets.
 - Network blocking in tests is implemented in `backend/tests/conftest.py` (patches `socket.getaddrinfo`,
   `socket.socket.connect`, `connect_ex`; loopback allowed) instead of adding `pytest-socket`; it is itself tested.
+
+## Amendment 2 (2026-11-22, R0)
+- Type checker: **pyright (strict)** replaces mypy. mypy 2.x imports the native `librt` extension
+  (no pure-Python fallback), and Windows Smart App Control on the developer's machine blocks that unsigned
+  `.pyd`. pyright is pure JavaScript on the (signed) Node runtime, installed via the pure-Python `pyright`
+  wrapper from PyPI and run as `uv run python -m pyright`. Config: `[tool.pyright]` in `backend/pyproject.toml`.
+- All Python tools are invoked as `uv run python -m <tool>` (SAC blocks uv's unsigned launcher `.exe` files).
+- On Windows with SAC on, the official signed python.org CPython is used (`UV_PYTHON_PREFERENCE=only-system`),
+  not uv's downloaded python-build-standalone (its `_socket.pyd` was blocked).
+- `uvicorn` without the `[standard]` extras (httptools, watchfiles, websockets are unsigned native modules).
+- Rule for new dependencies: prefer pure-Python packages or widely used wheels; verify on the user's Windows
+  machine (`test.ps1`) before relying on a new native extension. numpy/pandas (R1) must be verified first thing.

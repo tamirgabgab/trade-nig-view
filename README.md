@@ -66,7 +66,7 @@ cp .env.example .env
 ./scripts/test.sh
 ```
 
-Pip fallback (no uv): `cd backend; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -e . httpx2 mypy pytest pytest-cov hypothesis ruff`.
+Pip fallback (no uv): `cd backend; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -e . httpx2 pyright pytest pytest-cov hypothesis ruff`.
 
 Then open http://localhost:5173 (app) and http://127.0.0.1:8000/api/docs (API docs).
 

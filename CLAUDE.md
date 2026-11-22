@@ -28,13 +28,13 @@ Treat every indicator like a DUT (golden model, directed + property tests, score
 | Dev (backend :8000 + frontend :5173) | `.\scripts\dev.ps1` | `./scripts/dev.sh` |
 | All tests + lint + typecheck | `.\scripts\test.ps1` | `./scripts/test.sh` |
 | Backend tests | `cd backend; uv run python -m pytest` | same |
-| Backend lint/format/types | `uv run python -m ruff check . ; uv run python -m ruff format --check . ; uv run python -m mypy` | same |
+| Backend lint/format/types | `uv run python -m ruff check . ; uv run python -m ruff format --check . ; uv run python -m pyright` | same |
 | Frontend tests | `cd frontend; npm test` | same |
 | Frontend lint/types/format | `npm run lint ; npm run typecheck ; npm run format:check` | same |
 | Frontend build | `npm run build` | same |
 | E2E (from R2) | `npm run e2e -- --trace off` | same |
 
-**Windows Smart App Control rule:** always invoke Python tools as `uv run python -m <tool>` (uvicorn, pytest, mypy,
+**Windows Smart App Control rule:** always invoke Python tools as `uv run python -m <tool>` (uvicorn, pytest, pyright,
 ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.exe` files uv creates in `.venv\Scripts`
 ("An Application Control policy has blocked this file", os error 4551).
 
@@ -46,7 +46,7 @@ ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.
 - `.github/workflows/` — CI (ubuntu + windows).
 
 ## 5. Conventions
-- **Python 3.13** (`>=3.12`), full type hints, `mypy --strict`, ruff lint+format (line length 100). snake_case; modules small;
+- **Python 3.13** (`>=3.12`), full type hints, `pyright` strict (not mypy: its native `librt` is blocked by SAC), ruff lint+format (line length 100). snake_case; modules small;
   math documented in docstrings with formulas. Pure functions where possible; no global mutable state; config via
   `app.config.Settings`. pandas 3 copy-on-write: no chained assignment.
 - **TypeScript 6.0.x strict** (TS 7 blocked by typescript-eslint). No `any` without a comment explaining why. React function
@@ -94,7 +94,7 @@ No real-money trading, no broker APIs or credentials, no order routing. The agen
 
 ## 11. Definition of Done (every round)
 - [ ] Tests green (backend + frontend; e2e from R2), no network in tests
-- [ ] ruff + eslint + prettier clean; mypy + tsc clean
+- [ ] ruff + eslint + prettier clean; pyright + tsc clean
 - [ ] New code covered by tests; indicators by the full harness
 - [ ] Docs updated (ROADMAP checkboxes, README features, ARCHITECTURE/ADR if design changed)
 - [ ] `HANDOFF.md` updated (Hebrew) incl. session log

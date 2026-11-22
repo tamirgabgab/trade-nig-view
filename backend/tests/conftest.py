@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import socket
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic_settings import SettingsConfigDict
 
 from app.config import Settings
 from app.main import create_app
@@ -21,9 +22,10 @@ class NetworkBlockedError(RuntimeError):
     """Raised when a test tries to open a non-loopback network connection."""
 
 
-def _is_loopback(address: Any) -> bool:
-    if isinstance(address, tuple) and address:
-        return str(address[0]) in _LOOPBACK_HOSTS
+def _is_loopback(address: object) -> bool:
+    if isinstance(address, tuple):
+        host = cast("tuple[object, ...]", address)[:1]
+        return bool(host) and str(host[0]) in _LOOPBACK_HOSTS
     # AF_UNIX paths and other non-IP addresses are local by definition.
     return isinstance(address, (str, bytes))
 
@@ -57,10 +59,16 @@ def _block_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex)
 
 
+class IsolatedSettings(Settings):
+    """Settings that ignore the developer's ``.env`` file (environment variables still apply)."""
+
+    model_config = SettingsConfigDict(env_file=None)
+
+
 @pytest.fixture
 def settings() -> Settings:
     """Deterministic settings that ignore the developer's ``.env`` file."""
-    return Settings(_env_file=None, offline=True)
+    return IsolatedSettings(offline=True)
 
 
 @pytest.fixture

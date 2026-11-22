@@ -27,14 +27,14 @@
 **Out of scope**: any data, chart or indicator code.
 
 Tasks
-- [x] `backend/pyproject.toml` (uv, Python ≥3.12, ruff, mypy strict, pytest, hypothesis config), `uv.lock`, `.python-version` = 3.13
+- [x] `backend/pyproject.toml` (uv, Python ≥3.12, ruff, pyright strict — replaced mypy, see ADR 0001 am. 2 — pytest, hypothesis config), `uv.lock`, `.python-version` = 3.13
 - [x] `backend/app/main.py` (`create_app`), `config.py` (pydantic-settings), `api/health.py`, problem+json error handler
 - [x] `backend/tests/api/test_health.py`; pytest plugin/fixture that **blocks network sockets** in all tests
 - [x] `frontend/` via Vite React-TS template: TS 6.0.x strict, ESLint flat config + typescript-eslint + react-hooks, Prettier, Vitest + RTL (jsdom)
 - [x] Shell components with CSS Modules + `tokens.css` dark theme: `TopToolbar`, `DrawingToolbar`, `ChartArea` (placeholder), `RightSidebar`, `BottomBar`; icon buttons with tooltips, keyboard focusable
 - [x] Health badge in the bottom bar (calls `/api/health` via TanStack Query; Vite dev proxy `/api → :8000`)
 - [x] `scripts/dev.ps1` + `dev.sh` (backend + frontend together, Ctrl+C stops both), `test.ps1`/`test.sh`, `lint.ps1`/`lint.sh`, `setup.ps1`/`setup.sh`
-- [x] `.github/workflows/ci.yml`: backend (ruff, mypy, pytest) + frontend (eslint, prettier --check, tsc, vitest, build) on ubuntu + windows
+- [x] `.github/workflows/ci.yml`: backend (ruff, pyright, pytest) + frontend (eslint, prettier --check, tsc, vitest, build) on ubuntu + windows
 - [x] README quick start verified on Windows (CI `windows-latest` runs `setup.ps1` + `test.ps1` under PowerShell 5.1 — green)
 
 DoD

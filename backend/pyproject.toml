@@ -17,7 +17,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx2>=2.16",
-    "mypy>=2.4",
+    "pyright>=1.1.414",
     "pytest>=9.2",
     "pytest-cov>=6",
     "hypothesis>=6.170",
@@ -47,13 +47,16 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "PLR2004", "ANN401"]
 
-[tool.mypy]
-python_version = "3.12"
-strict = true
-warn_unreachable = true
-pretty = true
-files = ["app", "tests"]
-plugins = ["pydantic.mypy"]
+[tool.pyright]
+# pyright (not mypy): mypy 2.x needs the native librt module, which Windows Smart App Control
+# blocks on the developer's machine. pyright runs on Node (signed) - see ADR 0001 amendment 2.
+include = ["app", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+reportMissingTypeStubs = "error"
+reportUnnecessaryTypeIgnoreComment = "error"
 
 [tool.pytest.ini_options]
 minversion = "9.0"

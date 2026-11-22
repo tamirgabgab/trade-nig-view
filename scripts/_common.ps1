@@ -1,5 +1,8 @@
 # Shared helpers for ChartLab PowerShell scripts. Dot-source: . "$PSScriptRoot\_common.ps1"
 $ErrorActionPreference = 'Stop'
+# Show UTF-8 output (e.g. vitest check marks) correctly in Windows PowerShell 5.1 consoles.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $script:RepoRoot = Split-Path -Parent $PSScriptRoot
 $script:BackendDir = Join-Path $RepoRoot 'backend'
 $script:FrontendDir = Join-Path $RepoRoot 'frontend'
