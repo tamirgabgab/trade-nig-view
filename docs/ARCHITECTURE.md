@@ -89,7 +89,7 @@ flowchart LR
 | `indicators/` | Indicators dialog, legend rows, settings dialog generated from the registry `params` schema |
 | `drawings/` | `DrawingManager`, tool definitions, geometry & hit-testing (pure TS, unit-tested), properties dialog |
 | `components/` | Shell: `TopToolbar`, `DrawingToolbar`, `RightSidebar`, `Watchlist`, `BottomBar`, `SymbolSearch`, dialogs |
-| `store/` | Zustand slices: `workspace` (symbol, interval, chart type, scale), `indicators`, `drawings`, `replay`, `settings` |
+| `store/` | Zustand stores: `chartStore` (symbol, interval; chart type and scale in R2b; persisted to localStorage), later `indicators`, `drawings`, `replay`, `settings` |
 | `styles/` | CSS custom properties (design tokens), global reset; component styles are CSS Modules |
 
 ## 3. Data flow

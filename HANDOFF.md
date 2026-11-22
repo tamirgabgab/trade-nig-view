@@ -3,11 +3,9 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0 הושלם ואושר. **R1a הושלם ואומת על המחשב של המשתמש** (2026-11-22): ה-Watchlist מציג מחירים אמיתיים מ-Yahoo. **אחריו: R1b** (fixtures אמיתיים, 1h, OpenAPI types).
-- **הסבב הבא:** **R2a — גרף הנרות הבסיסי** (המשתמש ביקש לראות גרפים; R1b נדחה לאחר R2).
-  - R2a: `ChartEngine` מעל lightweight-charts 5.3, נרות ו-volume, legend של OHLC לפי ה-crosshair, לחיצה על סימבול ב-Watchlist מחליפה את הגרף, interval 1D/1W/1M, וגלילה וזום. Zustand store ל-symbol ול-interval.
-  - R2b: סוגי גרף, log ו-%, range buttons, symbol search, lazy loading, ו-Playwright smoke test.
-  - R1b (אחר כך): 1h, fixtures אמיתיים, OpenAPI types, ובעיית GOLD/SILVER/USOIL (futures מול spot).
+- **שלב:** Phase 1. R0 ו-R1a הושלמו ואומתו על המחשב של המשתמש. **R2a (גרף הנרות הבסיסי) הושלם** (2026-11-22) ונבדק בענן על נתונים סינתטיים. **ממתין לדמו אצל המשתמש עם נתונים אמיתיים.**
+- **הסבב הבא:** **R2b**: סוגי גרף (bars, hollow, line, area, Heikin Ashi דרך transform ב-backend), scale של log ו-%, range buttons, symbol search, lazy loading של היסטוריה, ו-Playwright smoke test.
+  - R1b (אחרי R2b): 1h, fixtures אמיתיים, OpenAPI types, ובעיית GOLD/SILVER/USOIL (futures מול spot).
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
 ## מה נעשה ב-session האחרון (2026-11-22, R0)
@@ -49,6 +47,18 @@
 - `scripts/make_fixtures.py`: מוריד snapshot קבוע (2015-01-01 עד 2026-10-30) ל-`backend/fixtures/daily/`.
 - בדיקות: 102 ב-backend (coverage 97%) ו-28 ב-frontend. כוללות תשובה מוקלטת אמיתית של Tiingo (AAPL, 17–20.11.2026) ו-hypothesis properties ל-resampling.
 
+## R2a — מה נבנה (2026-11-22)
+- `frontend/src/chart/ChartEngine.ts`: המודול היחיד שמייבא את `lightweight-charts`. נרות, ו-volume בתחתית ה-pane (20% התחתונים, scale נפרד), בצבע לפי כיוון הנר (`close >= open` = ירוק). ה-crosshair מדווח את האינדקס של הנר לכל היותר פעם אחת ב-frame (`rafLatest`). `attributionLogo` נשאר דלוק.
+- `chart/theme.ts` קורא את הצבעים מ-`tokens.css`. נוספו `--color-chart-grid` ו-`--color-chart-crosshair`.
+- `chart/seriesData.ts`: פונקציות טהורות, כמו המרה ל-series, טווח פתיחה (150 הנרות האחרונים ועוד 5 משבצות ריקות מימין), ו-`priceFormat` לפי `decimals` של הסימבול.
+- `api/bars.ts`: `useBars` מעל `/api/bars` (עד 5,000 בארים, עם `keepPreviousData` כדי שהגרף הקודם יישאר על המסך בזמן טעינה).
+- `store/chartStore.ts`: Zustand store לסימבול ול-interval, שנשמר ב-localStorage (`chartlab.chart`). ערכים פגומים חוזרים לברירת המחדל AAPL 1D.
+- `LegendOHLC`: שם, interval, בורסה, O/H/L/C, שינוי מול הסגירה הקודמת, ו-Vol (לא מוצג לסימבולים בלי volume).
+- `IntervalSwitcher` (D/W/M) בסרגל העליון. שורה ב-Watchlist נבחרת בלחיצה או ב-Enter/Space, והשורה הפעילה מודגשת.
+- **באג שנתפס בבדיקה:** ה-view סומן כ"הוצג" כבר במערך הריק שלפני התשובה הראשונה, והגרף נפתח על הנרות הישנים. תוקן ב-`ChartView` (הסימון נעשה רק כשיש בארים).
+- בדיקות: 71 ב-frontend (היו 28). כוללות `ChartEngine` מול mock של הספרייה, ו-`ChartArea` עם `FakeChartEngine` (`src/test/fakeChartEngine.ts`), כי ל-jsdom אין canvas.
+- בדיקה בדפדפן (Playwright, Chromium, backend במצב `OFFLINE=1` עם נתונים סינתטיים ב-scratchpad שלא נכנסו לריפו): הגרף הראשון תוך 0.6 שניות, ה-legend עוקב אחרי העכבר, החלפת סימבול ו-interval עובדות, הבחירה נשמרת אחרי רענון, ואין שגיאות ב-console.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -58,6 +68,8 @@
 | 2026-11-22 | Indicators מחושבים ב-backend ב-Python | מימוש אחד לכל ה-phases | [0003](docs/adr/0003-indicators-in-backend.md) |
 | 2026-11-22 | מסגרת drawings משלנו על series primitives | הספריות הקהילתיות עדיין v0.x | [0004](docs/adr/0004-own-drawing-framework.md) |
 | 2026-11-22 | Bar cache ב-SQLite | upserts אינקרמנטליים, בלי תלות נוספת | [0005](docs/adr/0005-bar-cache-format.md) |
+| 2026-11-22 | R2a: volume בתחתית ה-pane של המחיר (לא pane נפרד), זכירת הסימבול וה-interval ב-localStorage, כפתורי D/W/M | בחירת המשתמש | — |
+| 2026-11-22 | `zustand` pinned ל-`~5.0.16` ולא 5.1.0 | 5.1.0 יצאה שבועיים לפני הסבב | [0001](docs/adr/0001-stack.md) |
 | 2026-11-22 | yfinance כ-default, Tiingo כ-fallback, fixtures ל-offline | Stooq דורש עכשיו API key | [0006](docs/adr/0006-default-data-provider.md) |
 | 2026-11-22 | CSS Modules ו-CSS custom properties | אותם tokens משמשים גם את ה-canvas | [0007](docs/adr/0007-styling.md) |
 | 2026-11-22 | EMA עם SMA seed; Bollinger עם population σ | קונבנציות של TA-Lib ו-Pine | research §5 |
@@ -85,7 +97,9 @@
 - הגישה ל-Yahoo מתבצעת רק מהמחשב של המשתמש. כאן בענן היא חסומה, ולכן בדקתי את `YahooProvider` עם DataFrame מזויף בפורמט של yfinance.
 - ✅ ה-`.ps1` scripts אומתו ב-CI על `windows-latest` תחת PowerShell 5.1 (run #3 ירוק). הריצה הראשונה נכשלה בגלל התנגשות שמות `Clock.tsx`/`clock.ts` ב-file system שלא מבחין בין אותיות גדולות לקטנות. תוקן, ונוסף כלל ל-`CLAUDE.md`.
 - ה-TS types של ה-API עדיין כתובים ידנית (`api/health.ts`). generation מ-OpenAPI ייכנס ב-R1.
-- ה-watchlist סטטי, וה-range/scale toggles הם UI state בלבד. הם יחוברו ל-chart ב-R2.
+- ה-range buttons וה-scale toggles (`%`, `log`, `auto`, `ADJ`) בסרגל התחתון עדיין UI state בלבד. הם יחוברו לגרף ב-R2b.
+- בעמודת Chg% ב-Watchlist המספר נחתך מימין כשהמחירים ארוכים (למשל 12,912.115 בנתונים הסינתטיים). עם מחירים אמיתיים זה לא קרה; לבדוק ב-R2b.
+- צילום המסך ב-README עדיין של R0. יוחלף בצילום של גרף עם נתונים אמיתיים אחרי הדמו.
 - EMA seeding מול TradingView לא אומת מול המקור הרשמי של Pine (יאומת ב-R3).
 - Vitest מדווח שה-jsdom environment נוצר 5 פעמים (אופטימיזציה אופציונלית, לא דחוף).
 
@@ -93,7 +107,7 @@
 - **Smart App Control ב-Windows של המשתמש** חוסם קבצי `.exe` לא חתומים שנוצרים ב-`.venv\Scripts` (os error 4551). לכן כל הכלים רצים דרך `uv run python -m <tool>`. הסקריפטים ו-`CLAUDE.md` עודכנו בהתאם. ל-`ruff.exe` (binary מ-PyPI) עדיין לא ברור אם ייחסם; ייבדק בהרצה של `test.ps1` אצל המשתמש.
 - גרסאות בשימוש: Python 3.13, FastAPI 0.165, Starlette 1.10, pydantic 2.14, uvicorn 0.54, httpx2 2.16, ruff 0.17, pyright 1.1.414 (רץ על Node),
   pytest 9.2; Node 22, Vite 8.3, React 19.3, TypeScript 6.0.3, ESLint 10, typescript-eslint 8.73, Vitest 5.1,
-  TanStack Query 5.108, lucide-react 1.77.
+  TanStack Query 5.108, lucide-react 1.77, lightweight-charts 5.3.0, zustand 5.0.x.
 - **Windows (חד-פעמי):** `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, להתקין uv, Node 22+ ו-Git.
 - Ports: backend על `127.0.0.1:8000`, frontend על `localhost:5173` (`strictPort`). Vite עושה proxy ל-`/api`.
 - ה-`.ps1` נשמרים עם CRLF (לפי `.gitattributes`) ומכילים ASCII בלבד, בשביל תאימות ל-Windows PowerShell 5.1.
@@ -127,3 +141,9 @@
 - `git pull` ו-`setup.ps1` עברו. הטעינה הראשונה של המחירים (25 סימבולים, כולל טעינה ראשונה של yfinance ו-pandas תחת SAC) נמשכה בערך דקה, והסתיימה ב-`GET /api/quotes 200 OK`.
 - השוואה ל-TradingView (20.11): SPX, NDX, VIX, AAPL, TSLA ו-NFLX זהים. DJI, DXY ו-Forex שונים מעט. GOLD, SILVER ו-USOIL שונים משמעותית (futures מול spot, ראה בעיות ידועות).
 - המשתמש שאל אם אפשר לעבוד מהטלפון כשהמחשב כבוי. התשובה: כן לפיתוח ולבדיקות (הסשן רץ בענן); הדמו ונתוני Yahoo דורשים את המחשב שלו.
+
+### 2026-11-22 — R2a: גרף הנרות הבסיסי
+- המשתמש ביקש לראות גרפים, ולכן R2 פוצל ל-R2a (גרף בסיסי) ו-R2b. R1b נדחה לאחר R2b.
+- החלטות המשתמש לפני המימוש: volume בתחתית הגרף, לזכור את הסימבול האחרון, וכפתורי D/W/M.
+- נבנו `ChartEngine`, legend, interval switcher, Watchlist לחיץ ו-store. 8/8 gates ירוקים (backend 102 tests, frontend 71).
+- הדמו עם נתונים אמיתיים ממתין למשתמש.

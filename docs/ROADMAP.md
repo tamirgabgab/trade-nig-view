@@ -8,7 +8,7 @@
 | Stage A | Research, architecture, docs | M | ✅ Done (2026-11-22) |
 | R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
 | R1 | Market data layer | L | 🔨 R1a done (2026-11-22), R1b next |
-| R2 | Chart core | L | |
+| R2 | Chart core | L | 🔨 R2a done (2026-11-22), R2b next |
 | R3 | Indicator engine v1 | L | |
 | R4 | Drawing tools v1 | L | |
 | R5 | Market structure & reference values | M | |
@@ -96,10 +96,19 @@ sections, last price, change % (`/api/quotes`); lazy loading of older history on
 shift for intraday.
 Out of scope: indicators, drawings, saving layouts.
 
+R2a (basic candlestick chart) — delivered 2026-11-22
+- [x] `chart/ChartEngine.ts` (create/dispose, `setBars`, volume on its own scale, crosshair → bar index once per frame), `chart/theme.ts` (reads `tokens.css`)
+- [x] `LegendOHLC` synced to the crosshair (O/H/L/C, change vs previous close, volume)
+- [x] Interval switcher `1D`/`1W`/`1M`; watchlist row click/Enter selects the symbol; Zustand `chartStore` remembered in localStorage
+- [x] Unit tests: series mapping, volume coloring, initial visible range, crosshair index, price format, rAF throttle, `ChartEngine` against a mocked lightweight-charts
+- [x] Measured: first chart in 0.6 s (3,362 daily bars, headless Chromium, local backend)
+
+R2b (remaining)
+
 Tasks
-- [ ] `chart/ChartEngine.ts` (create/dispose, setBars, setChartType, setScaleMode, panes, crosshair → callback, time conversion), `chart/theme.ts`
+- [ ] `chart/ChartEngine.ts`: setChartType, setScaleMode, panes, time conversion for intraday (create/dispose, setBars, crosshair done in R2a)
 - [ ] Unit tests for pure helpers (time conversion, hollow-candle coloring, range-button → visible range math)
-- [ ] `LegendOHLC`, `SymbolSearchDialog`, `IntervalMenu`, `ChartTypeMenu`, `RangeBar`, `ScaleToggles`, `Watchlist` (+ `/api/quotes` backend + tests)
+- [ ] `SymbolSearchDialog`, `ChartTypeMenu`, `RangeBar`, `ScaleToggles`, `1h` in the interval switcher (`LegendOHLC`, interval switcher and `Watchlist` done)
 - [ ] `analysis/transforms.py` Heikin Ashi + tests; expose via `/api/bars?transform=heikin_ashi`
 - [ ] Lazy loading: `subscribeVisibleLogicalRangeChange` → fetch `end=<first bar>` page, prepend, keep viewport stable
 - [ ] Playwright setup + smoke test

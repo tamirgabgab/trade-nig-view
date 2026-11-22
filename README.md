@@ -4,11 +4,12 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** R1a (market data layer) complete — the watchlist shows live prices; charts come in R2.
+> **Status:** R2a complete — candlestick chart with volume and OHLC legend, D/W/M intervals, symbol switching from
+> the watchlist. Next: R2b (chart types, log/% scale, range buttons, symbol search).
 > See [HANDOFF.md](HANDOFF.md) for the live status and [docs/ROADMAP.md](docs/ROADMAP.md) for the plan.
 
 ![ChartLab shell (R0)](docs/img/shell-r0.png)
-<!-- Replaced with a chart screenshot in R2. -->
+<!-- Replaced with a chart screenshot (real data) after the R2a demo. -->
 
 ## Features
 
@@ -17,8 +18,9 @@ trading agent can plug in later.
 | Research, architecture, ADRs | ✅ Done |
 | Scaffolding, CI, quality gates, dark app shell (R0) | ✅ Done |
 | Market data: yfinance + Tiingo fallback, SQLite cache, validated daily/weekly/monthly bars, live watchlist prices (R1a) | ✅ Done |
-| Offline fixtures, 1h interval, generated API types (R1b) | ⏳ Next |
-| Chart: candles/bars/hollow/line/area/Heikin Ashi, volume, legend, log/% scale, watchlist (R2) | ⏳ Planned |
+| Offline fixtures, 1h interval, generated API types (R1b) | ⏳ After R2b |
+| Chart: candles + volume, OHLC legend on the crosshair, D/W/M intervals, symbol from the watchlist, pan/zoom (R2a) | ✅ Done |
+| Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ⏳ Next |
 | Indicators: SMA, EMA, WMA, MA Cross, BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3) | ⏳ Planned |
 | Drawing tools: lines, rays, channel, rectangle, text, measure, Fibonacci (R4) | ⏳ Planned |
 | Gaps, pivots, previous-period levels, 52-week high/low, data window (R5) | ⏳ Planned |
