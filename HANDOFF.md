@@ -5,7 +5,7 @@
 ## מצב נוכחי
 - **שלב:** Phase 1. R0, R1a ו-R2a הושלמו. **R1b (1h ו-4h, שעון ישראל, futures, OpenAPI types, סקריפט fixtures) הושלם** (2026-11-22) ונבדק בענן על נתוני הבדיקה. **ממתין לדמו אצל המשתמש: הרצת `make-fixtures.ps1` ובדיקת 1h/4h עם נתונים אמיתיים.**
 - **הסבב הבא:** **R2b** (S1 ב-[PLAN.md](PLAN.md)). **סדר ה-sessions הבאים, המלצת מודל ו-effort לכל אחד, ממצאי סקירת ה-UX והמתמטיקה של משפחת הממוצעים הנעים נמצאים ב-[PLAN.md](PLAN.md).** אחרי R2b: R3a (מנוע indicators ו-SMA/EMA/WMA/RMA), R3b (ממוצעים מוכללים), L1 (דפי לימוד), R3c, U1.
-- **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
+- **Branch:** עובדים ישירות על `main` (הוראה קבועה של המשתמש מ-2026-11-22). האייקון מעביר checkout ישן ל-`main` לבד.
 
 ## מה נעשה ב-session האחרון (2026-11-22, R0)
 - **Backend** (`backend/`):

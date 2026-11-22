@@ -97,7 +97,9 @@ ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.
   current docs before relying on them; record changes in an ADR.
 - End: run the full suite, update `HANDOFF.md` (Hebrew), README features, ROADMAP checkboxes; commit; give the demo
   checklist in Hebrew; STOP and wait for approval.
-- Git: develop on the branch the session specifies; never force-push shared branches.
+- Git: **all work goes to `main`** (user's standing instruction, 2026-11-22). Commit on `main` and push to
+  `origin main` directly; if the session also assigns a `claude/...` branch, keep it in sync with `main`, but `main` is
+  the source of truth (the desktop shortcut's `update.ps1` pulls `main`). No PRs unless asked. Never force-push.
 
 ## 10. Safety
 No real-money trading, no broker APIs or credentials, no order routing. The agent (P5) is paper-only. Not financial advice.
