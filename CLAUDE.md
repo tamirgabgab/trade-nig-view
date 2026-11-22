@@ -27,12 +27,16 @@ Treat every indicator like a DUT (golden model, directed + property tests, score
 | Install all | `.\scripts\setup.ps1` | `./scripts/setup.sh` |
 | Dev (backend :8000 + frontend :5173) | `.\scripts\dev.ps1` | `./scripts/dev.sh` |
 | All tests + lint + typecheck | `.\scripts\test.ps1` | `./scripts/test.sh` |
-| Backend tests | `cd backend; uv run pytest` | same |
-| Backend lint/format/types | `uv run ruff check . ; uv run ruff format --check . ; uv run mypy app` | same |
+| Backend tests | `cd backend; uv run python -m pytest` | same |
+| Backend lint/format/types | `uv run python -m ruff check . ; uv run python -m ruff format --check . ; uv run python -m mypy` | same |
 | Frontend tests | `cd frontend; npm test` | same |
 | Frontend lint/types/format | `npm run lint ; npm run typecheck ; npm run format:check` | same |
 | Frontend build | `npm run build` | same |
 | E2E (from R2) | `npm run e2e -- --trace off` | same |
+
+**Windows Smart App Control rule:** always invoke Python tools as `uv run python -m <tool>` (uvicorn, pytest, mypy,
+ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.exe` files uv creates in `.venv\Scripts`
+("An Application Control policy has blocked this file", os error 4551).
 
 ## 4. Repo map
 - `backend/` — FastAPI app (`app/api`, `app/data/{providers,cache}`, `app/indicators`, `app/analysis`, `app/replay`, `app/models`, `app/storage`) and `tests/` (`unit`, `api`, `golden`, `property`, `fixtures`).

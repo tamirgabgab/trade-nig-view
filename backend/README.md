@@ -5,7 +5,9 @@ FastAPI service for market data, indicators and analysis. See the repo root `REA
 
 ```bash
 uv sync                                   # install
-uv run uvicorn app.main:app --reload      # dev server on :8000
-uv run pytest                             # tests (network is blocked)
-uv run ruff check . && uv run ruff format --check . && uv run mypy
+uv run python -m uvicorn app.main:app --reload   # dev server on :8000
+uv run python -m pytest                          # tests (network is blocked)
+uv run python -m ruff check . && uv run python -m ruff format --check . && uv run python -m mypy
 ```
+
+Always use `uv run python -m <tool>`: Windows Smart App Control blocks the unsigned launcher `.exe` files in `.venv\Scripts`.

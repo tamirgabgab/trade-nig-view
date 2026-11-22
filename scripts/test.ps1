@@ -8,10 +8,10 @@
 . "$PSScriptRoot\_common.ps1"
 
 $steps = @(
-    @{ Name = 'backend: ruff check'; Dir = $BackendDir; Cmd = { uv run ruff check . } },
-    @{ Name = 'backend: ruff format --check'; Dir = $BackendDir; Cmd = { uv run ruff format --check . } },
-    @{ Name = 'backend: mypy'; Dir = $BackendDir; Cmd = { uv run mypy } },
-    @{ Name = 'backend: pytest'; Dir = $BackendDir; Cmd = { uv run pytest --cov --cov-report=term-missing:skip-covered } },
+    @{ Name = 'backend: ruff check'; Dir = $BackendDir; Cmd = { uv run python -m ruff check . } },
+    @{ Name = 'backend: ruff format --check'; Dir = $BackendDir; Cmd = { uv run python -m ruff format --check . } },
+    @{ Name = 'backend: mypy'; Dir = $BackendDir; Cmd = { uv run python -m mypy } },
+    @{ Name = 'backend: pytest'; Dir = $BackendDir; Cmd = { uv run python -m pytest --cov --cov-report=term-missing:skip-covered } },
     @{ Name = 'frontend: eslint'; Dir = $FrontendDir; Cmd = { npm run --silent lint } },
     @{ Name = 'frontend: prettier'; Dir = $FrontendDir; Cmd = { npm run --silent format:check } },
     @{ Name = 'frontend: tsc'; Dir = $FrontendDir; Cmd = { npm run --silent typecheck } },

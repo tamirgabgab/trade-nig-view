@@ -4,10 +4,10 @@
 set +e
 failed=()
 run() { local name="$1" dir="$2"; shift 2; step "$name"; (cd "$dir" && "$@") || failed+=("$name"); }
-run "backend: ruff check"          "$BACKEND_DIR"  uv run ruff check .
-run "backend: ruff format --check" "$BACKEND_DIR"  uv run ruff format --check .
-run "backend: mypy"                "$BACKEND_DIR"  uv run mypy
-run "backend: pytest"              "$BACKEND_DIR"  uv run pytest --cov --cov-report=term-missing:skip-covered
+run "backend: ruff check"          "$BACKEND_DIR"  uv run python -m ruff check .
+run "backend: ruff format --check" "$BACKEND_DIR"  uv run python -m ruff format --check .
+run "backend: mypy"                "$BACKEND_DIR"  uv run python -m mypy
+run "backend: pytest"              "$BACKEND_DIR"  uv run python -m pytest --cov --cov-report=term-missing:skip-covered
 run "frontend: eslint"             "$FRONTEND_DIR" npm run --silent lint
 run "frontend: prettier"           "$FRONTEND_DIR" npm run --silent format:check
 run "frontend: tsc"                "$FRONTEND_DIR" npm run --silent typecheck
