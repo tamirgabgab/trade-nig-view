@@ -72,9 +72,9 @@ flowchart LR
 | `config.py` | `Settings` (pydantic-settings) from env / `.env` |
 | `api/` | Thin routers: parse/validate, call services, map to response models. No business logic |
 | `models/` | Pydantic v2 request/response models and domain dataclasses (`Bar`, `BarFrame`, `Interval`, `Symbol`) |
-| `data/providers/` | `DataProvider` protocol + implementations (`yahoo.py`, `tiingo.py`, `twelvedata.py`, `fixtures.py`) |
+| `data/providers/` | `DataProvider` protocol + implementations (`yahoo.py`, `tiingo.py`, `fixtures.py`) |
 | `data/cache/` | `BarCache` (SQLite), range bookkeeping, incremental fetch planning |
-| `data/` (`bar_service.py`, `resample.py`, `validate.py`, `universe.py`) | Orchestration: cache → provider → validate → resample → adjust → truncate |
+| `data/` (`bar_service.py`, `resample.py`, `validate.py`, `adjust.py`, `ratelimit.py`, `universe.py`) | Orchestration: cache → provider → validate; per request: truncate(`until`) → adjust → resample → window/limit |
 | `indicators/` | One file per indicator (pure function) + `registry.py` + `core.py` (sma/ema/rma/stdev primitives) |
 | `analysis/` | Gaps, pivots, prev-period levels, 52w high/low, Heikin Ashi transform |
 | `replay/` | Cursor semantics helpers (`truncate_until`), later the event clock shared with the backtester |
@@ -145,7 +145,7 @@ OpenAPI at `/api/openapi.json`, docs at `/api/docs`.
 | `GET /health` | — | `{status:"ok", version, offline, providers:[{id, enabled}]}` | R0 |
 | `GET /symbols` | `query?`, `group?` | `[{symbol, name, exchange, type: "index"\|"etf"\|"stock"\|"future"\|"forex", group, timezone, currency, has_volume}]` | R1 |
 | `GET /bars` | `symbol`, `interval` (`1h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `adjusted=true`, `until?` | `{symbol, interval, adjusted, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, fetched_at}` | R1 |
-| `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, last, change, change_pct, time}]` from the two latest daily bars | R2 |
+| `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error}]` from the two latest unadjusted daily bars; per-symbol `error` instead of failing the request | R1a |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
 | `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted}` | `{id, params, outputs:{<name>:[{time, value}]}, markers?:[{time, kind, price?, text?}], warmup}` | R3 |
 | `GET /analysis/gaps` | `symbol`, `interval`, `min_pct=0`, `include_partial=false`, `until?` | `[{start_time, direction, top, bottom, size_pct, filled, fill_time?, max_fill_pct}]` | R5 |
@@ -283,7 +283,8 @@ used by R3 property tests and the R7 replay DoD.
   10 min after repeated 429s; next provider in `DATA_PROVIDERS` is tried).
 - **Stale-while-error**: if every provider fails, serve cached data with `meta.stale=true` and a warning header.
 - **Frontend**: TanStack Query `staleTime` 60 s for bars/quotes, `Infinity` for registry metadata.
-- **Offline**: `OFFLINE=1` → only the `fixtures` provider is registered; any network call raises.
+- **Offline**: `OFFLINE=1` → only the `fixtures` provider (CSV snapshots in `backend/fixtures/daily/`) is registered.
+- **Symbol universe**: `backend/config/universe.toml` (order = watchlist order; `group` = section).
 
 ## 9. Error handling
 

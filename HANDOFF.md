@@ -3,8 +3,8 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0 הושלם ואושר. **R1 — Market data layer בתהליך**: שלב 0, בדיקה מקדימה של ספריות native אצל המשתמש (`scripts/check_native.py`).
-- **הסבב הבא:** **R1 — Market data layer** (ראה `docs/ROADMAP.md`).
+- **שלב:** Phase 1. R0 הושלם ואושר. **R1a הושלם**: שכבת הנתונים, API, ו-Watchlist עם מחירים אמיתיים. ממתין לדמו אצל המשתמש. **אחריו: R1b** (fixtures אמיתיים, 1h, OpenAPI types).
+- **הסבב הבא:** סיום R1 (R1b), ואחריו **R2 — Chart core**.
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
 ## מה נעשה ב-session האחרון (2026-11-22, R0)
@@ -37,6 +37,15 @@
 6. לכתוב `YahooProvider`, `TiingoProvider` ו-`FixtureProvider`. אחר כך `scripts/make_fixtures.py` ו-commit של ה-fixtures.
 7. `/api/symbols` ו-`/api/bars`, ואחריהם generation של TS types מ-OpenAPI (`openapi-typescript`) ל-`frontend/src/api/schema.ts`.
 
+## R1a — מה נבנה (2026-11-22)
+- `backend/app/models/`: `BarFrame` (עמודות numpy) ו-`SymbolInfo`. `backend/config/universe.toml`: 25 סימבולים ב-5 קבוצות.
+- `backend/app/data/`: `validate`, `adjust`, `resample` (W/M בלי lookahead), `ratelimit` (token bucket, backoff, circuit breaker), `cache/bar_cache.py` (SQLite) ו-`bar_service.py`.
+- Providers: `yahoo` (ברירת מחדל), `tiingo` (fallback למניות ול-ETFs, עם התאמה ל-splits מ-`splitFactor`), ו-`fixtures` (offline).
+- API: `/api/symbols`, `/api/bars`, `/api/quotes`. ה-health מציג את שרשרת ה-providers הפעילה.
+- Frontend: `Watchlist.tsx` טוען סימבולים ומחירים מהשרת. ירוק ואדום לפי כיוון השינוי; `n/a` עם tooltip לסימבול שנכשל.
+- `scripts/make_fixtures.py`: מוריד snapshot קבוע (2015-01-01 עד 2026-10-30) ל-`backend/fixtures/daily/`.
+- בדיקות: 102 ב-backend (coverage 97%) ו-28 ב-frontend. כוללות תשובה מוקלטת אמיתית של Tiingo (AAPL, 17–20.11.2026) ו-hypothesis properties ל-resampling.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -55,14 +64,20 @@
 | 2026-11-22 | במחשב של המשתמש: הכול נשאר ב-Windows ו-Smart App Control דלוק. משתמשים ב-**Python הרשמי מ-python.org** (חתום על ידי PSF) במקום ה-Python של uv, עם `UV_PYTHON_PREFERENCE=only-system`; ו-`uvicorn` בלי `[standard]` | SAC חסם את `_socket.pyd` של ה-Python של uv ואת ה-launcher `uvicorn.exe`. WSL נשקל ונדחה על ידי המשתמש (רוצה הכול ב-Windows). פתוח: האם SAC יאפשר `.pyd` של צד שלישי (`pydantic_core`, בהמשך `numpy`) | — |
 | 2026-11-22 | `pyright` strict במקום `mypy` | `mypy` 2.x תלוי ב-`librt` הבינארי, ש-SAC חוסם. ל-`pyright` אין קבצים בינאריים (JavaScript על Node החתום) | [0001 amendment 2](docs/adr/0001-stack.md) |
 | 2026-11-22 | כלל לתלויות חדשות: להעדיף Python טהור או wheels נפוצים, ולאמת כל native extension חדש ב-`test.ps1` אצל המשתמש. ב-R1 מאמתים קודם כול את numpy ואת pandas | SAC במחשב של המשתמש | [0001 amendment 2](docs/adr/0001-stack.md) |
+| 2026-11-22 | `universe.toml` (TOML דרך `tomllib` של ה-stdlib) במקום YAML | בלי תלות נוספת | — |
+| 2026-11-22 | `/api/quotes` ומחירים ב-Watchlist הוקדמו מ-R2 ל-R1a | המשתמש רוצה לראות התקדמות בממשק | — |
+| 2026-11-22 | Tiingo מחזיר OHLC גולמי: מתאימים ל-splits לפי `splitFactor`, כדי ש-Yahoo ו-Tiingo יחזירו אותה סמנטיקה | עקביות בין providers | — |
+| 2026-11-22 | רענון cache: הורדה של 10 הימים האחרונים כל 15 דקות. אם החפיפה לא תואמת (split או דיבידנד חדש), מורידים את כל ההיסטוריה | נכונות מול חיסכון בבקשות | ARCHITECTURE §8 |
+| 2026-11-22 | אין workflow שעושה push אוטומטי של fixtures מ-CI (נחסם; דורש אישור מפורש של המשתמש). ה-fixtures ייווצרו אצל המשתמש | בטיחות | — |
 
 ## שאלות פתוחות אליך
-1. **Tiingo key** (נדרש רק ל-R1, ולא חוסם): יש לך, או שתפתח חשבון חינמי?
+1. **איך להכניס את ה-fixtures לריפו?** אפשרות א': אתה מריץ `make_fixtures.py` ועושה `git push` (נדרשת התחברות חד-פעמית ל-GitHub ב-Git). אפשרות ב': אתה מאשר workflow ב-GitHub Actions שמייצר אותם ועושה push ל-branch.
 2. **מקור ה-"Moving average crossover 9/21"** מהצילום (נדרש ל-R3).
-3. האם הלוק של ה-shell מקובל עליך (צבעים, צפיפות, רוחב ה-sidebar)? עדיף לשנות עכשיו מאשר אחרי R2.
 
 ## בעיות ידועות / tech debt
 - **אין גישה ל-Yahoo מסביבת הענן של Claude** (ה-proxy מחזיר `403`). ה-fixtures וה-recorded responses ייווצרו על המחשב של המשתמש באמצעות סקריפט שירוץ אצלו.
+- **ה-fixtures עדיין לא בריפו.** הבדיקות משתמשות כרגע בנתונים קטנים שנבנו ידנית (`backend/tests/fixtures/`). מצב `OFFLINE=1` עם ה-universe האמיתי לא יעבוד עד שה-fixtures ייווצרו.
+- הגישה ל-Yahoo מתבצעת רק מהמחשב של המשתמש. כאן בענן היא חסומה, ולכן בדקתי את `YahooProvider` עם DataFrame מזויף בפורמט של yfinance.
 - ✅ ה-`.ps1` scripts אומתו ב-CI על `windows-latest` תחת PowerShell 5.1 (run #3 ירוק). הריצה הראשונה נכשלה בגלל התנגשות שמות `Clock.tsx`/`clock.ts` ב-file system שלא מבחין בין אותיות גדולות לקטנות. תוקן, ונוסף כלל ל-`CLAUDE.md`.
 - ה-TS types של ה-API עדיין כתובים ידנית (`api/health.ts`). generation מ-OpenAPI ייכנס ב-R1.
 - ה-watchlist סטטי, וה-range/scale toggles הם UI state בלבד. הם יחוברו ל-chart ב-R2.

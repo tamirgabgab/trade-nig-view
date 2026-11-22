@@ -4,7 +4,7 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** Round 0 (scaffolding & quality gates) complete — the app shell runs; data and charts come next.
+> **Status:** R1a (market data layer) complete — the watchlist shows live prices; charts come in R2.
 > See [HANDOFF.md](HANDOFF.md) for the live status and [docs/ROADMAP.md](docs/ROADMAP.md) for the plan.
 
 ![ChartLab shell (R0)](docs/img/shell-r0.png)
@@ -16,7 +16,8 @@ trading agent can plug in later.
 |---|---|
 | Research, architecture, ADRs | ✅ Done |
 | Scaffolding, CI, quality gates, dark app shell (R0) | ✅ Done |
-| Market data: yfinance + Tiingo fallback, SQLite cache, offline fixtures (R1) | ⏳ Planned |
+| Market data: yfinance + Tiingo fallback, SQLite cache, validated daily/weekly/monthly bars, live watchlist prices (R1a) | ✅ Done |
+| Offline fixtures, 1h interval, generated API types (R1b) | ⏳ Next |
 | Chart: candles/bars/hollow/line/area/Heikin Ashi, volume, legend, log/% scale, watchlist (R2) | ⏳ Planned |
 | Indicators: SMA, EMA, WMA, MA Cross, BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3) | ⏳ Planned |
 | Drawing tools: lines, rays, channel, rectangle, text, measure, Fibonacci (R4) | ⏳ Planned |

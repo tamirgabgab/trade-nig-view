@@ -7,7 +7,7 @@
 |---|---|---|---|
 | Stage A | Research, architecture, docs | M | ✅ Done (2026-11-22) |
 | R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
-| R1 | Market data layer | L | 🔨 In progress |
+| R1 | Market data layer | L | 🔨 R1a done (2026-11-22), R1b next |
 | R2 | Chart core | L | |
 | R3 | Indicator engine v1 | L | |
 | R4 | Drawing tools v1 | L | |
@@ -58,18 +58,21 @@ dividend adjustment; `1W`/`1M` resampling; `1h` best effort (730-day limit enfor
 Out of scope: UI, Twelve Data/Massive/Stooq providers (optional stretch), intraday < 1h.
 
 Tasks
-- [ ] Domain models: `Interval`, `Bar`, `BarFrame` (numpy-backed columns), `SymbolInfo`
-- [ ] `config/universe.yaml` (Indices / ETFs / Stocks, + Futures/Forex if approved) with name, exchange, type, timezone, `has_volume`
-- [ ] `providers/base.py` protocol, `RateLimiter` (token bucket), `with_backoff` (exp. + jitter), circuit breaker
-- [ ] `providers/yahoo.py` (only module importing yfinance), `providers/tiingo.py` (httpx), `providers/fixtures.py`
-- [ ] `cache/bar_cache.py` (SQLite WAL, upsert, coverage, missing-range planner) + migrations
-- [ ] `validate.py` (OHLC sanity, duplicates, monotonic, negative volume, calendar gaps → warnings)
-- [ ] `resample.py` (W: ISO week, keyed by first trading day; M: calendar month; O=first, H=max, L=min, C=last, V=sum)
-- [ ] `adjust.py` (adjusted OHLC = raw × adjClose/close)
-- [ ] `bar_service.py` orchestrating the chain + `until` truncation
-- [ ] `scripts/make_fixtures.py` → `backend/tests/fixtures/daily/<SYMBOL>.csv` (≈ 2015-01-01 → 2026-10-30) — **run once by the user or in this session if Yahoo allows**, committed
-- [ ] API: `/api/symbols`, `/api/bars`; problem+json errors
-- [ ] Tests: provider contract tests with recorded responses (no network), cache incremental-fetch scenarios, resampling (hand vectors incl. holidays, partial weeks), validation, adjustment, API tests in offline mode
+- [x] Domain models: `Interval`, `BarFrame` (numpy-backed columns), `SymbolInfo`
+- [x] `backend/config/universe.toml` (stdlib `tomllib`, no YAML dependency): Indices / ETFs / Stocks / Futures / Forex with name, exchange, type, timezone, `has_volume`, `decimals`
+- [x] `providers/base.py` protocol, `TokenBucket`, `retry_with_backoff` (exp. + full jitter), `CircuitBreaker`
+- [x] `providers/yahoo.py` (only module importing yfinance), `providers/tiingo.py` (httpx2; split-adjusts raw OHLC), `providers/fixtures.py`
+- [x] `cache/bar_cache.py` (SQLite WAL, upsert, coverage, schema version); refresh = tail re-download + full reload when a split/dividend changes adjusted history
+- [x] `validate.py` (OHLC sanity, duplicates, monotonic, negative volume) — calendar-gap warnings moved to R5 (needs an exchange calendar)
+- [x] `resample.py` (W: ISO week, keyed by first trading day; M: calendar month; O=first, H=max, L=min, C=last, V=sum)
+- [x] `adjust.py` (adjusted OHLC = raw × adjClose/close)
+- [x] `bar_service.py` orchestrating the chain + `until` truncation (applied before adjust/resample)
+- [x] `scripts/make_fixtures.py` → `backend/fixtures/daily/<SYMBOL>.csv` (2015-01-01 → 2026-10-30)
+- [ ] Fixtures generated on the user's machine (the cloud sandbox cannot reach Yahoo) and committed
+- [x] API: `/api/symbols`, `/api/bars`, `/api/quotes` (moved forward from R2); problem+json errors
+- [x] Watchlist shows live last / change / change % from `/api/quotes` (moved forward from R2)
+- [ ] R1b: `1h` best-effort interval; OpenAPI → generated TS types (`frontend/src/api/schema.ts`)
+- [x] Tests: recorded Tiingo response + fake Yahoo history (no network), cache and refresh scenarios, resampling (hand vectors incl. holidays, year boundary, partial weeks + hypothesis no-lookahead), validation, adjustment, API tests in offline mode
 
 DoD: `/api/bars` returns validated data for every universe symbol (live and `OFFLINE=1`); tests cover cache, resampling,
 validation; network socket blocker proves no test touches the network; coverage ≥ 90% for `data/`.
