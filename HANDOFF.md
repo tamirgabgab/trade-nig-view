@@ -3,7 +3,7 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. **R0 — Scaffolding & quality gates** הושלם ואומת על המחשב שלך (Windows 11, Smart App Control דלוק): `dev.ps1` עובד ו-`test.ps1` עבר 8/8. ממתין לאישור שלך.
+- **שלב:** Phase 1. R0 הושלם ואושר. **R1 — Market data layer בתהליך**: שלב 0, בדיקה מקדימה של ספריות native אצל המשתמש (`scripts/check_native.py`).
 - **הסבב הבא:** **R1 — Market data layer** (ראה `docs/ROADMAP.md`).
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
@@ -62,6 +62,7 @@
 3. האם הלוק של ה-shell מקובל עליך (צבעים, צפיפות, רוחב ה-sidebar)? עדיף לשנות עכשיו מאשר אחרי R2.
 
 ## בעיות ידועות / tech debt
+- **אין גישה ל-Yahoo מסביבת הענן של Claude** (ה-proxy מחזיר `403`). ה-fixtures וה-recorded responses ייווצרו על המחשב של המשתמש באמצעות סקריפט שירוץ אצלו.
 - ✅ ה-`.ps1` scripts אומתו ב-CI על `windows-latest` תחת PowerShell 5.1 (run #3 ירוק). הריצה הראשונה נכשלה בגלל התנגשות שמות `Clock.tsx`/`clock.ts` ב-file system שלא מבחין בין אותיות גדולות לקטנות. תוקן, ונוסף כלל ל-`CLAUDE.md`.
 - ה-TS types של ה-API עדיין כתובים ידנית (`api/health.ts`). generation מ-OpenAPI ייכנס ב-R1.
 - ה-watchlist סטטי, וה-range/scale toggles הם UI state בלבד. הם יחוברו ל-chart ב-R2.

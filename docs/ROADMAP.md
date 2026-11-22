@@ -6,8 +6,8 @@
 | Round | Title | Size | Status |
 |---|---|---|---|
 | Stage A | Research, architecture, docs | M | ✅ Done (2026-11-22) |
-| R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) — awaiting approval |
-| R1 | Market data layer | L | ⏳ Next |
+| R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
+| R1 | Market data layer | L | 🔨 In progress |
 | R2 | Chart core | L | |
 | R3 | Indicator engine v1 | L | |
 | R4 | Drawing tools v1 | L | |
