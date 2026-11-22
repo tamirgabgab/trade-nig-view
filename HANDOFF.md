@@ -59,6 +59,12 @@
 - בדיקות: 71 ב-frontend (היו 28). כוללות `ChartEngine` מול mock של הספרייה, ו-`ChartArea` עם `FakeChartEngine` (`src/test/fakeChartEngine.ts`), כי ל-jsdom אין canvas.
 - בדיקה בדפדפן (Playwright, Chromium, backend במצב `OFFLINE=1` עם נתונים סינתטיים ב-scratchpad שלא נכנסו לריפו): הגרף הראשון תוך 0.6 שניות, ה-legend עוקב אחרי העכבר, החלפת סימבול ו-interval עובדות, הבחירה נשמרת אחרי רענון, ואין שגיאות ב-console.
 
+## עדכון אוטומטי באייקון (2026-11-22)
+- `scripts/update.ps1` (ו-`update.sh`): `git pull --ff-only` של ה-branch הנוכחי. אחר כך `uv sync` רק אם `uv.lock`, `pyproject.toml` או `.python-version` השתנו, או שאין `.venv`. ו-`npm ci` רק אם `package-lock.json` או `package.json` השתנו, או שאין `node_modules`.
+- `dev.ps1 -Open` (האייקון) מריץ אותו לפני ההפעלה. `-NoUpdate` מדלג. אם ה-pull נכשל (אין אינטרנט, שינויים מקומיים), מוצגת אזהרה צהובה והאפליקציה עולה עם הגרסה הקיימת. רק כשל בהתקנת ספריות עוצר את ההפעלה.
+- שינויים ב-`dev.ps1` עצמו נכנסים לתוקף רק בהפעלה שאחרי ה-pull (PowerShell כבר קרא את הקובץ).
+- נבדק: `update.sh` ב-7 תרחישים על clone זמני עם `uv`/`npm` מזויפים (נמצא ותוקן באג: תבנית ריקה ב-`grep` גרמה ל-`npm ci` מיותר). `update.ps1` נבדק ב-CI על Windows PowerShell 5.1 (checkout רגיל ו-remote לא זמין), כי בענן אין PowerShell.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -147,3 +153,4 @@
 - החלטות המשתמש לפני המימוש: volume בתחתית הגרף, לזכור את הסימבול האחרון, וכפתורי D/W/M.
 - נבנו `ChartEngine`, legend, interval switcher, Watchlist לחיץ ו-store. 8/8 gates ירוקים (backend 102 tests, frontend 71).
 - הדמו עם נתונים אמיתיים ממתין למשתמש.
+- המשתמש ביקש שאריץ בעצמי את `git pull` ו-`setup.ps1`. session בענן לא יכול להגיע למחשב שלו (התיקיות שלו לא זמינות ל-sessions בענן), ולכן נבחרה "דרך 2": האייקון מתעדכן לבד לפני כל הפעלה.

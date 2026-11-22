@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-    Create a "ChartLab" shortcut on the Desktop (and in the Start menu). Double-click it to start
-    the backend and frontend and open the app in the browser. Close its window to stop ChartLab.
+    Create a "ChartLab" shortcut on the Desktop (and in the Start menu). Double-click it to download
+    the latest version (update.ps1), start the backend and frontend and open the app in the browser. Close its window to stop ChartLab.
 .EXAMPLE
     .\scripts\install-shortcut.ps1
 #>
@@ -25,7 +25,7 @@ foreach ($folder in $targets) {
     $link.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$devScript`" -Open"
     $link.WorkingDirectory = $RepoRoot
     $link.IconLocation = "$icon,0"
-    $link.Description = 'Start ChartLab and open it in the browser'
+    $link.Description = 'Update ChartLab, start it and open it in the browser'
     $link.WindowStyle = 1  # normal window: shows logs and errors; closing it stops ChartLab
     $link.Save()
     Write-Host "Created $path" -ForegroundColor Green

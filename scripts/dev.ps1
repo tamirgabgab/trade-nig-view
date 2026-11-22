@@ -5,12 +5,15 @@
 .PARAMETER Open
     Open the app in the default browser once it is ready. Used by the desktop shortcut
     (see install-shortcut.ps1). If ChartLab is already running, only the browser is opened.
+    With -Open the latest version is downloaded first (update.ps1) unless -NoUpdate is given.
+.PARAMETER NoUpdate
+    With -Open: skip the automatic update and start the version already on disk.
 .EXAMPLE
     .\scripts\dev.ps1
 .EXAMPLE
     .\scripts\dev.ps1 -Open
 #>
-param([switch]$Open)
+param([switch]$Open, [switch]$NoUpdate)
 
 . "$PSScriptRoot\_common.ps1"
 
@@ -33,6 +36,12 @@ function Start-ChartLab {
         Write-Host "ChartLab is already running at $AppUrl" -ForegroundColor Green
         if ($Open) { Start-Process $AppUrl }
         return
+    }
+
+    if ($Open -and -not $NoUpdate) {
+        # Desktop shortcut: fetch the latest version and reinstall libraries if they changed.
+        & "$PSScriptRoot\update.ps1"
+        if ($LASTEXITCODE -ne 0) { throw 'Installing the updated libraries failed. Run .\scripts\setup.ps1 and read its error.' }
     }
 
     Assert-Command 'uv' 'Run .\scripts\setup.ps1 first.'

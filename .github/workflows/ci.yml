@@ -41,11 +41,27 @@ jobs:
           .\scripts\test.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The desktop shortcut runs update.ps1 before every start. Check it under PowerShell 5.1:
+      # an up-to-date checkout and an unreachable remote must both exit 0 (keep the version on disk).
+      - name: Update script (Windows PowerShell)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          .\scripts\update.ps1
+          if ($LASTEXITCODE -ne 0) { throw "update.ps1 failed on a normal checkout" }
+          $url = git remote get-url origin
+          git remote set-url origin https://invalid.example.invalid/none.git
+          .\scripts\update.ps1
+          $code = $LASTEXITCODE
+          git remote set-url origin $url
+          if ($code -ne 0) { throw "update.ps1 must not fail when the remote is unreachable" }
+
       - name: Setup + all gates (bash)
         if: runner.os != 'Windows'
         run: |
           ./scripts/setup.sh
           ./scripts/test.sh
+          ./scripts/update.sh
 
       - name: Frontend production build
         working-directory: frontend

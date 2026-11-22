@@ -53,8 +53,10 @@ Copy-Item .env.example .env        # optional API keys
 .\scripts\install-shortcut.ps1     # optional: "ChartLab" icon on the Desktop and in Start
 ```
 
-After `install-shortcut.ps1`, double-click **ChartLab** on the Desktop: it starts the backend and the
-frontend and opens the app in your browser. Close the black ChartLab window to stop it.
+After `install-shortcut.ps1`, double-click **ChartLab** on the Desktop: it downloads the latest version
+(`git pull --ff-only`, libraries reinstalled only if they changed), starts the backend and the frontend and
+opens the app in your browser. Offline or if the pull fails, it starts the version already on disk. Close the
+black ChartLab window to stop it. To update without starting: `.\scripts\update.ps1`.
 
 > **Windows with Smart App Control on:** use the official, signed Python from python.org instead of uv's
 > downloaded Python (SAC blocks its unsigned `.pyd` files):
