@@ -1,0 +1,25 @@
+# ADR 0004 — Own drawing framework on Lightweight Charts v5 primitives
+
+- Status: Accepted (2026-11-22)
+
+## Context
+Lightweight Charts has no drawing tools. Community v5 options found (2026-11-22):
+- `lightweight-charts-drawing` — MIT, v0.11.1, 86 tools, very active, essentially single-maintainer, pre-1.0 API.
+- `difurious/lightweight-charts-line-tools-core` — GitHub only (not on npm), young.
+Our needs: a dozen tools in Phase 1, our own persistence schema (time/price anchors, versioned), undo/redo, replay
+interaction, replaceable chart library, and fully unit-tested geometry.
+
+## Decision
+Build a small `DrawingManager` on **series primitives** (one primitive per drawing, `paneViews` for rendering,
+`hitTest` for hover/selection, price/time axis views for labels). Geometry, snapping (magnet) and hit-testing live in
+pure TS modules with unit tests. Study `lightweight-charts-drawing` for interaction details and defaults; do not depend on it.
+
+## Consequences
+- + Full control over schema, persistence, undo/redo and tests; no pre-1.0 dependency churn.
+- − More work in R4 (estimated L). Scope is limited to ~12 tools in Phase 1; more tools are additive.
+- Re-evaluate at the Phase-1 review: if `lightweight-charts-drawing` reaches 1.0 with a stable serialization API,
+  consider adopting it for the long tail of tools (patterns, Gann) behind our `DrawingManager` interface.
+
+## Alternatives
+- Adopt `lightweight-charts-drawing` now: fastest path to many tools, but couples our persistence to a v0 API and a single maintainer. Rejected for now.
+- HTML/SVG overlay on top of the canvas: easy to prototype but breaks the "no DOM hacks on the canvas" rule and drifts on pan/zoom. Rejected.
