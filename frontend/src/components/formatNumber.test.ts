@@ -1,4 +1,10 @@
-import { direction, formatPercent, formatPrice } from './formatNumber.ts';
+import {
+  direction,
+  formatPercent,
+  formatPrice,
+  formatSigned,
+  formatVolume,
+} from './formatNumber.ts';
 
 describe('number formatting', () => {
   it('formats prices with fixed decimals and separators', () => {
@@ -17,5 +23,18 @@ describe('number formatting', () => {
     expect(direction(-0.01)).toBe('down');
     expect(direction(0)).toBe('flat');
     expect(direction(null)).toBe('flat');
+  });
+
+  it('formats volume compactly', () => {
+    expect(formatVolume(950)).toBe('950');
+    expect(formatVolume(62_350_000)).toBe('62.35M');
+    expect(formatVolume(1_234_567_890)).toBe('1.23B');
+    expect(formatVolume(45_000)).toBe('45K');
+  });
+
+  it('adds a plus sign to positive values only', () => {
+    expect(formatSigned(0.38, 2)).toBe('+0.38');
+    expect(formatSigned(-6.65, 2)).toBe('-6.65');
+    expect(formatSigned(0, 2)).toBe('0.00');
   });
 });

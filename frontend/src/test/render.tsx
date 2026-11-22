@@ -25,7 +25,7 @@ export function stubFetchJson(status: number, body: unknown): void {
   );
 }
 
-type Route = { status?: number; body: unknown } | (() => Promise<Response>);
+type Route = { status?: number; body: unknown } | ((url: URL) => Promise<Response>);
 
 /**
  * Stub global fetch with responses chosen by URL path prefix, e.g. `{ '/api/health': {...} }`.
@@ -36,18 +36,28 @@ export function stubApi(routes: Record<string, Route>): void {
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      const path = new URL(url, 'http://localhost').pathname;
-      const route = routes[path];
+      const parsed = new URL(url, 'http://localhost');
+      const route = routes[parsed.pathname];
       if (route === undefined) {
         return Promise.resolve(new Response('{"detail":"no stub"}', { status: 404 }));
       }
-      if (typeof route === 'function') return route();
+      if (typeof route === 'function') return route(parsed);
       return Promise.resolve(
         new Response(JSON.stringify(route.body), {
           status: route.status ?? 200,
           headers: { 'Content-Type': 'application/json' },
         }),
       );
+    }),
+  );
+}
+
+/** JSON response helper for function routes. */
+export function jsonResponse(body: unknown, status = 200): Promise<Response> {
+  return Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
     }),
   );
 }
@@ -135,3 +145,25 @@ export const QUOTES = [
     error: null,
   },
 ];
+
+/** Three daily AAPL bars: up day, down day, up day. */
+export const AAPL_BARS = [
+  { time: '2026-11-18', open: 340, high: 345, low: 338.5, close: 344.1, volume: 51_200_000 },
+  { time: '2026-11-19', open: 344, high: 350.2, low: 343, close: 349.21, volume: 48_700_000 },
+  { time: '2026-11-20', open: 348, high: 349, low: 340.1, close: 342.56, volume: 62_350_000 },
+];
+
+/** A GET /api/bars body (snake_case, as the backend sends it). */
+export function barsBody(symbol: string, interval: string, bars: unknown[]) {
+  return {
+    symbol,
+    interval,
+    adjusted: true,
+    timezone: 'America/New_York',
+    source: 'fixtures',
+    stale: false,
+    has_more_before: false,
+    warnings: [],
+    bars,
+  };
+}

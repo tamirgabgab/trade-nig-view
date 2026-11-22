@@ -1,6 +1,7 @@
 import { Fragment, useMemo } from 'react';
 
 import { groupSymbols, useQuotes, useSymbols, type Quote, type SymbolInfo } from '../api/market.ts';
+import { useChartStore } from '../store/chartStore.ts';
 import { direction, formatPercent, formatPrice } from './formatNumber.ts';
 import styles from './RightSidebar.module.css';
 
@@ -43,6 +44,8 @@ function QuoteCells({ info, quote }: { info: SymbolInfo; quote: Quote | undefine
 
 /** Watchlist table: sections from the universe, prices from GET /api/quotes. */
 export function Watchlist() {
+  const activeSymbol = useChartStore((s) => s.symbol);
+  const setSymbol = useChartStore((s) => s.setSymbol);
   const symbolsQuery = useSymbols();
   const symbols = useMemo(() => symbolsQuery.data ?? [], [symbolsQuery.data]);
   const quotesQuery = useQuotes(useMemo(() => symbols.map((s) => s.symbol), [symbols]));
@@ -96,9 +99,22 @@ export function Watchlist() {
               {members.map((info) => (
                 <tr
                   key={info.symbol}
-                  className={styles.row}
-                  title={`${info.name} · ${info.exchange}`}
+                  className={[styles.row, info.symbol === activeSymbol ? styles.active : '']
+                    .filter(Boolean)
+                    .join(' ')}
+                  title={`${info.name} · ${info.exchange} (click to chart)`}
                   data-symbol={info.symbol}
+                  aria-current={info.symbol === activeSymbol ? 'true' : undefined}
+                  tabIndex={0}
+                  onClick={() => {
+                    setSymbol(info.symbol);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSymbol(info.symbol);
+                    }
+                  }}
                 >
                   <td className={styles.symbol}>{info.display}</td>
                   <QuoteCells info={info} quote={quotes.get(info.symbol)} />

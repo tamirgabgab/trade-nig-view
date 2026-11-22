@@ -13,7 +13,10 @@ import {
   Undo2,
 } from 'lucide-react';
 
+import { useSymbols } from '../api/market.ts';
+import { useChartStore } from '../store/chartStore.ts';
 import { IconButton } from './IconButton.tsx';
+import { IntervalSwitcher } from './IntervalSwitcher.tsx';
 import styles from './Toolbar.module.css';
 
 const ICON_SIZE = 18;
@@ -24,23 +27,29 @@ interface TopToolbarProps {
 
 /** Top bar: symbol, interval, chart type, indicators, alert, replay, undo/redo, layout actions. */
 export function TopToolbar({ className }: TopToolbarProps) {
+  const symbol = useChartStore((s) => s.symbol);
+  const display = useSymbols().data?.find((s) => s.symbol === symbol)?.display ?? symbol;
   return (
     <header className={[styles.bar, className].join(' ')} role="toolbar" aria-label="Chart toolbar">
       <button
         type="button"
         className={styles.symbolButton}
-        aria-label="Symbol search: AAPL"
+        aria-label={`Symbol search: ${display}`}
         aria-disabled="true"
-        title="Symbol search — coming in R2"
+        title="Symbol search — coming in R2b (pick a symbol in the watchlist for now)"
       >
         <Search size={16} aria-hidden="true" />
-        AAPL
+        {display}
       </button>
-      <IconButton label="Compare or add symbol" icon={<Plus size={ICON_SIZE} />} comingIn="R2" />
+      <IconButton
+        label="Compare or add symbol"
+        icon={<Plus size={ICON_SIZE} />}
+        comingIn="a later round"
+      />
       <span className={styles.separator} aria-hidden="true" />
-      <IconButton label="Interval" text="D" comingIn="R2" />
+      <IntervalSwitcher />
       <span className={styles.separator} aria-hidden="true" />
-      <IconButton label="Chart type" icon={<ChartCandlestick size={ICON_SIZE} />} comingIn="R2" />
+      <IconButton label="Chart type" icon={<ChartCandlestick size={ICON_SIZE} />} comingIn="R2b" />
       <IconButton
         label="Indicators"
         text="Indicators"

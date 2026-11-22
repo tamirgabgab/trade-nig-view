@@ -56,3 +56,8 @@
   font-size: var(--font-size-sm);
   padding: 0 var(--space-2);
 }
+
+.group {
+  display: flex;
+  gap: 2px;
+}

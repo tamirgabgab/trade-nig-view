@@ -62,8 +62,22 @@
   text-transform: uppercase;
 }
 
+.row {
+  cursor: pointer;
+}
+
 .row:hover td {
   background: var(--color-hover);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.active td,
+.active:hover td {
+  background: var(--color-accent-soft);
 }
 
 .symbol {

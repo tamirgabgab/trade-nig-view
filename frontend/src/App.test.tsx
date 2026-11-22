@@ -2,13 +2,26 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
-import { HEALTH_OK, QUOTES, renderWithQuery, stubApi, SYMBOLS } from './test/render.tsx';
+import { useChartStore } from './store/chartStore.ts';
+import {
+  AAPL_BARS,
+  barsBody,
+  HEALTH_OK,
+  QUOTES,
+  renderWithQuery,
+  stubApi,
+  SYMBOLS,
+} from './test/render.tsx';
+
+vi.mock('./chart/ChartEngine.ts', () => import('./test/fakeChartEngine.ts'));
 
 beforeEach(() => {
+  useChartStore.setState({ symbol: 'AAPL', interval: '1D' });
   stubApi({
     '/api/health': { body: HEALTH_OK },
     '/api/symbols': { body: SYMBOLS },
     '/api/quotes': { body: QUOTES },
+    '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
   });
 });
 
@@ -96,5 +109,10 @@ describe('App shell', () => {
       expect(within(table).getByText(title)).toBeInTheDocument();
     }
     expect(within(table).getByText('AAPL')).toBeInTheDocument();
+  });
+
+  it('shows the selected symbol on the symbol button', async () => {
+    renderWithQuery(<App />);
+    expect(await screen.findByRole('button', { name: 'Symbol search: AAPL' })).toBeInTheDocument();
   });
 });

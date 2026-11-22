@@ -1,27 +1,82 @@
-import { ChartCandlestick } from 'lucide-react';
+import { useState } from 'react';
 
+import { useBars } from '../api/bars.ts';
+import { useSymbols } from '../api/market.ts';
+import { useChartStore } from '../store/chartStore.ts';
 import styles from './ChartArea.module.css';
+import { ChartView } from './ChartView.tsx';
+import { LegendOHLC } from './LegendOHLC.tsx';
+import { legendValues } from './legendValues.ts';
 
 interface ChartAreaProps {
   className?: string | undefined;
 }
 
-/** Placeholder for the chart. ChartEngine (lightweight-charts v5) mounts here in R2. */
+const DEFAULT_DECIMALS = 2;
+
+/** Chart region: candlestick + volume chart of the selected symbol, with the OHLC legend. */
 export function ChartArea({ className }: ChartAreaProps) {
+  const symbol = useChartStore((s) => s.symbol);
+  const interval = useChartStore((s) => s.interval);
+  const symbols = useSymbols().data;
+  const barsQuery = useBars(symbol, interval);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  const data = barsQuery.data;
+  const shownSymbol = data?.symbol ?? symbol;
+  const info = symbols?.find((s) => s.symbol === shownSymbol);
+  const selected = symbols?.find((s) => s.symbol === symbol);
+  const bars = data?.bars ?? [];
+  const decimals = info?.decimals ?? DEFAULT_DECIMALS;
+  const hasVolume = info?.hasVolume ?? true;
+
+  let status: string | undefined;
+  if (barsQuery.isFetching && (barsQuery.isPlaceholderData || data === undefined)) {
+    status = `Loading ${selected?.display ?? symbol}…`;
+  } else if (data?.stale) {
+    status = 'Cached data (refresh failed)';
+  }
+
   return (
     <main className={[styles.area, className].join(' ')} aria-label="Chart">
-      <div className={styles.legend}>
-        <span className={styles.title}>Apple Inc. · 1D · NASDAQ</span>
-        <span className={styles.muted}>O — H — L — C —</span>
-      </div>
-      <div className={styles.empty}>
-        <ChartCandlestick size={40} strokeWidth={1.25} aria-hidden="true" />
-        <p className={styles.emptyTitle}>No chart yet</p>
-        <p className={styles.emptyText}>
-          The candlestick chart arrives in R2. Market data is already live: see the watchlist on the
-          right.
-        </p>
-      </div>
+      <LegendOHLC
+        title={info?.name ?? shownSymbol}
+        interval={data?.interval ?? interval}
+        exchange={info?.exchange ?? ''}
+        values={legendValues(bars, hoverIndex)}
+        decimals={decimals}
+        hasVolume={hasVolume}
+        status={status}
+      />
+      <ChartView
+        bars={bars}
+        decimals={decimals}
+        hasVolume={hasVolume}
+        viewKey={`${shownSymbol}|${data?.interval ?? interval}`}
+        onHover={setHoverIndex}
+      />
+      {barsQuery.isError && (
+        <div className={styles.overlay} role="alert">
+          <p className={styles.overlayTitle}>
+            Could not load {selected?.display ?? symbol} ({interval})
+          </p>
+          <p className={styles.overlayText}>{barsQuery.error.message}</p>
+          <button
+            type="button"
+            className={styles.retry}
+            onClick={() => {
+              void barsQuery.refetch();
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+      {data !== undefined && bars.length === 0 && !barsQuery.isError && (
+        <div className={styles.overlay}>
+          <p className={styles.overlayTitle}>No bars for {selected?.display ?? symbol}</p>
+        </div>
+      )}
     </main>
   );
 }
