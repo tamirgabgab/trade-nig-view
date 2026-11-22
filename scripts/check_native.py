@@ -1,3 +1,5 @@
+# ruff: noqa: PLC0415, S101, PLR2004
+# Lazy imports are the point (each package is probed in isolation); asserts are the checks.
 """Check that the native (compiled) Python packages ChartLab needs can load on this machine.
 
 Windows Smart App Control blocks unsigned DLL/.pyd files it has no reputation for. Run this before
