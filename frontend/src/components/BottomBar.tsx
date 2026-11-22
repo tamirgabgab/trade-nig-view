@@ -1,43 +1,40 @@
 import { CalendarRange } from 'lucide-react';
-import { useState } from 'react';
 
+import { RANGE_LABEL, RANGES } from '../chart/visibleRange.ts';
+import { useChartStore } from '../store/chartStore.ts';
 import styles from './BottomBar.module.css';
 import { Clock } from './Clock.tsx';
 import { HealthBadge } from './HealthBadge.tsx';
 import { IconButton } from './IconButton.tsx';
-import { RANGES, type RangeId } from './ranges.ts';
-
-type ScaleMode = 'normal' | 'percent' | 'log';
 
 interface BottomBarProps {
   className?: string | undefined;
 }
 
-/**
- * Bottom bar: visible-range buttons, go-to-date, clock, scale toggles, ADJ, API status.
- * R0 keeps the selections as local UI state; R2 connects them to the chart.
- */
+/** Bottom bar: visible-range buttons, go-to-date, clock, scale toggles, ADJ, API status. */
 export function BottomBar({ className }: BottomBarProps) {
-  const [range, setRange] = useState<RangeId>('1Y');
-  const [scale, setScale] = useState<ScaleMode>('normal');
-  const [autoScale, setAutoScale] = useState(true);
-  const [adjusted, setAdjusted] = useState(true);
-
-  const toggleScale = (mode: Exclude<ScaleMode, 'normal'>) => {
-    setScale((current) => (current === mode ? 'normal' : mode));
-  };
+  const range = useChartStore((s) => s.range);
+  const selectRange = useChartStore((s) => s.selectRange);
+  const scaleMode = useChartStore((s) => s.scaleMode);
+  const toggleScaleMode = useChartStore((s) => s.toggleScaleMode);
+  const autoScale = useChartStore((s) => s.autoScale);
+  const setAutoScale = useChartStore((s) => s.setAutoScale);
+  const adjusted = useChartStore((s) => s.adjusted);
+  const setAdjusted = useChartStore((s) => s.setAdjusted);
 
   return (
     <footer className={[styles.bar, className].join(' ')} aria-label="Chart range and scale">
-      <div role="group" aria-label="Visible range">
+      <div role="group" aria-label="Visible range" className={styles.ranges}>
         {RANGES.map((id) => (
           <button
             key={id}
             type="button"
             className={styles.range}
             aria-pressed={range === id}
+            aria-label={RANGE_LABEL[id]}
+            title={RANGE_LABEL[id]}
             onClick={() => {
-              setRange(id);
+              selectRange(id);
             }}
           >
             {id}
@@ -57,10 +54,11 @@ export function BottomBar({ className }: BottomBarProps) {
       <button
         type="button"
         className={styles.range}
-        aria-pressed={scale === 'percent'}
+        aria-pressed={scaleMode === 'percent'}
+        aria-label="Percent scale"
         title="Percent scale"
         onClick={() => {
-          toggleScale('percent');
+          toggleScaleMode('percent');
         }}
       >
         %
@@ -68,10 +66,11 @@ export function BottomBar({ className }: BottomBarProps) {
       <button
         type="button"
         className={styles.range}
-        aria-pressed={scale === 'log'}
+        aria-pressed={scaleMode === 'log'}
+        aria-label="Logarithmic scale"
         title="Logarithmic scale"
         onClick={() => {
-          toggleScale('log');
+          toggleScaleMode('log');
         }}
       >
         log
@@ -80,9 +79,10 @@ export function BottomBar({ className }: BottomBarProps) {
         type="button"
         className={styles.range}
         aria-pressed={autoScale}
+        aria-label="Auto-fit price scale"
         title="Auto-fit price scale"
         onClick={() => {
-          setAutoScale((value) => !value);
+          setAutoScale(!autoScale);
         }}
       >
         auto
@@ -91,9 +91,10 @@ export function BottomBar({ className }: BottomBarProps) {
         type="button"
         className={styles.range}
         aria-pressed={adjusted}
+        aria-label="Adjust history for dividends"
         title="Adjust history for dividends"
         onClick={() => {
-          setAdjusted((value) => !value);
+          setAdjusted(!adjusted);
         }}
       >
         ADJ

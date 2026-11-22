@@ -5,9 +5,12 @@ import {
   hasIntradayTimes,
   initialRange,
   INITIAL_VISIBLE_BARS,
+  prependedCount,
   priceFormat,
   RIGHT_OFFSET_BARS,
   toCandles,
+  toHollowCandles,
+  toLine,
   toVolume,
 } from './seriesData.ts';
 
@@ -118,5 +121,41 @@ describe('priceFormat', () => {
   it('clamps nonsense values', () => {
     expect(priceFormat(-3).precision).toBe(0);
     expect(priceFormat(20).precision).toBe(8);
+  });
+});
+
+describe('toHollowCandles', () => {
+  it('colours by close vs previous close and hollows bodies that close above their open', () => {
+    const points = toHollowCandles(BARS, DATES, 'up', 'down');
+    // bar 0: vs its own open (11 > 10) -> up, hollow; bar 1: 10.5 < 11 -> down, filled;
+    // bar 2: 10.5 == 10.5 (unchanged) -> up, close == open -> filled.
+    expect(points.map((p) => p.borderColor)).toEqual(['up', 'down', 'up']);
+    expect(points.map((p) => p.color)).toEqual(['rgba(0, 0, 0, 0)', 'down', 'up']);
+    expect(points[1]).toMatchObject({ time: '2026-11-19', open: 11, close: 10.5 });
+  });
+});
+
+describe('toLine', () => {
+  it('plots closes', () => {
+    expect(toLine(BARS, DATES)).toEqual([
+      { time: '2026-11-18', value: 11 },
+      { time: '2026-11-19', value: 10.5 },
+      { time: '2026-11-20', value: 10.5 },
+    ]);
+  });
+});
+
+describe('prependedCount', () => {
+  const older: Bar = { ...BARS[0], time: '2026-11-17' } as Bar;
+
+  it('counts bars added in front of the same history', () => {
+    expect(prependedCount(BARS, [older, ...BARS])).toBe(1);
+  });
+
+  it('is 0 for a different data set, an unchanged one, or an empty start', () => {
+    expect(prependedCount(BARS, BARS)).toBe(0);
+    expect(prependedCount([], BARS)).toBe(0);
+    expect(prependedCount(BARS, [older, ...BARS.slice(1)])).toBe(0);
+    expect(prependedCount(BARS, [older, ...BARS, older])).toBe(0);
   });
 });

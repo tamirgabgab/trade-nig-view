@@ -1,4 +1,5 @@
 .bar {
+  container-type: inline-size;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -40,13 +41,17 @@
 }
 
 .clock {
+  flex-shrink: 0;
   padding: 0 var(--space-2);
+  white-space: nowrap;
   color: var(--color-text);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
 .badge {
+  flex-shrink: 0;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -71,4 +76,18 @@
 
 .down {
   color: var(--color-down);
+}
+
+.ranges {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+/* Narrow chart (small window, wide sidebar): keep the controls, drop the clock and badge text. */
+@container (max-width: 720px) {
+  .clock,
+  .badgeText {
+    display: none;
+  }
 }

@@ -23,10 +23,11 @@ export function HealthBadge() {
       className={[styles.badge, state === 'pending' ? '' : styles[state]].join(' ')}
       role="status"
       title={title}
+      aria-label={text}
       data-state={state}
     >
       <span className={styles.dot} aria-hidden="true" />
-      {text}
+      <span className={styles.badgeText}>{text}</span>
     </span>
   );
 }

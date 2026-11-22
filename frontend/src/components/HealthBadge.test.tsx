@@ -12,7 +12,7 @@ describe('HealthBadge', () => {
     stubFetchJson(200, { status: 'ok', version: '0.1.0', offline: false, providers: [] });
     renderWithQuery(<HealthBadge />);
 
-    const badge = await screen.findByText('API');
+    const badge = await screen.findByRole('status', { name: 'API' });
     expect(badge).toHaveAttribute('data-state', 'ok');
     expect(badge).toHaveAttribute('title', 'Backend v0.1.0');
   });
@@ -21,7 +21,10 @@ describe('HealthBadge', () => {
     stubFetchJson(200, { status: 'ok', version: '0.1.0', offline: true, providers: [] });
     renderWithQuery(<HealthBadge />);
 
-    expect(await screen.findByText('API offline data')).toHaveAttribute('data-state', 'ok');
+    expect(await screen.findByRole('status', { name: 'API offline data' })).toHaveAttribute(
+      'data-state',
+      'ok',
+    );
   });
 
   it('shows down when the backend is unreachable', async () => {
@@ -31,6 +34,9 @@ describe('HealthBadge', () => {
     );
     renderWithQuery(<HealthBadge />);
 
-    expect(await screen.findByText('API down')).toHaveAttribute('data-state', 'down');
+    expect(await screen.findByRole('status', { name: 'API down' })).toHaveAttribute(
+      'data-state',
+      'down',
+    );
   });
 });

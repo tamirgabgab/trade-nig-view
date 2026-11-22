@@ -84,3 +84,9 @@
   right: calc(100% + 6px);
   transform: translateY(-50%);
 }
+
+/* Right-aligned with the button: for buttons near the right edge, so the tooltip stays on screen. */
+.bottomEnd::after {
+  top: calc(100% + 6px);
+  right: 0;
+}

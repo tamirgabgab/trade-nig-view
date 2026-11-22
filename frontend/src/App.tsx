@@ -3,10 +3,13 @@ import { BottomBar } from './components/BottomBar.tsx';
 import { ChartArea } from './components/ChartArea.tsx';
 import { DrawingToolbar } from './components/DrawingToolbar.tsx';
 import { RightSidebar } from './components/RightSidebar.tsx';
+import { SymbolSearchDialog } from './components/SymbolSearchDialog.tsx';
 import { TopToolbar } from './components/TopToolbar.tsx';
+import { useSymbolSearchHotkey } from './components/useSymbolSearchHotkey.ts';
 
 /** Application shell: five regions laid out like a desktop charting terminal. */
 export function App() {
+  useSymbolSearchHotkey();
   return (
     <div className={styles.shell}>
       <TopToolbar className={styles.top} />
@@ -14,6 +17,7 @@ export function App() {
       <ChartArea className={styles.chart} />
       <RightSidebar className={styles.right} />
       <BottomBar className={styles.bottom} />
+      <SymbolSearchDialog />
     </div>
   );
 }

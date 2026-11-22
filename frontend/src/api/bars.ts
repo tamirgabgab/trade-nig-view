@@ -1,4 +1,8 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
+import { useMemo } from 'react';
+
+import type { BarTransform } from '../chart/chartTypes.ts';
+import { barSeconds } from '../chart/visibleRange.ts';
 
 import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 
@@ -89,20 +93,96 @@ export function parseBars(body: unknown): BarsData {
   };
 }
 
-export function barsPath(symbol: string, interval: Interval, limit = BARS_LIMIT): string {
+/** Bars requested per older page when the user scrolls left. */
+export const OLDER_PAGE_LIMIT = 5000;
+
+export interface BarsQuery {
+  symbol: string;
+  interval: Interval;
+  adjusted: boolean;
+  transform: BarTransform;
+}
+
+export function barsPath(
+  { symbol, interval, adjusted, transform }: BarsQuery,
+  { limit = BARS_LIMIT, before }: { limit?: number; before?: number | undefined } = {},
+): string {
   const query = new URLSearchParams({ symbol, interval, limit: String(limit) });
+  if (!adjusted) query.set('adjusted', 'false');
+  if (transform !== 'none') query.set('transform', transform);
+  if (before !== undefined) query.set('before', String(before));
   return `/bars?${query.toString()}`;
 }
 
+/** Older bars first; pages arrive newest first (page 0 is the latest history). */
+export function mergePages(pages: readonly BarsData[]): Bar[] {
+  if (pages.length === 1) return pages[0]?.bars ?? [];
+  return [...pages].reverse().flatMap((page) => page.bars);
+}
+
+/** The `before=` cursor for the page older than `page`, or undefined when there is none. */
+export function olderCursor(page: BarsData): number | undefined {
+  const first = page.bars[0];
+  return page.hasMoreBefore && first !== undefined ? barSeconds(first.time) : undefined;
+}
+
+export interface BarHistory {
+  /** Newest page's metadata (symbol, interval, stale…); undefined before the first response. */
+  data: BarsData | undefined;
+  /** Every loaded bar, oldest first. */
+  bars: Bar[];
+  hasOlder: boolean;
+  loadOlder: () => void;
+  isLoadingOlder: boolean;
+  /** Loading a new data set (first load or another symbol/interval/setting). */
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  refetch: () => void;
+}
+
 /**
- * Bars of one symbol and interval. The previous chart stays on screen while the next one loads
+ * Bars of one symbol and interval, newest page first; `loadOlder` fetches the page before the
+ * oldest loaded bar. The previous chart stays on screen while the next one loads
  * (`keepPreviousData`), so switching symbols does not flash an empty chart.
  */
-export function useBars(symbol: string, interval: Interval) {
-  return useQuery({
-    queryKey: ['bars', symbol, interval],
-    queryFn: ({ signal }) => apiGet(barsPath(symbol, interval), parseBars, { signal }),
+export function useBarHistory(query: BarsQuery): BarHistory {
+  const result = useInfiniteQuery({
+    queryKey: ['bars', query.symbol, query.interval, query.adjusted, query.transform],
+    queryFn: ({ signal, pageParam }) =>
+      apiGet(
+        barsPath(query, {
+          before: pageParam,
+          limit: pageParam === undefined ? BARS_LIMIT : OLDER_PAGE_LIMIT,
+        }),
+        parseBars,
+        { signal },
+      ),
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: olderCursor,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
+  const pages = (result.data as InfiniteData<BarsData, number | undefined> | undefined)?.pages;
+  const bars = useMemo(() => (pages === undefined ? [] : mergePages(pages)), [pages]);
+  const { fetchNextPage, refetch } = result;
+  return {
+    data: pages?.[0],
+    bars,
+    hasOlder: result.hasNextPage,
+    loadOlder: () => {
+      void fetchNextPage({ cancelRefetch: false });
+    },
+    isLoadingOlder: result.isFetchingNextPage,
+    isLoading:
+      result.isFetching &&
+      !result.isFetchingNextPage &&
+      (result.isPlaceholderData || pages === undefined),
+    // A failed older page only stops paging; the chart keeps what it has.
+    isError: result.isError && !result.isFetchNextPageError,
+    error: result.error,
+    refetch: () => {
+      void refetch();
+    },
+  };
 }

@@ -12,6 +12,8 @@ export interface ChartTheme {
   labelBackground: string;
   up: string;
   down: string;
+  /** Line and area charts. */
+  line: string;
   fontFamily: string;
 }
 
@@ -25,6 +27,7 @@ export const FALLBACK_THEME: ChartTheme = {
   labelBackground: '#2e2e2e',
   up: '#089981',
   down: '#f23645',
+  line: '#2962ff',
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif",
 };
 
@@ -38,6 +41,7 @@ const TOKENS: Record<keyof ChartTheme, string> = {
   labelBackground: '--color-active',
   up: '--color-up',
   down: '--color-down',
+  line: '--color-accent',
   fontFamily: '--font-sans',
 };
 

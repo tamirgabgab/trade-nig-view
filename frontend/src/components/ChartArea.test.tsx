@@ -12,7 +12,7 @@ import {
   stubApi,
   SYMBOLS,
 } from '../test/render.tsx';
-import { ChartArea } from './ChartArea.tsx';
+import { ChartArea, LOAD_OLDER_THRESHOLD } from './ChartArea.tsx';
 import { IntervalSwitcher } from './IntervalSwitcher.tsx';
 import { Watchlist } from './Watchlist.tsx';
 
@@ -45,7 +45,7 @@ beforeEach(() => {
   engines.length = 0;
   requested.length = 0;
   localStorage.clear();
-  useChartStore.setState({ symbol: 'AAPL', interval: '1D' });
+  useChartStore.setState(useChartStore.getInitialState());
 });
 
 afterEach(() => {
@@ -222,5 +222,132 @@ describe('ChartArea', () => {
 
     unmount();
     expect(engine.disposed).toBe(true);
+  });
+
+  describe('history paging', () => {
+    /** `count` consecutive calendar days ending 2026-11-20 (weekends included, for simplicity). */
+    const days = (count: number) =>
+      Array.from({ length: count }, (_, i) => {
+        const time = new Date(Date.UTC(2026, 10, 20 - (count - 1 - i))).toISOString().slice(0, 10);
+        return { time, open: 10, high: 11, low: 9, close: 10.5, volume: 100 };
+      });
+
+    /** Serve `all` in pages of `size` bars, newest first, honouring `before=`. */
+    function stubPaged(all: ReturnType<typeof days>, size: number): void {
+      stubApi({
+        '/api/symbols': { body: SYMBOLS },
+        '/api/bars': (url) => {
+          const before = url.searchParams.get('before');
+          const interval = url.searchParams.get('interval') ?? '';
+          const transform = url.searchParams.get('transform') ?? 'none';
+          requested.push(`${interval} ${transform} ${before ?? '-'}`);
+          const end =
+            before === null
+              ? all.length
+              : all.findIndex((bar) => Date.parse(`${bar.time}T00:00:00Z`) / 1000 >= +before);
+          const page = all.slice(Math.max(end - size, 0), end);
+          return jsonResponse({
+            ...barsBody('AAPL', interval, page),
+            has_more_before: end - size > 0,
+          });
+        },
+      });
+    }
+
+    it('loads the older page when the user scrolls near the first bar, keeping the view', async () => {
+      const all = days(30);
+      stubPaged(all, 20);
+      renderWithQuery(<ChartArea />);
+      await waitFor(() => {
+        expect(liveEngine().calls.at(-1)?.bars).toHaveLength(20);
+      });
+
+      act(() => {
+        liveEngine().scrollTo({ from: LOAD_OLDER_THRESHOLD + 1, to: 100 });
+      });
+      expect(requested).toHaveLength(1); // far from the edge: nothing to load
+
+      act(() => {
+        liveEngine().scrollTo({ from: 3, to: 19 });
+      });
+      await waitFor(() => {
+        expect(liveEngine().calls.at(-1)?.bars).toHaveLength(30);
+      });
+      const cursor = String(Date.parse(`${all[10]?.time ?? ''}T00:00:00Z`) / 1000);
+      expect(requested).toEqual(['1D none -', `1D none ${cursor}`]);
+      expect(liveEngine().calls.at(-1)?.options.resetView).toBe(false);
+      expect(
+        liveEngine()
+          .calls.at(-1)
+          ?.bars.map((b) => b.time),
+      ).toEqual(all.map((b) => b.time));
+
+      // History is exhausted: scrolling to the edge again requests nothing.
+      act(() => {
+        liveEngine().scrollTo({ from: 0, to: 19 });
+      });
+      expect(requested).toHaveLength(2);
+    });
+
+    it('loads older pages until a range button is covered, then shows that range', async () => {
+      const all = days(800);
+      stubPaged(all, 300);
+      renderWithQuery(<ChartArea />);
+      await waitFor(() => {
+        expect(liveEngine().calls.at(-1)?.bars).toHaveLength(300);
+      });
+
+      act(() => {
+        useChartStore.getState().selectRange('YTD');
+      });
+      // 2026-01-01 … 2026-11-20 is 324 days: one older page is needed.
+      await waitFor(() => {
+        expect(liveEngine().ranges).toHaveLength(1);
+      });
+      expect(requested).toHaveLength(2);
+      const loaded = liveEngine().calls.at(-1)?.bars ?? [];
+      expect(loaded).toHaveLength(600);
+      const first = loaded.findIndex((bar) => bar.time === '2026-01-01');
+      expect(liveEngine().ranges[0]).toEqual({ from: first - 0.5, to: 599 + 5 });
+      expect(useChartStore.getState()).toMatchObject({ interval: '1D', range: 'YTD' });
+    });
+
+    it('asks the backend for Heikin Ashi bars and swaps the series type', async () => {
+      stubPaged(days(10), 20);
+      renderWithQuery(<ChartArea />);
+      await waitFor(() => {
+        expect(liveEngine().calls.at(-1)?.bars).toHaveLength(10);
+      });
+
+      act(() => {
+        useChartStore.getState().setChartType('heikin_ashi');
+      });
+      await waitFor(() => {
+        expect(requested).toEqual(['1D none -', '1D heikin_ashi -']);
+      });
+      expect(liveEngine().chartTypes.at(-1)).toBe('heikin_ashi');
+
+      act(() => {
+        useChartStore.getState().setChartType('line');
+      });
+      expect(liveEngine().chartTypes.at(-1)).toBe('line');
+      // Line is drawn from plain bars again (tests disable the cache, so they are refetched).
+      await waitFor(() => {
+        expect(requested.at(-1)).toBe('1D none -');
+      });
+    });
+
+    it('passes the scale mode and auto-fit to the chart', async () => {
+      stubPaged(days(10), 20);
+      renderWithQuery(<ChartArea />);
+      await waitFor(() => {
+        expect(liveEngine().calls.at(-1)?.bars).toHaveLength(10);
+      });
+      act(() => {
+        useChartStore.getState().toggleScaleMode('log');
+        useChartStore.getState().setAutoScale(false);
+      });
+      expect(liveEngine().scales.at(-1)).toEqual({ mode: 'log', autoScale: false });
+    });
   });
 });

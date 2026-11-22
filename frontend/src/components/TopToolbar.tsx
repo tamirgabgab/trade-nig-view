@@ -1,7 +1,6 @@
 import {
   BellPlus,
   Camera,
-  ChartCandlestick,
   ChartSpline,
   Maximize2,
   Plus,
@@ -15,6 +14,8 @@ import {
 
 import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
+import { useUiStore } from '../store/uiStore.ts';
+import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IntervalSwitcher } from './IntervalSwitcher.tsx';
 import styles from './Toolbar.module.css';
@@ -29,14 +30,18 @@ interface TopToolbarProps {
 export function TopToolbar({ className }: TopToolbarProps) {
   const symbol = useChartStore((s) => s.symbol);
   const display = useSymbols().data?.find((s) => s.symbol === symbol)?.display ?? symbol;
+  const openSymbolSearch = useUiStore((s) => s.openSymbolSearch);
   return (
     <header className={[styles.bar, className].join(' ')} role="toolbar" aria-label="Chart toolbar">
       <button
         type="button"
         className={styles.symbolButton}
         aria-label={`Symbol search: ${display}`}
-        aria-disabled="true"
-        title="Symbol search — coming in R2b (pick a symbol in the watchlist for now)"
+        aria-haspopup="dialog"
+        title="Symbol search (or just start typing a ticker)"
+        onClick={() => {
+          openSymbolSearch();
+        }}
       >
         <Search size={16} aria-hidden="true" />
         {display}
@@ -49,7 +54,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
       <span className={styles.separator} aria-hidden="true" />
       <IntervalSwitcher />
       <span className={styles.separator} aria-hidden="true" />
-      <IconButton label="Chart type" icon={<ChartCandlestick size={ICON_SIZE} />} comingIn="R2b" />
+      <ChartTypeMenu />
       <IconButton
         label="Indicators"
         text="Indicators"
@@ -75,9 +80,24 @@ export function TopToolbar({ className }: TopToolbarProps) {
       <IconButton label="Redo" shortcut="Ctrl+Y" icon={<Redo2 size={ICON_SIZE} />} comingIn="R6" />
       <span className={styles.spacer} />
       <span className={styles.layoutName}>Unnamed</span>
-      <IconButton label="Save layout" icon={<Save size={ICON_SIZE} />} comingIn="R6" />
-      <IconButton label="Chart settings" icon={<Settings size={ICON_SIZE} />} comingIn="R6" />
-      <IconButton label="Fullscreen" icon={<Maximize2 size={ICON_SIZE} />} comingIn="R6" />
+      <IconButton
+        label="Save layout"
+        tooltipSide="bottom-end"
+        icon={<Save size={ICON_SIZE} />}
+        comingIn="R6"
+      />
+      <IconButton
+        label="Chart settings"
+        tooltipSide="bottom-end"
+        icon={<Settings size={ICON_SIZE} />}
+        comingIn="R6"
+      />
+      <IconButton
+        label="Fullscreen"
+        tooltipSide="bottom-end"
+        icon={<Maximize2 size={ICON_SIZE} />}
+        comingIn="R6"
+      />
       <IconButton
         label="Take a snapshot"
         icon={<Camera size={ICON_SIZE} />}

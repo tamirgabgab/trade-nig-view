@@ -1,5 +1,5 @@
 import { AAPL_BARS, barsBody } from '../test/render.tsx';
-import { barsPath, isInterval, parseBars } from './bars.ts';
+import { barsPath, isInterval, mergePages, olderCursor, parseBars } from './bars.ts';
 
 describe('parseBars', () => {
   it('maps the snake_case response to camelCase', () => {
@@ -23,8 +23,52 @@ describe('parseBars', () => {
 });
 
 describe('barsPath', () => {
-  it('encodes symbols with special characters', () => {
-    expect(barsPath('^GSPC', '1W', 10)).toBe('/bars?symbol=%5EGSPC&interval=1W&limit=10');
+  const query = { symbol: '^GSPC', interval: '1W', adjusted: true, transform: 'none' } as const;
+
+  it('encodes symbols with special characters and omits default options', () => {
+    expect(barsPath(query, { limit: 10 })).toBe('/bars?symbol=%5EGSPC&interval=1W&limit=10');
+  });
+
+  it('adds the unadjusted flag, the transform and the paging cursor only when set', () => {
+    expect(
+      barsPath(
+        { ...query, adjusted: false, transform: 'heikin_ashi' },
+        { limit: 50, before: 1_700_000_000 },
+      ),
+    ).toBe(
+      '/bars?symbol=%5EGSPC&interval=1W&limit=50&adjusted=false&transform=heikin_ashi&before=1700000000',
+    );
+  });
+});
+
+describe('history pages', () => {
+  const page = (times: string[], hasMoreBefore: boolean) =>
+    parseBars({
+      ...barsBody(
+        'AAPL',
+        '1D',
+        times.map((time) => ({ ...AAPL_BARS[0], time })),
+      ),
+      has_more_before: hasMoreBefore,
+    });
+
+  it('merges pages oldest first (pages are fetched newest first)', () => {
+    const newest = page(['2026-11-19', '2026-11-20'], true);
+    const older = page(['2026-11-17', '2026-11-18'], false);
+    expect(mergePages([newest, older]).map((b) => b.time)).toEqual([
+      '2026-11-17',
+      '2026-11-18',
+      '2026-11-19',
+      '2026-11-20',
+    ]);
+  });
+
+  it('pages backwards from the first bar until the server has no more history', () => {
+    expect(olderCursor(page(['2026-11-19', '2026-11-20'], true))).toBe(
+      Date.parse('2026-11-19T00:00:00Z') / 1000,
+    );
+    expect(olderCursor(page(['2026-11-19'], false))).toBeUndefined();
+    expect(olderCursor(page([], true))).toBeUndefined();
   });
 });
 

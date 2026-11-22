@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
 import { useChartStore } from './store/chartStore.ts';
+import { useUiStore } from './store/uiStore.ts';
 import {
   AAPL_BARS,
   barsBody,
@@ -16,7 +17,8 @@ import {
 vi.mock('./chart/ChartEngine.ts', () => import('./test/fakeChartEngine.ts'));
 
 beforeEach(() => {
-  useChartStore.setState({ symbol: 'AAPL', interval: '1D' });
+  useChartStore.setState(useChartStore.getInitialState());
+  useUiStore.setState(useUiStore.getInitialState());
   stubApi({
     '/api/health': { body: HEALTH_OK },
     '/api/symbols': { body: SYMBOLS },
@@ -78,8 +80,8 @@ describe('App shell', () => {
   it('keeps log and percent scale mutually exclusive', async () => {
     const user = userEvent.setup();
     renderWithQuery(<App />);
-    const log = screen.getByRole('button', { name: 'log' });
-    const percent = screen.getByRole('button', { name: '%' });
+    const log = screen.getByRole('button', { name: 'Logarithmic scale' });
+    const percent = screen.getByRole('button', { name: 'Percent scale' });
 
     await user.click(log);
     await user.click(percent);
@@ -93,7 +95,7 @@ describe('App shell', () => {
     renderWithQuery(<App />);
     const group = screen.getByRole('group', { name: 'Visible range' });
 
-    await user.click(within(group).getByRole('button', { name: '5Y' }));
+    await user.click(within(group).getByRole('button', { name: '5 years' }));
 
     const pressed = within(group)
       .getAllByRole('button')

@@ -108,3 +108,60 @@ export function priceFormat(decimals: number): { precision: number; minMove: num
   const precision = Math.min(Math.max(Math.trunc(decimals), 0), 8);
   return { precision, minMove: 10 ** -precision };
 }
+
+export interface ColoredCandlePoint extends CandlePoint {
+  color: string;
+  borderColor: string;
+  wickColor: string;
+}
+
+export interface LinePoint {
+  time: ChartTime;
+  value: number;
+}
+
+const HOLLOW = 'rgba(0, 0, 0, 0)';
+
+/**
+ * Hollow candles (TradingView's definition): the **colour** follows the close against the previous
+ * close (`up` when close >= previous close; the first bar compares with its own open), and the
+ * **body** is hollow when the bar closed above its open, filled otherwise.
+ */
+export function toHollowCandles(
+  bars: readonly Bar[],
+  times: readonly ChartTime[],
+  up: string,
+  down: string,
+): ColoredCandlePoint[] {
+  return bars.map(({ open, high, low, close }, i) => {
+    const reference = i === 0 ? open : (bars[i - 1]?.close ?? open);
+    const color = close >= reference ? up : down;
+    return {
+      time: times[i] ?? '',
+      open,
+      high,
+      low,
+      close,
+      color: close > open ? HOLLOW : color,
+      borderColor: color,
+      wickColor: color,
+    };
+  });
+}
+
+/** Close prices for line and area charts. */
+export function toLine(bars: readonly Bar[], times: readonly ChartTime[]): LinePoint[] {
+  return bars.map((bar, i) => ({ time: times[i] ?? '', value: bar.close }));
+}
+
+/**
+ * How many bars were prepended when `next` replaced `previous` (older history loaded), or 0 if
+ * `next` is not `previous` with older bars in front (a different data set or a refresh).
+ */
+export function prependedCount(previous: readonly Bar[], next: readonly Bar[]): number {
+  const added = next.length - previous.length;
+  if (added <= 0 || previous.length === 0) return 0;
+  return next[added]?.time === previous[0]?.time && next.at(-1)?.time === previous.at(-1)?.time
+    ? added
+    : 0;
+}

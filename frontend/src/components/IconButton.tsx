@@ -2,7 +2,15 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import styles from './IconButton.module.css';
 
-export type TooltipSide = 'top' | 'bottom' | 'left' | 'right';
+export type TooltipSide = 'top' | 'bottom' | 'bottom-end' | 'left' | 'right';
+
+const SIDE_CLASS: Record<TooltipSide, string | undefined> = {
+  top: styles.top,
+  bottom: styles.bottom,
+  'bottom-end': styles.bottomEnd,
+  left: styles.left,
+  right: styles.right,
+};
 
 export interface IconButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -39,7 +47,7 @@ export function IconButton({
   if (shortcut) tooltipParts.push(`(${shortcut})`);
   if (comingIn) tooltipParts.push(`— coming in ${comingIn}`);
 
-  const classes = [styles.button, styles[tooltipSide], text ? styles.withLabel : '', className]
+  const classes = [styles.button, SIDE_CLASS[tooltipSide], text ? styles.withLabel : '', className]
     .filter(Boolean)
     .join(' ');
 

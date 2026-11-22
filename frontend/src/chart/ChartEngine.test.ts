@@ -16,6 +16,9 @@ const lwc = vi.hoisted(() => {
     series: [] as FakeSeries[],
     crosshair: undefined as ((param: { time?: unknown; logical?: number }) => void) | undefined,
     priceScaleOptions: new Map<string, unknown>(),
+    removed: [] as FakeSeries[],
+    visible: null as { from: number; to: number } | null,
+    rangeHandler: undefined as ((range: { from: number; to: number } | null) => void) | undefined,
     setVisibleLogicalRange: vi.fn(),
     remove: vi.fn(),
     unsubscribe: vi.fn(),
@@ -31,10 +34,23 @@ const lwc = vi.hoisted(() => {
       state.series.push(series);
       return series;
     },
+    removeSeries: (series: FakeSeries) => {
+      state.removed.push(series);
+      state.series = state.series.filter((s) => s !== series);
+    },
     priceScale: (id: string) => ({
       applyOptions: (options: unknown) => state.priceScaleOptions.set(id, options),
     }),
-    timeScale: () => ({ setVisibleLogicalRange: state.setVisibleLogicalRange }),
+    timeScale: () => ({
+      setVisibleLogicalRange: state.setVisibleLogicalRange,
+      getVisibleLogicalRange: () => state.visible,
+      subscribeVisibleLogicalRangeChange: (handler: typeof state.rangeHandler) => {
+        state.rangeHandler = handler;
+      },
+      unsubscribeVisibleLogicalRangeChange: () => {
+        state.rangeHandler = undefined;
+      },
+    }),
     subscribeCrosshairMove: (handler: typeof state.crosshair) => {
       state.crosshair = handler;
     },
@@ -51,8 +67,12 @@ const lwc = vi.hoisted(() => {
 
 vi.mock('lightweight-charts', () => ({
   createChart: lwc.createChart,
+  AreaSeries: { kind: 'Area' },
+  BarSeries: { kind: 'Bar' },
   CandlestickSeries: { kind: 'Candlestick' },
   HistogramSeries: { kind: 'Histogram' },
+  LineSeries: { kind: 'Line' },
+  PriceScaleMode: { Normal: 0, Logarithmic: 1, Percentage: 2 },
   ColorType: { Solid: 'solid' },
   CrosshairMode: { Normal: 0 },
 }));
@@ -72,6 +92,9 @@ beforeEach(() => {
   lwc.state.series = [];
   lwc.state.crosshair = undefined;
   lwc.state.priceScaleOptions.clear();
+  lwc.state.removed = [];
+  lwc.state.visible = null;
+  lwc.state.rangeHandler = undefined;
   lwc.state.appliedOptions = [];
   lwc.state.setVisibleLogicalRange.mockClear();
   lwc.state.remove.mockClear();
@@ -94,7 +117,8 @@ function flushFrames(): void {
 
 function engine(): { engine: ChartEngine; candles: FakeSeries; volume: FakeSeries } {
   const instance = new ChartEngine(document.createElement('div'), FALLBACK_THEME);
-  const [candles, volume] = lwc.state.series;
+  // Volume is added first so the main series draws on top of it.
+  const [volume, candles] = lwc.state.series;
   if (candles === undefined || volume === undefined) throw new Error('series not created');
   return { engine: instance, candles, volume };
 }
@@ -202,5 +226,67 @@ describe('ChartEngine', () => {
     expect(seen).toEqual([]);
     expect(lwc.state.unsubscribe).toHaveBeenCalled();
     expect(lwc.state.remove).toHaveBeenCalled();
+  });
+  it('swaps the main series for another chart type and re-renders the same bars', () => {
+    const { engine: chart, candles } = engine();
+    chart.setBars(BARS, { decimals: 2, hasVolume: true, resetView: true });
+
+    chart.setChartType('line');
+    const line = lwc.state.series.at(-1);
+    expect(lwc.state.removed).toEqual([candles]);
+    expect(line?.kind).toBe('Line');
+    expect(line?.setData).toHaveBeenCalledWith(
+      expect.arrayContaining([{ time: BARS[0]?.time, value: 101 }]),
+    );
+
+    chart.setChartType('area');
+    expect(lwc.state.series.at(-1)?.kind).toBe('Area');
+    chart.setChartType('bars');
+    expect(lwc.state.series.at(-1)?.kind).toBe('Bar');
+    chart.setChartType('bars');
+    expect(lwc.state.removed).toHaveLength(3); // same type again: no-op
+  });
+
+  it('colours hollow candles by close-to-close change', () => {
+    const { engine: chart } = engine();
+    chart.setChartType('hollow');
+    chart.setBars(BARS.slice(0, 2), { decimals: 2, hasVolume: true, resetView: true });
+    const data = lwc.state.series.at(-1)?.setData.mock.calls.at(-1)?.[0] as {
+      color: string;
+      borderColor: string;
+    }[];
+    // Bar 0 closes above its open (hollow body); bar 1 closes below bar 0's close (red).
+    expect(data.map((p) => p.borderColor)).toEqual([FALLBACK_THEME.up, FALLBACK_THEME.down]);
+    expect(data.map((p) => p.color)).toEqual(['rgba(0, 0, 0, 0)', FALLBACK_THEME.down]);
+  });
+
+  it('maps scale modes and auto-fit to the right price scale', () => {
+    const { engine: chart } = engine();
+    chart.setScale({ mode: 'log', autoScale: false });
+    expect(lwc.state.priceScaleOptions.get('right')).toEqual({ mode: 1, autoScale: false });
+    chart.setScale({ mode: 'percent', autoScale: true });
+    expect(lwc.state.priceScaleOptions.get('right')).toEqual({ mode: 2, autoScale: true });
+  });
+
+  it('keeps the same bars in view when older history is prepended', () => {
+    const { engine: chart } = engine();
+    const latest = BARS.slice(100);
+    chart.setBars(latest, { decimals: 2, hasVolume: true, resetView: true });
+    lwc.state.setVisibleLogicalRange.mockClear();
+    lwc.state.visible = { from: 10, to: 60 };
+
+    chart.setBars(BARS, { decimals: 2, hasVolume: true, resetView: false });
+    expect(lwc.state.setVisibleLogicalRange).toHaveBeenCalledWith({ from: 110, to: 160 });
+  });
+
+  it('forwards visible-range changes until disposed', () => {
+    const { engine: chart } = engine();
+    const seen: unknown[] = [];
+    chart.onVisibleRangeChange((range) => seen.push(range));
+    lwc.state.rangeHandler?.({ from: 3, to: 40 });
+    lwc.state.rangeHandler?.(null);
+    chart.dispose();
+    expect(seen).toEqual([{ from: 3, to: 40 }, null]);
+    expect(lwc.state.rangeHandler).toBeUndefined();
   });
 });
