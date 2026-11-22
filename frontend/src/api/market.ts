@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { apiGet, isRecord } from './client.ts';
+import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 
 /** One symbol of the curated universe (GET /api/symbols). */
 export interface SymbolInfo {
@@ -48,15 +48,17 @@ function list(body: unknown, what: string): unknown[] {
 export function parseSymbols(body: unknown): SymbolInfo[] {
   return list(body, '/api/symbols').map((item) => {
     if (!isRecord(item)) throw new Error('Unexpected symbol entry');
+    const field = fieldsOf<Schemas['SymbolInfo']>(item);
+    const decimals = field('decimals');
     return {
-      symbol: str(item['symbol'], 'symbol'),
-      display: str(item['display'], 'display'),
-      name: str(item['name'], 'name'),
-      type: str(item['type'], 'type'),
-      group: str(item['group'], 'group'),
-      exchange: str(item['exchange'], 'exchange'),
-      hasVolume: item['has_volume'] === true,
-      decimals: typeof item['decimals'] === 'number' ? item['decimals'] : 2,
+      symbol: str(field('symbol'), 'symbol'),
+      display: str(field('display'), 'display'),
+      name: str(field('name'), 'name'),
+      type: str(field('type'), 'type'),
+      group: str(field('group'), 'group'),
+      exchange: str(field('exchange'), 'exchange'),
+      hasVolume: field('has_volume') === true,
+      decimals: typeof decimals === 'number' ? decimals : 2,
     };
   });
 }
@@ -64,14 +66,15 @@ export function parseSymbols(body: unknown): SymbolInfo[] {
 export function parseQuotes(body: unknown): Quote[] {
   return list(body, '/api/quotes').map((item) => {
     if (!isRecord(item)) throw new Error('Unexpected quote entry');
+    const field = fieldsOf<Schemas['QuoteOut']>(item);
     return {
-      symbol: str(item['symbol'], 'symbol'),
-      time: strOrNull(item['time'], 'time'),
-      last: numOrNull(item['last'], 'last'),
-      change: numOrNull(item['change'], 'change'),
-      changePct: numOrNull(item['change_pct'], 'change_pct'),
-      stale: item['stale'] === true,
-      error: strOrNull(item['error'], 'error'),
+      symbol: str(field('symbol'), 'symbol'),
+      time: strOrNull(field('time'), 'time'),
+      last: numOrNull(field('last'), 'last'),
+      change: numOrNull(field('change'), 'change'),
+      changePct: numOrNull(field('change_pct'), 'change_pct'),
+      stale: field('stale') === true,
+      error: strOrNull(field('error'), 'error'),
     };
   });
 }

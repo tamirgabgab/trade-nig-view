@@ -10,8 +10,9 @@ run "backend: pyright"             "$BACKEND_DIR"  uv run python -m pyright
 run "backend: pytest"              "$BACKEND_DIR"  uv run python -m pytest --cov --cov-report=term-missing:skip-covered
 run "frontend: eslint"             "$FRONTEND_DIR" npm run --silent lint
 run "frontend: prettier"           "$FRONTEND_DIR" npm run --silent format:check
+run "frontend: api types"       "$FRONTEND_DIR" npm run --silent check:api
 run "frontend: tsc"                "$FRONTEND_DIR" npm run --silent typecheck
 run "frontend: vitest"             "$FRONTEND_DIR" npm run --silent test
 echo
 if [ ${#failed[@]} -gt 0 ]; then echo "FAILED: ${failed[*]}"; exit 1; fi
-echo "All 8 gates passed."
+echo "All 9 gates passed."

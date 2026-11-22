@@ -1,7 +1,13 @@
 /**
  * Minimal JSON client for the ChartLab API. Errors follow RFC 9457 problem+json.
- * From R1 on, response types are generated from the backend OpenAPI schema (src/api/schema.ts).
+ * Response types come from the backend OpenAPI schema: `src/api/schema.ts` is generated
+ * (`scripts/gen-api.ps1`), never edited by hand, and the `check:api` gate fails when it is stale.
  */
+
+import type { components } from './schema.ts';
+
+/** Response and model schemas of the API, exactly as the backend declares them. */
+export type Schemas = components['schemas'];
 
 export interface Problem {
   title: string;
@@ -55,6 +61,15 @@ export async function apiGet<T>(
     throw new ApiError(toProblem(response.status, response.statusText, body));
   }
   return parse(body);
+}
+
+/**
+ * Field reader that only accepts keys of the schema type `T`, so a renamed or removed API field
+ * breaks the build instead of silently reading `undefined`. Values stay `unknown` and are checked.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- T only narrows the keys
+export function fieldsOf<T>(record: Record<string, unknown>): (key: keyof T & string) => unknown {
+  return (key) => record[key];
 }
 
 export { isRecord };

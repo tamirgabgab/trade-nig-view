@@ -7,6 +7,7 @@ describe('parseBars', () => {
     expect(data.symbol).toBe('AAPL');
     expect(data.interval).toBe('1D');
     expect(data.hasMoreBefore).toBe(true);
+    expect(data.timezone).toBe('America/New_York');
     expect(data.bars).toHaveLength(3);
     expect(data.bars[2]).toEqual(AAPL_BARS[2]);
   });

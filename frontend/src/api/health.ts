@@ -1,21 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { apiGet, isRecord } from './client.ts';
+import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 
-export interface Health {
-  status: 'ok';
-  version: string;
-  offline: boolean;
-}
+export type Health = Pick<Schemas['HealthResponse'], 'status' | 'version' | 'offline'>;
 
 export function parseHealth(body: unknown): Health {
-  if (
-    isRecord(body) &&
-    body['status'] === 'ok' &&
-    typeof body['version'] === 'string' &&
-    typeof body['offline'] === 'boolean'
-  ) {
-    return { status: 'ok', version: body['version'], offline: body['offline'] };
+  if (isRecord(body)) {
+    const field = fieldsOf<Schemas['HealthResponse']>(body);
+    const version = field('version');
+    const offline = field('offline');
+    if (field('status') === 'ok' && typeof version === 'string' && typeof offline === 'boolean') {
+      return { status: 'ok', version, offline };
+    }
   }
   throw new Error('Unexpected /api/health response');
 }

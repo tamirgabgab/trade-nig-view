@@ -1,9 +1,9 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
-import { apiGet, isRecord } from './client.ts';
+import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 
 /** Bar intervals the chart offers (the backend also knows them; `1h` arrives in R1b). */
-export const INTERVALS = ['1D', '1W', '1M'] as const;
+export const INTERVALS = ['1D', '1W', '1M'] as const satisfies readonly Schemas['Interval'][];
 export type Interval = (typeof INTERVALS)[number];
 
 export function isInterval(value: unknown): value is Interval {
@@ -25,6 +25,8 @@ export interface BarsData {
   symbol: string;
   interval: Interval;
   adjusted: boolean;
+  /** Exchange time zone (IANA), e.g. 'America/New_York'. */
+  timezone: string;
   source: string;
   stale: boolean;
   hasMoreBefore: boolean;
@@ -43,33 +45,43 @@ function num(value: unknown, field: string): number {
 }
 
 function parseBar(item: unknown): Bar {
-  if (!isRecord(item) || typeof item['time'] !== 'string') throw new Error('Unexpected bar entry');
+  if (!isRecord(item)) throw new Error('Unexpected bar entry');
+  const field = fieldsOf<Schemas['Bar']>(item);
+  const time = field('time');
+  if (typeof time !== 'string') throw new Error('Unexpected bar entry');
   return {
-    time: item['time'],
-    open: num(item['open'], 'open'),
-    high: num(item['high'], 'high'),
-    low: num(item['low'], 'low'),
-    close: num(item['close'], 'close'),
-    volume: num(item['volume'], 'volume'),
+    time,
+    open: num(field('open'), 'open'),
+    high: num(field('high'), 'high'),
+    low: num(field('low'), 'low'),
+    close: num(field('close'), 'close'),
+    volume: num(field('volume'), 'volume'),
   };
 }
 
 export function parseBars(body: unknown): BarsData {
-  if (!isRecord(body) || !Array.isArray(body['bars'])) {
-    throw new Error('Unexpected /api/bars response');
-  }
-  const interval = body['interval'];
+  if (!isRecord(body)) throw new Error('Unexpected /api/bars response');
+  const field = fieldsOf<Schemas['BarsResponse']>(body);
+  const bars = field('bars');
+  if (!Array.isArray(bars)) throw new Error('Unexpected /api/bars response');
+  const interval = field('interval');
   if (!isInterval(interval)) throw new Error('Unexpected interval in /api/bars response');
-  const warnings = Array.isArray(body['warnings']) ? (body['warnings'] as unknown[]) : [];
+  const warnings = field('warnings');
+  const symbol = field('symbol');
+  const source = field('source');
+  const timezone = field('timezone');
   return {
-    symbol: typeof body['symbol'] === 'string' ? body['symbol'] : '',
+    symbol: typeof symbol === 'string' ? symbol : '',
     interval,
-    adjusted: body['adjusted'] === true,
-    source: typeof body['source'] === 'string' ? body['source'] : '',
-    stale: body['stale'] === true,
-    hasMoreBefore: body['has_more_before'] === true,
-    warnings: warnings.filter((w): w is string => typeof w === 'string'),
-    bars: (body['bars'] as unknown[]).map(parseBar),
+    adjusted: field('adjusted') === true,
+    timezone: typeof timezone === 'string' ? timezone : '',
+    source: typeof source === 'string' ? source : '',
+    stale: field('stale') === true,
+    hasMoreBefore: field('has_more_before') === true,
+    warnings: Array.isArray(warnings)
+      ? (warnings as unknown[]).filter((w): w is string => typeof w === 'string')
+      : [],
+    bars: (bars as unknown[]).map(parseBar),
   };
 }
 

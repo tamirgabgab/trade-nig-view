@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Run every quality gate: backend (ruff, ruff format, pyright, pytest) and
-    frontend (eslint, prettier, tsc, vitest). Exits non-zero if any gate fails.
+    frontend (eslint, prettier, api types, tsc, vitest). Exits non-zero if any gate fails.
 .EXAMPLE
     .\scripts\test.ps1
 #>
@@ -14,6 +14,7 @@ $steps = @(
     @{ Name = 'backend: pytest'; Dir = $BackendDir; Cmd = { uv run python -m pytest --cov --cov-report=term-missing:skip-covered } },
     @{ Name = 'frontend: eslint'; Dir = $FrontendDir; Cmd = { npm run --silent lint } },
     @{ Name = 'frontend: prettier'; Dir = $FrontendDir; Cmd = { npm run --silent format:check } },
+    @{ Name = 'frontend: api types'; Dir = $FrontendDir; Cmd = { npm run --silent check:api } },
     @{ Name = 'frontend: tsc'; Dir = $FrontendDir; Cmd = { npm run --silent typecheck } },
     @{ Name = 'frontend: vitest'; Dir = $FrontendDir; Cmd = { npm run --silent test } }
 )

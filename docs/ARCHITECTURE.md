@@ -138,13 +138,14 @@ The frontend holds a single `replay.cursor` (bar time). Every data request carri
 ## 4. API contract (v1, JSON, prefix `/api`)
 
 General: JSON only; snake_case fields; times as described in §6; errors as RFC 9457 `application/problem+json`;
-OpenAPI at `/api/openapi.json`, docs at `/api/docs`.
+OpenAPI at `/api/openapi.json`, docs at `/api/docs`. The same schema is committed as `frontend/src/api/openapi.json` and
+turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail when either file is stale (ADR 0008).
 
 | Method & path | Query / body | Response | Round |
 |---|---|---|---|
 | `GET /health` | — | `{status:"ok", version, offline, providers:[{id, enabled}]}` | R0 |
-| `GET /symbols` | `query?`, `group?` | `[{symbol, name, exchange, type: "index"\|"etf"\|"stock"\|"future"\|"forex", group, timezone, currency, has_volume}]` | R1 |
-| `GET /bars` | `symbol`, `interval` (`1h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `adjusted=true`, `until?` | `{symbol, interval, adjusted, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, fetched_at}` | R1 |
+| `GET /symbols` | `query?`, `group?` | `[{symbol, display, name, exchange, type: "index"\|"etf"\|"stock"\|"future"\|"forex", group, timezone, currency, has_volume, decimals, session_start}]` | R1 |
+| `GET /bars` | `symbol`, `interval` (`1h`\|`4h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `adjusted=true`, `until?` | `{symbol, interval, adjusted, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, stale, warnings}`; intraday `time` is UTC epoch seconds, daily+ `'YYYY-MM-DD'`; for intraday `start`/`end`/`until` select whole sessions | R1 (1h/4h R1b) |
 | `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error}]` from the two latest unadjusted daily bars; per-symbol `error` instead of failing the request | R1a |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
 | `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted}` | `{id, params, outputs:{<name>:[{time, value}]}, markers?:[{time, kind, price?, text?}], warmup}` | R3 |

@@ -1,0 +1,670 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ChartLab API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "description": "Report that the API is up, its version, offline mode and the active data providers.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/symbols": {
+      "get": {
+        "tags": [
+          "symbols"
+        ],
+        "summary": "List Symbols",
+        "description": "Symbols in universe order (which is also the default watchlist order).",
+        "operationId": "list_symbols_api_symbols_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 50,
+              "description": "Substring of symbol or name",
+              "default": "",
+              "title": "Query"
+            },
+            "description": "Substring of symbol or name"
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Watchlist section, e.g. 'Stocks'",
+              "title": "Group"
+            },
+            "description": "Watchlist section, e.g. 'Stocks'"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SymbolInfo"
+                  },
+                  "title": "Response List Symbols Api Symbols Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bars": {
+      "get": {
+        "tags": [
+          "bars"
+        ],
+        "summary": "Get Bars",
+        "description": "The newest ``limit`` bars in ``[start, end]``, never after ``until``.\n\nFor intraday intervals the dates select whole trading sessions (by session date).",
+        "operationId": "get_bars_api_bars_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Interval",
+              "default": "1D"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Replay cursor: no bar after it",
+              "title": "Until"
+            },
+            "description": "Replay cursor: no bar after it"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50000,
+              "minimum": 1,
+              "default": 5000,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "adjusted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjusted"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BarsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quotes": {
+      "get": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Get Quotes",
+        "description": "Unadjusted last close vs previous close. Per-symbol failures are reported in ``error``.",
+        "operationId": "get_quotes_api_quotes_get",
+        "parameters": [
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated, e.g. 'AAPL,^GSPC'",
+              "title": "Symbols"
+            },
+            "description": "Comma-separated, e.g. 'AAPL,^GSPC'"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuoteOut"
+                  },
+                  "title": "Response Get Quotes Api Quotes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Bar": {
+        "properties": {
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Time",
+            "description": "Daily and longer: session date 'YYYY-MM-DD'. Intraday (1h, 4h): UTC epoch seconds of the bar start."
+          },
+          "open": {
+            "type": "number",
+            "title": "Open"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "close": {
+            "type": "number",
+            "title": "Close"
+          },
+          "volume": {
+            "type": "number",
+            "title": "Volume"
+          }
+        },
+        "type": "object",
+        "required": [
+          "time",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "Bar"
+      },
+      "BarsResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "adjusted": {
+            "type": "boolean",
+            "title": "Adjusted",
+            "description": "Dividend adjustment applied (ADJ)"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "description": "Exchange time zone (IANA), e.g. 'America/New_York'"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Provider that delivered the cached data"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "description": "True if a refresh failed and cached data is served"
+          },
+          "has_more_before": {
+            "type": "boolean",
+            "title": "Has More Before",
+            "description": "Older bars exist (request with an earlier end)"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/Bar"
+            },
+            "type": "array",
+            "title": "Bars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "adjusted",
+          "timezone",
+          "source",
+          "stale",
+          "has_more_before",
+          "warnings",
+          "bars"
+        ],
+        "title": "BarsResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "offline": {
+            "type": "boolean",
+            "title": "Offline"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderStatus"
+            },
+            "type": "array",
+            "title": "Providers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "offline",
+          "providers"
+        ],
+        "title": "HealthResponse",
+        "description": "Response body of ``GET /api/health``."
+      },
+      "Interval": {
+        "type": "string",
+        "enum": [
+          "1h",
+          "4h",
+          "1D",
+          "1W",
+          "1M"
+        ],
+        "title": "Interval",
+        "description": "Bar intervals served by the API.\n\n``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and\n``1W``/``1M`` from ``1D``."
+      },
+      "ProviderStatus": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "enabled"
+        ],
+        "title": "ProviderStatus",
+        "description": "One market-data provider in the active chain (in priority order)."
+      },
+      "QuoteOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Pct"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "time",
+          "last",
+          "change",
+          "change_pct",
+          "stale",
+          "error"
+        ],
+        "title": "QuoteOut"
+      },
+      "SymbolInfo": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol",
+            "description": "Provider symbol, e.g. 'AAPL', '^GSPC', 'GC=F'"
+          },
+          "display": {
+            "type": "string",
+            "title": "Display",
+            "description": "Short display name, e.g. 'SPX'"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "index",
+              "etf",
+              "stock",
+              "future",
+              "forex"
+            ],
+            "title": "Type"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group",
+            "description": "Watchlist section, e.g. 'Indices'"
+          },
+          "exchange": {
+            "type": "string",
+            "title": "Exchange"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "America/New_York"
+          },
+          "has_volume": {
+            "type": "boolean",
+            "title": "Has Volume",
+            "default": true
+          },
+          "decimals": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 0.0,
+            "title": "Decimals",
+            "description": "Price display precision",
+            "default": 2
+          },
+          "session_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Start",
+            "description": "Local 'HH:MM' start of a trading session that spans midnight (CME futures '18:00', forex '17:00'); null when each session lies within one calendar day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "display",
+          "name",
+          "type",
+          "group",
+          "exchange"
+        ],
+        "title": "SymbolInfo",
+        "description": "One tradable or reference instrument."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
