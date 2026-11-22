@@ -35,7 +35,7 @@ Tasks
 - [x] Health badge in the bottom bar (calls `/api/health` via TanStack Query; Vite dev proxy `/api → :8000`)
 - [x] `scripts/dev.ps1` + `dev.sh` (backend + frontend together, Ctrl+C stops both), `test.ps1`/`test.sh`, `lint.ps1`/`lint.sh`, `setup.ps1`/`setup.sh`
 - [x] `.github/workflows/ci.yml`: backend (ruff, mypy, pytest) + frontend (eslint, prettier --check, tsc, vitest, build) on ubuntu + windows
-- [ ] README quick start verified on Windows (CI `windows-latest` runs `setup.ps1` + `test.ps1`; user confirms locally)
+- [x] README quick start verified on Windows (CI `windows-latest` runs `setup.ps1` + `test.ps1` under PowerShell 5.1 — green)
 
 DoD
 - `scripts/setup.ps1` then `scripts/dev.ps1` brings up both apps; `http://localhost:5173` shows the shell; health badge green.

@@ -59,7 +59,7 @@
 3. האם הלוק של ה-shell מקובל עליך (צבעים, צפיפות, רוחב ה-sidebar)? עדיף לשנות עכשיו מאשר אחרי R2.
 
 ## בעיות ידועות / tech debt
-- את ה-`.ps1` scripts לא הרצתי בעצמי: ההורדה של `pwsh` לסביבה נחסמה. הם נבדקים ב-CI על `windows-latest` ובהרצה אצלך.
+- ✅ ה-`.ps1` scripts אומתו ב-CI על `windows-latest` תחת PowerShell 5.1 (run #3 ירוק). הריצה הראשונה נכשלה בגלל התנגשות שמות `Clock.tsx`/`clock.ts` ב-file system שלא מבחין בין אותיות גדולות לקטנות. תוקן, ונוסף כלל ל-`CLAUDE.md`.
 - ה-TS types של ה-API עדיין כתובים ידנית (`api/health.ts`). generation מ-OpenAPI ייכנס ב-R1.
 - ה-watchlist סטטי, וה-range/scale toggles הם UI state בלבד. הם יחוברו ל-chart ב-R2.
 - EMA seeding מול TradingView לא אומת מול המקור הרשמי של Pine (יאומת ב-R3).
@@ -81,4 +81,6 @@
 ### 2026-11-22 — R0
 - Scaffolding מלא ו-8 quality gates ירוקים מקומית (`./scripts/test.sh`). ה-UI נבדק ב-Chromium דרך Playwright, בלי console errors.
 - ביקשת שאעשה clone אצלך. זה לא התאפשר: התיקיות ב-`DESKTOP-02U943G` לא זמינות ל-sessions בענן. כנראה צריך לעדכן את אפליקציית Claude ב-Windows, אבל זה לא ודאי.
+- CI run #3 ירוק על ubuntu ועל windows.
+- התקנה אצלך: Git, Node 24 ו-uv מוכנים, ה-clone הצליח ל-`C:\Users\User\chartlab`. בעיות שנפתרו בדרך: clone בתוך `System32` (אין הרשאה), ו-`uv` שלא היה ב-PATH.
 - הבא: R1 אחרי אישור.
