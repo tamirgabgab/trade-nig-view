@@ -25,6 +25,9 @@
   --color-warning: #f7a600;
   --color-focus: #2962ff;
 
+  --color-chart-grid: #1c1c1c;
+  --color-chart-crosshair: #6a6d78;
+
   --color-tooltip-bg: #e9e9ea;
   --color-tooltip-text: #0f0f0f;
 
@@ -69,6 +72,9 @@
   --color-text: #131722;
   --color-text-strong: #000000;
   --color-text-muted: #6a6d78;
+
+  --color-chart-grid: #f0f3fa;
+  --color-chart-crosshair: #9598a1;
 
   --color-tooltip-bg: #131722;
   --color-tooltip-text: #ffffff;
