@@ -26,6 +26,7 @@ Treat every indicator like a DUT (golden model, directed + property tests, score
 |---|---|---|
 | Install all | `.\scripts\setup.ps1` | `./scripts/setup.sh` |
 | Dev (backend :8000 + frontend :5173) | `.\scripts\dev.ps1` | `./scripts/dev.sh` |
+| Desktop shortcut (double-click → app opens) | `.\scripts\install-shortcut.ps1` (runs `dev.ps1 -Open`) | — |
 | All tests + lint + typecheck | `.\scripts\test.ps1` | `./scripts/test.sh` |
 | Backend tests | `cd backend; uv run python -m pytest` | same |
 | Backend lint/format/types | `uv run python -m ruff check . ; uv run python -m ruff format --check . ; uv run python -m pyright` | same |

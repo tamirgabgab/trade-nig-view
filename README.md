@@ -47,7 +47,11 @@ Copy-Item .env.example .env        # optional API keys
 .\scripts\setup.ps1                # backend + frontend dependencies
 .\scripts\dev.ps1                  # backend :8000 + frontend :5173
 .\scripts\test.ps1                 # all tests, lint, typecheck
+.\scripts\install-shortcut.ps1     # optional: "ChartLab" icon on the Desktop and in Start
 ```
+
+After `install-shortcut.ps1`, double-click **ChartLab** on the Desktop: it starts the backend and the
+frontend and opens the app in your browser. Close the black ChartLab window to stop it.
 
 > **Windows with Smart App Control on:** use the official, signed Python from python.org instead of uv's
 > downloaded Python (SAC blocks its unsigned `.pyd` files):
