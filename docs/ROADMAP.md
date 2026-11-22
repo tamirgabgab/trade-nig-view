@@ -2,6 +2,10 @@
 
 > One round per session. A round ends with: full test/lint/typecheck green, HANDOFF.md updated, demo checklist, and
 > the user's approval. Checkboxes are updated at the end of each round.
+>
+> **Session order, model/effort per session and the moving-average maths: [PLAN.md](../PLAN.md)** (2026-11-22). R3 is
+> split into R3a (engine + SMA/EMA/WMA/RMA), R3b (generalised MA family), R3c (bands & oscillators); L1 (learn pages
+> for the MA family, pulled forward from Phase 2) and U1 (UX pass) are inserted before R4.
 
 | Round | Title | Size | Status |
 |---|---|---|---|
@@ -9,7 +13,9 @@
 | R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
 | R1 | Market data layer | L | ✅ R1a + R1b done (2026-11-22); real fixtures pending on the user's machine |
 | R2 | Chart core | L | 🔨 R2a done (2026-11-22), R2b next |
-| R3 | Indicator engine v1 | L | |
+| R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | |
+| L1 | Learn v1 for the MA family (from Phase 2) | M | |
+| U1 | UX pass (responsive, disabled states, loaders, keyboard) | M | |
 | R4 | Drawing tools v1 | L | |
 | R5 | Market structure & reference values | M | |
 | R6 | Persistence, layouts & UX polish | L | |

@@ -6,7 +6,8 @@ trading agent can plug in later.
 
 > **Status:** R1b complete — 1h and 4h bars shown in Israel time, futures labelled as futures (`GC1!`), API types
 > generated from OpenAPI. Next: R2b (chart types, log/% scale, range buttons, symbol search).
-> See [HANDOFF.md](HANDOFF.md) for the live status and [docs/ROADMAP.md](docs/ROADMAP.md) for the plan.
+> See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
+> [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
 ![ChartLab shell (R0)](docs/img/shell-r0.png)
 <!-- Replaced with a chart screenshot (real data) after the R2a demo. -->
@@ -21,7 +22,10 @@ trading agent can plug in later.
 | 1h and 4h intervals (session-aware, Israel time on the chart), generated API types, fixture download script (R1b) | ✅ Done |
 | Chart: candles + volume, OHLC legend on the crosshair, D/W/M intervals, symbol from the watchlist, pan/zoom (R2a) | ✅ Done |
 | Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ⏳ Next |
-| Indicators: SMA, EMA, WMA, MA Cross, BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3) | ⏳ Planned |
+| Indicators: SMA, EMA, WMA, SMMA + generalised MAs (DEMA, TEMA, HMA, ALMA, LSMA, VWMA, McGinley, KAMA, T3, ZLEMA), MA Cross/Ribbon/Envelope (R3a/R3b) | ⏳ Planned |
+| Learn pages for the MA family: formulas, lag, noise reduction, frequency response (L1) | ⏳ Planned |
+| Indicators: BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3c) | ⏳ Planned |
+| UX pass: narrow windows, disabled states, loaders, keyboard map (U1) | ⏳ Planned |
 | Drawing tools: lines, rays, channel, rectangle, text, measure, Fibonacci (R4) | ⏳ Planned |
 | Gaps, pivots, previous-period levels, 52-week high/low, data window (R5) | ⏳ Planned |
 | Layouts, watchlists, undo/redo, shortcuts, settings (R6) | ⏳ Planned |

@@ -4,7 +4,7 @@
 
 ## מצב נוכחי
 - **שלב:** Phase 1. R0, R1a ו-R2a הושלמו. **R1b (1h ו-4h, שעון ישראל, futures, OpenAPI types, סקריפט fixtures) הושלם** (2026-11-22) ונבדק בענן על נתוני הבדיקה. **ממתין לדמו אצל המשתמש: הרצת `make-fixtures.ps1` ובדיקת 1h/4h עם נתונים אמיתיים.**
-- **הסבב הבא:** **R2b**: סוגי גרף (bars, hollow, line, area, Heikin Ashi דרך transform ב-backend), scale של log ו-%, range buttons, symbol search, lazy loading של היסטוריה, ו-Playwright smoke test.
+- **הסבב הבא:** **R2b** (S1 ב-[PLAN.md](PLAN.md)). **סדר ה-sessions הבאים, המלצת מודל ו-effort לכל אחד, ממצאי סקירת ה-UX והמתמטיקה של משפחת הממוצעים הנעים נמצאים ב-[PLAN.md](PLAN.md).** אחרי R2b: R3a (מנוע indicators ו-SMA/EMA/WMA/RMA), R3b (ממוצעים מוכללים), L1 (דפי לימוד), R3c, U1.
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
 ## מה נעשה ב-session האחרון (2026-11-22, R0)
@@ -121,9 +121,11 @@
 | 2026-11-22 | Intervals תוך-יומיים: `1h` ו-`4h`; 4h מעוגן ל-session (כמו TradingView) | בחירת המשתמש | ARCHITECTURE §6 |
 | 2026-11-22 | נרות תוך-יומיים מוצגים בשעון ישראל (`Asia/Jerusalem`); הגדרה למשתמש ב-R6 | בחירת המשתמש | ARCHITECTURE §6 |
 | 2026-11-22 | `openapi-typescript` ~7.13 עם `overrides` ל-TS 6 | types שנוצרים מה-backend, תלות dev קטנה | [0008](docs/adr/0008-openapi-typescript.md) |
+| 2026-11-22 | `PLAN.md` כתוכנית העבודה ל-sessions הבאים: R3 מתפצל ל-R3a/R3b/R3c, ו-L1 (דפי לימוד לממוצעים) ו-U1 (UX) נכנסים לפני R4 | בקשת המשתמש להתמקד בממוצעים נעים ובמתמטיקה שלהם וב-UX | [PLAN.md](PLAN.md) |
 
 ## שאלות פתוחות אליך
 1. **מקור ה-"Moving average crossover 9/21"** מהצילום (נדרש ל-R3).
+2. החלטות D1–D6 ב-[PLAN.md §7](PLAN.md#7-decisions-needed-from-the-user): סדר הסבבים, TA-Lib כתלות בדיקות אופציונלית, KaTeX מול Temml, ממוצעים שאינם ב-TV (KAMA, T3, ZLEMA), ופאנל הגדרות חי מול חלון OK/Cancel.
 
 ## בעיות ידועות / tech debt
 - ✅ **GOLD, SILVER ו-USOIL** (spot ב-TV מול futures אצלנו): נפתר ב-R1b בשינוי השם ל-`GC1!`/`SI1!`/`CL1!`. להשוואה ב-TradingView יש לפתוח `COMEX:GC1!`, `COMEX:SI1!`, `NYMEX:CL1!`. בימי roll השינוי היומי של continuous futures עדיין חריג (כך גם ב-TV).
@@ -194,3 +196,9 @@
 - 9/9 gates ירוקים מקומית (backend 141 tests, coverage 98%; frontend 89). CI ירוק על ubuntu ו-windows.
 - נמצא ותוקן בדרך: `has_more_before` ספר גם נרות אחרי `end` (נכתב מחדש ב-`_window`); תווית ה-crosshair הציגה שניות ב-intraday (`secondsVisible: false`).
 - ממתין לדמו אצל המשתמש: `make-fixtures.ps1` ובדיקת 1h/4h מול TradingView.
+
+### 2026-11-22 — סקירה ותוכנית עבודה (PLAN.md)
+- המשתמש ביקש סיכום, סקירה רחבה ותוכנית לימים הבאים עם דגש על ממוצעים נעים (כולל המתמטיקה) ועל UX/UI, והמלצת מודל ו-effort לכל סבב.
+- סקירת UX: צילומי Playwright ב-1280 וב-375 על נתוני הבדיקה, ובדיקה מול ה-UX skills. ממצאים עיקריים: כפתורי range ו-scale שנראים פעילים ולא עושים כלום, שבירה של הפריסה בחלון צר, גלילה אופקית של 29px ב-1280.
+- נוסחאות ה-lag וה-NRF של 12 ממוצעים אומתו נומרית (impulse response על 4,000 נרות) ונכנסו ל-PLAN.md §5.
+- בלי שינוי קוד. נוצר `PLAN.md`, ועודכנו ROADMAP, README ו-HANDOFF.
