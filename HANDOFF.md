@@ -4,7 +4,10 @@
 
 ## מצב נוכחי
 - **שלב:** Phase 1. R0 הושלם ואושר. **R1a הושלם ואומת על המחשב של המשתמש** (2026-11-22): ה-Watchlist מציג מחירים אמיתיים מ-Yahoo. **אחריו: R1b** (fixtures אמיתיים, 1h, OpenAPI types).
-- **הסבב הבא:** סיום R1 (R1b), ואחריו **R2 — Chart core**.
+- **הסבב הבא:** **R2a — גרף הנרות הבסיסי** (המשתמש ביקש לראות גרפים; R1b נדחה לאחר R2).
+  - R2a: `ChartEngine` מעל lightweight-charts 5.3, נרות ו-volume, legend של OHLC לפי ה-crosshair, לחיצה על סימבול ב-Watchlist מחליפה את הגרף, interval 1D/1W/1M, וגלילה וזום. Zustand store ל-symbol ול-interval.
+  - R2b: סוגי גרף, log ו-%, range buttons, symbol search, lazy loading, ו-Playwright smoke test.
+  - R1b (אחר כך): 1h, fixtures אמיתיים, OpenAPI types, ובעיית GOLD/SILVER/USOIL (futures מול spot).
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
 ## מה נעשה ב-session האחרון (2026-11-22, R0)
