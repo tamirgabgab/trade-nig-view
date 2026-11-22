@@ -102,7 +102,7 @@
           "bars"
         ],
         "summary": "Get Bars",
-        "description": "The newest ``limit`` bars in ``[start, end]``, never after ``until``.\n\nFor intraday intervals the dates select whole trading sessions (by session date).",
+        "description": "The newest ``limit`` bars in ``[start, end]`` (and before ``before``), never after\n``until``.\n\nFor intraday intervals the dates select whole trading sessions (by session date).",
         "operationId": "get_bars_api_bars_get",
         "parameters": [
           {
@@ -198,6 +198,34 @@
               "type": "boolean",
               "default": true,
               "title": "Adjusted"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Paging: only bars that start before this UTC epoch second (exclusive). Pass the oldest loaded bar's time; a daily date counts as 00:00 UTC.",
+              "title": "Before"
+            },
+            "description": "Paging: only bars that start before this UTC epoch second (exclusive). Pass the oldest loaded bar's time; a daily date counts as 00:00 UTC."
+          },
+          {
+            "name": "transform",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Transform",
+              "default": "none"
             }
           }
         ],
@@ -337,6 +365,10 @@
             "title": "Adjusted",
             "description": "Dividend adjustment applied (ADJ)"
           },
+          "transform": {
+            "$ref": "#/components/schemas/Transform",
+            "description": "Bar transform applied (e.g. Heikin Ashi)"
+          },
           "timezone": {
             "type": "string",
             "title": "Timezone",
@@ -377,6 +409,7 @@
           "symbol",
           "interval",
           "adjusted",
+          "transform",
           "timezone",
           "source",
           "stale",
@@ -624,6 +657,15 @@
         ],
         "title": "SymbolInfo",
         "description": "One tradable or reference instrument."
+      },
+      "Transform": {
+        "type": "string",
+        "enum": [
+          "none",
+          "heikin_ashi"
+        ],
+        "title": "Transform",
+        "description": "Bar transforms selectable with ``/api/bars?transform=``."
       },
       "ValidationError": {
         "properties": {

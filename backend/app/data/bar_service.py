@@ -35,6 +35,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import numpy as np
 
+from app.analysis.transforms import Transform, apply_transform
 from app.data.adjust import dividend_adjust
 from app.data.cache.bar_cache import BarCache
 from app.data.providers.base import DataProvider, ProviderError, RateLimitedError
@@ -294,19 +295,30 @@ class BarService:
         end: date | None = None,
         until: date | None = None,
         limit: int = 5000,
+        before: int | None = None,
+        transform: Transform = Transform.NONE,
     ) -> BarsResult:
-        """Bars for the API. ``until`` (replay cursor) is applied before anything else."""
+        """Bars for the API. ``until`` (replay cursor) is applied before anything else.
+
+        ``before`` (UTC epoch seconds, exclusive) pages backwards: pass the time of the oldest bar
+        already loaded. ``transform`` (e.g. Heikin Ashi) runs on the whole history before the
+        window is cut, so every page agrees with a full-history computation.
+        """
         info = self.resolve(symbol)
         if interval.is_intraday:
-            return self._intraday_bars(info, interval, adjusted, start, end, until, limit)
+            return self._intraday_bars(
+                info, interval, adjusted, start, end, until, limit, before, transform
+            )
         daily = self.daily(info)
         frame = daily.frame
         if until is not None:
             frame = frame.take(frame.time <= date_to_ts(until))
         if adjusted:
             frame = dividend_adjust(frame)
-        frame = resample(frame, interval)
-        frame, has_more_before = _window(frame, frame.time // SECONDS_PER_DAY, start, end, limit)
+        frame = apply_transform(resample(frame, interval), transform)
+        frame, has_more_before = _window(
+            frame, frame.time // SECONDS_PER_DAY, start, end, limit, before
+        )
         return BarsResult(
             symbol=info,
             interval=interval,
@@ -327,6 +339,8 @@ class BarService:
         end: date | None,
         until: date | None,
         limit: int,
+        before: int | None,
+        transform: Transform,
     ) -> BarsResult:
         hourly = self.hourly(info)
         frame = hourly.frame
@@ -342,7 +356,8 @@ class BarService:
         if interval is not Interval.H1:
             frame = resample_intraday(frame, sessions, interval)
             frame_sessions = session_days(frame.time, info.timezone, info.session_start_minutes)
-        frame, has_more_before = _window(frame, frame_sessions, start, end, limit)
+        frame = apply_transform(frame, transform)
+        frame, has_more_before = _window(frame, frame_sessions, start, end, limit, before)
         return BarsResult(
             symbol=info,
             interval=interval,
@@ -414,13 +429,21 @@ class BarService:
 
 
 def _window(
-    frame: BarFrame, days: IntArray, start: date | None, end: date | None, limit: int
+    frame: BarFrame,
+    days: IntArray,
+    start: date | None,
+    end: date | None,
+    limit: int,
+    before: int | None = None,
 ) -> tuple[BarFrame, bool]:
-    """Bars whose (session) day is in ``[start, end]``, the newest ``limit`` of them.
+    """Bars whose (session) day is in ``[start, end]`` and that start before ``before`` (UTC
+    epoch seconds, exclusive), the newest ``limit`` of them.
 
     Also returns whether older bars exist (before ``start`` or cut by ``limit``).
     """
     keep = np.ones(len(frame), dtype=np.bool_)
+    if before is not None:
+        keep &= frame.time < before
     older = False
     if start is not None:
         after_start = days >= date_to_ts(start) // SECONDS_PER_DAY

@@ -53,7 +53,8 @@ export interface paths {
         };
         /**
          * Get Bars
-         * @description The newest ``limit`` bars in ``[start, end]``, never after ``until``.
+         * @description The newest ``limit`` bars in ``[start, end]`` (and before ``before``), never after
+         *     ``until``.
          *
          *     For intraday intervals the dates select whole trading sessions (by session date).
          */
@@ -118,6 +119,8 @@ export interface components {
              * @description Dividend adjustment applied (ADJ)
              */
             adjusted: boolean;
+            /** @description Bar transform applied (e.g. Heikin Ashi) */
+            transform: components["schemas"]["Transform"];
             /**
              * Timezone
              * @description Exchange time zone (IANA), e.g. 'America/New_York'
@@ -257,6 +260,12 @@ export interface components {
              */
             session_start?: string | null;
         };
+        /**
+         * Transform
+         * @description Bar transforms selectable with ``/api/bars?transform=``.
+         * @enum {string}
+         */
+        Transform: "none" | "heikin_ashi";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -344,6 +353,9 @@ export interface operations {
                 until?: string | null;
                 limit?: number;
                 adjusted?: boolean;
+                /** @description Paging: only bars that start before this UTC epoch second (exclusive). Pass the oldest loaded bar's time; a daily date counts as 00:00 UTC. */
+                before?: number | null;
+                transform?: components["schemas"]["Transform"];
             };
             header?: never;
             path?: never;

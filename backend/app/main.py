@@ -1,6 +1,7 @@
 """FastAPI application factory.
 
-Run with ``uv run uvicorn app.main:app --reload``.
+Run with ``uv run python -m uvicorn --factory app.main:create_app --reload``. Importing this
+module must not create ``data/bars.db`` (tech debt T1), so ``app`` is built lazily.
 """
 
 from __future__ import annotations
@@ -80,4 +81,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
-app = create_app()
+def __getattr__(name: str) -> FastAPI:
+    """Lazy ``app.main:app`` for launchers that predate ``--factory`` (e.g. a ``dev.ps1`` still in
+    memory while it pulls this version). Importing the module stays side-effect free."""
+    if name == "app":
+        return create_app()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

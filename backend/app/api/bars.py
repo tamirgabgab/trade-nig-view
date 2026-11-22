@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
+from app.analysis.transforms import Transform
 from app.api.deps import get_bar_service
 from app.data.bar_service import BarService
 from app.models.bars import Interval, ts_to_iso_dates
@@ -31,6 +32,7 @@ class BarsResponse(BaseModel):
     symbol: str
     interval: Interval
     adjusted: bool = Field(description="Dividend adjustment applied (ADJ)")
+    transform: Transform = Field(description="Bar transform applied (e.g. Heikin Ashi)")
     timezone: str = Field(description="Exchange time zone (IANA), e.g. 'America/New_York'")
     source: str = Field(description="Provider that delivered the cached data")
     stale: bool = Field(description="True if a refresh failed and cached data is served")
@@ -49,13 +51,31 @@ def get_bars(
     until: Annotated[date | None, Query(description="Replay cursor: no bar after it")] = None,
     limit: Annotated[int, Query(ge=1, le=50_000)] = 5000,
     adjusted: bool = True,
+    before: Annotated[
+        int | None,
+        Query(
+            ge=0,
+            description="Paging: only bars that start before this UTC epoch second (exclusive). "
+            "Pass the oldest loaded bar's time; a daily date counts as 00:00 UTC.",
+        ),
+    ] = None,
+    transform: Transform = Transform.NONE,
 ) -> BarsResponse:
-    """The newest ``limit`` bars in ``[start, end]``, never after ``until``.
+    """The newest ``limit`` bars in ``[start, end]`` (and before ``before``), never after
+    ``until``.
 
     For intraday intervals the dates select whole trading sessions (by session date).
     """
     result = service.get_bars(
-        symbol, interval, adjusted=adjusted, start=start, end=end, until=until, limit=limit
+        symbol,
+        interval,
+        adjusted=adjusted,
+        start=start,
+        end=end,
+        until=until,
+        limit=limit,
+        before=before,
+        transform=transform,
     )
     frame = result.frame
     times: list[str] | list[int] = (
@@ -76,6 +96,7 @@ def get_bars(
         symbol=result.symbol.symbol,
         interval=interval,
         adjusted=result.adjusted,
+        transform=transform,
         timezone=result.symbol.timezone,
         source=result.source,
         stale=result.stale,

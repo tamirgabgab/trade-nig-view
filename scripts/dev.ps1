@@ -50,7 +50,7 @@ function Start-ChartLab {
     Write-Host '==> Backend on http://127.0.0.1:8000 (API docs: /api/docs)' -ForegroundColor Cyan
     # 'python -m uvicorn' instead of the uvicorn.exe launcher: Windows Smart App Control /
     # Application Control blocks the unsigned launcher .exe files that uv generates in .venv.
-    $uvicornArgs = @('run', 'python', '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000')
+    $uvicornArgs = @('run', 'python', '-m', 'uvicorn', '--factory', 'app.main:create_app', '--host', '127.0.0.1', '--port', '8000')
     if (-not $Open) {
         # Auto-reload only for development from a terminal. On Windows the uvicorn reloader restarts
         # the server with a console Ctrl+C event, which also reaches this PowerShell window and

@@ -5,7 +5,7 @@ FastAPI service for market data, indicators and analysis. See the repo root `REA
 
 ```bash
 uv sync                                   # install
-uv run python -m uvicorn app.main:app --reload   # dev server on :8000
+uv run python -m uvicorn --factory app.main:create_app --reload   # dev server on :8000
 uv run python -m pytest                          # tests (network is blocked)
 uv run python -m ruff check . && uv run python -m ruff format --check . && uv run python -m pyright
 ```

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -127,3 +128,41 @@ def test_quotes_mix_success_and_errors(client: TestClient) -> None:
     assert idx["last"] == 5040.0
     assert bbb["error"] is not None
     assert nope["error"] == "unknown symbol"
+
+
+def test_before_pages_backwards_without_gaps(client: TestClient) -> None:
+    params = {"symbol": "AAA", "adjusted": "false"}
+    full = client.get("/api/bars", params=params).json()["bars"]
+    newest = client.get("/api/bars", params={**params, "limit": 5}).json()
+    assert newest["has_more_before"] is True
+    # The oldest loaded daily bar is a date; as a cursor it counts as 00:00 UTC of that day.
+    cursor = 86_400 * (np.datetime64(newest["bars"][0]["time"], "D").astype(np.int64))
+    older = client.get("/api/bars", params={**params, "limit": 5, "before": int(cursor)}).json()
+    assert older["bars"] + newest["bars"] == full[-10:]
+    assert older["has_more_before"] is True
+    first = 86_400 * int(np.datetime64(full[0]["time"], "D").astype(np.int64))
+    rest = client.get("/api/bars", params={**params, "before": first}).json()
+    assert rest["bars"] == []
+    assert rest["has_more_before"] is False
+
+
+def test_before_pages_intraday_by_utc_seconds(client: TestClient) -> None:
+    params = {"symbol": "AAA", "interval": "1h", "adjusted": "false"}
+    full = client.get("/api/bars", params=params).json()["bars"]
+    page = client.get("/api/bars", params={**params, "before": full[10]["time"]}).json()
+    assert page["bars"] == full[:10]
+    assert page["has_more_before"] is False
+
+
+def test_heikin_ashi_pages_match_full_history(client: TestClient) -> None:
+    params = {"symbol": "AAA", "adjusted": "false", "transform": "heikin_ashi"}
+    full = client.get("/api/bars", params=params).json()
+    assert full["transform"] == "heikin_ashi"
+    raw = client.get("/api/bars", params={**params, "transform": "none"}).json()["bars"]
+    b0 = raw[0]
+    assert full["bars"][0]["close"] == pytest.approx(
+        (b0["open"] + b0["high"] + b0["low"] + b0["close"]) / 4
+    )
+    # A later page continues the recursion from the true history start, not from its own first bar.
+    newest = client.get("/api/bars", params={**params, "limit": 4}).json()["bars"]
+    assert newest == full["bars"][-4:]
