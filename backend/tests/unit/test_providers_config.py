@@ -16,7 +16,7 @@ def test_offline_uses_fixtures_only(tmp_path: Path) -> None:
 
 def test_online_chain_follows_settings_and_skips_unknown_ids() -> None:
     settings = IsolatedSettings(
-        data_providers=["yahoo", "tiingo", "twelvedata"], tiingo_api_key="k"
+        data_providers=["yahoo", "tiingo", "twelvedata"], tiingo_api_key=SecretStr("k")
     )
     assert [p.id for p in build_providers(settings)] == ["yahoo", "tiingo"]
 
