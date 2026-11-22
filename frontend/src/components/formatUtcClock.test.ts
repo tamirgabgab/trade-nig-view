@@ -1,4 +1,4 @@
-import { formatUtcClock } from './clock.ts';
+import { formatUtcClock } from './formatUtcClock.ts';
 
 describe('formatUtcClock', () => {
   it('formats with zero padding in UTC', () => {

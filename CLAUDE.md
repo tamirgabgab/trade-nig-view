@@ -44,6 +44,8 @@ Treat every indicator like a DUT (golden model, directed + property tests, score
   `app.config.Settings`. pandas 3 copy-on-write: no chained assignment.
 - **TypeScript 6.0.x strict** (TS 7 blocked by typescript-eslint). No `any` without a comment explaining why. React function
   components + hooks; camelCase vars, PascalCase components, one component per file, CSS Modules + tokens in `styles/tokens.css`.
+- **File names**: never have two files in one folder whose names differ only by case or extension
+  (`Clock.tsx` + `clock.ts` breaks TypeScript/ESLint on Windows' case-insensitive file system).
 - **API**: REST JSON under `/api`, snake_case fields, errors as RFC 9457 problem+json, OpenAPI → generated TS types
   (`frontend/src/api/schema.ts`, never edited by hand). Contract in `docs/ARCHITECTURE.md §4`.
 - **Time**: store UTC epoch seconds + exchange TZ. Daily+ bars to the chart as `'YYYY-MM-DD'`; intraday as UTC seconds,

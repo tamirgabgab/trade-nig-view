@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import styles from './BottomBar.module.css';
-import { formatUtcClock } from './clock.ts';
+import { formatUtcClock } from './formatUtcClock.ts';
 
 /** Live clock in the bottom bar. Time-zone selection arrives in R6. */
 export function Clock() {

@@ -37,7 +37,12 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 # install uv if needed
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-git clone <repo-url> chartlab; cd chartlab
+# reload PATH so this window sees uv (or open a new, non-admin PowerShell window)
+$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+
+# clone into your user folder - never inside C:\Windows\System32 (no write access there)
+cd $HOME
+git clone https://github.com/tamirgabgab/trade-nig-view.git chartlab; cd chartlab
 Copy-Item .env.example .env        # optional API keys
 .\scripts\setup.ps1                # backend + frontend dependencies
 .\scripts\dev.ps1                  # backend :8000 + frontend :5173
