@@ -3,7 +3,7 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. **R0 — Scaffolding & quality gates** הושלם וממתין לאישור שלך.
+- **שלב:** Phase 1. **R0 — Scaffolding & quality gates** הושלם ואומת על המחשב שלך (Windows 11, Smart App Control דלוק): `dev.ps1` עובד ו-`test.ps1` עבר 8/8. ממתין לאישור שלך.
 - **הסבב הבא:** **R1 — Market data layer** (ראה `docs/ROADMAP.md`).
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
@@ -92,5 +92,5 @@
   - `_socket.pyd` של ה-Python של uv נחסם. תיקון: Python רשמי מ-python.org דרך `winget` ו-`UV_PYTHON_PREFERENCE=only-system`.
   - WSL הוצע ונדחה על ידי המשתמש.
   - `mypy` נחסם (`librt`). תיקון: `pyright`.
-  - אחרי התיקונים: `dev.ps1` עובד (Backend is up, health 200, ה-shell מוצג), ו-`test.ps1` עבר 7/8 לפני המעבר ל-pyright. ממתין להרצה חוזרת אחרי `git pull`.
+  - אחרי התיקונים: `dev.ps1` עובד (Backend is up, health 200, ה-shell מוצג), ו-**`test.ps1` עבר 8/8 על המחשב של המשתמש** (pyright 0 errors, 11 backend tests, 19 frontend tests), עם SAC דלוק. R0 אומת במלואו ב-Windows.
 - הבא: R1 אחרי אישור.
