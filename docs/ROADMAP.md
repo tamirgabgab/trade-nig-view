@@ -7,7 +7,7 @@
 |---|---|---|---|
 | Stage A | Research, architecture, docs | M | ✅ Done (2026-11-22) |
 | R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
-| R1 | Market data layer | L | 🔨 R1a done (2026-11-22), R1b next |
+| R1 | Market data layer | L | ✅ R1a + R1b done (2026-11-22); real fixtures pending on the user's machine |
 | R2 | Chart core | L | 🔨 R2a done (2026-11-22), R2b next |
 | R3 | Indicator engine v1 | L | |
 | R4 | Drawing tools v1 | L | |
@@ -71,7 +71,11 @@ Tasks
 - [ ] Fixtures generated on the user's machine (the cloud sandbox cannot reach Yahoo) and committed
 - [x] API: `/api/symbols`, `/api/bars`, `/api/quotes` (moved forward from R2); problem+json errors
 - [x] Watchlist shows live last / change / change % from `/api/quotes` (moved forward from R2)
-- [ ] R1b: `1h` best-effort interval; OpenAPI → generated TS types (`frontend/src/api/schema.ts`)
+- [x] R1b: `1h` interval (Yahoo, 730-day limit: first fetch 729 days back, the cache keeps older history) and `4h`
+  resampled per trading session (`app/data/sessions.py`); intraday dividend adjustment from the session's daily bar
+- [x] R1b: OpenAPI → generated TS types (`frontend/src/api/schema.ts`, ADR 0008) with freshness gates
+- [x] R1b: GOLD/SILVER/USOIL shown as what they are: continuous futures `GC1!`, `SI1!`, `CL1!`
+- [x] R1b: `scripts/make-fixtures.ps1` (download daily + 1h, test, commit, push) and universe-wide fixture tests
 - [x] Tests: recorded Tiingo response + fake Yahoo history (no network), cache and refresh scenarios, resampling (hand vectors incl. holidays, year boundary, partial weeks + hypothesis no-lookahead), validation, adjustment, API tests in offline mode
 
 DoD: `/api/bars` returns validated data for every universe symbol (live and `OFFLINE=1`); tests cover cache, resampling,
@@ -106,9 +110,9 @@ R2a (basic candlestick chart) — delivered 2026-11-22
 R2b (remaining)
 
 Tasks
-- [ ] `chart/ChartEngine.ts`: setChartType, setScaleMode, panes, time conversion for intraday (create/dispose, setBars, crosshair done in R2a)
-- [ ] Unit tests for pure helpers (time conversion, hollow-candle coloring, range-button → visible range math)
-- [ ] `SymbolSearchDialog`, `ChartTypeMenu`, `RangeBar`, `ScaleToggles`, `1h` in the interval switcher (`LegendOHLC`, interval switcher and `Watchlist` done)
+- [ ] `chart/ChartEngine.ts`: setChartType, setScaleMode, panes (create/dispose, setBars, crosshair done in R2a; intraday time conversion done in R1b)
+- [ ] Unit tests for pure helpers (hollow-candle coloring, range-button → visible range math; time conversion done in R1b)
+- [ ] `SymbolSearchDialog`, `ChartTypeMenu`, `RangeBar`, `ScaleToggles` (`LegendOHLC`, interval switcher with 1h/4h/D/W/M and `Watchlist` done)
 - [ ] `analysis/transforms.py` Heikin Ashi + tests; expose via `/api/bars?transform=heikin_ashi`
 - [ ] Lazy loading: `subscribeVisibleLogicalRangeChange` → fetch `end=<first bar>` page, prepend, keep viewport stable
 - [ ] Playwright setup + smoke test

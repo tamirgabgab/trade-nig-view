@@ -3,9 +3,8 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0 ו-R1a הושלמו ואומתו על המחשב של המשתמש. **R2a (גרף הנרות הבסיסי) הושלם** (2026-11-22) ונבדק בענן על נתונים סינתטיים. **ממתין לדמו אצל המשתמש עם נתונים אמיתיים.**
+- **שלב:** Phase 1. R0, R1a ו-R2a הושלמו. **R1b (1h ו-4h, שעון ישראל, futures, OpenAPI types, סקריפט fixtures) הושלם** (2026-11-22) ונבדק בענן על נתוני הבדיקה. **ממתין לדמו אצל המשתמש: הרצת `make-fixtures.ps1` ובדיקת 1h/4h עם נתונים אמיתיים.**
 - **הסבב הבא:** **R2b**: סוגי גרף (bars, hollow, line, area, Heikin Ashi דרך transform ב-backend), scale של log ו-%, range buttons, symbol search, lazy loading של היסטוריה, ו-Playwright smoke test.
-  - R1b (אחרי R2b): 1h, fixtures אמיתיים, OpenAPI types, ובעיית GOLD/SILVER/USOIL (futures מול spot).
 - **Branch:** `claude/jolly-planck-gd2vdg`. `main` עדיין מכיל רק את ה-Initial commit; עוד לא נפתח PR.
 
 ## מה נעשה ב-session האחרון (2026-11-22, R0)
@@ -65,6 +64,32 @@
 - שינויים ב-`dev.ps1` עצמו נכנסים לתוקף רק בהפעלה שאחרי ה-pull (PowerShell כבר קרא את הקובץ).
 - נבדק: `update.sh` ב-7 תרחישים על clone זמני עם `uv`/`npm` מזויפים (נמצא ותוקן באג: תבנית ריקה ב-`grep` גרמה ל-`npm ci` מיותר). `update.ps1` נבדק ב-CI על Windows PowerShell 5.1 (checkout רגיל ו-remote לא זמין), כי בענן אין PowerShell.
 
+## R1b — מה נבנה (2026-11-22)
+- **Intervals:** `1h` (מ-Yahoo) ו-`4h` (resample מ-1h). `Interval` ב-backend: `1h`, `4h`, `1D`, `1W`, `1M`.
+  - Yahoo שומר 1h רק ל-730 יום אחורה. ההורדה הראשונה מתחילה 729 ימים אחורה, וה-cache שומר גם היסטוריה ישנה יותר שכבר ירדה. רענון: 5 הימים האחרונים.
+  - Tiingo לא מספק 1h אצלנו (מדולג אוטומטית). ל-`^IDX` של הבדיקות אין 1h, והתשובה היא 503 ברורה.
+- **Sessions** (`app/data/sessions.py`): לכל נר שעתי יש session date, זהה לתאריך של הנר היומי.
+  - ל-futures יש `session_start = "18:00"`, ל-DXY `"20:00"`, ול-forex `"17:00"` (שעון ניו יורק), כך שנר של יום ראשון 18:00 שייך ל-session של יום שני.
+  - נרות 4h מעוגנים לנר הראשון של ה-session: מניות 09:30 ו-13:30 (ניו יורק), futures ב-18, 22, 2, 6, 10 ו-14.
+  - ADJ לנרות שעתיים: כל נר מקבל את מקדם הדיבידנד של הנר היומי של אותו session.
+  - `start`/`end`/`until` ב-intraday בוחרים sessions שלמים.
+- **GOLD/SILVER/USOIL:** הוצגו מעכשיו כמו שהם באמת: `GC1!`, `SI1!` ו-`CL1!` (continuous futures, כמו `COMEX:GC1!` ב-TradingView). ה-provider symbol (`GC=F`) לא השתנה, ולכן הבחירה השמורה ב-localStorage ממשיכה לעבוד.
+- **Frontend:**
+  - כפתורי `1h` ו-`4h` ב-`IntervalSwitcher` (לפני D/W/M).
+  - `chart/timeZone.ts`: המרה של UTC לשעון ישראל (`Asia/Jerusalem`), עם offset ששמור לכל יום UTC ומחושב לכל נר בימי מעבר שעון. מדויק גם בימי DST (נבדק מול golden model לכל נר, ב-3 אזורי זמן ובשני כיווני המעבר).
+  - ציר הזמן מציג שעות ב-intraday (בלי שניות). השעון בסרגל התחתון מציג שעון ישראל עם `UTC+2`/`UTC+3`.
+  - סימבול שמור שכבר לא קיים ב-universe חוזר ל-AAPL.
+- **OpenAPI → TS** (ADR 0008):
+  - `app/openapi_export.py` כותב את `frontend/src/api/openapi.json`, ו-`openapi-typescript` 7.13 מייצר ממנו את `schema.ts`. הפקודה: `scripts/gen-api.ps1`.
+  - ה-parsers קוראים שדות דרך `fieldsOf<Schemas[...]>()`, כך ששינוי שם של שדה ב-backend שובר את `tsc`.
+  - gate חדש `frontend: api types` (סה"כ 9 gates), ו-test ב-backend שבודק ש-`openapi.json` מעודכן.
+  - openapi-typescript מצהיר על peer `typescript ^5`; פתרנו עם `overrides` ב-`package.json` (נבדק עם TS 6.0.3).
+- **Fixtures:**
+  - `scripts/make_fixtures.py` כותב `backend/fixtures/daily/` (2015-01-01 עד 2026-10-30) ו-`backend/fixtures/1h/` (2026-08-01 עד 2026-10-30).
+  - `scripts/make-fixtures.ps1`: `git pull`, הורדה מ-Yahoo, הרצת `test_committed_fixtures.py`, commit של `backend/fixtures` בלבד, ו-`git push`. `-NoPush` כותב ובודק בלי commit.
+  - `tests/unit/data/test_committed_fixtures.py`: לכל סימבול ב-universe: הקבצים נקיים, ה-sessions של 1h תואמים לימים של daily (לפחות 90%), וה-API מחזיר נרות תקינים בכל 5 ה-intervals במצב offline. סימבול בלי קובץ מדולג (כרגע: 175 skipped).
+- **בדיקות:** backend 141 (coverage 98%), frontend 89. בדיקה בדפדפן (Playwright, `OFFLINE=1` עם נתוני הבדיקה): הנר הראשון של AAA ב-1h מוצג ב-16:30 (= 09:30 בניו יורק), 4h מציג 2 נרות ל-session, השעון מציג `UTC+2`, ואין שגיאות ב-console.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -90,19 +115,27 @@
 | 2026-11-22 | Tiingo מחזיר OHLC גולמי: מתאימים ל-splits לפי `splitFactor`, כדי ש-Yahoo ו-Tiingo יחזירו אותה סמנטיקה | עקביות בין providers | — |
 | 2026-11-22 | רענון cache: הורדה של 10 הימים האחרונים כל 15 דקות. אם החפיפה לא תואמת (split או דיבידנד חדש), מורידים את כל ההיסטוריה | נכונות מול חיסכון בבקשות | ARCHITECTURE §8 |
 | 2026-11-22 | אין workflow שעושה push אוטומטי של fixtures מ-CI (נחסם; דורש אישור מפורש של המשתמש). ה-fixtures ייווצרו אצל המשתמש | בטיחות | — |
+| 2026-11-22 | R1b לפני R2b, לבקשת המשתמש | רוצה דברים מעניינים יותר (שעות) | — |
+| 2026-11-22 | Fixtures: סקריפט אצל המשתמש (`make-fixtures.ps1`) שמוריד, בודק, עושה commit ו-push | בחירת המשתמש | — |
+| 2026-11-22 | GOLD/SILVER/USOIL → `GC1!`/`SI1!`/`CL1!` (futures רציפים, בלי מקור spot) | בחירת המשתמש; אין מקור spot חינמי ואמין | — |
+| 2026-11-22 | Intervals תוך-יומיים: `1h` ו-`4h`; 4h מעוגן ל-session (כמו TradingView) | בחירת המשתמש | ARCHITECTURE §6 |
+| 2026-11-22 | נרות תוך-יומיים מוצגים בשעון ישראל (`Asia/Jerusalem`); הגדרה למשתמש ב-R6 | בחירת המשתמש | ARCHITECTURE §6 |
+| 2026-11-22 | `openapi-typescript` ~7.13 עם `overrides` ל-TS 6 | types שנוצרים מה-backend, תלות dev קטנה | [0008](docs/adr/0008-openapi-typescript.md) |
 
 ## שאלות פתוחות אליך
-1. **איך להכניס את ה-fixtures לריפו?** אפשרות א': אתה מריץ `make_fixtures.py` ועושה `git push` (נדרשת התחברות חד-פעמית ל-GitHub ב-Git). אפשרות ב': אתה מאשר workflow ב-GitHub Actions שמייצר אותם ועושה push ל-branch.
-2. **מקור ה-"Moving average crossover 9/21"** מהצילום (נדרש ל-R3).
+1. **מקור ה-"Moving average crossover 9/21"** מהצילום (נדרש ל-R3).
 
 ## בעיות ידועות / tech debt
-- **GOLD, SILVER ו-USOIL שונים מ-TradingView.** אצל המשתמש ב-TradingView אלה מחירי spot (CFD), ואצלנו חוזים עתידיים רציפים של Yahoo (`GC=F`, `SI=F`, `CL=F`). ב-20.11: GOLD אצלנו 3,515.40 (-4.62%) מול 3,537.83 (-2.41%) ב-TV. בימי roll השינוי היומי מעוות. ל-R1b: לבדוק מקור spot, או לשנות את התווית ל-"Gold futures".
+- ✅ **GOLD, SILVER ו-USOIL** (spot ב-TV מול futures אצלנו): נפתר ב-R1b בשינוי השם ל-`GC1!`/`SI1!`/`CL1!`. להשוואה ב-TradingView יש לפתוח `COMEX:GC1!`, `COMEX:SI1!`, `NYMEX:CL1!`. בימי roll השינוי היומי של continuous futures עדיין חריג (כך גם ב-TV).
+- **1h לא אומת עם Yahoo אמיתי** (אין גישה מהענן). לבדוק בדמו: AAPL, `GC1!`, SPX ו-GBPUSD. אם Yahoo לא מחזיר 1h לסימבול מסוים, תוצג שגיאה ברורה בגרף.
+- חלון ה-1h של ה-fixtures (2026-08-01 עד 2026-10-30) ייצא ממגבלת 730 הימים של Yahoo באמצע 2028. אז צריך להזיז אותו ב-`make_fixtures.py`.
+- ייבוא של `app.main` יוצר את `app = create_app()` ברמת המודול, ולכן גם `openapi_export` ו-tests יוצרים את `data/bars.db` (gitignored). לא מזיק; אפשר לעבור ל-`uvicorn --factory` בהזדמנות.
 - הבדלים קטנים ב-DJI (0.01%), ב-DXY וב-Forex (Yahoo ו-TV חותכים את היום בשעות שונות). מניות, ETFs, SPX, NDX ו-VIX זהים ל-TV עד הסנט.
 - **אין גישה ל-Yahoo מסביבת הענן של Claude** (ה-proxy מחזיר `403`). ה-fixtures וה-recorded responses ייווצרו על המחשב של המשתמש באמצעות סקריפט שירוץ אצלו.
-- **ה-fixtures עדיין לא בריפו.** הבדיקות משתמשות כרגע בנתונים קטנים שנבנו ידנית (`backend/tests/fixtures/`). מצב `OFFLINE=1` עם ה-universe האמיתי לא יעבוד עד שה-fixtures ייווצרו.
+- **ה-fixtures עדיין לא בריפו.** הם ייכנסו כשהמשתמש יריץ `.\scripts\make-fixtures.ps1`. עד אז הבדיקות משתמשות בנתונים קטנים שנבנו ידנית (`backend/tests/fixtures/`), `test_committed_fixtures.py` מדלג, ומצב `OFFLINE=1` עם ה-universe האמיתי לא יעבוד.
 - הגישה ל-Yahoo מתבצעת רק מהמחשב של המשתמש. כאן בענן היא חסומה, ולכן בדקתי את `YahooProvider` עם DataFrame מזויף בפורמט של yfinance.
 - ✅ ה-`.ps1` scripts אומתו ב-CI על `windows-latest` תחת PowerShell 5.1 (run #3 ירוק). הריצה הראשונה נכשלה בגלל התנגשות שמות `Clock.tsx`/`clock.ts` ב-file system שלא מבחין בין אותיות גדולות לקטנות. תוקן, ונוסף כלל ל-`CLAUDE.md`.
-- ה-TS types של ה-API עדיין כתובים ידנית (`api/health.ts`). generation מ-OpenAPI ייכנס ב-R1.
+- ✅ ה-TS types של ה-API נוצרים מ-OpenAPI (R1b).
 - ה-range buttons וה-scale toggles (`%`, `log`, `auto`, `ADJ`) בסרגל התחתון עדיין UI state בלבד. הם יחוברו לגרף ב-R2b.
 - בעמודת Chg% ב-Watchlist המספר נחתך מימין כשהמחירים ארוכים (למשל 12,912.115 בנתונים הסינתטיים). עם מחירים אמיתיים זה לא קרה; לבדוק ב-R2b.
 - צילום המסך ב-README עדיין של R0. יוחלף בצילום של גרף עם נתונים אמיתיים אחרי הדמו.
@@ -154,3 +187,10 @@
 - נבנו `ChartEngine`, legend, interval switcher, Watchlist לחיץ ו-store. 8/8 gates ירוקים (backend 102 tests, frontend 71).
 - הדמו עם נתונים אמיתיים ממתין למשתמש.
 - המשתמש ביקש שאריץ בעצמי את `git pull` ו-`setup.ps1`. session בענן לא יכול להגיע למחשב שלו (התיקיות שלו לא זמינות ל-sessions בענן), ולכן נבחרה "דרך 2": האייקון מתעדכן לבד לפני כל הפעלה.
+
+### 2026-11-22 — R1b: שעות, futures ו-OpenAPI types
+- המשתמש ביקש לממש את R1b לפני R2b. השאלות לפני המימוש והתשובות: fixtures דרך סקריפט אצלו עם push; futures בשם `GC1!`; intervals של `1h` ו-`4h`; שעון ישראל.
+- 5 commits: backend של 1h/4h, OpenAPI types, frontend של 1h/4h ושעון ישראל, סקריפט fixtures, ותיעוד.
+- 9/9 gates ירוקים מקומית (backend 141 tests, coverage 98%; frontend 89). CI ירוק על ubuntu ו-windows.
+- נמצא ותוקן בדרך: `has_more_before` ספר גם נרות אחרי `end` (נכתב מחדש ב-`_window`); תווית ה-crosshair הציגה שניות ב-intraday (`secondsVisible: false`).
+- ממתין לדמו אצל המשתמש: `make-fixtures.ps1` ובדיקת 1h/4h מול TradingView.

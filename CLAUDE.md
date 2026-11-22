@@ -29,6 +29,8 @@ Treat every indicator like a DUT (golden model, directed + property tests, score
 | Desktop shortcut (double-click → update + app opens) | `.\scripts\install-shortcut.ps1` (runs `dev.ps1 -Open`, which runs `update.ps1` first) | — |
 | Update checkout (ff-only pull, reinstall libs only if lock files changed) | `.\scripts\update.ps1` | `./scripts/update.sh` |
 | All tests + lint + typecheck | `.\scripts\test.ps1` | `./scripts/test.sh` |
+| Regenerate API types (after a backend model change) | `.\scripts\gen-api.ps1` | `./scripts/gen-api.sh` |
+| Download fixtures from Yahoo + commit + push (user's machine only) | `.\scripts\make-fixtures.ps1` | — |
 | Backend tests | `cd backend; uv run python -m pytest` | same |
 | Backend lint/format/types | `uv run python -m ruff check . ; uv run python -m ruff format --check . ; uv run python -m pyright` | same |
 | Frontend tests | `cd frontend; npm test` | same |

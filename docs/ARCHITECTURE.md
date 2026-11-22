@@ -248,10 +248,18 @@ params, style, pane, visible}], pane_stretch:[...], visible_range?, drawings_ref
   as the key (`date` column) plus the symbol's exchange timezone (`America/New_York` for US) in the symbol metadata.
 - **API → chart**: daily and above → business-day string `"YYYY-MM-DD"` (session date; week bars keyed by the first
   trading day of the week, month bars by the first trading day of the month). Intraday → UTC epoch seconds.
+- **Sessions (R1b)**: every intraday bar belongs to a trading session identified by its session date, the same date as
+  that session's daily bar: `date(wall + 24h - session_start)` when the symbol has `session_start` (CME futures
+  `18:00`, ICE DXY `20:00`, forex `17:00`, all New York time), else the exchange-local calendar date
+  (`app/data/sessions.py`). 4h bars are anchored to the session's first bar (US stocks 09:30/13:30; futures
+  18/22/02/06/10/14). Intraday dividend adjustment uses the factor of the session's daily bar.
 - **Display**: Lightweight Charts has no time-zone support. `ChartEngine` converts intraday UTC timestamps to
-  "wall-clock seconds" in the display TZ (`utc + offset(tz, utc)`) before `setData`, and back when reporting crosshair
-  times. DST handled per timestamp (via `Intl.DateTimeFormat`). Only `ChartEngine` knows about this shift.
-- `until` / `start` / `end` query params accept ISO dates (`2026-11-20`) or epoch seconds; interpreted as **inclusive**.
+  "wall-clock seconds" in the display TZ (`utc + offset(tz, utc)`, `chart/timeZone.ts`) before `setData`. The display
+  TZ is `Asia/Jerusalem` (a setting arrives in R6); offsets come from `Intl.DateTimeFormat`, cached per UTC day and
+  computed per bar on DST days, so the shift is exact. The crosshair reports a bar index, never a shifted time, so no
+  reverse conversion is needed. Only the chart layer knows about this shift; the bottom-bar clock shows the same zone.
+- `until` / `start` / `end` query params are ISO dates (`2026-11-20`), interpreted as **inclusive**. For intraday
+  intervals they are session dates and select whole sessions.
 
 ## 7. Indicator verification harness
 

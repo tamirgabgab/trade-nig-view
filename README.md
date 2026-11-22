@@ -4,8 +4,8 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** R2a complete — candlestick chart with volume and OHLC legend, D/W/M intervals, symbol switching from
-> the watchlist. Next: R2b (chart types, log/% scale, range buttons, symbol search).
+> **Status:** R1b complete — 1h and 4h bars shown in Israel time, futures labelled as futures (`GC1!`), API types
+> generated from OpenAPI. Next: R2b (chart types, log/% scale, range buttons, symbol search).
 > See [HANDOFF.md](HANDOFF.md) for the live status and [docs/ROADMAP.md](docs/ROADMAP.md) for the plan.
 
 ![ChartLab shell (R0)](docs/img/shell-r0.png)
@@ -18,7 +18,7 @@ trading agent can plug in later.
 | Research, architecture, ADRs | ✅ Done |
 | Scaffolding, CI, quality gates, dark app shell (R0) | ✅ Done |
 | Market data: yfinance + Tiingo fallback, SQLite cache, validated daily/weekly/monthly bars, live watchlist prices (R1a) | ✅ Done |
-| Offline fixtures, 1h interval, generated API types (R1b) | ⏳ After R2b |
+| 1h and 4h intervals (session-aware, Israel time on the chart), generated API types, fixture download script (R1b) | ✅ Done |
 | Chart: candles + volume, OHLC legend on the crosshair, D/W/M intervals, symbol from the watchlist, pan/zoom (R2a) | ✅ Done |
 | Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ⏳ Next |
 | Indicators: SMA, EMA, WMA, MA Cross, BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3) | ⏳ Planned |
@@ -57,6 +57,13 @@ After `install-shortcut.ps1`, double-click **ChartLab** on the Desktop: it downl
 (`git pull --ff-only`, libraries reinstalled only if they changed), starts the backend and the frontend and
 opens the app in your browser. Offline or if the pull fails, it starts the version already on disk. Close the
 black ChartLab window to stop it. To update without starting: `.\scripts\update.ps1`.
+
+Maintenance scripts:
+
+```powershell
+.\scripts\make-fixtures.ps1        # download daily + 1h fixtures from Yahoo, test, commit and push them
+.\scripts\gen-api.ps1              # after a backend API model change: regenerate openapi.json + schema.ts
+```
 
 > **Windows with Smart App Control on:** use the official, signed Python from python.org instead of uv's
 > downloaded Python (SAC blocks its unsigned `.pyd` files):
