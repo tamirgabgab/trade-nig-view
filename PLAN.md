@@ -35,7 +35,7 @@
 ### 2.2 Tech debt (scheduled below)
 | # | Item | Scheduled in |
 |---|---|---|
-| T1 | `app = create_app()` at module level creates `data/bars.db` on import → switch to `uvicorn --factory` | R2b (small) |
+| T1 | ✅ `app = create_app()` at module level created `data/bars.db` on import → `uvicorn --factory` (done in R2b) | R2b (small) |
 | T2 | 1h fixture window (2026-08-01 → 2026-10-30) leaves Yahoo's 730-day limit mid-2028 | calendar reminder, not a round |
 | T3 | README screenshot is still the R0 shell | U1 |
 | T4 | Watchlist Chg% column clips long prices | U1 |
@@ -54,12 +54,12 @@ keyboard, colour-palette, typography, motion, reduced-motion). No `.ux-profile.m
 
 | # | Severity | Finding | Evidence | Fix in |
 |---|---|---|---|---|
-| X1 | High | **False active state**: range buttons (1Y highlighted) and `auto` / `ADJ` toggles look active but do nothing | screenshot 1280; HANDOFF known issue | R2b (wire them) |
+| X1 | High | ✅ (R2b) **False active state**: range buttons (1Y highlighted) and `auto` / `ADJ` toggles look active but do nothing | screenshot 1280; HANDOFF known issue | R2b (wire them) |
 | X2 | High | **Narrow windows break**: at 375 px the watchlist overlays the legend, range buttons stack vertically, document is 820 px wide. A half-screen Windows window (~960 px) is the realistic case | screenshot 375; `scrollWidth` 820 | U1 |
-| X3 | Medium | **29 px horizontal overflow at 1280 px** (`scrollWidth` 1309), probably an off-screen tooltip | Playwright `scrollWidth` | R2b (quick) |
+| X3 | Medium | ✅ (R2b: right-aligned tooltips; e2e asserts no overflow at 1280/960) **29 px horizontal overflow at 1280 px** (`scrollWidth` 1309), probably an off-screen tooltip | Playwright `scrollWidth` | R2b (quick) |
 | X4 | Medium | ~25 placeholder controls (drawing tools, alert, replay, undo…) are `aria-disabled` with a "coming in Rx" tooltip (good), but look almost as strong as live controls | screenshot | U1 (dim to a clearly disabled style) |
 | X5 | Medium | Indicator UX does not exist yet. Needs: searchable dialog with categories and `/` shortcut, legend rows (eye, gear, learn, remove), live settings panel, oscillator panes | — | R3a / R3c |
-| X6 | Medium | Long loads (first 1h fetch, several seconds) show only a text overlay. Loaders skill: skeleton or progress beyond 1 s | `ChartArea.tsx` | R2b |
+| X6 | Medium | ✅ (R2b: progress bar after 150 ms, skeleton after 1 s) Long loads (first 1h fetch, several seconds) show only a text overlay. Loaders skill: skeleton or progress beyond 1 s | `ChartArea.tsx` | R2b |
 | X7 | Low | Watchlist shows `n/a` for a missing price while other columns use `—` | screenshot | U1 |
 | X8 | Low | Up/down colours are red/green only; offer a colour-blind-safe pair (blue/orange) | tokens | R6 settings |
 | ✓ | — | Tabular numbers in legend, watchlist and bottom bar; `prefers-reduced-motion` honoured; error and empty states for chart and watchlist; tooltips on icon buttons; TradingView attribution logo kept | code + screenshot | — |
@@ -74,7 +74,7 @@ overflow), fix hard-gate failures in the same round, and list the rest in HANDOF
 | E2 | Several Pine semantics are unconfirmed: `ta.ema` seed, HMA's `length/2` rounding, ALMA `floor` flag, McGinley seed, SMMA seed | Each becomes a written assumption + a TV cross-check row (`tests/golden/tv_crosscheck.json`) |
 | E3 | Rolling sums drift in float | One exact FIR kernel (`sliding_window_view(x, n) @ w`, O(N·n), fine for N=10k) for every finite-window MA; IIR filters as a scalar recursion (≈ms for 10k bars). No numba/scipy (native, SAC risk) |
 | E4 | Property "min(window) ≤ MA ≤ max(window)" is **false** for lag-compensated MAs (negative weights: DEMA, TEMA, HMA, LSMA, ZLEMA, T3) | Property tests split by filter class (§5.4) |
-| E5 | Lazy history loading (R2b) and indicator warm-up (R3a) interact: prepending bars must recompute indicators with enough lookback | Design the `lookback` contract in R2b, consume it in R3a |
+| E5 | ✅ contract defined in ARCHITECTURE §3.2 (R2b). Lazy history loading (R2b) and indicator warm-up (R3a) interact: prepending bars must recompute indicators with enough lookback | Design the `lookback` contract in R2b, consume it in R3a |
 
 ---
 
@@ -102,15 +102,15 @@ follow an established pattern; **Haiku 5.5** for chores (docs, a failing script 
 | S11 | Phase-1 review + Phase-2 plan | Opus 5.5 · xhigh | Whole-repo reasoning, re-verification of versions/limits | S |
 | any | Chores: fixture-script errors, doc fixes, dependency bumps | Haiku 5.5 · low (Sonnet 5.5 · low if it touches logic) | Small, local | XS |
 
-### S1 — R2b: chart core completion (Sonnet 5.5 · high)
+### S1 — R2b: chart core completion (Sonnet 5.5 · high) — ✅ done 2026-11-22
 Goal: everything visible on the chart chrome actually works, and the e2e harness exists before indicators arrive.
-- [ ] Wire range buttons (1D 5D 1M 3M 6M YTD 1Y 5Y All) and scale toggles (`auto`, `log`, `%`, `ADJ`) — fixes X1
-- [ ] `SymbolSearchDialog` (type a letter on the chart, arrow keys, Enter, Esc; grouped by section)
-- [ ] Chart types: candles, bars, hollow candles, line, area (Heikin Ashi via backend transform = stretch)
-- [ ] Lazy history on scroll-left, viewport stable; define the `lookback` contract for indicators (E5)
-- [ ] Loading skeleton/progress for loads > 1 s (X6); fix the 1280 px overflow (X3); `uvicorn --factory` (T1)
-- [ ] Playwright setup + smoke test (OFFLINE=1): AAPL 1D → NVDA 1W → log → legend values match fixtures
-- [ ] End: ux-audit at 1280/960
+- [x] Wire range buttons (1D 5D 1M 3M 6M YTD 1Y 5Y All) and scale toggles (`auto`, `log`, `%`, `ADJ`) — fixes X1
+- [x] `SymbolSearchDialog` (type a letter on the chart, arrow keys, Enter, Esc; grouped by section)
+- [x] Chart types: candles, bars, hollow candles, line, area (Heikin Ashi via backend transform = stretch)
+- [x] Lazy history on scroll-left, viewport stable; define the `lookback` contract for indicators (E5)
+- [x] Loading skeleton/progress for loads > 1 s (X6); fix the 1280 px overflow (X3); `uvicorn --factory` (T1)
+- [x] Playwright setup + smoke test (OFFLINE=1): AAPL 1D → NVDA 1W → log → legend values match fixtures
+- [x] End: ux-audit at 1280/960
 
 ### S2 — R3a: indicator engine + core moving averages (Opus 5.5 · high)
 Goal: the pipeline from a Python function to a line on the chart, verified like a DUT; SMA/EMA/WMA/RMA shipped.

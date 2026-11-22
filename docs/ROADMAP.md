@@ -12,8 +12,8 @@
 | Stage A | Research, architecture, docs | M | ✅ Done (2026-11-22) |
 | R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
 | R1 | Market data layer | L | ✅ R1a + R1b done (2026-11-22); real fixtures pending on the user's machine |
-| R2 | Chart core | L | 🔨 R2a done (2026-11-22), R2b next |
-| R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | |
+| R2 | Chart core | L | ✅ R2a + R2b done (2026-11-22) |
+| R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | 🔨 R3a next |
 | L1 | Learn v1 for the MA family (from Phase 2) | M | |
 | U1 | UX pass (responsive, disabled states, loaders, keyboard) | M | |
 | R4 | Drawing tools v1 | L | |
@@ -116,13 +116,13 @@ R2a (basic candlestick chart) — delivered 2026-11-22
 R2b (remaining)
 
 Tasks
-- [ ] `chart/ChartEngine.ts`: setChartType, setScaleMode, panes (create/dispose, setBars, crosshair done in R2a; intraday time conversion done in R1b)
-- [ ] Unit tests for pure helpers (hollow-candle coloring, range-button → visible range math; time conversion done in R1b)
-- [ ] `SymbolSearchDialog`, `ChartTypeMenu`, `RangeBar`, `ScaleToggles` (`LegendOHLC`, interval switcher with 1h/4h/D/W/M and `Watchlist` done)
-- [ ] `analysis/transforms.py` Heikin Ashi + tests; expose via `/api/bars?transform=heikin_ashi`
-- [ ] Lazy loading: `subscribeVisibleLogicalRangeChange` → fetch `end=<first bar>` page, prepend, keep viewport stable
-- [ ] Playwright setup + smoke test
-- [ ] Perf check: 10k bars pan/zoom; initial render < 1 s for 5k daily bars (measured, recorded in HANDOFF)
+- [x] `chart/ChartEngine.ts`: setChartType, setScale (normal/log/%, auto-fit), setVisibleRange, visible-range events, viewport kept when older bars are prepended (panes move to R3c with the first oscillator)
+- [x] Unit tests for pure helpers (hollow-candle coloring, range-button → visible range math in `chart/visibleRange.ts`, `prependedCount`)
+- [x] `SymbolSearchDialog` (type on the chart, arrows, Enter, Esc, grouped), `ChartTypeMenu`, range buttons and scale toggles wired in `BottomBar`
+- [x] `analysis/transforms.py` Heikin Ashi + tests; exposed via `/api/bars?transform=heikin_ashi` (computed on full history before paging)
+- [x] Lazy loading: `subscribeVisibleLogicalRangeChange` → fetch `before=<first bar>` page, prepend, keep viewport stable
+- [x] Playwright setup + smoke test (`frontend/e2e`, synthetic fixtures in `frontend/e2e/data`, CI job `e2e`)
+- [x] Perf check (headless Chromium, dev build): 5,000 daily bars painted 0.36–0.85 s after the response; 60 zoom steps over 5,000 bars in ~2 s incl. test-driver round trips (recorded in HANDOFF)
 
 DoD: Playwright smoke test opens AAPL 1D, switches to NVDA 1W, toggles log scale, checks legend values against the
 fixture data (runs with `OFFLINE=1`). Unit + lint + typecheck green.

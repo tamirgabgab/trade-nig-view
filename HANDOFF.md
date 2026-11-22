@@ -3,8 +3,9 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0, R1a ו-R2a הושלמו. **R1b (1h ו-4h, שעון ישראל, futures, OpenAPI types, סקריפט fixtures) הושלם** (2026-11-22) ונבדק בענן על נתוני הבדיקה. **ממתין לדמו אצל המשתמש: הרצת `make-fixtures.ps1` ובדיקת 1h/4h עם נתונים אמיתיים.**
-- **הסבב הבא:** **R2b** (S1 ב-[PLAN.md](PLAN.md)). **סדר ה-sessions הבאים, המלצת מודל ו-effort לכל אחד, ממצאי סקירת ה-UX והמתמטיקה של משפחת הממוצעים הנעים נמצאים ב-[PLAN.md](PLAN.md).** אחרי R2b: R3a (מנוע indicators ו-SMA/EMA/WMA/RMA), R3b (ממוצעים מוכללים), L1 (דפי לימוד), R3c, U1.
+- **שלב:** Phase 1. R0, R1a, R1b, R2a ו-**R2b (S1) הושלמו** (2026-11-22). R2b: סוגי גרף (כולל Heikin Ashi), log/%, auto, ADJ, כפתורי טווח, חיפוש סימבולים, היסטוריה עצלה בגלילה שמאלה, Playwright. **ממתין לדמו אצל המשתמש** (ראה רשימת הדמו בסוף ה-session האחרון).
+- **הסבב הבא:** **R3a** (S2 ב-[PLAN.md](PLAN.md)): מנוע indicators ו-SMA/EMA/WMA/SMMA. אחריו R3b (ממוצעים מוכללים), L1, R3c, U1. סדר ה-sessions, המלצות מודל ו-effort, ממצאי ה-UX והמתמטיקה של הממוצעים: [PLAN.md](PLAN.md).
+- **החלטות D1–D6** (PLAN §7): המשתמש ביקש לממש S1–S3 בלי לבחור; אומצו ההמלצות: D2 = TA-Lib כתלות בדיקות אופציונלית (מדולג מקומית אם חסום), D4 = כולל KAMA, T3, ZLEMA, D6 = פאנל הגדרות חי.
 - **Branch:** עובדים ישירות על `main` (הוראה קבועה של המשתמש מ-2026-11-22). האייקון מעביר checkout ישן ל-`main` לבד.
 
 ## מה נעשה ב-session האחרון (2026-11-22, R0)
@@ -100,6 +101,25 @@
   - `tests/unit/data/test_committed_fixtures.py`: לכל סימבול ב-universe: הקבצים נקיים, ה-sessions של 1h תואמים לימים של daily (לפחות 90%), וה-API מחזיר נרות תקינים בכל 5 ה-intervals במצב offline. סימבול בלי קובץ מדולג (כרגע: 175 skipped).
 - **בדיקות:** backend 141 (coverage 98%), frontend 89. בדיקה בדפדפן (Playwright, `OFFLINE=1` עם נתוני הבדיקה): הנר הראשון של AAA ב-1h מוצג ב-16:30 (= 09:30 בניו יורק), 4h מציג 2 נרות ל-session, השעון מציג `UTC+2`, ואין שגיאות ב-console.
 
+## R2b — מה נבנה (2026-11-22)
+- **Backend:**
+  - `app/analysis/transforms.py`: Heikin Ashi (`close = (O+H+L+C)/4`, `open_t = (open_{t-1} + close_{t-1})/2`). רץ על כל ההיסטוריה **לפני** החיתוך לעמוד, ולכן עמוד = אותו קטע מהחישוב המלא (נבדק).
+  - `/api/bars`: פרמטרים חדשים `before` (epoch seconds, בלעדי; נר יומי = 00:00 UTC של התאריך) ו-`transform=none|heikin_ashi`. שדה `transform` בתשובה. ה-OpenAPI types עודכנו.
+  - **T1 תוקן:** אין יותר `app = create_app()` ברמת המודול. `dev.ps1`/`dev.sh` מריצים `uvicorn --factory app.main:create_app`; `app.main:app` עדיין עובד (lazy) בשביל `dev.ps1` ישן שכבר בזיכרון.
+- **Frontend:**
+  - `api/bars.ts`: `useBarHistory` מעל `useInfiniteQuery`: עמוד ראשון = 5,000 הנרות האחרונים, עמודים ישנים עם `before`. העמוד הבא נטען כשנשארים פחות מ-50 נרות משמאל לחלון. `ChartEngine.setBars` מזיז את ה-logical range במספר הנרות שנוספו, כך שהגרף לא קופץ.
+  - `ChartEngine`: `setChartType` (נרות, נרות חלולים, bars, line, area, Heikin Ashi), `setScale` (normal/log/%, auto), `setVisibleRange`, `onVisibleRangeChange`.
+  - `chart/visibleRange.ts`: כפתורי הטווח כמתמטיקה טהורה. כל כפתור עובר ל-interval שמתאים לו (1D/5D/1M/3M → 1h, 6M → 4h, YTD/1Y → 1D, 5Y → 1W, All → 1M), טוען עמודים ישנים עד שהטווח מכוסה, ואז מציג אותו פעם אחת. 1D/5D סופרים ימי מסחר (לא ימים קלנדריים).
+  - `chartStore` גרסה 2: סוג גרף, scale, auto, ADJ נשמרים ב-localStorage (רשומה מגרסה 1 משודרגת לבד). הטווח הנבחר נמחק כשמחליפים interval או סימבול.
+  - `SymbolSearchDialog`: הקלדת אות או ספרה בכל מקום (לא בתוך שדה טקסט) פותחת חיפוש עם האות הזו. חצים, Enter, Esc, לחיצה בחוץ; קבוצות לפי ה-watchlist; דירוג: טיקר מדויק, תחילת טיקר, תחילת מילה בשם, מכיל. הפוקוס חוזר למקום שבו היה.
+  - `ChartTypeMenu` בסרגל העליון (`role=menu`, `menuitemradio`, חצים/Home/End/Esc).
+  - Loaders: פס התקדמות דק אחרי 150ms, skeleton אחרי שנייה כשאין נרות, ותווית "Loading older bars…" בזמן טעינת עמוד ישן.
+  - **X3 תוקן:** ה-overflow של 29px ב-1280 נבע מ-tooltip שקוף של כפתור Fullscreen שבלט מימין. כפתורי הימין מקבלים tooltip מיושר לימין (`bottom-end`). בחלון צר (≤720px לאזור הגרף) השעון וטקסט ה-API badge מוסתרים כדי שהסרגל התחתון לא יישבר.
+- **Playwright (E2E):** `frontend/e2e/` עם נתונים סינתטיים דטרמיניסטיים (`e2e/data/generate.py`, seed קבוע; AAPL עם 6,500 נרות יומיים כדי לבדוק דפדוף). `serve-backend.mjs` מריץ backend עם `OFFLINE=1` על port 8010 ו-Vite על 5183 (לא מתנגש באפליקציה שרצה). 4 בדיקות: חיפוש סימבול → NVDA → 1W → log → ערכי ה-legend מול ה-CSV (כולל נר שבועי ו-ADJ) → נשמר אחרי רענון; כפתורי טווח וסוגי גרף (HA close מול הנוסחה); גלילה שמאלה טוענת היסטוריה (`before=`); אין overflow ב-1280 וב-960. ב-CI: job חדש `e2e` (ubuntu, Chromium).
+- **ביצועים** (Chromium headless, dev build לא ממוזער, בענן): 5,000 נרות יומיים מצוירים 0.36–0.85 שניות אחרי התשובה; 60 צעדי zoom על 5,000 נרות בכ-2 שניות כולל ה-round trips של Playwright. עומד ביעד (<1 שנייה).
+- **בדיקות:** backend 148 (175 skipped = fixtures אמיתיים שעוד לא בריפו), frontend 133 (היו 89), E2E 4. 9/9 gates ירוקים.
+- **חוזה lookback ל-indicators (E5):** הוגדר ב-[ARCHITECTURE §3.2](docs/ARCHITECTURE.md). הגרף מבקש indicator בדיוק על טווח הנרות הטעונים; ה-backend מוסיף `max(25·n, 250)` נרות warm-up. כשנטען עמוד ישן, ה-indicator מחושב מחדש לכל הטווח (בלי תפירה בצד הלקוח).
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -131,6 +151,8 @@
 | 2026-11-22 | Intervals תוך-יומיים: `1h` ו-`4h`; 4h מעוגן ל-session (כמו TradingView) | בחירת המשתמש | ARCHITECTURE §6 |
 | 2026-11-22 | נרות תוך-יומיים מוצגים בשעון ישראל (`Asia/Jerusalem`); הגדרה למשתמש ב-R6 | בחירת המשתמש | ARCHITECTURE §6 |
 | 2026-11-22 | `openapi-typescript` ~7.13 עם `overrides` ל-TS 6 | types שנוצרים מה-backend, תלות dev קטנה | [0008](docs/adr/0008-openapi-typescript.md) |
+| 2026-11-22 | R2b: כפתורי טווח מחליפים interval (כמו TradingView); Heikin Ashi מחושב ב-backend; דפדוף לאחור עם `before`; `@playwright/test` 1.63.0 (dev) | ROADMAP R2b, PLAN S1 | ARCHITECTURE §3.1 |
+| 2026-11-22 | D2/D4/D6 לפי ההמלצה: TA-Lib אופציונלי לבדיקות, KAMA/T3/ZLEMA נכללים, פאנל הגדרות חי | המשתמש ביקש לממש S1–S3 בלי לבחור | PLAN §7 |
 | 2026-11-22 | `PLAN.md` כתוכנית העבודה ל-sessions הבאים: R3 מתפצל ל-R3a/R3b/R3c, ו-L1 (דפי לימוד לממוצעים) ו-U1 (UX) נכנסים לפני R4 | בקשת המשתמש להתמקד בממוצעים נעים ובמתמטיקה שלהם וב-UX | [PLAN.md](PLAN.md) |
 
 ## שאלות פתוחות אליך
@@ -141,20 +163,23 @@
 - ✅ **GOLD, SILVER ו-USOIL** (spot ב-TV מול futures אצלנו): נפתר ב-R1b בשינוי השם ל-`GC1!`/`SI1!`/`CL1!`. להשוואה ב-TradingView יש לפתוח `COMEX:GC1!`, `COMEX:SI1!`, `NYMEX:CL1!`. בימי roll השינוי היומי של continuous futures עדיין חריג (כך גם ב-TV).
 - **1h לא אומת עם Yahoo אמיתי** (אין גישה מהענן). לבדוק בדמו: AAPL, `GC1!`, SPX ו-GBPUSD. אם Yahoo לא מחזיר 1h לסימבול מסוים, תוצג שגיאה ברורה בגרף.
 - חלון ה-1h של ה-fixtures (2026-08-01 עד 2026-10-30) ייצא ממגבלת 730 הימים של Yahoo באמצע 2028. אז צריך להזיז אותו ב-`make_fixtures.py`.
-- ייבוא של `app.main` יוצר את `app = create_app()` ברמת המודול, ולכן גם `openapi_export` ו-tests יוצרים את `data/bars.db` (gitignored). לא מזיק; אפשר לעבור ל-`uvicorn --factory` בהזדמנות.
+- ✅ ייבוא של `app.main` כבר לא יוצר את `data/bars.db` (R2b: `uvicorn --factory`).
 - הבדלים קטנים ב-DJI (0.01%), ב-DXY וב-Forex (Yahoo ו-TV חותכים את היום בשעות שונות). מניות, ETFs, SPX, NDX ו-VIX זהים ל-TV עד הסנט.
 - **אין גישה ל-Yahoo מסביבת הענן של Claude** (ה-proxy מחזיר `403`). ה-fixtures וה-recorded responses ייווצרו על המחשב של המשתמש באמצעות סקריפט שירוץ אצלו.
 - **ה-fixtures עדיין לא בריפו.** הם ייכנסו כשהמשתמש יריץ `.\scripts\make-fixtures.ps1`. עד אז הבדיקות משתמשות בנתונים קטנים שנבנו ידנית (`backend/tests/fixtures/`), `test_committed_fixtures.py` מדלג, ומצב `OFFLINE=1` עם ה-universe האמיתי לא יעבוד.
 - הגישה ל-Yahoo מתבצעת רק מהמחשב של המשתמש. כאן בענן היא חסומה, ולכן בדקתי את `YahooProvider` עם DataFrame מזויף בפורמט של yfinance.
 - ✅ ה-`.ps1` scripts אומתו ב-CI על `windows-latest` תחת PowerShell 5.1 (run #3 ירוק). הריצה הראשונה נכשלה בגלל התנגשות שמות `Clock.tsx`/`clock.ts` ב-file system שלא מבחין בין אותיות גדולות לקטנות. תוקן, ונוסף כלל ל-`CLAUDE.md`.
 - ✅ ה-TS types של ה-API נוצרים מ-OpenAPI (R1b).
-- ה-range buttons וה-scale toggles (`%`, `log`, `auto`, `ADJ`) בסרגל התחתון עדיין UI state בלבד. הם יחוברו לגרף ב-R2b.
+- ✅ ה-range buttons וה-scale toggles (`%`, `log`, `auto`, `ADJ`) מחוברים לגרף (R2b).
+- `auto` לא נכבה לבד כשגוררים את ציר המחיר (כמו ב-TradingView); כרגע רק לחיצה על הכפתור משנה אותו. ל-U1.
+- סוג הגרף נשמר אחד לכל הסימבולים (לא לכל סימבול בנפרד). Layouts ב-R6.
 - בעמודת Chg% ב-Watchlist המספר נחתך מימין כשהמחירים ארוכים (למשל 12,912.115 בנתונים הסינתטיים). עם מחירים אמיתיים זה לא קרה; לבדוק ב-R2b.
 - צילום המסך ב-README עדיין של R0. יוחלף בצילום של גרף עם נתונים אמיתיים אחרי הדמו.
 - EMA seeding מול TradingView לא אומת מול המקור הרשמי של Pine (יאומת ב-R3).
 - Vitest מדווח שה-jsdom environment נוצר 5 פעמים (אופטימיזציה אופציונלית, לא דחוף).
 
 ## הערות סביבה
+- **E2E אצל המשתמש (לא חובה):** `cd frontend; npx playwright install chromium; npm run e2e -- --trace off`. רץ גם ב-CI.
 - **Smart App Control ב-Windows של המשתמש** חוסם קבצי `.exe` לא חתומים שנוצרים ב-`.venv\Scripts` (os error 4551). לכן כל הכלים רצים דרך `uv run python -m <tool>`. הסקריפטים ו-`CLAUDE.md` עודכנו בהתאם. ל-`ruff.exe` (binary מ-PyPI) עדיין לא ברור אם ייחסם; ייבדק בהרצה של `test.ps1` אצל המשתמש.
 - גרסאות בשימוש: Python 3.13, FastAPI 0.165, Starlette 1.10, pydantic 2.14, uvicorn 0.54, httpx2 2.16, ruff 0.17, pyright 1.1.414 (רץ על Node),
   pytest 9.2; Node 22, Vite 8.3, React 19.3, TypeScript 6.0.3, ESLint 10, typescript-eslint 8.73, Vitest 5.1,
@@ -212,3 +237,10 @@
 - סקירת UX: צילומי Playwright ב-1280 וב-375 על נתוני הבדיקה, ובדיקה מול ה-UX skills. ממצאים עיקריים: כפתורי range ו-scale שנראים פעילים ולא עושים כלום, שבירה של הפריסה בחלון צר, גלילה אופקית של 29px ב-1280.
 - נוסחאות ה-lag וה-NRF של 12 ממוצעים אומתו נומרית (impulse response על 4,000 נרות) ונכנסו ל-PLAN.md §5.
 - בלי שינוי קוד. נוצר `PLAN.md`, ועודכנו ROADMAP, README ו-HANDOFF.
+
+### 2026-11-22 — S1 / R2b: השלמת הגרף
+- המשתמש ביקש לממש S1, S2 ו-S3 ברצף ("תמשיך לעבוד, לילה טוב"). לא היו שאלות פתוחות; D2/D4/D6 לפי ההמלצות.
+- נבנו: Heikin Ashi ו-`before` ב-backend, היסטוריה עצלה, סוגי גרף, scale, כפתורי טווח, חיפוש סימבולים, loaders, Playwright עם 4 בדיקות ו-job ב-CI, ותיקון ה-overflow.
+- נמצא ותוקן בדרך: ה-legend בבדיקת ה-E2E הראה את הנר שמתחת לעכבר ולא את האחרון (העכבר נשאר על הגרף אחרי בחירה בתפריט); `setState` בתוך effect הוחלף ב-focus נגזר (`useMemo`) ש-`ChartView` מפעיל פעם אחת לכל `seq`.
+- 9/9 gates ירוקים, E2E 4/4.
+

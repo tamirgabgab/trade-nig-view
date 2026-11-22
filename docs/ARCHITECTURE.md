@@ -104,7 +104,7 @@ sequenceDiagram
   participant S as BarService
   participant C as BarCache (SQLite)
   participant P as Provider (yfinance)
-  UI->>Q: useBars(AAPL, 1D, adjusted)
+  UI->>Q: useBarHistory(AAPL, 1D, adjusted, transform)
   Q->>B: /api/bars?symbol=AAPL&interval=1D&limit=5000
   B->>S: get_bars(...)
   S->>C: covered ranges for (AAPL, 1D-base)?
@@ -114,11 +114,22 @@ sequenceDiagram
     S->>S: validate → upsert into cache
   end
   S->>C: read range
-  S->>S: adjust (if adjusted) → resample (1W/1M) → truncate(until)
+  S->>S: adjust (if adjusted) → resample (1W/1M) → transform (Heikin Ashi) → truncate(until) → window(before, limit)
   S-->>B: BarFrame
   B-->>Q: {symbol, interval, bars:[...], meta}
   Q-->>UI: data → store → ChartEngine.setBars()
 ```
+
+**Lazy history (R2b).** The first page is the newest `limit` bars. When the visible range comes within 50 bars of the
+oldest loaded bar, the frontend asks for the next page with `before=<epoch seconds of the oldest bar>` (a daily bar
+counts as 00:00 UTC of its date) and prepends it; `ChartEngine.setBars` shifts the logical range by the number of
+prepended bars, so the same candles stay under the mouse. Pages are TanStack `useInfiniteQuery` pages keyed by
+`(symbol, interval, adjusted, transform)`. Transforms (Heikin Ashi) run on the full history **before** windowing, so a
+page equals the same slice of the full-history result (tested).
+
+**Range buttons.** Each button switches to an interval that fits the span (1D/5D/1M/3M → 1h, 6M → 4h, YTD/1Y → 1D,
+5Y → 1W, All → 1M), loads older pages until the span's start is covered (or history ends), then sets the visible
+range once (`chart/visibleRange.ts`, pure and unit-tested).
 
 ### 3.2 Indicator compute
 
@@ -129,6 +140,13 @@ computation (verified by test). For recursive filters the seed influence after $
 ($\alpha=\frac{2}{n+1}$) gives $\approx e^{-2k/n}$, RMA ($\alpha=\frac1n$) gives $\approx e^{-k/n}$. Lookback = `max(25·n, 250)` bars
 → RMA residual $\approx e^{-25}\approx 1.4\times10^{-11}$, below the $10^{-9}$ test tolerance. When the data start is reached,
 the true series start is used (identical to full history by construction).
+
+**Lookback contract with lazy history (E5, defined in R2b, consumed in R3a).** The chart asks for indicator values over
+exactly the bars it has loaded: `start = time of the oldest loaded bar`, `end = time of the newest`. The backend, not
+the frontend, adds the warm-up: it loads `lookback = max(25·n, 250)` extra bars before `start` (n = the longest length
+parameter of the indicator). When older history is prepended, the frontend recomputes the indicator for the new
+`[start, end]` and replaces its series (no client-side stitching of two computations). Values for bars that were
+already shown therefore do not change, except within floating-point tolerance, which the R3a harness asserts.
 
 ### 3.3 Replay
 
@@ -145,7 +163,7 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 |---|---|---|---|
 | `GET /health` | — | `{status:"ok", version, offline, providers:[{id, enabled}]}` | R0 |
 | `GET /symbols` | `query?`, `group?` | `[{symbol, display, name, exchange, type: "index"\|"etf"\|"stock"\|"future"\|"forex", group, timezone, currency, has_volume, decimals, session_start}]` | R1 |
-| `GET /bars` | `symbol`, `interval` (`1h`\|`4h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `adjusted=true`, `until?` | `{symbol, interval, adjusted, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, stale, warnings}`; intraday `time` is UTC epoch seconds, daily+ `'YYYY-MM-DD'`; for intraday `start`/`end`/`until` select whole sessions | R1 (1h/4h R1b) |
+| `GET /bars` | `symbol`, `interval` (`1h`\|`4h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `before?` (epoch seconds, exclusive: only bars starting earlier; paging cursor), `adjusted=true`, `transform=none`\|`heikin_ashi`, `until?` | `{symbol, interval, adjusted, transform, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, stale, warnings}`; intraday `time` is UTC epoch seconds, daily+ `'YYYY-MM-DD'`; for intraday `start`/`end`/`until` select whole sessions | R1 (1h/4h R1b, `before`/`transform` R2b) |
 | `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error}]` from the two latest unadjusted daily bars; per-symbol `error` instead of failing the request | R1a |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
 | `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted}` | `{id, params, outputs:{<name>:[{time, value}]}, markers?:[{time, kind, price?, text?}], warmup}` | R3 |

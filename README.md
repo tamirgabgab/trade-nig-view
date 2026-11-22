@@ -4,8 +4,8 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** R1b complete — 1h and 4h bars shown in Israel time, futures labelled as futures (`GC1!`), API types
-> generated from OpenAPI. Next: R2b (chart types, log/% scale, range buttons, symbol search).
+> **Status:** R2b complete — chart types (incl. Heikin Ashi), log/% scale, range buttons, symbol search (just type a
+> ticker), lazy history on scroll-left, Playwright end-to-end tests. Next: R3a (indicator engine + SMA/EMA/WMA/SMMA).
 > See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
@@ -21,7 +21,7 @@ trading agent can plug in later.
 | Market data: yfinance + Tiingo fallback, SQLite cache, validated daily/weekly/monthly bars, live watchlist prices (R1a) | ✅ Done |
 | 1h and 4h intervals (session-aware, Israel time on the chart), generated API types, fixture download script (R1b) | ✅ Done |
 | Chart: candles + volume, OHLC legend on the crosshair, D/W/M intervals, symbol from the watchlist, pan/zoom (R2a) | ✅ Done |
-| Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ⏳ Next |
+| Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ✅ Done |
 | Indicators: SMA, EMA, WMA, SMMA + generalised MAs (DEMA, TEMA, HMA, ALMA, LSMA, VWMA, McGinley, KAMA, T3, ZLEMA), MA Cross/Ribbon/Envelope (R3a/R3b) | ⏳ Planned |
 | Learn pages for the MA family: formulas, lag, noise reduction, frequency response (L1) | ⏳ Planned |
 | Indicators: BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3c) | ⏳ Planned |
@@ -91,6 +91,17 @@ Pip fallback (no uv): `cd backend; python -m venv .venv; .venv\Scripts\Activate.
 Then open http://localhost:5173 (app) and http://127.0.0.1:8000/api/docs (API docs).
 
 Offline mode: set `OFFLINE=1` in `.env` to serve committed fixture data only (no network).
+
+End-to-end tests (Playwright + Chromium; they start their own backend on synthetic data, ports 8010/5183):
+
+```bash
+cd frontend
+npx playwright install chromium   # once
+npm run e2e -- --trace off
+```
+
+On the chart: type any letter to search symbols; range buttons (1D … All) pick a fitting interval; scrolling to the
+left edge loads older history.
 
 ## Project layout
 
