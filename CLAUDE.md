@@ -2,6 +2,9 @@
 
 ## 1. Language policy (HARD RULE, every session)
 - Reply to the user **in Hebrew**: chat, plans, round summaries, demo checklists, questions.
+- **This includes every user-visible interim message**: short progress notes between tool calls ("reading the CI
+  log...", "found the bug..."), reasoning shared while working, and the one-line descriptions of tool calls / commands.
+  Nothing the user sees during a session is in English except code, commands, identifiers and tool output.
 - Inside Hebrew text keep technical terms, identifiers, file names, commands, library and indicator names **in English**
   (e.g. "נוסיף את ה-EMA ל-registry"). Math as LaTeX/plain notation, not translated.
 - Code blocks and command output stay in English. Never translate code.
