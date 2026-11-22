@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -61,6 +62,40 @@ def test_limit_and_until(client: TestClient) -> None:
     ).json()
     assert [b["time"] for b in body["bars"]] == ["2026-02-02", "2026-02-03"]
     assert body["has_more_before"] is True
+
+
+def test_hourly_bars_use_utc_seconds_and_daily_dividend_factor(client: TestClient) -> None:
+    raw = client.get("/api/bars", params={"symbol": "AAA", "interval": "1h", "adjusted": "false"})
+    assert raw.status_code == 200
+    body = raw.json()
+    assert body["interval"] == "1h"
+    assert body["timezone"] == "America/New_York"
+    assert body["adjusted"] is False
+    assert len(body["bars"]) == 28
+    assert body["bars"][0]["time"] == 1_770_301_800  # 2026-02-05 09:30 New York (14:30 UTC)
+
+    adjusted = client.get("/api/bars", params={"symbol": "AAA", "interval": "1h"}).json()
+    assert adjusted["adjusted"] is True
+    # Sessions before the 2026-02-09 ex-dividend date carry the daily factor 0.98.
+    assert adjusted["bars"][6]["close"] == pytest.approx(106.82)  # = adjusted daily close 02-05
+    assert adjusted["bars"][-1]["close"] == pytest.approx(112.0)
+
+
+def test_four_hour_bars_split_the_session_at_13_30(client: TestClient) -> None:
+    body = client.get(
+        "/api/bars", params={"symbol": "AAA", "interval": "4h", "adjusted": "false"}
+    ).json()
+    times = [bar["time"] for bar in body["bars"]]
+    assert len(times) == 8
+    assert times[1] - times[0] == 4 * 3600  # 09:30 and 13:30
+    assert body["bars"][1]["close"] == pytest.approx(109.0)  # daily close of 2026-02-05
+    assert body["bars"][0]["volume"] + body["bars"][1]["volume"] == pytest.approx(9002.0)
+
+
+def test_hourly_without_fixture_is_503(client: TestClient) -> None:
+    response = client.get("/api/bars", params={"symbol": "IDX", "interval": "1h"})
+    assert response.status_code == 503
+    assert "1h" in response.json()["detail"]
 
 
 def test_unknown_symbol_is_problem_json_404(client: TestClient) -> None:

@@ -1,4 +1,5 @@
-# Test universe (tests only). AAA and ^IDX have offline fixtures in daily/; BBB has none.
+# Test universe (tests only). AAA and ^IDX have offline fixtures in daily/ (AAA also in 1h/);
+# BBB has none.
 [[symbols]]
 symbol = "AAA"
 display = "AAA"

@@ -14,12 +14,19 @@ from app.data.providers.fixtures import (
     FixtureProvider,
     fixture_filename,
     read_fixture,
+    read_hourly_fixture,
     write_fixture,
+    write_hourly_fixture,
 )
 from app.data.providers.tiingo import TiingoProvider, frame_from_prices
-from app.data.providers.yahoo import YahooProvider, frame_from_history
+from app.data.providers.yahoo import (
+    HOURLY_MAX_DAYS,
+    YahooProvider,
+    frame_from_history,
+    frame_from_hourly_history,
+)
 from app.data.ratelimit import TokenBucket
-from app.models.bars import ts_to_iso_dates
+from app.models.bars import BarFrame, date_to_ts, ts_to_iso_dates
 from app.models.symbols import SymbolInfo
 from tests.conftest import FIXTURES_DIR
 from tests.unit.data.factories import bars
@@ -85,6 +92,78 @@ def test_yahoo_provider_requests_exclusive_end_and_converts() -> None:
     assert calls == [("^GSPC", date(2026, 11, 19), date(2026, 11, 21))]
     assert len(frame) == 2
     assert provider.supports(SPX)
+
+
+def yahoo_hourly_frame() -> pd.DataFrame:
+    """Shaped like yfinance.Ticker.history(interval="1h"): tz-aware bar starts in New York."""
+    index = pd.DatetimeIndex(
+        ["2026-11-19 15:30:00-05:00", "2026-11-20 09:30:00-05:00", "2026-11-20 10:30:00-05:00"],
+        tz="America/New_York",
+    )
+    return pd.DataFrame(
+        {
+            "Open": [350.0, 352.865, 351.0],
+            "High": [350.5, 354.34, 352.0],
+            "Low": [349.0, 350.1, 340.56],
+            "Close": [349.21, 351.0, 341.0],
+            "Adj Close": [349.21, 351.0, 341.0],
+            "Volume": [5_000_000, 12_000_000, 9_000_000],
+        },
+        index=index,
+    )
+
+
+def test_yahoo_hourly_frame_uses_utc_bar_starts() -> None:
+    frame = frame_from_hourly_history(yahoo_hourly_frame())
+    # 09:30 New York (EST) is 14:30 UTC.
+    assert frame.time[1] == date_to_ts(date(2026, 11, 20)) + 14 * 3600 + 1800
+    assert frame.close.tolist() == [349.21, 351.0, 341.0]
+    assert frame.adj_close.tolist() == frame.close.tolist()
+    assert frame.volume.tolist() == [5e6, 12e6, 9e6]
+    assert len(frame_from_hourly_history(pd.DataFrame())) == 0
+    no_volume = frame_from_hourly_history(yahoo_hourly_frame().drop(columns=["Volume"]))
+    assert no_volume.volume.tolist() == [0.0, 0.0, 0.0]
+
+
+def test_yahoo_hourly_frame_needs_a_time_zone() -> None:
+    history = yahoo_hourly_frame()
+    history.index = pd.DatetimeIndex(history.index).tz_localize(None)
+    with pytest.raises(ProviderError, match="time zone"):
+        frame_from_hourly_history(history)
+
+
+def test_yahoo_hourly_pads_the_request_and_cuts_to_utc_dates() -> None:
+    calls: list[tuple[str, date, date]] = []
+
+    def fake_hourly(ticker: str, start: date, end: date) -> pd.DataFrame:
+        calls.append((ticker, start, end))
+        return yahoo_hourly_frame()
+
+    provider = YahooProvider(
+        hourly_history=fake_hourly, bucket=NO_WAIT, today=lambda: date(2026, 11, 22)
+    )
+    assert provider.supports_hourly(AAPL)
+    frame = provider.fetch_hourly(AAPL, date(2026, 11, 20), date(2026, 11, 20))
+    assert calls == [("AAPL", date(2026, 11, 19), date(2026, 11, 22))]
+    assert len(frame) == 2  # the 2026-11-19 bar is outside the requested UTC dates
+
+
+def test_yahoo_hourly_never_asks_past_the_730_day_limit() -> None:
+    calls: list[tuple[str, date, date]] = []
+
+    def fake_hourly(ticker: str, start: date, end: date) -> pd.DataFrame:
+        calls.append((ticker, start, end))
+        return pd.DataFrame()
+
+    today = date(2026, 11, 22)
+    provider = YahooProvider(hourly_history=fake_hourly, bucket=NO_WAIT, today=lambda: today)
+    oldest = date(2024, 11, 23)
+    assert (today - oldest).days == HOURLY_MAX_DAYS
+    provider.fetch_hourly(AAPL, date(2020, 1, 1), today)
+    assert calls[0][1] == oldest
+    # A range that ends before the limit is not requested at all.
+    assert len(provider.fetch_hourly(AAPL, date(2020, 1, 1), date(2021, 1, 1))) == 0
+    assert len(calls) == 1
 
 
 # ---------------------------------------------------------------- Tiingo
@@ -198,7 +277,7 @@ def test_fixture_write_read_roundtrip_is_exact(tmp_path: Path) -> None:
 
 
 def test_fixture_provider_filters_inclusive_range() -> None:
-    provider = FixtureProvider(FIXTURES_DIR / "daily")
+    provider = FixtureProvider(FIXTURES_DIR)
     aaa = SymbolInfo(
         symbol="AAA", display="AAA", name="A", type="stock", group="Stocks", exchange="T"
     )
@@ -208,7 +287,7 @@ def test_fixture_provider_filters_inclusive_range() -> None:
 
 
 def test_fixture_provider_without_file() -> None:
-    provider = FixtureProvider(FIXTURES_DIR / "daily")
+    provider = FixtureProvider(FIXTURES_DIR)
     assert not provider.supports(AAPL)
     with pytest.raises(ProviderError, match="No offline fixture"):
         provider.fetch_daily(AAPL, date(2026, 1, 1), date(2026, 1, 2))
@@ -218,3 +297,49 @@ def test_fixture_with_missing_columns(tmp_path: Path) -> None:
     (tmp_path / "X.csv").write_text("date,close\n2026-01-05,1.0\n")
     with pytest.raises(ProviderError, match="missing columns"):
         read_fixture(tmp_path / "X.csv")
+
+
+def test_tiingo_has_no_hourly_bars() -> None:
+    provider = TiingoProvider("key", bucket=NO_WAIT)
+    assert not provider.supports_hourly(AAPL)
+    with pytest.raises(ProviderError, match="1h"):
+        provider.fetch_hourly(AAPL, date(2026, 1, 1), date(2026, 1, 2))
+
+
+def test_hourly_fixture_write_read_roundtrip_is_exact(tmp_path: Path) -> None:
+    frame = BarFrame.from_columns(
+        time=[1_770_301_800, 1_770_305_400],
+        open=[1 / 3, 2.0],
+        high=[1.0, 2.5],
+        low=[0.25, 1.5],
+        close=[0.5, 2 / 7],
+        volume=[10.0, 0.0],
+    )
+    write_hourly_fixture(tmp_path / "X.csv", frame)
+    assert (tmp_path / "X.csv").read_text().splitlines()[1].startswith("2026-02-05T14:30:00Z,")
+    assert read_hourly_fixture(tmp_path / "X.csv").equals(frame)
+
+
+def test_fixture_provider_serves_hourly_bars_by_utc_date() -> None:
+    provider = FixtureProvider(FIXTURES_DIR)
+    aaa = SymbolInfo(
+        symbol="AAA", display="AAA", name="A", type="stock", group="Stocks", exchange="T"
+    )
+    assert provider.supports_hourly(aaa)
+    frame = provider.fetch_hourly(aaa, date(2026, 2, 6), date(2026, 2, 9))
+    assert len(frame) == 14
+    assert ts_to_iso_dates(frame.time)[0] == "2026-02-06"
+    assert ts_to_iso_dates(frame.time)[-1] == "2026-02-09"
+
+
+def test_fixture_provider_without_hourly_file(tmp_path: Path) -> None:
+    provider = FixtureProvider(FIXTURES_DIR)
+    assert not provider.supports_hourly(AAPL)
+    with pytest.raises(ProviderError, match="1h fixture"):
+        provider.fetch_hourly(AAPL, date(2026, 1, 1), date(2026, 1, 2))
+    (tmp_path / "1h").mkdir()
+    (tmp_path / "1h" / "X.csv").write_text("time,close\n2026-01-05T14:30:00Z,1.0\n")
+    with pytest.raises(ProviderError, match="missing columns"):
+        read_hourly_fixture(tmp_path / "1h" / "X.csv")
+    (tmp_path / "1h" / "Y.csv").write_text("")
+    assert len(read_hourly_fixture(tmp_path / "1h" / "Y.csv")) == 0

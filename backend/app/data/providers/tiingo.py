@@ -99,3 +99,10 @@ class TiingoProvider:
         if not isinstance(payload, list):
             raise ProviderError(f"Unexpected Tiingo response for {symbol.symbol}")
         return frame_from_prices(payload)  # pyright: ignore[reportUnknownArgumentType]
+
+    def supports_hourly(self, symbol: SymbolInfo) -> bool:
+        # Tiingo intraday (IEX) carries IEX-only volume, not consolidated bars: not used.
+        return False
+
+    def fetch_hourly(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
+        raise ProviderError("Tiingo does not provide 1h bars in ChartLab")

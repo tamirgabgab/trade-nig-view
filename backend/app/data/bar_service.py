@@ -1,17 +1,27 @@
 """Bar orchestration: cache -> providers -> validate -> adjust -> resample -> truncate.
 
-Freshness policy (docs/ARCHITECTURE.md section 8):
+Two **base** intervals are downloaded and cached: ``1D`` (full history) and ``1h`` (the last
+:data:`~app.data.providers.yahoo.HOURLY_MAX_DAYS` days the provider allows; the cache keeps older
+hours it already has, so local 1h history grows over time). ``1W``/``1M`` are resampled from
+``1D`` and ``4h`` from ``1h``.
 
-* First request for a symbol downloads the full daily history (one provider request).
+Freshness policy (docs/ARCHITECTURE.md section 8), per symbol and base interval:
+
+* First request downloads the full available history (one provider request).
 * Later requests are served from the cache for ``refresh_ttl_s``; after that the last
-  ``tail_days`` days are re-downloaded (late corrections, today's still-forming bar).
+  ``tail_days`` days (daily) or ``hourly_tail_days`` days (hourly) are re-downloaded (late
+  corrections, the still-forming bar).
 * If the refreshed overlap disagrees with the cache (a new split or dividend changed the adjusted
   history), the full history is downloaded again and replaces the cache.
 * If every provider fails, cached data is served with ``stale=True``; with no cache the request
   fails with ``DataUnavailableError``.
 
 Every derived series honours ``until`` (replay cursor) **before** adjustment and resampling, so no
-bar after the cursor can influence a returned value.
+bar after the cursor can influence a returned value. For intraday intervals ``start``, ``end`` and
+``until`` select whole trading sessions by session date (``app.data.sessions``).
+
+Intraday bars are dividend-adjusted with the factor of their session's daily bar, so with ADJ on the
+last 1h close of a session equals that session's adjusted daily close.
 """
 
 from __future__ import annotations
@@ -28,18 +38,21 @@ import numpy as np
 from app.data.adjust import dividend_adjust
 from app.data.cache.bar_cache import BarCache
 from app.data.providers.base import DataProvider, ProviderError, RateLimitedError
+from app.data.providers.yahoo import HOURLY_MAX_DAYS
 from app.data.ratelimit import CircuitBreaker, retry_with_backoff
-from app.data.resample import resample
+from app.data.resample import resample, resample_intraday
+from app.data.sessions import daily_factor_per_session, session_days
 from app.data.universe import Universe
 from app.data.validate import validate_bars
 from app.errors import DataUnavailableError, SymbolNotFoundError
-from app.models.bars import BarFrame, Interval, date_to_ts, ts_to_date
+from app.models.bars import SECONDS_PER_DAY, BarFrame, IntArray, Interval, date_to_ts, ts_to_date
 from app.models.symbols import SymbolInfo
 
-BASE_INTERVAL = "1D"
 HISTORY_START = date(1970, 1, 1)
 OVERLAP_RTOL = 1e-5
 QUOTE_WORKERS = 4
+DIVIDEND_TYPES = frozenset({"stock", "etf"})
+"""Symbol types whose adjusted close can differ from the close (pay dividends)."""
 
 
 def _utc_today() -> date:
@@ -47,8 +60,8 @@ def _utc_today() -> date:
 
 
 @dataclass(frozen=True, slots=True)
-class DailyBars:
-    """Validated, split-adjusted daily history of one symbol as currently cached."""
+class CachedBars:
+    """Validated, split-adjusted history of one symbol and base interval as currently cached."""
 
     frame: BarFrame
     source: str
@@ -120,6 +133,7 @@ class BarService:
         today: Callable[[], date] = _utc_today,
         refresh_ttl_s: float = 900.0,
         tail_days: int = 10,
+        hourly_tail_days: int = 5,
         retry_sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._universe = universe
@@ -128,7 +142,7 @@ class BarService:
         self._clock = clock
         self._today = today
         self._refresh_ttl_s = refresh_ttl_s
-        self._tail_days = tail_days
+        self._tail_days = {Interval.D1: tail_days, Interval.H1: hourly_tail_days}
         self._retry_sleep = retry_sleep
         self._breakers = {p.id: CircuitBreaker() for p in self._providers}
         self._locks: dict[str, threading.Lock] = {}
@@ -144,51 +158,69 @@ class BarService:
             raise SymbolNotFoundError(f"Unknown symbol '{symbol}' (not in the universe)")
         return info
 
-    # ------------------------------------------------------------------ daily history
+    # ------------------------------------------------------------------ cached history
 
-    def daily(self, info: SymbolInfo) -> DailyBars:
+    def daily(self, info: SymbolInfo) -> CachedBars:
         """Return the cached daily history, downloading or refreshing it when needed."""
-        with self._lock_for(info.symbol):
-            return self._ensure_daily(info)
+        return self.history(info, Interval.D1)
 
-    def _lock_for(self, symbol: str) -> threading.Lock:
+    def hourly(self, info: SymbolInfo) -> CachedBars:
+        """Return the cached 1h history, downloading or refreshing it when needed."""
+        return self.history(info, Interval.H1)
+
+    def history(self, info: SymbolInfo, base: Interval) -> CachedBars:
+        if base not in (Interval.D1, Interval.H1):
+            raise ValueError(f"{base} is not a base interval")
+        with self._lock_for(f"{info.symbol}|{base}"):
+            return self._ensure(info, base)
+
+    def _lock_for(self, key: str) -> threading.Lock:
         with self._locks_guard:
-            return self._locks.setdefault(symbol, threading.Lock())
+            return self._locks.setdefault(key, threading.Lock())
 
-    def _ensure_daily(self, info: SymbolInfo) -> DailyBars:
-        coverage = self._cache.coverage(info.symbol, BASE_INTERVAL)
+    def _history_start(self, base: Interval, today: date) -> date:
+        if base is Interval.H1:
+            return today - timedelta(days=HOURLY_MAX_DAYS)
+        return HISTORY_START
+
+    def _ensure(self, info: SymbolInfo, base: Interval) -> CachedBars:
+        coverage = self._cache.coverage(info.symbol, base)
         now = self._clock()
         if coverage is not None and now - coverage.fetched_at < self._refresh_ttl_s:
-            return DailyBars(
-                self._cache.read(info.symbol, BASE_INTERVAL),
+            return CachedBars(
+                self._cache.read(info.symbol, base),
                 coverage.source,
                 stale=False,
                 fetched_at=coverage.fetched_at,
             )
 
         today = self._today()
+        earliest = self._history_start(base, today)
         full = coverage is None
         start = (
-            HISTORY_START
+            earliest
             if coverage is None
-            else min(ts_to_date(coverage.end_ts), today) - timedelta(days=self._tail_days)
+            else max(
+                min(ts_to_date(coverage.end_ts), today) - timedelta(days=self._tail_days[base]),
+                earliest,
+            )
         )
         try:
-            result = self._fetch(info, start, today, require_data=full)
+            result = self._fetch(info, base, start, today, require_data=full)
             if coverage is not None:
-                cached = self._cache.read(info.symbol, BASE_INTERVAL)
+                cached = self._cache.read(info.symbol, base)
                 if not overlap_consistent(cached, result.frame):
-                    result = self._fetch(info, HISTORY_START, today, require_data=True)
+                    result = self._fetch(info, base, earliest, today, require_data=True)
                     result.warnings.append(
                         f"{info.symbol}: adjustment changed (split or dividend), "
-                        "full history re-downloaded"
+                        f"full {base} history re-downloaded"
                     )
-                    full, start = True, HISTORY_START
+                    full, start = True, earliest
         except DataUnavailableError as exc:
             if coverage is None:
                 raise
-            return DailyBars(
-                self._cache.read(info.symbol, BASE_INTERVAL),
+            return CachedBars(
+                self._cache.read(info.symbol, base),
                 coverage.source,
                 stale=True,
                 fetched_at=coverage.fetched_at,
@@ -197,7 +229,7 @@ class BarService:
 
         self._cache.store(
             info.symbol,
-            BASE_INTERVAL,
+            base,
             result.frame,
             covered_start_ts=date_to_ts(start),
             covered_end_ts=date_to_ts(today),
@@ -205,8 +237,8 @@ class BarService:
             source=result.source,
             replace_all=full,
         )
-        return DailyBars(
-            self._cache.read(info.symbol, BASE_INTERVAL),
+        return CachedBars(
+            self._cache.read(info.symbol, base),
             result.source,
             stale=False,
             fetched_at=now,
@@ -214,12 +246,13 @@ class BarService:
         )
 
     def _fetch(
-        self, info: SymbolInfo, start: date, end: date, *, require_data: bool
+        self, info: SymbolInfo, base: Interval, start: date, end: date, *, require_data: bool
     ) -> _FetchResult:
         """Try each provider in order; validate the first usable answer."""
+        hourly = base is Interval.H1
         errors: list[str] = []
         for provider in self._providers:
-            if not provider.supports(info):
+            if not provider.supports(info) or (hourly and not provider.supports_hourly(info)):
                 continue
             breaker = self._breakers[provider.id]
             if not breaker.allow():
@@ -227,7 +260,11 @@ class BarService:
                 continue
             try:
                 raw = retry_with_backoff(
-                    lambda p=provider: p.fetch_daily(info, start, end),
+                    lambda p=provider: (
+                        p.fetch_hourly(info, start, end)
+                        if hourly
+                        else p.fetch_daily(info, start, end)
+                    ),
                     retry_on=(RateLimitedError,),
                     attempts=3,
                     sleep=self._retry_sleep,
@@ -242,8 +279,8 @@ class BarService:
                 continue
             breaker.record_success()
             return _FetchResult(clean, provider.id, list(report.warnings))
-        detail = "; ".join(errors) or f"no provider supports {info.symbol}"
-        raise DataUnavailableError(f"No data for {info.symbol}: {detail}")
+        detail = "; ".join(errors) or f"no provider has {base} bars for {info.symbol}"
+        raise DataUnavailableError(f"No {base} data for {info.symbol}: {detail}")
 
     # ------------------------------------------------------------------ public queries
 
@@ -260,6 +297,8 @@ class BarService:
     ) -> BarsResult:
         """Bars for the API. ``until`` (replay cursor) is applied before anything else."""
         info = self.resolve(symbol)
+        if interval.is_intraday:
+            return self._intraday_bars(info, interval, adjusted, start, end, until, limit)
         daily = self.daily(info)
         frame = daily.frame
         if until is not None:
@@ -267,25 +306,76 @@ class BarService:
         if adjusted:
             frame = dividend_adjust(frame)
         frame = resample(frame, interval)
-        total = len(frame)
-        if start is not None:
-            frame = frame.take(frame.time >= date_to_ts(start))
-        if end is not None:
-            frame = frame.take(frame.time <= date_to_ts(end))
-        dropped_before = total - len(frame) if start is not None else 0
-        if len(frame) > limit:
-            dropped_before += len(frame) - limit
-            frame = frame.take(slice(len(frame) - limit, None))
+        frame, has_more_before = _window(frame, frame.time // SECONDS_PER_DAY, start, end, limit)
         return BarsResult(
             symbol=info,
             interval=interval,
             adjusted=adjusted,
             frame=frame,
-            has_more_before=dropped_before > 0,
+            has_more_before=has_more_before,
             source=daily.source,
             stale=daily.stale,
             warnings=daily.warnings,
         )
+
+    def _intraday_bars(
+        self,
+        info: SymbolInfo,
+        interval: Interval,
+        adjusted: bool,
+        start: date | None,
+        end: date | None,
+        until: date | None,
+        limit: int,
+    ) -> BarsResult:
+        hourly = self.hourly(info)
+        frame = hourly.frame
+        warnings = list(hourly.warnings)
+        sessions = session_days(frame.time, info.timezone, info.session_start_minutes)
+        if until is not None:
+            keep = sessions <= date_to_ts(until) // SECONDS_PER_DAY
+            frame, sessions = frame.take(keep), sessions[keep]
+        applied = False
+        if adjusted:
+            frame, applied = self._adjust_intraday(info, frame, sessions, warnings)
+        frame_sessions = sessions
+        if interval is not Interval.H1:
+            frame = resample_intraday(frame, sessions, interval)
+            frame_sessions = session_days(frame.time, info.timezone, info.session_start_minutes)
+        frame, has_more_before = _window(frame, frame_sessions, start, end, limit)
+        return BarsResult(
+            symbol=info,
+            interval=interval,
+            adjusted=applied,
+            frame=frame,
+            has_more_before=has_more_before,
+            source=hourly.source,
+            stale=hourly.stale,
+            warnings=tuple(warnings),
+        )
+
+    def _adjust_intraday(
+        self, info: SymbolInfo, frame: BarFrame, sessions: IntArray, warnings: list[str]
+    ) -> tuple[BarFrame, bool]:
+        """Dividend-adjust 1h bars with their session's daily factor (returns whether applied)."""
+        if info.type not in DIVIDEND_TYPES:
+            return frame, True  # no dividends: adjusted == raw
+        try:
+            daily = self.daily(info).frame
+        except DataUnavailableError as exc:
+            warnings.append(f"Dividend adjustment skipped (no daily bars): {exc.detail}")
+            return frame, False
+        factor = daily_factor_per_session(sessions, daily.time, daily.adj_close / daily.close)
+        with_factor = BarFrame(
+            frame.time,
+            frame.open,
+            frame.high,
+            frame.low,
+            frame.close,
+            frame.close * factor,
+            frame.volume,
+        )
+        return dividend_adjust(with_factor), True
 
     def quote(self, symbol: str) -> Quote:
         """Last close and change vs the previous session (never raises)."""
@@ -321,3 +411,25 @@ class BarService:
         """Quotes for many symbols, fetched in parallel (each provider rate-limits itself)."""
         with ThreadPoolExecutor(max_workers=QUOTE_WORKERS) as pool:
             return list(pool.map(self.quote, symbols))
+
+
+def _window(
+    frame: BarFrame, days: IntArray, start: date | None, end: date | None, limit: int
+) -> tuple[BarFrame, bool]:
+    """Bars whose (session) day is in ``[start, end]``, the newest ``limit`` of them.
+
+    Also returns whether older bars exist (before ``start`` or cut by ``limit``).
+    """
+    keep = np.ones(len(frame), dtype=np.bool_)
+    older = False
+    if start is not None:
+        after_start = days >= date_to_ts(start) // SECONDS_PER_DAY
+        older = not bool(after_start.all())
+        keep &= after_start
+    if end is not None:
+        keep &= days <= date_to_ts(end) // SECONDS_PER_DAY
+    frame = frame.take(keep)
+    if len(frame) > limit:
+        older = True
+        frame = frame.take(slice(len(frame) - limit, None))
+    return frame, older

@@ -75,7 +75,7 @@ def settings(tmp_path: Path) -> Settings:
         offline=True,
         chartlab_data_dir=tmp_path / "data",
         universe_file=FIXTURES_DIR / "universe.toml",
-        fixtures_dir=FIXTURES_DIR / "daily",
+        fixtures_dir=FIXTURES_DIR,
     )
 
 

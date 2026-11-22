@@ -3,6 +3,10 @@
 # type     = index | etf | stock | future | forex  group   = watchlist section
 # has_volume = false for indices/forex (no real traded volume; use ETFs for volume work)
 # Continuous futures (=F) contain roll gaps between contracts: expect artificial price gaps.
+#   Their display names follow TradingView's continuous-contract tickers (GC1! = COMEX:GC1!).
+# session_start = local "HH:MM" (in timezone, default America/New_York) when a trading session that
+#   spans midnight starts: CME futures 18:00, ICE DXY 20:00, forex 17:00. Omit it for instruments
+#   whose session lies within one calendar day. Used to group 1h bars into sessions (4h bars).
 
 [[symbols]]
 symbol = "^GSPC"
@@ -163,25 +167,28 @@ exchange = "NASDAQ"
 
 [[symbols]]
 symbol = "CL=F"
-display = "USOIL"
-name = "Crude Oil (continuous front-month future)"
+display = "CL1!"
+name = "Crude Oil WTI Futures (continuous)"
 type = "future"
+session_start = "18:00"
 group = "Futures"
 exchange = "NYMEX"
 
 [[symbols]]
 symbol = "GC=F"
-display = "GOLD"
-name = "Gold (continuous front-month future)"
+display = "GC1!"
+name = "Gold Futures (continuous)"
 type = "future"
+session_start = "18:00"
 group = "Futures"
 exchange = "COMEX"
 
 [[symbols]]
 symbol = "SI=F"
-display = "SILVER"
-name = "Silver (continuous front-month future)"
+display = "SI1!"
+name = "Silver Futures (continuous)"
 type = "future"
+session_start = "18:00"
 group = "Futures"
 exchange = "COMEX"
 decimals = 3
@@ -193,6 +200,7 @@ name = "US Dollar Index"
 type = "index"
 group = "Indices"
 exchange = "ICE"
+session_start = "20:00"
 has_volume = false
 decimals = 3
 
@@ -203,6 +211,7 @@ name = "US Dollar / Japanese Yen"
 type = "forex"
 group = "Forex"
 exchange = "FX"
+session_start = "17:00"
 has_volume = false
 decimals = 3
 
@@ -213,5 +222,6 @@ name = "British Pound / US Dollar"
 type = "forex"
 group = "Forex"
 exchange = "FX"
+session_start = "17:00"
 has_volume = false
 decimals = 5

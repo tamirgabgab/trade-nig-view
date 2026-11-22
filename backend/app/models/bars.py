@@ -4,6 +4,7 @@ Conventions (see docs/ARCHITECTURE.md section 6):
 
 * ``time`` is UTC epoch seconds. For daily and longer bars it is the **session date at 00:00 UTC**
   (so ``time // 86400`` is the day number since 1970-01-01), independent of the exchange time zone.
+  For intraday bars (``1h``, ``4h``) it is the real UTC instant the bar **starts**.
 * ``open/high/low/close`` are **split-adjusted only** (what TradingView shows with ADJ off).
 * ``adj_close`` is split **and** dividend adjusted; ``adj_close / close`` is the dividend factor.
 * Arrays are sorted by ``time``, strictly increasing, all the same length.
@@ -26,15 +27,26 @@ SECONDS_PER_DAY = 86_400
 
 
 class Interval(StrEnum):
-    """Bar intervals served by the API. Weekly/monthly are resampled from daily bars."""
+    """Bar intervals served by the API.
 
+    ``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and
+    ``1W``/``1M`` from ``1D``.
+    """
+
+    H1 = "1h"
+    H4 = "4h"
     D1 = "1D"
     W1 = "1W"
     M1 = "1M"
 
     @property
     def is_intraday(self) -> bool:
-        return False
+        return self in (Interval.H1, Interval.H4)
+
+    @property
+    def base(self) -> Interval:
+        """The downloaded interval this one is derived from."""
+        return Interval.H1 if self.is_intraday else Interval.D1
 
 
 def date_to_ts(day: date) -> int:

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
@@ -13,6 +14,7 @@ import pytest
 from app.data.bar_service import HISTORY_START, BarService, overlap_consistent
 from app.data.cache.bar_cache import BarCache
 from app.data.providers.base import ProviderError, RateLimitedError
+from app.data.providers.yahoo import HOURLY_MAX_DAYS
 from app.data.universe import Universe
 from app.errors import DataUnavailableError, SymbolNotFoundError
 from app.models.bars import BarFrame, Interval, date_to_ts, ts_to_iso_dates
@@ -43,9 +45,22 @@ class FakeProvider:
     fail: Exception | None = None
     only: set[str] | None = None
     calls: list[tuple[str, date, date]] = field(default_factory=list[tuple[str, date, date]])
+    hourly: BarFrame | None = None
+    hourly_calls: list[tuple[str, date, date]] = field(default_factory=list[tuple[str, date, date]])
 
     def supports(self, symbol: SymbolInfo) -> bool:
         return self.only is None or symbol.symbol in self.only
+
+    def supports_hourly(self, symbol: SymbolInfo) -> bool:
+        return self.hourly is not None
+
+    def fetch_hourly(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
+        self.hourly_calls.append((symbol.symbol, start, end))
+        if self.fail is not None:
+            raise self.fail
+        assert self.hourly is not None
+        t = self.hourly.time
+        return self.hourly.take((t >= date_to_ts(start)) & (t < date_to_ts(end) + 86_400))
 
     def fetch_daily(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
         self.calls.append((symbol.symbol, start, end))
@@ -299,3 +314,131 @@ def test_quote_with_single_bar_has_no_change(make_service: Factory) -> None:
     service, _ = make_service(FakeProvider("p", bars(DAYS[:1], [5.0])))
     quote = service.quote("AAA")
     assert (quote.last, quote.change, quote.change_pct) == (5.0, None, None)
+
+
+# ---------------------------------------------------------------- intraday (1h, 4h)
+
+NY = ZoneInfo("America/New_York")
+
+
+def hourly_history(days: list[date] = DAYS) -> BarFrame:
+    """Seven regular-hours 1h bars per session; each session's last close is its daily close."""
+    times: list[int] = []
+    closes: list[float] = []
+    for day, close in zip(days, CLOSES, strict=False):
+        for k in range(7):
+            start = datetime(day.year, day.month, day.day, 9 + k, 30, tzinfo=NY)
+            times.append(int(start.timestamp()))
+            closes.append(close - 0.6 + 0.1 * k)
+    return BarFrame.from_columns(
+        time=times,
+        open=[c - 0.05 for c in closes],
+        high=[c + 0.2 for c in closes],
+        low=[c - 0.2 for c in closes],
+        close=closes,
+        volume=[10.0] * len(times),
+    )
+
+
+def test_first_hourly_request_downloads_the_provider_limit_once(make_service: Factory) -> None:
+    provider = FakeProvider("p", history(), hourly=hourly_history())
+    service, clock = make_service(provider)
+
+    first = service.hourly(AAA)
+    service.hourly(AAA)
+    assert provider.hourly_calls == [("AAA", TODAY - timedelta(days=HOURLY_MAX_DAYS), TODAY)]
+    assert first.frame.equals(hourly_history())
+    assert provider.calls == []  # daily history untouched
+
+    clock.now += 901.0
+    service.hourly(AAA)
+    assert provider.hourly_calls[1] == ("AAA", TODAY - timedelta(days=5), TODAY)
+
+
+def test_hourly_refresh_after_a_long_pause_stays_within_the_limit(make_service: Factory) -> None:
+    provider = FakeProvider("p", history(), hourly=hourly_history())
+    service, clock = make_service(provider)
+    service.hourly(AAA)
+    today = TODAY + timedelta(days=1000)
+    service._today = lambda: today  # pyright: ignore[reportPrivateUsage]
+    clock.now += 901.0
+    service.hourly(AAA)
+    assert provider.hourly_calls[1] == ("AAA", today - timedelta(days=HOURLY_MAX_DAYS), today)
+
+
+def test_hourly_bars_skip_providers_without_intraday(make_service: Factory) -> None:
+    daily_only = FakeProvider("daily", history())
+    service, _ = make_service(daily_only)
+    with pytest.raises(DataUnavailableError, match="No 1h data"):
+        service.get_bars("AAA", Interval.H1)
+
+    both = FakeProvider("both", history(), hourly=hourly_history())
+    service, _ = make_service(daily_only, both)
+    result = service.get_bars("AAA", Interval.H1, adjusted=False)
+    assert result.source == "both"
+    assert len(result.frame) == 7 * len(DAYS)
+
+
+def test_intraday_adjustment_uses_the_session_daily_factor(make_service: Factory) -> None:
+    factors = [0.98] * 5 + [1.0] * (len(DAYS) - 5)  # ex-dividend on the 6th session
+    adj = [c * f for c, f in zip(CLOSES, factors, strict=True)]
+    service, _ = make_service(FakeProvider("p", history(adj=adj), hourly=hourly_history()))
+
+    raw = service.get_bars("AAA", Interval.H1, adjusted=False)
+    adjusted = service.get_bars("AAA", Interval.H1, adjusted=True)
+    assert not raw.adjusted
+    assert adjusted.adjusted
+    expected = raw.frame.close * np.repeat(factors, 7)
+    np.testing.assert_allclose(adjusted.frame.close, expected, rtol=1e-12)
+    np.testing.assert_allclose(adjusted.frame.open, raw.frame.open * np.repeat(factors, 7))
+    # The last 1h close of each session equals that session's adjusted daily close.
+    np.testing.assert_allclose(adjusted.frame.close[6::7], adj, rtol=1e-12)
+
+
+def test_intraday_without_dividends_never_fetches_daily_bars(make_service: Factory) -> None:
+    provider = FakeProvider("p", history(), hourly=hourly_history())
+    service, _ = make_service(provider)
+    result = service.get_bars("IDX", Interval.H1, adjusted=True)
+    assert result.adjusted
+    assert provider.calls == []
+
+
+def test_intraday_adjustment_is_skipped_when_daily_bars_fail(make_service: Factory) -> None:
+    hourly_only = FakeProvider("h", BarFrame.empty(), hourly=hourly_history())
+    service, _ = make_service(hourly_only)
+    result = service.get_bars("AAA", Interval.H1, adjusted=True)
+    assert not result.adjusted
+    assert any("Dividend adjustment skipped" in w for w in result.warnings)
+    assert len(result.frame) == 7 * len(DAYS)
+
+
+def test_4h_bars_through_the_service(make_service: Factory) -> None:
+    service, _ = make_service(FakeProvider("p", history(), hourly=hourly_history()))
+    result = service.get_bars("AAA", Interval.H4, adjusted=False)
+    assert result.interval is Interval.H4
+    assert len(result.frame) == 2 * len(DAYS)
+    first = datetime.fromtimestamp(int(result.frame.time[0]), NY)
+    second = datetime.fromtimestamp(int(result.frame.time[1]), NY)
+    assert (first.hour, first.minute, second.hour, second.minute) == (9, 30, 13, 30)
+    assert result.frame.close[1] == hourly_history().close[6]
+
+
+def test_intraday_dates_select_whole_sessions(make_service: Factory) -> None:
+    service, _ = make_service(FakeProvider("p", history(), hourly=hourly_history()))
+    # Sessions 2026-01-07 .. 2026-01-08; 15:30 New York is 20:30 UTC, still the same session.
+    window = service.get_bars(
+        "AAA", Interval.H1, adjusted=False, start=date(2026, 1, 7), end=date(2026, 1, 8)
+    )
+    assert len(window.frame) == 14
+    assert window.has_more_before
+    cut = service.get_bars("AAA", Interval.H4, adjusted=False, until=date(2026, 1, 6))
+    assert len(cut.frame) == 4
+    tail = service.get_bars("AAA", Interval.H1, adjusted=False, limit=10)
+    assert len(tail.frame) == 10
+    assert tail.has_more_before
+
+
+def test_history_rejects_derived_intervals(make_service: Factory) -> None:
+    service, _ = make_service(FakeProvider("p", history()))
+    with pytest.raises(ValueError, match="base interval"):
+        service.history(AAA, Interval.W1)
