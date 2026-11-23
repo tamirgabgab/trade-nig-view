@@ -290,3 +290,31 @@ def test_empty_window_returns_no_bars(client: TestClient) -> None:
     ).json()
     assert body["time"] == []
     assert body["outputs"] == {"ma": []}
+
+
+def test_response_of_a_linear_ma(client: TestClient) -> None:
+    response = client.post("/api/indicators/response", json={"id": "sma", "params": {"length": 9}})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["params"] == {"length": 9, "source": "close", "offset": 0}
+    (out,) = body["outputs"]
+    assert out["linear"] is True
+    assert out["lag"] == pytest.approx(4.0)
+    assert out["impulse"][:9] == pytest.approx([1 / 9] * 9)
+    assert len(out["frequency"]["period"]) == len(out["frequency"]["magnitude_db"])
+
+
+def test_response_of_an_adaptive_ma_has_no_impulse(client: TestClient) -> None:
+    (out,) = client.post("/api/indicators/response", json={"id": "kama"}).json()["outputs"]
+    assert out["linear"] is False
+    assert out["reason"]
+    assert out["impulse"] is None
+    assert out["frequency"] is None
+    assert out["step"]
+
+
+def test_response_rejects_unknown_indicators_and_bad_params(client: TestClient) -> None:
+    unknown = client.post("/api/indicators/response", json={"id": "nope"})
+    assert unknown.status_code == 404
+    bad = client.post("/api/indicators/response", json={"id": "sma", "params": {"length": 0}})
+    assert bad.status_code == 422

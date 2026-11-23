@@ -131,6 +131,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/indicators/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Indicator Response
+         * @description The filter view of an indicator: its measured impulse, step, ramp and frequency response
+         *     for these parameters, from the real implementation on synthetic bars (no market data).
+         */
+        post: operations["indicator_response_api_indicators_response_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/learn/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Learn Page
+         * @description The page of a registered indicator's ``learn_slug`` (only those: no path is built from
+         *     arbitrary input).
+         */
+        get: operations["learn_page_api_learn__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -267,6 +309,24 @@ export interface components {
              */
             lookback: number;
         };
+        /** FrequencyInfo */
+        FrequencyInfo: {
+            /**
+             * Period
+             * @description Cycle length in bars (log-spaced, 2 to 200)
+             */
+            period: number[];
+            /**
+             * Magnitude Db
+             * @description 20 log10 |H|, floored at -120 dB
+             */
+            magnitude_db: number[];
+            /**
+             * Group Delay
+             * @description Bars; null where |H| = 0
+             */
+            group_delay: (number | null)[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -340,6 +400,13 @@ export interface components {
          * @enum {string}
          */
         Interval: "1h" | "4h" | "1D" | "1W" | "1M";
+        /** LearnPage */
+        LearnPage: {
+            /** Slug */
+            slug: string;
+            /** Markdown */
+            markdown: string;
+        };
         /** OutputInfo */
         OutputInfo: {
             /** Name */
@@ -362,6 +429,53 @@ export interface components {
             style?: {
                 [key: string]: string;
             };
+        };
+        /** OutputResponseInfo */
+        OutputResponseInfo: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
+            /** Linear */
+            linear: boolean;
+            /**
+             * Reason
+             * @description Why there is no impulse/frequency response
+             */
+            reason: string | null;
+            /**
+             * Step
+             * @description Unit step response from the step bar on
+             */
+            step: number[];
+            /**
+             * Ramp Lag
+             * @description Bars behind a straight line once settled
+             */
+            ramp_lag: number;
+            /**
+             * Impulse
+             * @description h_k from k = 0 (until it dies out)
+             */
+            impulse: number[] | null;
+            /** Dc Gain */
+            dc_gain: number | null;
+            /**
+             * Lag
+             * @description Centre of mass of h_k (bars)
+             */
+            lag: number | null;
+            /**
+             * Nrf
+             * @description Noise reduction factor, sum of h_k^2
+             */
+            nrf: number | null;
+            frequency: components["schemas"]["FrequencyInfo"] | null;
+            /**
+             * Truncated
+             * @description The impulse tail was cut before it died out
+             */
+            truncated: boolean;
         };
         /** ParamInfo */
         ParamInfo: {
@@ -416,6 +530,37 @@ export interface components {
             stale: boolean;
             /** Error */
             error: string | null;
+        };
+        /** ResponseInfo */
+        ResponseInfo: {
+            /** Id */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Params
+             * @description Parameters used (defaults filled in)
+             */
+            params: {
+                [key: string]: boolean | number | string;
+            };
+            /** Outputs */
+            outputs: components["schemas"]["OutputResponseInfo"][];
+        };
+        /** ResponseRequest */
+        ResponseRequest: {
+            /**
+             * Id
+             * @description Indicator id
+             */
+            id: string;
+            /**
+             * Params
+             * @description Missing parameters use defaults
+             */
+            params?: {
+                [key: string]: boolean | number | string;
+            };
         };
         /**
          * SymbolInfo
@@ -668,6 +813,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ComputeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    indicator_response_api_indicators_response_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResponseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponseInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    learn_page_api_learn__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearnPage"];
                 };
             };
             /** @description Validation Error */

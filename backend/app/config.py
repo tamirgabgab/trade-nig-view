@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     universe_file: Path = REPO_ROOT / "backend" / "config" / "universe.toml"
     fixtures_dir: Path = REPO_ROOT / "backend" / "fixtures"  # daily/ and 1h/ inside
     refresh_ttl_s: float = 900.0
+    learn_dir: Path = REPO_ROOT / "docs" / "indicators"  # learn pages, <learn_slug>.md
 
     @field_validator("tiingo_api_key", mode="before")
     @classmethod

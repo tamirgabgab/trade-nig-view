@@ -9,6 +9,7 @@ import numpy as np
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from app.analysis.response import OutputResponse, filter_response
 from app.analysis.transforms import Transform
 from app.api.deps import get_bar_service
 from app.data.bar_service import BarService
@@ -197,4 +198,77 @@ def compute_indicator(
         outputs={name: _values(y[first - lo :]) for name, y in outputs.items()},
         warmup=spec.warmup(params),
         lookback=lookback,
+    )
+
+
+class ResponseRequest(BaseModel):
+    id: Annotated[str, Field(min_length=1, max_length=40, description="Indicator id")]
+    params: dict[str, ParamValue] = Field(
+        default_factory=dict[str, ParamValue], description="Missing parameters use defaults"
+    )
+
+
+class FrequencyInfo(BaseModel):
+    period: list[float] = Field(description="Cycle length in bars (log-spaced, 2 to 200)")
+    magnitude_db: list[float] = Field(description="20 log10 |H|, floored at -120 dB")
+    group_delay: list[float | None] = Field(description="Bars; null where |H| = 0")
+
+
+class OutputResponseInfo(BaseModel):
+    name: str
+    label: str
+    linear: bool
+    reason: str | None = Field(description="Why there is no impulse/frequency response")
+    step: list[float] = Field(description="Unit step response from the step bar on")
+    ramp_lag: float = Field(description="Bars behind a straight line once settled")
+    impulse: list[float] | None = Field(description="h_k from k = 0 (until it dies out)")
+    dc_gain: float | None
+    lag: float | None = Field(description="Centre of mass of h_k (bars)")
+    nrf: float | None = Field(description="Noise reduction factor, sum of h_k^2")
+    frequency: FrequencyInfo | None
+    truncated: bool = Field(description="The impulse tail was cut before it died out")
+
+
+class ResponseInfo(BaseModel):
+    id: str
+    version: int
+    params: dict[str, ParamValue] = Field(description="Parameters used (defaults filled in)")
+    outputs: list[OutputResponseInfo]
+
+
+def _response_info(r: OutputResponse) -> OutputResponseInfo:
+    f = r.frequency
+    return OutputResponseInfo(
+        name=r.name,
+        label=r.label,
+        linear=r.linear,
+        reason=r.reason,
+        step=r.step.tolist(),
+        ramp_lag=r.ramp_lag,
+        impulse=None if r.impulse is None else r.impulse.tolist(),
+        dc_gain=r.dc_gain,
+        lag=r.lag,
+        nrf=r.nrf,
+        frequency=None
+        if f is None
+        else FrequencyInfo(
+            period=f.period.tolist(),
+            magnitude_db=f.magnitude_db.tolist(),
+            group_delay=_values(f.group_delay),
+        ),
+        truncated=r.truncated,
+    )
+
+
+@router.post("/indicators/response", response_model=ResponseInfo)
+def indicator_response(request: ResponseRequest) -> ResponseInfo:
+    """The filter view of an indicator: its measured impulse, step, ramp and frequency response
+    for these parameters, from the real implementation on synthetic bars (no market data)."""
+    spec = get_spec(request.id)
+    params = resolve_params(spec, request.params)
+    return ResponseInfo(
+        id=spec.id,
+        version=spec.version,
+        params=params,
+        outputs=[_response_info(r) for r in filter_response(spec, params)],
     )

@@ -369,6 +369,91 @@
           }
         }
       }
+    },
+    "/api/indicators/response": {
+      "post": {
+        "tags": [
+          "indicators"
+        ],
+        "summary": "Indicator Response",
+        "description": "The filter view of an indicator: its measured impulse, step, ramp and frequency response\nfor these parameters, from the real implementation on synthetic bars (no market data).",
+        "operationId": "indicator_response_api_indicators_response_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/learn/{slug}": {
+      "get": {
+        "tags": [
+          "learn"
+        ],
+        "summary": "Learn Page",
+        "description": "The page of a registered indicator's ``learn_slug`` (only those: no path is built from\narbitrary input).",
+        "operationId": "learn_page_api_learn__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -670,6 +755,48 @@
         ],
         "title": "ComputeResponse"
       },
+      "FrequencyInfo": {
+        "properties": {
+          "period": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Period",
+            "description": "Cycle length in bars (log-spaced, 2 to 200)"
+          },
+          "magnitude_db": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Magnitude Db",
+            "description": "20 log10 |H|, floored at -120 dB"
+          },
+          "group_delay": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Group Delay",
+            "description": "Bars; null where |H| = 0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "magnitude_db",
+          "group_delay"
+        ],
+        "title": "FrequencyInfo"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -827,6 +954,24 @@
         "title": "Interval",
         "description": "Bar intervals served by the API.\n\n``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and\n``1W``/``1M`` from ``1D``."
       },
+      "LearnPage": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "markdown": {
+            "type": "string",
+            "title": "Markdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "markdown"
+        ],
+        "title": "LearnPage"
+      },
       "OutputInfo": {
         "properties": {
           "name": {
@@ -873,6 +1018,128 @@
           "line_width"
         ],
         "title": "OutputInfo"
+      },
+      "OutputResponseInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "linear": {
+            "type": "boolean",
+            "title": "Linear"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why there is no impulse/frequency response"
+          },
+          "step": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Step",
+            "description": "Unit step response from the step bar on"
+          },
+          "ramp_lag": {
+            "type": "number",
+            "title": "Ramp Lag",
+            "description": "Bars behind a straight line once settled"
+          },
+          "impulse": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impulse",
+            "description": "h_k from k = 0 (until it dies out)"
+          },
+          "dc_gain": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dc Gain"
+          },
+          "lag": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lag",
+            "description": "Centre of mass of h_k (bars)"
+          },
+          "nrf": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nrf",
+            "description": "Noise reduction factor, sum of h_k^2"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrequencyInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "description": "The impulse tail was cut before it died out"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "linear",
+          "reason",
+          "step",
+          "ramp_lag",
+          "impulse",
+          "dc_gain",
+          "lag",
+          "nrf",
+          "frequency",
+          "truncated"
+        ],
+        "title": "OutputResponseInfo"
       },
       "ParamInfo": {
         "properties": {
@@ -1066,6 +1333,91 @@
           "error"
         ],
         "title": "QuoteOut"
+      },
+      "ResponseInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Parameters used (defaults filled in)"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputResponseInfo"
+            },
+            "type": "array",
+            "title": "Outputs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "params",
+          "outputs"
+        ],
+        "title": "ResponseInfo"
+      },
+      "ResponseRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Id",
+            "description": "Indicator id"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Missing parameters use defaults"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "ResponseRequest"
       },
       "SymbolInfo": {
         "properties": {
