@@ -12,6 +12,7 @@ import {
   HEALTH_OK,
   INDICATORS,
   jsonResponse,
+  MA_CROSS_SPEC,
   QUOTES,
   renderWithQuery,
   stubApi,
@@ -29,9 +30,25 @@ interface ComputeBody {
 
 let computes: ComputeBody[] = [];
 let computeStatus = 200;
+let registry: unknown[] = INDICATORS;
 
 /** A fake compute: value = close + length (easy to check), no warm-up on the first bar only. */
 function compute(body: ComputeBody) {
+  if (body.id === 'ma_cross') {
+    return {
+      id: body.id,
+      version: 1,
+      params: body.params,
+      time: AAPL_BARS.map((b) => b.time),
+      outputs: {
+        fast: AAPL_BARS.map((b) => b.close + 1),
+        slow: AAPL_BARS.map((b) => b.close - 1),
+        crosses: AAPL_BARS.map((_, i) => (i === 1 ? 1 : i === 2 ? -1 : null)),
+      },
+      warmup: 0,
+      lookback: 525,
+    };
+  }
   const length = Number(body.params['length']);
   return {
     id: body.id,
@@ -51,12 +68,13 @@ beforeEach(() => {
   useIndicatorStore.setState(useIndicatorStore.getInitialState());
   computes = [];
   computeStatus = 200;
+  registry = INDICATORS;
   stubApi({
     '/api/health': { body: HEALTH_OK },
     '/api/symbols': { body: SYMBOLS },
     '/api/quotes': { body: QUOTES },
     '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
-    '/api/indicators': { body: INDICATORS },
+    '/api/indicators': () => jsonResponse(registry),
     '/api/indicators/compute': (_url, init) => {
       const body = JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as ComputeBody;
       computes.push(body);
@@ -115,6 +133,7 @@ describe('indicators on the chart', () => {
       expect(liveEngine().lines).toEqual([
         {
           key: expect.stringMatching(/^ema-\d+:ma$/) as unknown,
+          plot: 'line',
           values: [null, 349.21 + 9, 342.56 + 9],
           color: '#FF6D00',
           lineWidth: 2,
@@ -216,5 +235,41 @@ describe('indicators on the chart', () => {
     await waitFor(() => {
       expect(computes.map((c) => c.id)).toEqual(['wma']);
     });
+  });
+
+  it('draws a composite: two lines in the legend, crosses as markers, MA type names', async () => {
+    registry = [...INDICATORS, MA_CROSS_SPEC];
+    useIndicatorStore.getState().add('ma_cross', {
+      fast_type: 'hma',
+      fast_length: 9,
+      slow_type: 'sma',
+      slow_length: 21,
+    });
+    const user = userEvent.setup();
+    renderWithQuery(<App />);
+    const label = await within(legend()).findByText('MA Cross HMA 9 SMA 21');
+    const row = label.closest('li');
+    if (row === null) throw new Error('no legend row');
+    await waitFor(() => {
+      expect(row.querySelectorAll('[data-output]')).toHaveLength(2);
+    });
+    expect(row.querySelector('[data-output="crosses"]')).toBeNull();
+    await waitFor(() => {
+      expect(liveEngine().lines.map((l) => [l.plot, l.upColor ?? null])).toEqual([
+        ['line', null],
+        ['line', null],
+        ['markers', '#089981'],
+      ]);
+    });
+    expect(liveEngine().lines[2]?.values.slice(0, 3)).toEqual([null, 1, -1]);
+
+    await user.click(screen.getByRole('button', { name: 'Settings: MA Cross HMA 9 SMA 21' }));
+    const panel = screen.getByRole('dialog', { name: 'MA Cross HMA 9 SMA 21' });
+    const fastType = within(panel).getByRole('combobox', { name: 'Fast MA type' });
+    expect(within(fastType).getByRole('option', { name: 'HMA (Hull)' })).toBeInTheDocument();
+    expect(within(panel).queryByRole('combobox', { name: 'Crosses line width' })).toBeNull();
+    await user.selectOptions(fastType, 'ema');
+    await within(legend()).findByText('MA Cross EMA 9 SMA 21');
+    expect(computes.at(-1)?.params['fast_type']).toBe('ema');
   });
 });

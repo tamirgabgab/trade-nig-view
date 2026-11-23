@@ -10,6 +10,7 @@ const LENGTH: ParamInfo = {
   max: 5000,
   step: 1,
   options: [],
+  optionLabels: [],
 };
 
 describe('parseParamInput', () => {

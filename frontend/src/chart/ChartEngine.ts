@@ -8,15 +8,18 @@ import {
   CandlestickSeries,
   ColorType,
   createChart,
+  createSeriesMarkers,
   CrosshairMode,
   HistogramSeries,
   LineSeries,
   PriceScaleMode,
   type IChartApi,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
   type LineWidth,
   type LogicalRange as LwcLogicalRange,
   type MouseEventParams,
+  type SeriesMarkerBar,
   type SeriesType,
   type Time,
   type UTCTimestamp,
@@ -87,15 +90,48 @@ export interface ScaleOptions {
   autoScale: boolean;
 }
 
-/** One indicator output drawn as a line on the price pane. */
+/**
+ * One indicator output on the price pane: a line, or markers (arrows on the price bars: +1 = up
+ * arrow below the bar, -1 = down arrow above it, null = none).
+ */
 export interface IndicatorLine {
   /** Stable id (instance uid + output name). */
   key: string;
+  plot: 'line' | 'markers';
   /** One value per bar given to `setBars` (null = no value, e.g. warm-up). */
   values: readonly (number | null)[];
   color: string;
   lineWidth: number;
   visible: boolean;
+  /** Marker colours (default: `color`). */
+  upColor?: string | undefined;
+  downColor?: string | undefined;
+}
+
+/** Markers of `lines` on `times` (by bar index), sorted by time as lightweight-charts requires. */
+export function toMarkers(
+  lines: readonly IndicatorLine[],
+  times: readonly ChartTime[],
+): SeriesMarkerBar<ChartTime>[] {
+  const found: { index: number; marker: SeriesMarkerBar<ChartTime> }[] = [];
+  for (const line of lines) {
+    if (line.plot !== 'markers' || !line.visible) continue;
+    line.values.forEach((value, index) => {
+      const time = times[index];
+      if (value === null || value === 0 || time === undefined) return;
+      const up = value > 0;
+      found.push({
+        index,
+        marker: {
+          time,
+          position: up ? 'belowBar' : 'aboveBar',
+          shape: up ? 'arrowUp' : 'arrowDown',
+          color: (up ? line.upColor : line.downColor) ?? line.color,
+        },
+      });
+    });
+  }
+  return found.sort((a, b) => a.index - b.index).map((f) => f.marker);
 }
 
 interface LineEntry {
@@ -124,6 +160,9 @@ export class ChartEngine {
   private times: ChartTime[] = [];
   private decimals = 2;
   private readonly lines = new Map<string, LineEntry>();
+  private markerLines: readonly IndicatorLine[] = [];
+  private markerTimes: readonly ChartTime[] | null = null;
+  private markers: ISeriesMarkersPluginApi<Time> | null = null;
 
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
     this.theme = theme;
@@ -209,7 +248,9 @@ export class ChartEngine {
    * Show exactly these indicator lines (others are removed). Call after `setBars`: values are
    * matched to the current bars by index. Data is only re-sent when values or bars changed.
    */
-  setIndicatorLines(lines: readonly IndicatorLine[]): void {
+  setIndicatorLines(all: readonly IndicatorLine[]): void {
+    const lines = all.filter((line) => line.plot === 'line');
+    this.setMarkers(all.filter((line) => line.plot === 'markers'));
     const keep = new Set(lines.map((line) => line.key));
     for (const [key, entry] of this.lines) {
       if (keep.has(key)) continue;
@@ -241,13 +282,49 @@ export class ChartEngine {
     }
   }
 
-  /** Switch the main series' type, keeping data and viewport. */
+  /** Marker outputs sit on the main series, so they follow the candles' highs and lows. */
+  private setMarkers(lines: readonly IndicatorLine[]): void {
+    const same =
+      this.markerTimes === this.times &&
+      lines.length === this.markerLines.length &&
+      lines.every((line, i) => {
+        const old = this.markerLines[i];
+        return (
+          old !== undefined &&
+          old.key === line.key &&
+          old.values === line.values &&
+          old.visible === line.visible &&
+          old.color === line.color &&
+          old.upColor === line.upColor &&
+          old.downColor === line.downColor
+        );
+      });
+    if (same) return;
+    this.markerLines = lines;
+    this.markerTimes = this.times;
+    this.renderMarkers();
+  }
+
+  private renderMarkers(): void {
+    const markers = withTime(toMarkers(this.markerLines, this.times));
+    if (this.markers === null) {
+      if (markers.length === 0) return;
+      this.markers = createSeriesMarkers(this.main, markers);
+    } else {
+      this.markers.setMarkers(markers);
+    }
+  }
+
+  /** Switch the main series' type, keeping data, markers and viewport. */
   setChartType(type: ChartType): void {
     if (type === this.chartType) return;
+    this.markers?.detach();
+    this.markers = null;
     this.chart.removeSeries(this.main);
     this.chartType = type;
     this.main = this.createMainSeries(type);
     this.renderMain();
+    this.renderMarkers();
   }
 
   /** Price-axis mode (normal, logarithmic, percent) and auto-fit. */
@@ -284,6 +361,7 @@ export class ChartEngine {
     this.listeners.clear();
     this.rangeListeners.clear();
     this.lines.clear();
+    this.markers = null;
     this.chart.unsubscribeCrosshairMove(this.handleCrosshairMove);
     this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.handleRangeChange);
     this.chart.remove();

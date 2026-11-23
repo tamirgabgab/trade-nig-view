@@ -38,19 +38,21 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
           >
             <span className={styles.label}>{view.label}</span>
             {visible &&
-              view.outputs.map((output) => {
-                const value = output.values[index];
-                return (
-                  <span
-                    key={output.name}
-                    className={styles.value}
-                    style={{ color: output.color }}
-                    data-output={output.name}
-                  >
-                    {value === null || value === undefined ? '—' : formatPrice(value, decimals)}
-                  </span>
-                );
-              })}
+              view.outputs
+                .filter((output) => output.plot !== 'markers')
+                .map((output) => {
+                  const value = output.values[index];
+                  return (
+                    <span
+                      key={output.name}
+                      className={styles.value}
+                      style={{ color: output.color }}
+                      data-output={output.name}
+                    >
+                      {value === null || value === undefined ? '—' : formatPrice(value, decimals)}
+                    </span>
+                  );
+                })}
             {view.error !== null && (
               <span className={styles.error} role="alert" title={view.error.message}>
                 <TriangleAlert size={ICON} aria-hidden="true" />

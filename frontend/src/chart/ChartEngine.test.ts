@@ -20,6 +20,13 @@ const lwc = vi.hoisted(() => {
     visible: null as { from: number; to: number } | null,
     rangeHandler: undefined as ((range: { from: number; to: number } | null) => void) | undefined,
     setVisibleLogicalRange: vi.fn(),
+    markerPlugins: [] as {
+      series: unknown;
+      markers: unknown[];
+      detached: boolean;
+      setMarkers: (markers: unknown[]) => void;
+      detach: () => void;
+    }[],
     remove: vi.fn(),
     unsubscribe: vi.fn(),
   };
@@ -62,11 +69,27 @@ const lwc = vi.hoisted(() => {
     state.chartOptions = options;
     return chart;
   };
-  return { state, createChart };
+  const createSeriesMarkers = (series: unknown, markers: unknown[]) => {
+    const plugin = {
+      series,
+      markers,
+      detached: false,
+      setMarkers: (next: unknown[]) => {
+        plugin.markers = next;
+      },
+      detach: () => {
+        plugin.detached = true;
+      },
+    };
+    state.markerPlugins.push(plugin);
+    return plugin;
+  };
+  return { state, createChart, createSeriesMarkers };
 });
 
 vi.mock('lightweight-charts', () => ({
   createChart: lwc.createChart,
+  createSeriesMarkers: lwc.createSeriesMarkers,
   AreaSeries: { kind: 'Area' },
   BarSeries: { kind: 'Bar' },
   CandlestickSeries: { kind: 'Candlestick' },
@@ -295,7 +318,7 @@ describe('ChartEngine', () => {
     chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
     const values = [null, 101, 102];
     chart.setIndicatorLines([
-      { key: 'ema-1:ma', values, color: '#ff6d00', lineWidth: 2, visible: true },
+      { key: 'ema-1:ma', plot: 'line', values, color: '#ff6d00', lineWidth: 2, visible: true },
     ]);
     const line = lwc.state.series.at(-1);
     expect(line?.kind).toBe('Line');
@@ -310,7 +333,7 @@ describe('ChartEngine', () => {
 
     // Same values, new colour: options only.
     chart.setIndicatorLines([
-      { key: 'ema-1:ma', values, color: '#2962ff', lineWidth: 9, visible: false },
+      { key: 'ema-1:ma', plot: 'line', values, color: '#2962ff', lineWidth: 9, visible: false },
     ]);
     expect(line?.setData).toHaveBeenCalledTimes(1);
     expect(line?.applyOptions).toHaveBeenLastCalledWith(
@@ -320,11 +343,46 @@ describe('ChartEngine', () => {
     // New bars: the same values array is sent again against the new times.
     chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: false });
     chart.setIndicatorLines([
-      { key: 'ema-1:ma', values, color: '#2962ff', lineWidth: 2, visible: true },
+      { key: 'ema-1:ma', plot: 'line', values, color: '#2962ff', lineWidth: 2, visible: true },
     ]);
     expect(line?.setData).toHaveBeenCalledTimes(2);
 
     chart.setIndicatorLines([]);
     expect(lwc.state.removed).toContain(line);
+  });
+
+  it('draws marker outputs as arrows on the main series and keeps them across chart types', () => {
+    const { engine: chart } = engine();
+    chart.setBars(BARS.slice(0, 4), { decimals: 2, hasVolume: true, resetView: true });
+    const crosses = [null, 1, null, -1];
+    const markers = {
+      key: 'x-1:crosses',
+      plot: 'markers' as const,
+      values: crosses,
+      color: '#089981',
+      lineWidth: 2,
+      visible: true,
+      upColor: '#00ff00',
+      downColor: '#ff0000',
+    };
+    const before = lwc.state.series.length;
+    chart.setIndicatorLines([markers]);
+    expect(lwc.state.series.length).toBe(before);
+    const plugin = lwc.state.markerPlugins.at(-1);
+    expect(plugin?.series).toMatchObject({ kind: 'Candlestick' });
+    expect(plugin?.markers).toEqual([
+      { time: '2026-01-02', position: 'belowBar', shape: 'arrowUp', color: '#00ff00' },
+      { time: '2026-01-04', position: 'aboveBar', shape: 'arrowDown', color: '#ff0000' },
+    ]);
+
+    chart.setChartType('line');
+    expect(plugin?.detached).toBe(true);
+    const moved = lwc.state.markerPlugins.at(-1);
+    expect(moved).not.toBe(plugin);
+    expect(moved?.series).toMatchObject({ kind: 'Line' });
+    expect(moved?.markers).toHaveLength(2);
+
+    chart.setIndicatorLines([{ ...markers, visible: false }]);
+    expect(moved?.markers).toEqual([]);
   });
 });

@@ -11,6 +11,7 @@ import {
   type ComputeData,
   type ComputeRequestBody,
   type IndicatorInfo,
+  type OutputInfo,
   type Params,
   type SeriesQuery,
 } from '../api/indicators.ts';
@@ -20,6 +21,9 @@ import { useIndicatorStore, type IndicatorInstance } from '../store/indicatorSto
 export interface OutputView {
   name: string;
   label: string;
+  plot: OutputInfo['plot'];
+  /** Extra colours by role (markers: `up`, `down`). */
+  style: Record<string, string>;
   color: string;
   lineWidth: number;
   /** One value per loaded bar (null = no value). */
@@ -89,6 +93,8 @@ export function useChartIndicators(
           return {
             name: output.name,
             label: output.label,
+            plot: output.plot,
+            style: output.style,
             color: style?.color ?? output.color,
             lineWidth: style?.lineWidth ?? output.lineWidth,
             values: values[output.name] ?? EMPTY,
@@ -110,12 +116,16 @@ export function useChartIndicators(
   const lines = useMemo(
     () =>
       views.flatMap((view) =>
-        view.outputs.map((output) => ({
+        view.outputs.map((output): IndicatorLine => ({
           key: `${view.instance.uid}:${output.name}`,
+          // Histogram and area plots arrive with the oscillators (R4); until then, lines.
+          plot: output.plot === 'markers' ? 'markers' : 'line',
           values: output.values,
           color: output.color,
           lineWidth: output.lineWidth,
           visible: view.instance.visible,
+          upColor: output.style.up,
+          downColor: output.style.down,
         })),
       ),
     [views],

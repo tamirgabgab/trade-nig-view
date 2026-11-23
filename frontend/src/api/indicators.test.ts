@@ -10,6 +10,44 @@ import {
 } from './indicators.ts';
 
 const [SMA] = parseIndicatorList(INDICATORS);
+
+const MA_CROSS = {
+  id: 'ma_cross',
+  version: 1,
+  name: 'Moving Average Cross',
+  short_name: 'MA Cross',
+  category: 'moving_averages',
+  overlay: true,
+  params: [
+    {
+      name: 'fast_type',
+      type: 'enum',
+      default: 'sma',
+      label: 'Fast MA type',
+      min: null,
+      max: null,
+      step: null,
+      options: ['sma', 'hma'],
+      option_labels: ['SMA', 'HMA (Hull)'],
+    },
+    { name: 'fast_length', type: 'int', default: 9, label: 'Fast length', min: 1, max: 5000 },
+    { name: 'floor', type: 'bool', default: false, label: 'Floor' },
+  ],
+  outputs: [
+    { name: 'fast', label: 'Fast', plot: 'line', color: '#FF6D00', line_width: 2, style: {} },
+    {
+      name: 'crosses',
+      label: 'Crosses',
+      plot: 'markers',
+      color: '#089981',
+      line_width: 2,
+      style: { up: '#089981', down: '#F23645' },
+    },
+  ],
+  levels: [],
+  learn_slug: 'ma-cross',
+  description: '',
+};
 if (SMA === undefined) throw new Error('fixture');
 
 describe('indicator registry', () => {
@@ -32,7 +70,37 @@ describe('indicator registry', () => {
       max: 5000,
       step: 1,
       options: [],
+      optionLabels: [],
     });
+  });
+
+  it('parses enum display names and output style colours', () => {
+    const [cross] = parseIndicatorList([MA_CROSS]);
+    if (cross === undefined) throw new Error('fixture');
+    expect(cross.params[0]).toMatchObject({
+      options: ['sma', 'hma'],
+      optionLabels: ['SMA', 'HMA (Hull)'],
+    });
+    expect(cross.outputs[1]).toMatchObject({
+      plot: 'markers',
+      style: { up: '#089981', down: '#F23645' },
+    });
+    // Labels that do not match the options fall back to the ids.
+    const [bad] = parseIndicatorList([
+      { ...MA_CROSS, params: [{ ...MA_CROSS.params[0], option_labels: ['only one'] }] },
+    ]);
+    expect(bad?.params[0]?.optionLabels).toEqual(['sma', 'hma']);
+  });
+
+  it('labels enums by their short display name and booleans only when on', () => {
+    const [cross] = parseIndicatorList([MA_CROSS]);
+    if (cross === undefined) throw new Error('fixture');
+    expect(instanceLabel(cross, { fast_type: 'hma', fast_length: 9, floor: false })).toBe(
+      'MA Cross HMA 9',
+    );
+    expect(instanceLabel(cross, { fast_type: 'sma', fast_length: 5, floor: true })).toBe(
+      'MA Cross SMA 5 Floor',
+    );
   });
 
   it('rejects malformed registry entries', () => {

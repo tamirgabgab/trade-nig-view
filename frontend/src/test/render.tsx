@@ -227,3 +227,55 @@ export const INDICATORS = [
   maSpec('wma', 'Weighted Moving Average', 9, '#00BCD4'),
   maSpec('smma', 'Smoothed Moving Average', 7, '#AB47BC'),
 ];
+
+const MA_TYPE_OPTIONS = ['sma', 'ema', 'hma'];
+
+function maTypeParam(name: string, label: string) {
+  return {
+    name,
+    type: 'enum',
+    default: 'sma',
+    label,
+    min: null,
+    max: null,
+    step: null,
+    options: MA_TYPE_OPTIONS,
+    option_labels: ['SMA', 'EMA', 'HMA (Hull)'],
+  };
+}
+
+function lengthParam(name: string, label: string, value: number) {
+  return { name, type: 'int', default: value, label, min: 1, max: 5000, step: 1, options: [] };
+}
+
+/** A composite with an enum per average and a markers output (backend `ma_cross`). */
+export const MA_CROSS_SPEC = {
+  id: 'ma_cross',
+  version: 1,
+  name: 'Moving Average Cross',
+  short_name: 'MA Cross',
+  category: 'moving_averages',
+  overlay: true,
+  inputs: ['open', 'high', 'low', 'close', 'volume'],
+  params: [
+    maTypeParam('fast_type', 'Fast MA type'),
+    lengthParam('fast_length', 'Fast length', 9),
+    maTypeParam('slow_type', 'Slow MA type'),
+    lengthParam('slow_length', 'Slow length', 21),
+  ],
+  outputs: [
+    { name: 'fast', label: 'Fast', plot: 'line', color: '#FF6D00', line_width: 2, style: {} },
+    { name: 'slow', label: 'Slow', plot: 'line', color: '#2962FF', line_width: 2, style: {} },
+    {
+      name: 'crosses',
+      label: 'Crosses',
+      plot: 'markers',
+      color: '#089981',
+      line_width: 2,
+      style: { up: '#089981', down: '#F23645' },
+    },
+  ],
+  levels: [],
+  learn_slug: 'ma-cross',
+  description: 'Fast and slow averages with arrows where they cross.',
+};

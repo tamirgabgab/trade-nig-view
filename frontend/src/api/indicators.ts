@@ -23,6 +23,8 @@ export interface ParamInfo {
   max: number | null;
   step: number | null;
   options: string[];
+  /** Display names of `options` (same order and length). */
+  optionLabels: string[];
 }
 
 export interface OutputInfo {
@@ -31,6 +33,8 @@ export interface OutputInfo {
   plot: Schemas['OutputInfo']['plot'];
   color: string;
   lineWidth: number;
+  /** Extra colours by role, e.g. markers' `up` / `down`. */
+  style: Record<string, string>;
 }
 
 export interface IndicatorInfo {
@@ -78,6 +82,15 @@ function strings(value: unknown): string[] {
     : [];
 }
 
+function stringRecord(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string',
+    ),
+  );
+}
+
 function parseParam(item: unknown): ParamInfo {
   if (!isRecord(item)) throw new Error('Unexpected indicator param');
   const field = fieldsOf<Schemas['ParamInfo']>(item);
@@ -85,6 +98,8 @@ function parseParam(item: unknown): ParamInfo {
   const value = field('default');
   if (!PARAM_TYPES.includes(type as ParamType)) throw new Error('Unexpected param type');
   if (!isParamValue(value)) throw new Error('Unexpected param default');
+  const options = strings(field('options'));
+  const labels = strings(field('option_labels'));
   return {
     name: str(field('name'), 'param name'),
     type: type as ParamType,
@@ -93,7 +108,8 @@ function parseParam(item: unknown): ParamInfo {
     min: numOrNull(field('min')),
     max: numOrNull(field('max')),
     step: numOrNull(field('step')),
-    options: strings(field('options')),
+    options,
+    optionLabels: labels.length === options.length ? labels : options,
   };
 }
 
@@ -109,6 +125,7 @@ function parseOutput(item: unknown): OutputInfo {
     plot: plot as OutputInfo['plot'],
     color: str(field('color'), 'output color'),
     lineWidth: typeof width === 'number' ? width : 2,
+    style: stringRecord(field('style')),
   };
 }
 
@@ -166,11 +183,27 @@ export function defaultParams(spec: IndicatorInfo): Params {
   return effectiveParams(spec, {});
 }
 
-/** Short legend label: "EMA 20 close" (the non-default offset is shown too). */
+/** Display name of an enum value ("SMMA (RMA)" for "smma"); the value itself if unknown. */
+export function optionLabel(param: ParamInfo, value: string): string {
+  return param.optionLabels[param.options.indexOf(value)] ?? value;
+}
+
+/** One input as the legend shows it, or null to leave it out. */
+function shownValue(param: ParamInfo, value: ParamValue): string | null {
+  if (param.name === 'offset' && value === param.default) return null;
+  if (param.type === 'bool') return value === true ? param.label : null;
+  if (param.type === 'enum' && typeof value === 'string') {
+    // The short form: "HMA (Hull)" -> "HMA".
+    return optionLabel(param, value).split(' ')[0] ?? value;
+  }
+  return String(value);
+}
+
+/** Short legend label: "EMA 20 close", "MA Cross SMA 9 SMA 21 close" (non-default offset too). */
 export function instanceLabel(spec: IndicatorInfo, params: Params): string {
   const shown = spec.params
-    .filter((p) => p.name !== 'offset' || params[p.name] !== p.default)
-    .map((p) => String(params[p.name] ?? p.default));
+    .map((p) => shownValue(p, params[p.name] ?? p.default))
+    .filter((text): text is string => text !== null);
   return [spec.shortName, ...shown].join(' ');
 }
 
