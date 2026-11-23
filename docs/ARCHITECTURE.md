@@ -286,6 +286,13 @@ bar containing that instant (logical index), with fractional interpolation insid
 the last bar using the bar spacing. Each tool type has a JSON-schema (pydantic model on the backend) for `props`.
 Migrations: `schema_version` bump + a pure migration function `v1 → v2`, tested.
 
+R4a implementation: `GET/PUT /api/drawings/{symbol}` (PUT body `{revision, drawings}`; a stale revision is 409
+`revision_conflict`), SQLite `app.db` (`storage/drawings.py`), `props` per tool: `text` {text, font_size}, `rectangle`
+{fill}. Frontend: `drawings/` holds the pure parts (geometry, anchor mapping, magnet, `shapes.ts` shared by the hit test and
+the canvas renderer, `DrawingManager` for pointer/keyboard interaction); `chart/drawingLayer.ts` is one series
+primitive that projects every anchor at paint time; `store/drawingStore.ts` + `useDrawingsSync` load and save (debounced
+600 ms, flushed on a symbol switch).
+
 ### 5.3 Layout document
 
 `{schema_version, name, symbol, interval, chart_type, scale_mode, adjusted, indicators:[{instance_id, id, version,

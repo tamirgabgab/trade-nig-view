@@ -16,7 +16,7 @@
 | R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | ✅ R3a, R3b, R3c (2026-11-23) |
 | L1 | Learn v1 for the MA family (from Phase 2) | M | ✅ (2026-11-23) |
 | U1 | UX pass (U1a polish + motion + half screen; U1b watchlist, palette, theme) | L | ✅ U1a + U1b (2026-11-23) |
-| R4 | Drawing tools v1 | L | |
+| R4 | Drawing tools v1 (R4a core + lines/shapes/text; R4b Fib, channel, ranges) | L | 🔨 R4a ✅ (2026-11-23), R4b next |
 | R5 | Market structure & reference values | M | |
 | R6 | Persistence, layouts & UX polish | L | |
 | R7 | Bar Replay | M | |
@@ -174,11 +174,11 @@ mode, lock all, hide all, remove all. Persistence per symbol (`/api/drawings/{sy
 Out of scope: undo/redo (R6), the other ~70 TradingView tools.
 
 Tasks
-- [ ] `drawings/geometry.ts` (projection, distance-to-segment/ray/line, rect hit, channel), `snap.ts`, `fib.ts` (levels math) — pure + unit tests
-- [ ] `DrawingManager`, `DrawingPrimitive` base, one class per tool, tool registry for the toolbar
-- [ ] Properties dialog (style + tool props, Fib level table)
-- [ ] Backend `storage/drawings.py` + API + pydantic models per tool type + migration scaffold + tests
-- [ ] Anchor mapping across intervals (time → logical index, interpolation/extrapolation) + tests
+- [x] `drawings/geometry.ts` (distance-to-segment/ray/line, rect hit, clipping, 45° snap), `snap.ts` — pure + unit tests (R4a); `fib.ts`, channel in R4b
+- [x] `DrawingManager`, one `DrawingLayer` primitive, shape module per tool (`shapes.ts`), tool registry for the toolbar (R4a)
+- [x] Properties: floating toolbar + live side panel (R4a); Fib level table in R4b
+- [x] Backend `storage/drawings.py` + API + pydantic models per tool type + migration scaffold + tests (R4a)
+- [x] Anchor mapping across intervals (time → logical index, interpolation/extrapolation) + tests (R4a)
 
 DoD: draw a Fib from a swing low to a swing high on AAPL 1D, reload → still there with the same levels; switch to 1W → anchors at the same time/price; geometry/hit-test unit tests; Playwright: draw, move, delete a trend line.
 
