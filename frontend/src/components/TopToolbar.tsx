@@ -34,9 +34,7 @@ interface TopToolbarProps {
 export function TopToolbar({ className }: TopToolbarProps) {
   const symbol = useChartStore((s) => s.symbol);
   const display = useSymbols().data?.find((s) => s.symbol === symbol)?.display ?? symbol;
-  const openSymbolSearch = useUiStore((s) => s.openSymbolSearch);
-  const setIndicatorsDialog = useUiStore((s) => s.setIndicatorsDialog);
-  const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen);
+  const openModal = useUiStore((s) => s.openModal);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   return (
@@ -48,7 +46,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
         aria-haspopup="dialog"
         title="Symbol search (or just start typing a ticker)"
         onClick={() => {
-          openSymbolSearch();
+          openModal('symbols');
         }}
       >
         <Search size={16} aria-hidden="true" />
@@ -70,7 +68,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
         icon={<ChartSpline size={ICON_SIZE} />}
         aria-haspopup="dialog"
         onClick={() => {
-          setIndicatorsDialog(true);
+          openModal('indicators');
         }}
       />
       <span className={styles.separator} aria-hidden="true" />
@@ -104,7 +102,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
         icon={<Keyboard size={ICON_SIZE} />}
         aria-haspopup="dialog"
         onClick={() => {
-          setShortcutsOpen(true);
+          openModal('shortcuts');
         }}
       />
       <IconButton

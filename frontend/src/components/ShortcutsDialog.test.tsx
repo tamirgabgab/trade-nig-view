@@ -19,7 +19,7 @@ function Harness() {
 }
 
 afterEach(() => {
-  useUiStore.setState({ shortcutsOpen: false });
+  useUiStore.setState(useUiStore.getInitialState());
 });
 
 describe('ShortcutsDialog', () => {
@@ -36,7 +36,7 @@ describe('ShortcutsDialog', () => {
     expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
     // While it is open, typing does not stack a symbol search on top.
     await user.keyboard('a');
-    expect(useUiStore.getState().symbolSearch.open).toBe(false);
+    expect(useUiStore.getState().modal).toBe('shortcuts');
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

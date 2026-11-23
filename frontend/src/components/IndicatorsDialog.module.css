@@ -1,12 +1,4 @@
-/* Element + class: wins over the shared dialog styles whatever the CSS load order. */
-input.input {
-  text-transform: none;
-}
-
-li.option {
-  grid-template-columns: 1fr auto;
-}
-
+/* Element + class: wins over the shared ModalShell styles whatever the CSS load order. */
 li.option[aria-disabled='true'] {
   cursor: not-allowed;
   opacity: 0.6;

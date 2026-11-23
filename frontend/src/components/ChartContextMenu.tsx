@@ -28,10 +28,9 @@ export function ChartContextMenu({
   const scaleMode = useChartStore((s) => s.scaleMode);
   const toggleScaleMode = useChartStore((s) => s.toggleScaleMode);
   const indicatorCount = useIndicatorStore((s) => s.instances.length);
-  const setIndicatorsDialog = useUiStore((s) => s.setIndicatorsDialog);
+  const openModal = useUiStore((s) => s.openModal);
   const requestSnapshot = useUiStore((s) => s.requestSnapshot);
   const showToast = useUiStore((s) => s.showToast);
-  const confirmRemoveAll = useUiStore((s) => s.setConfirmRemoveAll);
 
   const items: MenuItem[] = [
     { label: 'Reset chart view', onSelect: onResetView },
@@ -39,7 +38,7 @@ export function ChartContextMenu({
       label: 'Add indicator',
       shortcut: '/',
       onSelect: () => {
-        setIndicatorsDialog(true);
+        openModal('indicators');
       },
     },
   ];
@@ -88,7 +87,7 @@ export function ChartContextMenu({
       label: 'Remove all indicators…',
       divider: true,
       onSelect: () => {
-        confirmRemoveAll(true);
+        openModal('confirmRemoveAll');
       },
     });
   }

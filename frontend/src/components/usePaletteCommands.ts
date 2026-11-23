@@ -181,7 +181,7 @@ export function usePaletteCommands(): Command[] {
       label: 'Show keyboard shortcuts',
       hint: '?',
       run: () => {
-        ui().setShortcutsOpen(true);
+        ui().openModal('shortcuts');
       },
     },
   );

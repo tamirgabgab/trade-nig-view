@@ -12,14 +12,19 @@ export interface Toast {
 
 export type SnapshotMode = 'copy' | 'download';
 
+/** The modal dialogs; at most one is open, so they can never stack. */
+export type Modal = 'symbols' | 'indicators' | 'shortcuts' | 'palette' | 'confirmRemoveAll';
+
 /** Transient UI state (not persisted): which overlay is open. */
 export interface UiState {
-  /** Symbol search dialog; `seed` is the text it opens with (the key typed on the chart). */
-  symbolSearch: { open: boolean; seed: string };
-  openSymbolSearch: (seed?: string) => void;
-  closeSymbolSearch: () => void;
-  indicatorsDialog: boolean;
-  setIndicatorsDialog: (open: boolean) => void;
+  /** The open modal dialog, or null. */
+  modal: Modal | null;
+  /** Text the symbol search opens with (the key typed on the chart). */
+  symbolSeed: string;
+  /** Open a modal (replacing any other); `symbolSeed` for the symbol search. */
+  openModal: (modal: Modal, symbolSeed?: string) => void;
+  /** Close `modal` if it is the open one. */
+  closeModal: (modal: Modal) => void;
   /** Instance whose settings panel is open, or null. */
   settingsFor: string | null;
   openSettings: (uid: string | null) => void;
@@ -32,13 +37,6 @@ export interface UiState {
   /** Indicator just added: drawn thicker for EMPHASIS_MS (ChartArea clears it). */
   emphasis: string | null;
   setEmphasis: (uid: string | null) => void;
-  shortcutsOpen: boolean;
-  setShortcutsOpen: (open: boolean) => void;
-  paletteOpen: boolean;
-  setPaletteOpen: (open: boolean) => void;
-  /** The "Remove all indicators?" confirmation. */
-  confirmRemoveAll: boolean;
-  setConfirmRemoveAll: (open: boolean) => void;
   /** Forget panels, hover focus and emphasis of removed indicators (one uid, or all). */
   forgetIndicator: (uid?: string) => void;
   /** Watchlist column on a wide window; floating panel below 1100 px (closed by default). */
@@ -53,28 +51,19 @@ export interface UiState {
   dismissToast: () => void;
 }
 
-/** Any modal dialog open: the global hotkeys stay quiet so modals never stack. */
+/** Any modal dialog open: the global hotkeys stay quiet. */
 export function selectModalOpen(s: UiState): boolean {
-  return (
-    s.symbolSearch.open ||
-    s.indicatorsDialog ||
-    s.shortcutsOpen ||
-    s.paletteOpen ||
-    s.confirmRemoveAll
-  );
+  return s.modal !== null;
 }
 
 export const useUiStore = create<UiState>()((set) => ({
-  symbolSearch: { open: false, seed: '' },
-  openSymbolSearch: (seed = '') => {
-    set({ symbolSearch: { open: true, seed } });
+  modal: null,
+  symbolSeed: '',
+  openModal: (modal, symbolSeed = '') => {
+    set({ modal, symbolSeed });
   },
-  closeSymbolSearch: () => {
-    set({ symbolSearch: { open: false, seed: '' } });
-  },
-  indicatorsDialog: false,
-  setIndicatorsDialog: (open) => {
-    set({ indicatorsDialog: open });
+  closeModal: (modal) => {
+    set((s) => (s.modal === modal ? { modal: null } : s));
   },
   settingsFor: null,
   openSettings: (uid) => {
@@ -91,18 +80,6 @@ export const useUiStore = create<UiState>()((set) => ({
   emphasis: null,
   setEmphasis: (uid) => {
     set({ emphasis: uid });
-  },
-  shortcutsOpen: false,
-  setShortcutsOpen: (open) => {
-    set({ shortcutsOpen: open });
-  },
-  paletteOpen: false,
-  setPaletteOpen: (open) => {
-    set({ paletteOpen: open });
-  },
-  confirmRemoveAll: false,
-  setConfirmRemoveAll: (open) => {
-    set({ confirmRemoveAll: open });
   },
   forgetIndicator: (uid) => {
     const gone = (current: string | null) =>

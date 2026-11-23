@@ -72,8 +72,8 @@ export function ChartArea({ className }: ChartAreaProps) {
   const closeContextMenu = useCallback(() => {
     setMenuAt(null);
   }, []);
-  const confirmClear = useUiStore((s) => s.confirmRemoveAll);
-  const setConfirmClear = useUiStore((s) => s.setConfirmRemoveAll);
+  const confirmClear = useUiStore((s) => s.modal === 'confirmRemoveAll');
+  const closeModal = useUiStore((s) => s.closeModal);
   const [offLatest, setOffLatest] = useState(false);
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
   const firstRun = useIndicatorStore((s) => s.seq === 0);
@@ -287,10 +287,10 @@ export function ChartArea({ className }: ChartAreaProps) {
           message={`This removes ${indicators.views.map((v) => v.label).join(', ')} from the chart, with their settings.`}
           confirmLabel={`Remove ${String(indicators.views.length)} indicator${indicators.views.length === 1 ? '' : 's'}`}
           onCancel={() => {
-            setConfirmClear(false);
+            closeModal('confirmRemoveAll');
           }}
           onConfirm={() => {
-            setConfirmClear(false);
+            closeModal('confirmRemoveAll');
             removeAllIndicators();
           }}
         />

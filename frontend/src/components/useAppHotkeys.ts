@@ -9,16 +9,16 @@ export function useAppHotkeys(): void {
   const ui = useUiStore.getState;
   // A typed letter or digit opens symbol search with that key as the query, as on TradingView.
   useGlobalHotkey(opensSymbolSearch, (event) => {
-    ui().openSymbolSearch(event.key.toUpperCase());
+    ui().openModal('symbols', event.key.toUpperCase());
   });
   useGlobalHotkey(opensIndicators, () => {
-    ui().setIndicatorsDialog(true);
+    ui().openModal('indicators');
   });
   useGlobalHotkey(opensShortcuts, () => {
-    ui().setShortcutsOpen(true);
+    ui().openModal('shortcuts');
   });
   useGlobalHotkey(opensPalette, () => {
-    ui().setPaletteOpen(true);
+    ui().openModal('palette');
   });
   useGlobalHotkey(copiesSnapshot, () => {
     ui().requestSnapshot('copy');
