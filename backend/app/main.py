@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import bars, health, quotes, symbols
+from app.api import bars, health, indicators, quotes, symbols
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
 from app.data.cache.bar_cache import BarCache
@@ -76,7 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         refresh_ttl_s=settings.refresh_ttl_s,
     )
 
-    for router in (health.router, symbols.router, bars.router, quotes.router):
+    for router in (health.router, symbols.router, bars.router, quotes.router, indicators.router):
         app.include_router(router, prefix=API_PREFIX)
     return app
 

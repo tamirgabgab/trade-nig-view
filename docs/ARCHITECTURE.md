@@ -166,7 +166,7 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 | `GET /bars` | `symbol`, `interval` (`1h`\|`4h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `before?` (epoch seconds, exclusive: only bars starting earlier; paging cursor), `adjusted=true`, `transform=none`\|`heikin_ashi`, `until?` | `{symbol, interval, adjusted, transform, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, stale, warnings}`; intraday `time` is UTC epoch seconds, daily+ `'YYYY-MM-DD'`; for intraday `start`/`end`/`until` select whole sessions | R1 (1h/4h R1b, `before`/`transform` R2b) |
 | `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error}]` from the two latest unadjusted daily bars; per-symbol `error` instead of failing the request | R1a |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
-| `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted}` | `{id, params, outputs:{<name>:[{time, value}]}, markers?:[{time, kind, price?, text?}], warmup}` | R3 |
+| `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted, transform}` (`start`/`end` = epoch seconds of bar starts, inclusive) | `{id, version, params (resolved), time:[t], outputs:{<name>:[value\|null]}, markers?, warmup, lookback}` — column arrays aligned with `time`; `null` = warm-up/NaN | R3 |
 | `GET /analysis/gaps` | `symbol`, `interval`, `min_pct=0`, `include_partial=false`, `until?` | `[{start_time, direction, top, bottom, size_pct, filled, fill_time?, max_fill_pct}]` | R5 |
 | `GET /analysis/pivots` | `symbol`, `interval`, `left=5`, `right=5`, `until?` | `[{time, kind:"high"\|"low", price, confirmed_time}]` | R5 |
 | `GET /analysis/levels` | `symbol`, `interval`, `until?` | `{prev_day, prev_week, prev_month:{high, low, close}, high_52w, low_52w}` | R5 |
@@ -220,7 +220,8 @@ class IndicatorSpec:
     intraday_only: bool = False  # VWAP
 ```
 
-`GET /indicators` serialises everything except `warmup`/`compute`. The frontend builds the settings dialog purely from
+`GET /indicators` serialises everything except `warmup`/`compute`/`lookback` (R3a: `ParamSpec` also has `label`, `step`,
+`options`; `OutputSpec` has `label`; `offset` is limited to `>= 0` so a plotted value never reads a later bar). The frontend builds the settings dialog purely from
 `params` + `outputs` → adding an indicator needs no frontend change.
 
 ### 5.2 Drawings document (schema version 1)

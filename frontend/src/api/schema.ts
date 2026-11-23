@@ -87,6 +87,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/indicators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Indicators
+         * @description Every registered indicator with its inputs and outputs (the UI is generated from this).
+         */
+        get: operations["list_indicators_api_indicators_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/indicators/compute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compute Indicator
+         * @description Indicator values for the bars in ``[start, end]``.
+         *
+         *     ``lookback = max(25 n, 250)`` extra bars before ``start`` are loaded so the first returned
+         *     values are warmed up exactly as in a full-history computation (ARCHITECTURE section 3.2).
+         */
+        post: operations["compute_indicator_api_indicators_compute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -146,6 +189,83 @@ export interface components {
             /** Bars */
             bars: components["schemas"]["Bar"][];
         };
+        /** ComputeRequest */
+        ComputeRequest: {
+            /** Symbol */
+            symbol: string;
+            /** @default 1D */
+            interval: components["schemas"]["Interval"];
+            /**
+             * Id
+             * @description Indicator id
+             */
+            id: string;
+            /**
+             * Params
+             * @description Missing parameters use defaults
+             */
+            params?: {
+                [key: string]: boolean | number | string;
+            };
+            /**
+             * Start
+             * @description First bar to return: UTC epoch seconds of its start, inclusive
+             */
+            start?: number | null;
+            /**
+             * End
+             * @description Last bar to return: UTC epoch seconds of its start, inclusive
+             */
+            end?: number | null;
+            /**
+             * Until
+             * @description Replay cursor: no bar after it
+             */
+            until?: string | null;
+            /**
+             * Adjusted
+             * @default true
+             */
+            adjusted: boolean;
+            /** @default none */
+            transform: components["schemas"]["Transform"];
+        };
+        /** ComputeResponse */
+        ComputeResponse: {
+            /** Id */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Params
+             * @description Parameters used (defaults filled in)
+             */
+            params: {
+                [key: string]: boolean | number | string;
+            };
+            /**
+             * Time
+             * @description Bar times, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)
+             */
+            time: (string | number)[];
+            /**
+             * Outputs
+             * @description One value per bar in `time`; null during warm-up
+             */
+            outputs: {
+                [key: string]: (number | null)[];
+            };
+            /**
+             * Warmup
+             * @description Bars without a value at the start of the full history
+             */
+            warmup: number;
+            /**
+             * Lookback
+             * @description Extra history bars loaded before `start`
+             */
+            lookback: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -168,6 +288,48 @@ export interface components {
             /** Providers */
             providers: components["schemas"]["ProviderStatus"][];
         };
+        /** IndicatorInfo */
+        IndicatorInfo: {
+            /**
+             * Id
+             * @description Stable id, used in layouts and tests
+             */
+            id: string;
+            /**
+             * Version
+             * @description Bumped when the output semantics change
+             */
+            version: number;
+            /** Name */
+            name: string;
+            /** Short Name */
+            short_name: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "moving_averages" | "bands" | "oscillators" | "volatility" | "volume" | "structure";
+            /**
+             * Overlay
+             * @description True: drawn on the price pane; false: own pane
+             */
+            overlay: boolean;
+            /** Inputs */
+            inputs: ("open" | "high" | "low" | "close" | "volume")[];
+            /** Params */
+            params: components["schemas"]["ParamInfo"][];
+            /** Outputs */
+            outputs: components["schemas"]["OutputInfo"][];
+            /** Levels */
+            levels: number[];
+            /**
+             * Learn Slug
+             * @description docs/indicators/<learn_slug>.md
+             */
+            learn_slug: string;
+            /** Description */
+            description: string;
+        };
         /**
          * Interval
          * @description Bar intervals served by the API.
@@ -177,6 +339,51 @@ export interface components {
          * @enum {string}
          */
         Interval: "1h" | "4h" | "1D" | "1W" | "1M";
+        /** OutputInfo */
+        OutputInfo: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
+            /**
+             * Plot
+             * @enum {string}
+             */
+            plot: "line" | "histogram" | "area" | "markers";
+            /**
+             * Color
+             * @description Default colour (#RRGGBB)
+             */
+            color: string;
+            /** Line Width */
+            line_width: number;
+            /** Style */
+            style?: {
+                [key: string]: string;
+            };
+        };
+        /** ParamInfo */
+        ParamInfo: {
+            /** Name */
+            name: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "int" | "float" | "bool" | "enum" | "source";
+            /** Default */
+            default: boolean | number | string;
+            /** Label */
+            label: string;
+            /** Min */
+            min?: number | null;
+            /** Max */
+            max?: number | null;
+            /** Step */
+            step?: number | null;
+            /** Options */
+            options?: string[];
+        };
         /**
          * ProviderStatus
          * @description One market-data provider in the active chain (in priority order).
@@ -402,6 +609,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_indicators_api_indicators_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndicatorInfo"][];
+                };
+            };
+        };
+    };
+    compute_indicator_api_indicators_compute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComputeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComputeResponse"];
                 };
             };
             /** @description Validation Error */

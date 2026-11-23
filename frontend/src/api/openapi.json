@@ -301,6 +301,74 @@
           }
         }
       }
+    },
+    "/api/indicators": {
+      "get": {
+        "tags": [
+          "indicators"
+        ],
+        "summary": "List Indicators",
+        "description": "Every registered indicator with its inputs and outputs (the UI is generated from this).",
+        "operationId": "list_indicators_api_indicators_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IndicatorInfo"
+                  },
+                  "type": "array",
+                  "title": "Response List Indicators Api Indicators Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/indicators/compute": {
+      "post": {
+        "tags": [
+          "indicators"
+        ],
+        "summary": "Compute Indicator",
+        "description": "Indicator values for the bars in ``[start, end]``.\n\n``lookback = max(25 n, 250)`` extra bars before ``start`` are loaded so the first returned\nvalues are warmed up exactly as in a full-history computation (ARCHITECTURE section 3.2).",
+        "operationId": "compute_indicator_api_indicators_compute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -419,6 +487,189 @@
         ],
         "title": "BarsResponse"
       },
+      "ComputeRequest": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval",
+            "default": "1D"
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Id",
+            "description": "Indicator id"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Missing parameters use defaults"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "First bar to return: UTC epoch seconds of its start, inclusive"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End",
+            "description": "Last bar to return: UTC epoch seconds of its start, inclusive"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until",
+            "description": "Replay cursor: no bar after it"
+          },
+          "adjusted": {
+            "type": "boolean",
+            "title": "Adjusted",
+            "default": true
+          },
+          "transform": {
+            "$ref": "#/components/schemas/Transform",
+            "default": "none"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "id"
+        ],
+        "title": "ComputeRequest"
+      },
+      "ComputeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Parameters used (defaults filled in)"
+          },
+          "time": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Time",
+            "description": "Bar times, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)"
+          },
+          "outputs": {
+            "additionalProperties": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Outputs",
+            "description": "One value per bar in `time`; null during warm-up"
+          },
+          "warmup": {
+            "type": "integer",
+            "title": "Warmup",
+            "description": "Bars without a value at the start of the full history"
+          },
+          "lookback": {
+            "type": "integer",
+            "title": "Lookback",
+            "description": "Extra history bars loaded before `start`"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "params",
+          "time",
+          "outputs",
+          "warmup",
+          "lookback"
+        ],
+        "title": "ComputeResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -465,6 +716,105 @@
         "title": "HealthResponse",
         "description": "Response body of ``GET /api/health``."
       },
+      "IndicatorInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable id, used in layouts and tests"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "description": "Bumped when the output semantics change"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "short_name": {
+            "type": "string",
+            "title": "Short Name"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "moving_averages",
+              "bands",
+              "oscillators",
+              "volatility",
+              "volume",
+              "structure"
+            ],
+            "title": "Category"
+          },
+          "overlay": {
+            "type": "boolean",
+            "title": "Overlay",
+            "description": "True: drawn on the price pane; false: own pane"
+          },
+          "inputs": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume"
+              ]
+            },
+            "type": "array",
+            "title": "Inputs"
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/ParamInfo"
+            },
+            "type": "array",
+            "title": "Params"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputInfo"
+            },
+            "type": "array",
+            "title": "Outputs"
+          },
+          "levels": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Levels"
+          },
+          "learn_slug": {
+            "type": "string",
+            "title": "Learn Slug",
+            "description": "docs/indicators/<learn_slug>.md"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "name",
+          "short_name",
+          "category",
+          "overlay",
+          "inputs",
+          "params",
+          "outputs",
+          "levels",
+          "learn_slug",
+          "description"
+        ],
+        "title": "IndicatorInfo"
+      },
       "Interval": {
         "type": "string",
         "enum": [
@@ -476,6 +826,141 @@
         ],
         "title": "Interval",
         "description": "Bar intervals served by the API.\n\n``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and\n``1W``/``1M`` from ``1D``."
+      },
+      "OutputInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "plot": {
+            "type": "string",
+            "enum": [
+              "line",
+              "histogram",
+              "area",
+              "markers"
+            ],
+            "title": "Plot"
+          },
+          "color": {
+            "type": "string",
+            "title": "Color",
+            "description": "Default colour (#RRGGBB)"
+          },
+          "line_width": {
+            "type": "integer",
+            "title": "Line Width"
+          },
+          "style": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Style"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "plot",
+          "color",
+          "line_width"
+        ],
+        "title": "OutputInfo"
+      },
+      "ParamInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "int",
+              "float",
+              "bool",
+              "enum",
+              "source"
+            ],
+            "title": "Type"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Default"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "default",
+          "label"
+        ],
+        "title": "ParamInfo"
       },
       "ProviderStatus": {
         "properties": {

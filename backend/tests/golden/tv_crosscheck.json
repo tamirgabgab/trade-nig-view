@@ -1,0 +1,123 @@
+{
+  "_instructions": [
+    "Manual TradingView cross-check (PLAN.md T5/E2). Tolerance: display precision (0.01).",
+    "1. Open AAPL on TradingView, 1D, regular session, default settings (no dividend adjustment).",
+    "2. Add the indicator with the params below (source close, offset 0).",
+    "3. Hover each date and type the value shown in the legend into tv_value (a number, 2 decimals).",
+    "4. Run scripts/make-fixtures.ps1 once so backend/fixtures/daily/AAPL.csv exists, then .\\scripts\\test.ps1.",
+    "Rows with tv_value null are skipped; filled rows must match ChartLab within 0.01."
+  ],
+  "symbol": "AAPL",
+  "interval": "1d",
+  "tolerance": 0.01,
+  "checks": [
+    {
+      "indicator": "sma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2025-06-02",
+      "tv_value": null
+    },
+    {
+      "indicator": "sma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "sma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "ema",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2025-06-02",
+      "tv_value": null
+    },
+    {
+      "indicator": "ema",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "ema",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "wma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2025-06-02",
+      "tv_value": null
+    },
+    {
+      "indicator": "wma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "wma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "smma",
+      "params": {
+        "length": 14
+      },
+      "output": "ma",
+      "date": "2025-06-02",
+      "tv_value": null
+    },
+    {
+      "indicator": "smma",
+      "params": {
+        "length": 14
+      },
+      "output": "ma",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "smma",
+      "params": {
+        "length": 14
+      },
+      "output": "ma",
+      "date": "2026-06-01",
+      "tv_value": null
+    }
+  ]
+}
