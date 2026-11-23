@@ -31,7 +31,7 @@ import threading
 import time
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 
 import numpy as np
@@ -84,9 +84,14 @@ class BarsResult:
     warnings: tuple[str, ...] = ()
 
 
+#: Daily closes in a watchlist sparkline.
+SPARK_BARS = 20
+YEAR_SECONDS = 365 * 86_400
+
+
 @dataclass(frozen=True, slots=True)
 class Quote:
-    """Latest daily close vs the previous one (unadjusted)."""
+    """Latest daily close vs the previous one (unadjusted), with the ranges the watchlist shows."""
 
     symbol: SymbolInfo
     time: int | None = None
@@ -95,6 +100,13 @@ class Quote:
     change_pct: float | None = None
     stale: bool = False
     error: str | None = None
+    #: The last ``SPARK_BARS`` daily closes, oldest first (sparkline).
+    spark: tuple[float, ...] = ()
+    day_low: float | None = None
+    day_high: float | None = None
+    #: Lowest low and highest high of the daily bars in the 365 days up to the last bar.
+    low_52w: float | None = None
+    high_52w: float | None = None
 
 
 @dataclass
@@ -411,17 +423,22 @@ class BarService:
         if len(frame) == 0:
             return Quote(symbol=info, error="no data")
         last = float(frame.close[-1])
-        if len(frame) == 1:
-            return Quote(symbol=info, time=int(frame.time[-1]), last=last, stale=daily.stale)
-        previous = float(frame.close[-2])
-        return Quote(
+        year = frame.time >= frame.time[-1] - YEAR_SECONDS
+        ranges = Quote(
             symbol=info,
             time=int(frame.time[-1]),
             last=last,
-            change=last - previous,
-            change_pct=(last / previous - 1.0) * 100.0,
             stale=daily.stale,
+            spark=tuple(float(c) for c in frame.close[-SPARK_BARS:]),
+            day_low=float(frame.low[-1]),
+            day_high=float(frame.high[-1]),
+            low_52w=float(frame.low[year].min()),
+            high_52w=float(frame.high[year].max()),
         )
+        if len(frame) == 1:
+            return ranges
+        previous = float(frame.close[-2])
+        return replace(ranges, change=last - previous, change_pct=(last / previous - 1.0) * 100.0)
 
     def quotes(self, symbols: Sequence[str]) -> list[Quote]:
         """Quotes for many symbols, fetched in parallel (each provider rate-limits itself)."""

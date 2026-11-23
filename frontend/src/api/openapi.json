@@ -1359,6 +1359,60 @@
               }
             ],
             "title": "Error"
+          },
+          "spark": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Spark",
+            "description": "The last 20 daily closes, oldest first"
+          },
+          "day_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Low"
+          },
+          "day_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day High"
+          },
+          "low_52w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low 52W",
+            "description": "Lowest low of the last 365 days of daily bars"
+          },
+          "high_52w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High 52W",
+            "description": "Highest high of the last 365 days of daily bars"
           }
         },
         "type": "object",
@@ -1369,7 +1423,12 @@
           "change",
           "change_pct",
           "stale",
-          "error"
+          "error",
+          "spark",
+          "day_low",
+          "day_high",
+          "low_52w",
+          "high_52w"
         ],
         "title": "QuoteOut"
       },

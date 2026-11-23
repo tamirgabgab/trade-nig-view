@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pytest
 
-from app.data.bar_service import HISTORY_START, BarService, overlap_consistent
+from app.data.bar_service import HISTORY_START, SPARK_BARS, BarService, overlap_consistent
 from app.data.cache.bar_cache import BarCache
 from app.data.providers.base import ProviderError, RateLimitedError
 from app.data.providers.yahoo import HOURLY_MAX_DAYS
@@ -308,6 +308,23 @@ def test_quotes_report_change_and_errors(make_service: Factory) -> None:
     assert idx.error is not None
     assert "no provider" in idx.error
     assert nope.error == "unknown symbol"
+
+
+def test_quote_carries_sparkline_day_and_52_week_ranges(make_service: Factory) -> None:
+    # A bar 400 days before the last one is outside the 52-week window.
+    old = DAYS[-1] - timedelta(days=400)
+    service, _ = make_service(FakeProvider("p", bars([old, *DAYS], [1000.0, *CLOSES])))
+    quote = service.quote("AAA")
+    assert quote.spark == (1000.0, *CLOSES)  # fewer than SPARK_BARS bars: all of them
+    assert (quote.day_low, quote.day_high) == (CLOSES[-1] - 1.0, CLOSES[-1] + 1.0)
+    assert (quote.low_52w, quote.high_52w) == (CLOSES[0] - 1.0, CLOSES[-1] + 1.0)
+
+
+def test_sparkline_keeps_the_last_20_closes(make_service: Factory) -> None:
+    days = [date(2025, 1, 1) + timedelta(days=i) for i in range(SPARK_BARS + 5)]
+    closes = [float(i) for i in range(len(days))]
+    service, _ = make_service(FakeProvider("p", bars(days, closes)))
+    assert service.quote("AAA").spark == tuple(closes[-SPARK_BARS:])
 
 
 def test_quote_with_single_bar_has_no_change(make_service: Factory) -> None:

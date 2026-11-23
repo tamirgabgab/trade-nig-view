@@ -120,10 +120,17 @@ def test_quotes_mix_success_and_errors(client: TestClient) -> None:
     response = client.get("/api/quotes", params={"symbols": "AAA, ^IDX,BBB,NOPE"})
     assert response.status_code == 200
     aaa, idx, bbb, nope = response.json()
-    assert aaa == {
+    assert {k: aaa[k] for k in ("symbol", "time", "last", "change", "stale", "error")} == {
         "symbol": "AAA", "time": "2026-02-20", "last": 119.0, "change": 1.0,
-        "change_pct": aaa["change_pct"], "stale": False, "error": None,
+        "stale": False, "error": None,
     }  # fmt: skip
+    assert 1 < len(aaa["spark"]) <= 20
+    assert aaa["spark"][-1] == 119.0
+    assert aaa["day_low"] <= 119.0 <= aaa["day_high"]
+    assert aaa["low_52w"] <= aaa["day_low"]
+    assert aaa["high_52w"] >= aaa["day_high"]
+    assert nope["spark"] == []
+    assert nope["low_52w"] is None
     assert abs(aaa["change_pct"] - 100.0 / 118.0) < 1e-12
     assert idx["last"] == 5040.0
     assert bbb["error"] is not None

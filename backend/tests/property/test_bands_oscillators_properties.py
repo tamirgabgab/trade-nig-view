@@ -153,7 +153,8 @@ def test_vwap_stays_inside_the_session_range(frame: BarFrame) -> None:
             assert frame.volume[first : t + 1].sum() == 0.0
             continue
         low, high = frame.low[first : t + 1].min(), frame.high[first : t + 1].max()
-        assert low * (1 - 1e-12) <= vwap[t] <= high * (1 + 1e-12)
+        # Relative slack that also holds for negative prices.
+        assert low - 1e-12 * abs(low) <= vwap[t] <= high + 1e-12 * abs(high)
 
 
 @settings(max_examples=40, deadline=None)

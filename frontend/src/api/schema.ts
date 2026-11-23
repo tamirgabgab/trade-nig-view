@@ -545,6 +545,25 @@ export interface components {
             stale: boolean;
             /** Error */
             error: string | null;
+            /**
+             * Spark
+             * @description The last 20 daily closes, oldest first
+             */
+            spark: number[];
+            /** Day Low */
+            day_low: number | null;
+            /** Day High */
+            day_high: number | null;
+            /**
+             * Low 52W
+             * @description Lowest low of the last 365 days of daily bars
+             */
+            low_52w: number | null;
+            /**
+             * High 52W
+             * @description Highest high of the last 365 days of daily bars
+             */
+            high_52w: number | null;
         };
         /** ResponseInfo */
         ResponseInfo: {

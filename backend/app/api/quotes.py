@@ -1,11 +1,11 @@
-"""``GET /api/quotes`` - last price and daily change for the watchlist."""
+"""``GET /api/quotes`` - last price, daily change, sparkline and ranges for the watchlist."""
 
 from __future__ import annotations
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.api.deps import get_bar_service
 from app.data.bar_service import BarService
@@ -24,6 +24,11 @@ class QuoteOut(BaseModel):
     change_pct: float | None
     stale: bool
     error: str | None
+    spark: list[float] = Field(description="The last 20 daily closes, oldest first")
+    day_low: float | None
+    day_high: float | None
+    low_52w: float | None = Field(description="Lowest low of the last 365 days of daily bars")
+    high_52w: float | None = Field(description="Highest high of the last 365 days of daily bars")
 
 
 @router.get("/quotes", response_model=list[QuoteOut])
@@ -42,6 +47,11 @@ def get_quotes(
             change_pct=q.change_pct,
             stale=q.stale,
             error=q.error,
+            spark=list(q.spark),
+            day_low=q.day_low,
+            day_high=q.day_high,
+            low_52w=q.low_52w,
+            high_52w=q.high_52w,
         )
         for q in service.quotes(requested)
     ]
