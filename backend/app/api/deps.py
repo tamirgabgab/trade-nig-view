@@ -8,6 +8,7 @@ from fastapi import Request
 
 from app.data.bar_service import BarService
 from app.data.universe import Universe
+from app.storage.drawings import DrawingsRepository
 
 
 def get_universe(request: Request) -> Universe:
@@ -16,3 +17,7 @@ def get_universe(request: Request) -> Universe:
 
 def get_bar_service(request: Request) -> BarService:
     return cast("BarService", request.app.state.bar_service)
+
+
+def get_drawings(request: Request) -> DrawingsRepository:
+    return cast("DrawingsRepository", request.app.state.drawings)

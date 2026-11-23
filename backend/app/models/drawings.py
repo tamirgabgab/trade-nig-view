@@ -1,0 +1,129 @@
+"""Drawings document (ARCHITECTURE §5.2): data-anchored chart drawings, one document per symbol.
+
+Anchors are in data space, never pixels: ``time`` is the UTC epoch second of the anchor bar's open
+(the frontend maps it onto any interval), ``price`` is the price.
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+SCHEMA_VERSION = 1
+MAX_DRAWINGS = 500
+
+DrawingType = Literal[
+    "trend_line",
+    "ray",
+    "extended_line",
+    "horizontal_line",
+    "horizontal_ray",
+    "vertical_line",
+    "rectangle",
+    "text",
+]
+
+#: Number of anchors each tool needs.
+POINTS: dict[str, int] = {
+    "trend_line": 2,
+    "ray": 2,
+    "extended_line": 2,
+    "horizontal_line": 1,
+    "horizontal_ray": 1,
+    "vertical_line": 1,
+    "rectangle": 2,
+    "text": 1,
+}
+
+HexColor = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
+
+
+class DrawingPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    time: int = Field(description="UTC epoch seconds of the anchor bar's open")
+    price: float
+
+    @field_validator("price")
+    @classmethod
+    def _finite(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("price must be a finite number")
+        return value
+
+
+class DrawingStyle(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    line_color: HexColor = "#2962FF"
+    line_width: int = Field(default=2, ge=1, le=4)
+    line_style: Literal["solid", "dashed", "dotted"] = "solid"
+
+
+class DrawingProps(BaseModel):
+    """Tool-specific properties; each tool uses only its own (checked in ``Drawing``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str | None = Field(default=None, max_length=500, description="text tool")
+    font_size: int | None = Field(default=None, ge=8, le=48, description="text tool")
+    fill: bool | None = Field(default=None, description="rectangle: shade the inside")
+
+
+#: Props each tool may set.
+ALLOWED_PROPS: dict[str, frozenset[str]] = {
+    "text": frozenset({"text", "font_size"}),
+    "rectangle": frozenset({"fill"}),
+}
+
+
+class Drawing(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=64, description="Client-generated unique id")
+    type: DrawingType
+    points: list[DrawingPoint]
+    style: DrawingStyle = DrawingStyle()
+    props: DrawingProps = DrawingProps()
+    locked: bool = False
+    hidden: bool = False
+    z: int = 0
+    created_at: str = ""
+    updated_at: str = ""
+
+    @model_validator(mode="after")
+    def _check_tool(self) -> Drawing:
+        need = POINTS[self.type]
+        if len(self.points) != need:
+            raise ValueError(f"{self.type} needs {need} point(s), got {len(self.points)}")
+        allowed = ALLOWED_PROPS.get(self.type, frozenset())
+        extra = {name for name, value in self.props if value is not None} - allowed
+        if extra:
+            raise ValueError(f"{self.type} has no props {sorted(extra)}")
+        return self
+
+
+class DrawingsDocument(BaseModel):
+    schema_version: int = SCHEMA_VERSION
+    symbol: str
+    revision: int = Field(ge=0, description="Bumped by every save; 0 = never saved")
+    drawings: list[Drawing]
+
+
+class DrawingsUpdate(BaseModel):
+    """``PUT`` body: the full list, and the revision it was based on (optimistic locking)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    revision: int = Field(ge=0, description="Revision the client last read")
+    drawings: list[Drawing] = Field(max_length=MAX_DRAWINGS)
+
+    @field_validator("drawings")
+    @classmethod
+    def _unique_ids(cls, drawings: list[Drawing]) -> list[Drawing]:
+        ids = [d.id for d in drawings]
+        if len(set(ids)) != len(ids):
+            raise ValueError("drawing ids must be unique")
+        return drawings

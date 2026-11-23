@@ -454,6 +454,103 @@
           }
         }
       }
+    },
+    "/api/drawings/{symbol}": {
+      "get": {
+        "tags": [
+          "drawings"
+        ],
+        "summary": "Get Drawings Of",
+        "description": "The drawings (revision 0 and none when nothing was saved yet).",
+        "operationId": "get_drawings_of_api_drawings__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrawingsDocument"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "drawings"
+        ],
+        "summary": "Put Drawings Of",
+        "description": "Replace the drawings; ``revision`` must be the one last read (else 409 revision_conflict).",
+        "operationId": "put_drawings_of_api_drawings__symbol__put",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DrawingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrawingsDocument"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -754,6 +851,239 @@
           "lookback"
         ],
         "title": "ComputeResponse"
+      },
+      "Drawing": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "description": "Client-generated unique id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "trend_line",
+              "ray",
+              "extended_line",
+              "horizontal_line",
+              "horizontal_ray",
+              "vertical_line",
+              "rectangle",
+              "text"
+            ],
+            "title": "Type"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/DrawingPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "style": {
+            "$ref": "#/components/schemas/DrawingStyle",
+            "default": {
+              "line_color": "#2962FF",
+              "line_width": 2,
+              "line_style": "solid"
+            }
+          },
+          "props": {
+            "$ref": "#/components/schemas/DrawingProps",
+            "default": {}
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "default": false
+          },
+          "z": {
+            "type": "integer",
+            "title": "Z",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "default": ""
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "points"
+        ],
+        "title": "Drawing"
+      },
+      "DrawingPoint": {
+        "properties": {
+          "time": {
+            "type": "integer",
+            "title": "Time",
+            "description": "UTC epoch seconds of the anchor bar's open"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "DrawingPoint"
+      },
+      "DrawingProps": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "text tool"
+          },
+          "font_size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 48.0,
+                "minimum": 8.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Font Size",
+            "description": "text tool"
+          },
+          "fill": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fill",
+            "description": "rectangle: shade the inside"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DrawingProps",
+        "description": "Tool-specific properties; each tool uses only its own (checked in ``Drawing``)."
+      },
+      "DrawingStyle": {
+        "properties": {
+          "line_color": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "title": "Line Color",
+            "default": "#2962FF"
+          },
+          "line_width": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Line Width",
+            "default": 2
+          },
+          "line_style": {
+            "type": "string",
+            "enum": [
+              "solid",
+              "dashed",
+              "dotted"
+            ],
+            "title": "Line Style",
+            "default": "solid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DrawingStyle"
+      },
+      "DrawingsDocument": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version",
+            "default": 1
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "description": "Bumped by every save; 0 = never saved"
+          },
+          "drawings": {
+            "items": {
+              "$ref": "#/components/schemas/Drawing"
+            },
+            "type": "array",
+            "title": "Drawings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "revision",
+          "drawings"
+        ],
+        "title": "DrawingsDocument"
+      },
+      "DrawingsUpdate": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "description": "Revision the client last read"
+          },
+          "drawings": {
+            "items": {
+              "$ref": "#/components/schemas/Drawing"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Drawings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision",
+          "drawings"
+        ],
+        "title": "DrawingsUpdate",
+        "description": "``PUT`` body: the full list, and the revision it was based on (optimistic locking)."
       },
       "FrequencyInfo": {
         "properties": {

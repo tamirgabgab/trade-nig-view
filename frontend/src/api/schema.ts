@@ -173,6 +173,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/drawings/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Drawings Of
+         * @description The drawings (revision 0 and none when nothing was saved yet).
+         */
+        get: operations["get_drawings_of_api_drawings__symbol__get"];
+        /**
+         * Put Drawings Of
+         * @description Replace the drawings; ``revision`` must be the one last read (else 409 revision_conflict).
+         */
+        put: operations["put_drawings_of_api_drawings__symbol__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -308,6 +332,136 @@ export interface components {
              * @description Extra history bars the indicator asks for before `start` (fewer are loaded when the history is shorter; 1000000000 = the whole history, e.g. OBV)
              */
             lookback: number;
+        };
+        /** Drawing */
+        Drawing: {
+            /**
+             * Id
+             * @description Client-generated unique id
+             */
+            id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text";
+            /** Points */
+            points: components["schemas"]["DrawingPoint"][];
+            /**
+             * @default {
+             *       "line_color": "#2962FF",
+             *       "line_width": 2,
+             *       "line_style": "solid"
+             *     }
+             */
+            style: components["schemas"]["DrawingStyle"];
+            /** @default {} */
+            props: components["schemas"]["DrawingProps"];
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /**
+             * Hidden
+             * @default false
+             */
+            hidden: boolean;
+            /**
+             * Z
+             * @default 0
+             */
+            z: number;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * @default
+             */
+            updated_at: string;
+        };
+        /** DrawingPoint */
+        DrawingPoint: {
+            /**
+             * Time
+             * @description UTC epoch seconds of the anchor bar's open
+             */
+            time: number;
+            /** Price */
+            price: number;
+        };
+        /**
+         * DrawingProps
+         * @description Tool-specific properties; each tool uses only its own (checked in ``Drawing``).
+         */
+        DrawingProps: {
+            /**
+             * Text
+             * @description text tool
+             */
+            text?: string | null;
+            /**
+             * Font Size
+             * @description text tool
+             */
+            font_size?: number | null;
+            /**
+             * Fill
+             * @description rectangle: shade the inside
+             */
+            fill?: boolean | null;
+        };
+        /** DrawingStyle */
+        DrawingStyle: {
+            /**
+             * Line Color
+             * @default #2962FF
+             */
+            line_color: string;
+            /**
+             * Line Width
+             * @default 2
+             */
+            line_width: number;
+            /**
+             * Line Style
+             * @default solid
+             * @enum {string}
+             */
+            line_style: "solid" | "dashed" | "dotted";
+        };
+        /** DrawingsDocument */
+        DrawingsDocument: {
+            /**
+             * Schema Version
+             * @default 1
+             */
+            schema_version: number;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Revision
+             * @description Bumped by every save; 0 = never saved
+             */
+            revision: number;
+            /** Drawings */
+            drawings: components["schemas"]["Drawing"][];
+        };
+        /**
+         * DrawingsUpdate
+         * @description ``PUT`` body: the full list, and the revision it was based on (optimistic locking).
+         */
+        DrawingsUpdate: {
+            /**
+             * Revision
+             * @description Revision the client last read
+             */
+            revision: number;
+            /** Drawings */
+            drawings: components["schemas"]["Drawing"][];
         };
         /** FrequencyInfo */
         FrequencyInfo: {
@@ -912,6 +1066,79 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["LearnPage"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_drawings_of_api_drawings__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrawingsDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_drawings_of_api_drawings__symbol__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DrawingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrawingsDocument"];
+                };
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
