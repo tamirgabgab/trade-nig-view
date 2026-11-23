@@ -692,6 +692,16 @@ export class ChartEngine {
     }
   }
 
+  /** The bar under a pointer at `clientX` (page coordinates), clamped to the bars; null without. */
+  barIndexAtClientX(clientX: number): number | null {
+    if (this.bars.length === 0) return null;
+    const x = clientX - this.container.getBoundingClientRect().left;
+    const logical = this.chart.timeScale().coordinateToLogical(x);
+    return logical === null
+      ? null
+      : Math.min(Math.max(Math.round(logical), 0), this.bars.length - 1);
+  }
+
   /** Replay start picking: mark this bar and shade the bars after it (null: none). */
   setReplayPick(index: number | null): void {
     this.replayLayer.set(index);

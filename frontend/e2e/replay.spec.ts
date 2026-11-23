@@ -20,6 +20,7 @@ test('replay AAPL from 2024-01-02: step 5 bars, the legend shows bar 5 and nothi
   await page.getByRole('button', { name: 'Bar replay' }).click();
   const bar = page.getByRole('toolbar', { name: 'Bar replay' });
   await bar.getByLabel('Start date').fill('2024-01-02');
+  await bar.getByLabel('Start date').press('Enter');
   await expect(field(page, 'C')).toHaveText(
     price(adjusted(present(rows[start], 'start bar')).close),
   );

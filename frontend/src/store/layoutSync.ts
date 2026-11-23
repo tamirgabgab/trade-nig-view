@@ -10,6 +10,7 @@ import { useChartStore } from './chartStore.ts';
 import { useHistoryStore } from './historyStore.ts';
 import { useIndicatorStore } from './indicatorStore.ts';
 import { useLayoutStore } from './layoutStore.ts';
+import { useReplayStore } from './replayStore.ts';
 import { useUiStore } from './uiStore.ts';
 
 /**
@@ -54,6 +55,8 @@ export function currentLayout(): LayoutState {
 
 /** Show a saved layout: chart settings and indicators now, view once its bars are in. */
 export function applyLayout(layout: SavedLayout): void {
+  // Another chart: a replay of this one ends.
+  useReplayStore.getState().exit();
   useChartStore.setState({
     symbol: layout.symbol,
     interval: layout.interval,

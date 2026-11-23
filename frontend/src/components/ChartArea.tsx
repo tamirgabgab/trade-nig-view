@@ -281,12 +281,15 @@ export function ChartArea({ className }: ChartAreaProps) {
         !barIndex.has(g.time)
           ? []
           : [
-              g.filledTime === null || barIndex.has(g.filledTime)
+              // In a replay the deepest fill so far is unknown (the backend's is over all bars).
+              !replayOn
                 ? g
-                : { ...g, filledTime: null, fillPrice: null },
+                : g.filledTime !== null && barIndex.has(g.filledTime)
+                  ? g
+                  : { ...g, filledTime: null, fillPrice: null },
             ],
       ),
-    [allGaps, barIndex],
+    [allGaps, barIndex, replayOn],
   );
   useEffect(() => {
     gapZonesRef.current = gaps.map((g) => ({
@@ -329,31 +332,39 @@ export function ChartArea({ className }: ChartAreaProps) {
   useEffect(() => {
     engineRef.current?.setReplayPick(picking ? hoverIndex : null);
   }, [picking, hoverIndex]);
-  const follow = useRef(false);
   useEffect(() => {
-    const element = engineRef.current?.element();
-    if (!picking || element === undefined) return;
+    const engine = engineRef.current;
+    if (!picking || engine === null) return;
+    const element = engine.element();
     const onPick = (event: PointerEvent) => {
-      const index = useChartDataStore.getState().hoverIndex;
+      // The bar under the click itself (a tap has no hover before it).
+      const index = engine.barIndexAtClientX(event.clientX);
       const bar = index === null ? undefined : allBars[index];
       if (event.button !== 0 || bar === undefined) return;
-      event.stopPropagation();
-      follow.current = true;
-      useReplayStore.getState().setCursor(bar.time);
+      useReplayStore.getState().setCursor(bar.time, true);
     };
     element.addEventListener('pointerdown', onPick, true);
     return () => {
       element.removeEventListener('pointerdown', onPick, true);
     };
   }, [picking, allBars]);
-  // Keep the cursor in view while replaying (unless the user scrolled back).
+  // Keep the cursor in view while replaying (unless the user scrolled back); a new start bar
+  // always comes into view.
+  const jumps = useRef(replay.jumps);
   useEffect(() => {
     if (!replayOn) return;
-    if (follow.current || !offLatest) engineRef.current?.scrollToLatest();
-    follow.current = false;
+    const jumped = jumps.current !== replay.jumps;
+    jumps.current = replay.jumps;
+    if (jumped || !offLatest) engineRef.current?.scrollToLatest();
     // The cursor moved: offLatest is read, not followed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [replayOn, cursorIndex]);
+  }, [replayOn, cursorIndex, replay.jumps]);
+  // Leaving the replay: back to the present.
+  const wasReplaying = useRef(false);
+  useEffect(() => {
+    if (wasReplaying.current && !replayOn) engineRef.current?.scrollToLatest();
+    wasReplaying.current = replayOn;
+  }, [replayOn]);
   const step = useCallback(() => {
     const next = allBars[cursorIndex + 1];
     if (next === undefined) {
@@ -370,9 +381,7 @@ export function ChartArea({ className }: ChartAreaProps) {
       window.clearTimeout(timer);
     };
   }, [replayOn, replay.playing, replay.speed, step]);
-  useGlobalHotkey(stepsReplay, () => {
-    if (replayOn) step();
-  });
+  useGlobalHotkey((event) => replayOn && stepsReplay(event), step);
 
   const showProgress = useDelayedFlag(
     history.isLoading || history.isLoadingOlder,

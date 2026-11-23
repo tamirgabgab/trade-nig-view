@@ -10,6 +10,7 @@ import {
   type ScaleMode,
 } from '../chart/chartTypes.ts';
 import { RANGE_INTERVAL, type RangeId } from '../chart/visibleRange.ts';
+import { useReplayStore } from './replayStore.ts';
 
 export const DEFAULT_SYMBOL = 'AAPL';
 export const DEFAULT_INTERVAL: Interval = '1D';
@@ -93,6 +94,8 @@ export const useChartStore = create<ChartState>()(
         set((s) => (s.symbol === symbol ? s : { symbol, range: null, rangeRequest: null }));
       },
       setInterval: (interval) => {
+        // Locked during a bar replay (R7), whoever asks: buttons, palette, undo.
+        if (useReplayStore.getState().mode !== 'off') return;
         set({ interval, range: null, rangeRequest: null });
       },
       setChartType: (chartType) => {
@@ -108,6 +111,7 @@ export const useChartStore = create<ChartState>()(
         set({ adjusted });
       },
       selectRange: (id) => {
+        if (useReplayStore.getState().mode !== 'off') return;
         set((s) => ({
           interval: RANGE_INTERVAL[id],
           range: id,

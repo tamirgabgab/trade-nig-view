@@ -15,9 +15,11 @@ export interface ReplayState {
   cursor: Bar['time'] | null;
   playing: boolean;
   speed: ReplaySpeed;
+  /** Bumped by a jump (a new start bar): the chart then scrolls to the cursor. */
+  jumps: number;
   start: (symbol: string) => void;
-  /** Show the bars up to and including this one. */
-  setCursor: (time: Bar['time']) => void;
+  /** Show the bars up to and including this one; `jump`: a new start, bring it into view. */
+  setCursor: (time: Bar['time'], jump?: boolean) => void;
   setPlaying: (playing: boolean) => void;
   setSpeed: (speed: ReplaySpeed) => void;
   exit: () => void;
@@ -33,11 +35,12 @@ export const useReplayStore = create<ReplayState>()((set) => ({
   cursor: null,
   playing: false,
   speed: 1,
+  jumps: 0,
   start: (symbol) => {
     set({ mode: 'picking', symbol, cursor: null, playing: false });
   },
-  setCursor: (cursor) => {
-    set({ mode: 'on', cursor });
+  setCursor: (cursor, jump = false) => {
+    set((s) => ({ mode: 'on', cursor, jumps: jump ? s.jumps + 1 : s.jumps }));
   },
   setPlaying: (playing) => {
     set({ playing });

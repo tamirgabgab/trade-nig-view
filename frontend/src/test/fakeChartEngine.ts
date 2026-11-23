@@ -155,6 +155,12 @@ export class FakeChartEngine {
 
   replayPick: number | null = null;
 
+  /** Bar under a pointer: one bar per 10 px from the left edge. */
+  barIndexAtClientX(clientX: number): number | null {
+    const bars = this.calls.at(-1)?.bars ?? [];
+    return bars.length === 0 ? null : Math.min(Math.floor(clientX / 10), bars.length - 1);
+  }
+
   setReplayPick(index: number | null): void {
     this.replayPick = index;
   }

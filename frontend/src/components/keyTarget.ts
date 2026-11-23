@@ -73,6 +73,7 @@ export function stepsReplay(event: KeyboardEvent): boolean {
     !event.metaKey &&
     !event.altKey &&
     event.key === 'ArrowRight' &&
+    !event.defaultPrevented &&
     outsideField(event)
   );
 }

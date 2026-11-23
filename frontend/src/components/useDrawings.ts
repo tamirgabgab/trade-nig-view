@@ -5,6 +5,7 @@ import { fetchDrawings, saveDrawings } from '../api/drawings.ts';
 import type { ChartEngine } from '../chart/ChartEngine.ts';
 import { DrawingManager } from '../drawings/manager.ts';
 import { useDrawingStore } from '../store/drawingStore.ts';
+import { useReplayStore } from '../store/replayStore.ts';
 import { selectModalOpen, useUiStore } from '../store/uiStore.ts';
 
 /** Saves wait this long after the last change (a drag is many changes). */
@@ -129,7 +130,9 @@ export function useDrawingManager(): (engine: ChartEngine | null) => void {
       engine === null
         ? null
         : new DrawingManager(engine, useDrawingStore, {
-            blocked: () => selectModalOpen(useUiStore.getState()),
+            blocked: () =>
+              selectModalOpen(useUiStore.getState()) ||
+              useReplayStore.getState().mode === 'picking',
             openSettings: (id) => {
               useUiStore.getState().openDrawingSettings(id);
             },

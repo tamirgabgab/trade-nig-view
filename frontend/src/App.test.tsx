@@ -222,6 +222,8 @@ describe('App shell', () => {
       expect(close()).toHaveTextContent('342.56');
     });
 
+    // A drawing tool stays active: the click that picks the start must not draw.
+    useDrawingStore.getState().setTool('horizontal_line', 'lines');
     await user.click(screen.getByRole('button', { name: 'Bar replay' }));
     expect(screen.getByRole('toolbar', { name: 'Bar replay' })).toHaveTextContent('Click a bar');
     // The pointer on the first bar marks it; a click starts the replay there.
@@ -229,7 +231,10 @@ describe('App shell', () => {
       useChartDataStore.getState().setHoverIndex(0);
     });
     expect(liveEngine().replayPick).toBe(0);
-    fireEvent.pointerDown(liveEngine().element(), { button: 0 });
+    // The bar under the click (one bar per 10 px in the fake chart), not the last hover.
+    fireEvent.pointerDown(liveEngine().element(), { button: 0, clientX: 3 });
+    fireEvent.pointerUp(window, { button: 0, clientX: 3 });
+    expect(useDrawingStore.getState().drawings).toEqual([]);
     act(() => {
       useChartDataStore.getState().setHoverIndex(null);
     });
@@ -238,6 +243,11 @@ describe('App shell', () => {
     });
     expect(close()).toHaveTextContent('344.10');
     expect(screen.getByRole('button', { name: '1 week' })).toBeDisabled();
+    // Locked in the store too (palette, undo): the interval does not change.
+    act(() => {
+      useChartStore.getState().setInterval('1W');
+    });
+    expect(useChartStore.getState().interval).toBe('1D');
 
     await user.keyboard('{Shift>}{ArrowRight}{/Shift}');
     await waitFor(() => {

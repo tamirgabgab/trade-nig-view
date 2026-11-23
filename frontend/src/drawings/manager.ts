@@ -31,7 +31,7 @@ export interface ChartSurface {
 }
 
 export interface DrawingCallbacks {
-  /** A modal dialog is open: keys and clicks are not for the chart. */
+  /** A modal dialog is open, or a click picks the replay start: input is not for drawings. */
   blocked: () => boolean;
   /** Double-click on a drawing, or a new text label: open its settings panel. */
   openSettings: (id: string) => void;
@@ -236,7 +236,7 @@ export class DrawingManager {
   // ---------------------------------------------------------------- events
 
   private readonly onPointerDown = (event: PointerEvent): void => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || this.callbacks.blocked()) return;
     const p = this.local(event);
     const s = this.store.getState();
     // Outside the price pane, or before this symbol's drawings are loaded: not ours.
