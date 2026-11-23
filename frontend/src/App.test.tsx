@@ -1,10 +1,12 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
 import { newDrawing } from './drawings/manager.ts';
+import { useChartDataStore } from './store/chartDataStore.ts';
 import { useChartStore } from './store/chartStore.ts';
 import { useDrawingStore } from './store/drawingStore.ts';
+import { useReplayStore } from './store/replayStore.ts';
 import { useSettingsStore } from './store/settingsStore.ts';
 import { useThemeStore } from './store/themeStore.ts';
 import { useUiStore } from './store/uiStore.ts';
@@ -209,5 +211,44 @@ describe('App shell', () => {
     });
     await user.click(within(dialog).getByRole('button', { name: 'Reset colors' }));
     expect(liveEngine().display?.upColor).toBeNull();
+  });
+
+  it('replays the bars: pick a start bar, step with Shift+→, interval locked, exit', async () => {
+    const user = userEvent.setup();
+    useReplayStore.getState().exit();
+    renderWithQuery(<App />);
+    const close = () => screen.getByLabelText('Price legend').querySelector('[data-field="C"]');
+    await waitFor(() => {
+      expect(close()).toHaveTextContent('342.56');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Bar replay' }));
+    expect(screen.getByRole('toolbar', { name: 'Bar replay' })).toHaveTextContent('Click a bar');
+    // The pointer on the first bar marks it; a click starts the replay there.
+    act(() => {
+      useChartDataStore.getState().setHoverIndex(0);
+    });
+    expect(liveEngine().replayPick).toBe(0);
+    fireEvent.pointerDown(liveEngine().element(), { button: 0 });
+    act(() => {
+      useChartDataStore.getState().setHoverIndex(null);
+    });
+    await waitFor(() => {
+      expect(liveEngine().calls.at(-1)?.bars).toHaveLength(1);
+    });
+    expect(close()).toHaveTextContent('344.10');
+    expect(screen.getByRole('button', { name: '1 week' })).toBeDisabled();
+
+    await user.keyboard('{Shift>}{ArrowRight}{/Shift}');
+    await waitFor(() => {
+      expect(close()).toHaveTextContent('349.21');
+    });
+    expect(liveEngine().calls.at(-1)?.bars).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Exit replay' }));
+    await waitFor(() => {
+      expect(close()).toHaveTextContent('342.56');
+    });
+    expect(screen.getByRole('button', { name: '1 week' })).toBeEnabled();
   });
 });

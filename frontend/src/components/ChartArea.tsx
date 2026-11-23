@@ -13,6 +13,7 @@ import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
 import { useLayoutStore } from '../store/layoutStore.ts';
+import { useReplayStore } from '../store/replayStore.ts';
 import { registerViewCapture, scheduleSave } from '../store/layoutSync.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { useStructureStore } from '../store/structureStore.ts';
@@ -37,7 +38,8 @@ import { useChartIndicators } from './useChartIndicators.ts';
 import { useChartSnapshot } from './useChartSnapshot.ts';
 import { useDrawingManager, useDrawingsSync } from './useDrawings.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
-import { altKey } from './keyTarget.ts';
+import { altKey, stepsReplay } from './keyTarget.ts';
+import { ReplayBar } from './ReplayBar.tsx';
 import { useGlobalHotkey } from './useGlobalHotkey.ts';
 import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 
@@ -125,7 +127,23 @@ export function ChartArea({ className }: ChartAreaProps) {
   }, [emphasis, setEmphasis]);
 
   const data = history.data;
-  const bars = history.bars;
+  const allBars = history.bars;
+  // Bar replay (R7): only the bars up to the cursor are shown.
+  const replay = useReplayStore();
+  const replayOn = replay.mode === 'on' && replay.symbol === symbol && replay.cursor !== null;
+  const cursorIndex = useMemo(() => {
+    if (!replayOn || replay.cursor === null) return -1;
+    const at = barSeconds(replay.cursor);
+    return allBars.findLastIndex((bar) => barSeconds(bar.time) <= at);
+  }, [replayOn, replay.cursor, allBars]);
+  const bars = useMemo(
+    () => (replayOn ? allBars.slice(0, cursorIndex + 1) : allBars),
+    [replayOn, allBars, cursorIndex],
+  );
+  const shownCount = useRef(bars.length);
+  useEffect(() => {
+    shownCount.current = bars.length;
+  });
   const shownSymbol = data?.symbol ?? symbol;
   const shownInterval = data?.interval ?? interval;
   const info = symbols?.find((s) => s.symbol === shownSymbol);
@@ -160,7 +178,7 @@ export function ChartArea({ className }: ChartAreaProps) {
     if (range !== null && range.from < LOAD_OLDER_THRESHOLD && h.hasOlder && !h.isLoadingOlder) {
       h.loadOlder();
     }
-    setOffLatest(range !== null && range.to < h.bars.length - 1);
+    setOffLatest(range !== null && range.to < shownCount.current - 1);
     scheduleSave();
   }, []);
 
@@ -214,7 +232,21 @@ export function ChartArea({ className }: ChartAreaProps) {
         : { symbol: data.symbol, interval: data.interval, adjusted: data.adjusted, transform },
     [history.isLoading, data, transform],
   );
-  const indicators = useChartIndicators(series, bars);
+  // Computed over all the loaded bars (a replay step does not ask the backend again) and shown up
+  // to the cursor: every indicator's value at bar k uses only bars <= k (tested for each one).
+  const computed = useChartIndicators(series, allBars);
+  const indicators = useMemo(() => {
+    if (bars.length === allBars.length) return computed;
+    const cut = <T extends { values: readonly (number | null)[] }>(o: T): T => ({
+      ...o,
+      values: o.values.slice(0, bars.length),
+    });
+    return {
+      ...computed,
+      views: computed.views.map((v) => ({ ...v, outputs: v.outputs.map(cut) })),
+      lines: computed.lines.map(cut),
+    };
+  }, [computed, bars.length, allBars.length]);
 
   // A layout just opened: once its bars are in, restore its pane sizes and visible bars.
   const pendingView = useLayoutStore((s) => s.pending);
@@ -242,7 +274,20 @@ export function ChartArea({ className }: ChartAreaProps) {
     partial: structure.gapPartial,
   });
   const barIndex = useMemo(() => new Map(bars.map((bar, i) => [bar.time, i])), [bars]);
-  const gaps = useMemo(() => allGaps.filter((g) => barIndex.has(g.time)), [allGaps, barIndex]);
+  // In a replay a gap after the cursor is unknown, and one filled after it is still open.
+  const gaps = useMemo(
+    () =>
+      allGaps.flatMap((g) =>
+        !barIndex.has(g.time)
+          ? []
+          : [
+              g.filledTime === null || barIndex.has(g.filledTime)
+                ? g
+                : { ...g, filledTime: null, fillPrice: null },
+            ],
+      ),
+    [allGaps, barIndex],
+  );
   useEffect(() => {
     gapZonesRef.current = gaps.map((g) => ({
       start: barIndex.get(g.time) ?? 0,
@@ -275,6 +320,59 @@ export function ChartArea({ className }: ChartAreaProps) {
   // Oscillators get their own pane and a legend at its top; the rest are listed over the price.
   const priceViews = indicators.views.filter((view) => view.spec?.overlay !== false);
   const paneViews = indicators.views.filter((view) => view.spec?.overlay === false);
+
+  // Replay: another symbol ends it; picking marks the bar under the pointer, a click starts there.
+  useEffect(() => {
+    if (replay.mode !== 'off' && replay.symbol !== symbol) replay.exit();
+  }, [replay, symbol]);
+  const picking = replay.mode === 'picking';
+  useEffect(() => {
+    engineRef.current?.setReplayPick(picking ? hoverIndex : null);
+  }, [picking, hoverIndex]);
+  const follow = useRef(false);
+  useEffect(() => {
+    const element = engineRef.current?.element();
+    if (!picking || element === undefined) return;
+    const onPick = (event: PointerEvent) => {
+      const index = useChartDataStore.getState().hoverIndex;
+      const bar = index === null ? undefined : allBars[index];
+      if (event.button !== 0 || bar === undefined) return;
+      event.stopPropagation();
+      follow.current = true;
+      useReplayStore.getState().setCursor(bar.time);
+    };
+    element.addEventListener('pointerdown', onPick, true);
+    return () => {
+      element.removeEventListener('pointerdown', onPick, true);
+    };
+  }, [picking, allBars]);
+  // Keep the cursor in view while replaying (unless the user scrolled back).
+  useEffect(() => {
+    if (!replayOn) return;
+    if (follow.current || !offLatest) engineRef.current?.scrollToLatest();
+    follow.current = false;
+    // The cursor moved: offLatest is read, not followed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayOn, cursorIndex]);
+  const step = useCallback(() => {
+    const next = allBars[cursorIndex + 1];
+    if (next === undefined) {
+      useReplayStore.getState().setPlaying(false);
+      useUiStore.getState().showToast('The replay reached the latest bar');
+      return;
+    }
+    useReplayStore.getState().setCursor(next.time);
+  }, [allBars, cursorIndex]);
+  useEffect(() => {
+    if (!replayOn || !replay.playing) return;
+    const timer = window.setTimeout(step, 1000 / replay.speed);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [replayOn, replay.playing, replay.speed, step]);
+  useGlobalHotkey(stepsReplay, () => {
+    if (replayOn) step();
+  });
 
   const showProgress = useDelayedFlag(
     history.isLoading || history.isLoadingOlder,
@@ -387,6 +485,9 @@ export function ChartArea({ className }: ChartAreaProps) {
         />
       )}
       <RemoveConfirm views={indicators.views} />
+      {replay.mode !== 'off' && replay.symbol === symbol && (
+        <ReplayBar bars={allBars} cursorIndex={cursorIndex} onStep={step} />
+      )}
       <DrawingFloatToolbar />
       <IndicatorSettingsPanel views={indicators.views} />
       <DrawingSettingsPanel />

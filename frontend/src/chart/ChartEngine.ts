@@ -57,6 +57,7 @@ import { spanBetween, type Span } from '../drawings/measure.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 import { DrawingLayer } from './drawingLayer.ts';
 import { GapLayer, type GapZone } from './gapLayer.ts';
+import { ReplayLayer } from './replayLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
 import { barSeconds } from './visibleRange.ts';
 import { DISPLAY_TIME_ZONE } from './timeZone.ts';
@@ -238,6 +239,10 @@ export class ChartEngine {
     (price) => this.priceToY(price),
     () => ({ up: this.theme.up, down: this.theme.down, filled: this.theme.textMuted }),
   );
+  private readonly replayLayer = new ReplayLayer(
+    (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),
+    () => ({ background: this.theme.background, accent: this.theme.line }),
+  );
   private lastLines: readonly IndicatorLine[] = [];
   /** Pane heights to give own-pane indicators (by group) when their pane is created. */
   private stretches = new Map<string, number>();
@@ -291,6 +296,7 @@ export class ChartEngine {
     this.main = this.createMainSeries(this.chartType);
     this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
+    this.main.attachPrimitive(this.replayLayer);
 
     this.hover = rafLatest((index) => {
       for (const listener of this.listeners) listener(index);
@@ -629,6 +635,7 @@ export class ChartEngine {
     this.main = this.createMainSeries(this.chartType);
     this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
+    this.main.attachPrimitive(this.replayLayer);
     this.renderMain();
     this.renderMarkers();
   }
@@ -683,6 +690,11 @@ export class ChartEngine {
       const factor = this.stretches.get(entry.group);
       if (entry.ownPane && factor !== undefined) entry.series.getPane().setStretchFactor(factor);
     }
+  }
+
+  /** Replay start picking: mark this bar and shade the bars after it (null: none). */
+  setReplayPick(index: number | null): void {
+    this.replayLayer.set(index);
   }
 
   /** Show these gap zones (bar indexes of the current bars) under the bars. */

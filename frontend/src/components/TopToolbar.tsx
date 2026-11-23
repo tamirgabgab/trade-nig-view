@@ -17,6 +17,7 @@ import {
 import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useHistoryStore } from '../store/historyStore.ts';
+import { useReplayStore } from '../store/replayStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { ChartTypeMenu } from './ChartTypeMenu.tsx';
@@ -42,6 +43,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const fullscreen = useFullscreen();
+  const replaying = useReplayStore((s) => s.mode !== 'off');
   const canUndo = useHistoryStore((s) => s.past.length > 0);
   const canRedo = useHistoryStore((s) => s.future.length > 0);
   const undo = useHistoryStore((s) => s.undo);
@@ -89,10 +91,14 @@ export function TopToolbar({ className }: TopToolbarProps) {
         comingIn="a later phase"
       />
       <IconButton
-        label="Bar replay"
+        label={replaying ? 'Exit bar replay' : 'Bar replay'}
         text="Replay"
         icon={<Rewind size={ICON_SIZE} />}
-        comingIn="R7"
+        pressed={replaying}
+        onClick={() => {
+          if (replaying) useReplayStore.getState().exit();
+          else useReplayStore.getState().start(symbol);
+        }}
       />
       <span className={styles.separator} aria-hidden="true" />
       <IconButton

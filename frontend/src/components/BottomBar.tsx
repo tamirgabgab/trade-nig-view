@@ -2,6 +2,7 @@ import { CalendarRange } from 'lucide-react';
 
 import { RANGE_LABEL, RANGES } from '../chart/visibleRange.ts';
 import { useChartStore } from '../store/chartStore.ts';
+import { useReplayStore } from '../store/replayStore.ts';
 import styles from './BottomBar.module.css';
 import { Clock } from './Clock.tsx';
 import { HealthBadge } from './HealthBadge.tsx';
@@ -22,6 +23,8 @@ export function BottomBar({ className }: BottomBarProps) {
   const setAutoScale = useChartStore((s) => s.setAutoScale);
   const adjusted = useChartStore((s) => s.adjusted);
   const setAdjusted = useChartStore((s) => s.setAdjusted);
+  // Range buttons switch the interval: locked during a bar replay.
+  const locked = useReplayStore((s) => s.mode !== 'off');
 
   return (
     <footer className={[styles.bar, className].join(' ')} aria-label="Chart range and scale">
@@ -34,7 +37,8 @@ export function BottomBar({ className }: BottomBarProps) {
             className={styles.range}
             aria-pressed={range === id}
             aria-label={RANGE_LABEL[id]}
-            title={RANGE_LABEL[id]}
+            title={locked ? 'Locked during bar replay' : RANGE_LABEL[id]}
+            disabled={locked}
             onClick={() => {
               selectRange(id);
             }}

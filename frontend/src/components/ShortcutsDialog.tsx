@@ -20,6 +20,7 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
       { keys: ['Alt+S'], action: 'Copy the chart image' },
       { keys: ['Ctrl+S'], action: 'Save the layout' },
       { keys: ['Alt+R'], action: 'Reset the chart view' },
+      { keys: ['Shift+→'], action: 'Next bar in a bar replay' },
       { keys: ['Ctrl+Z'], action: 'Undo the last chart change' },
       { keys: ['Ctrl+Y'], action: 'Redo' },
       { keys: ['Esc'], action: 'Close a dialog, panel or menu' },

@@ -153,6 +153,12 @@ export class FakeChartEngine {
   gapZones: readonly GapZone[] = [];
   shownBar: number | null = null;
 
+  replayPick: number | null = null;
+
+  setReplayPick(index: number | null): void {
+    this.replayPick = index;
+  }
+
   setGaps(zones: readonly GapZone[]): void {
     this.gapZones = zones;
   }

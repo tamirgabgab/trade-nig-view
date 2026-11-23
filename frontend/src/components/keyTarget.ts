@@ -65,6 +65,18 @@ export function savesLayout(event: KeyboardEvent): boolean {
   );
 }
 
+/** Shift+→ outside text fields: the next replay bar. */
+export function stepsReplay(event: KeyboardEvent): boolean {
+  return (
+    event.shiftKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey &&
+    event.key === 'ArrowRight' &&
+    outsideField(event)
+  );
+}
+
 /** Alt+S: copy the chart image. `code`, not `key`: Option+S on a Mac types "ß". */
 export function copiesSnapshot(event: KeyboardEvent): boolean {
   return event.altKey && !event.ctrlKey && !event.metaKey && event.code === 'KeyS';
