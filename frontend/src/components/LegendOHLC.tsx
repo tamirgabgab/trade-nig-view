@@ -1,13 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { Interval } from '../api/bars.ts';
-import {
-  direction,
-  formatPercent,
-  formatPrice,
-  formatSigned,
-  formatVolume,
-} from './formatNumber.ts';
+import { direction, formatChange, formatPrice, formatVolume } from './formatNumber.ts';
 import styles from './LegendOHLC.module.css';
 import type { LegendValues } from './legendValues.ts';
 import { usePriceFlash, type PriceFlash } from './usePriceFlash.ts';
@@ -89,8 +83,7 @@ export function LegendOHLC({
             <Field name="C" value={formatPrice(values.close, decimals)} tone={tone} flash={flash} />
             {values.change !== null && values.changePct !== null && (
               <span className={tone} data-field="change">
-                {formatSigned(values.change, decimals)} ({values.changePct > 0 ? '+' : ''}
-                {formatPercent(values.changePct)})
+                {formatChange(values.change, values.changePct, decimals)}
               </span>
             )}
           </>

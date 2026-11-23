@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { useSymbols, useUniverseQuotes } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
-import { direction, formatPercent, formatPrice, formatSigned } from './formatNumber.ts';
+import { direction, formatChange, formatPrice } from './formatNumber.ts';
 import { MarketStatus } from './MarketStatus.tsx';
 import { RangeBar } from './RangeBar.tsx';
 import styles from './SymbolCard.module.css';
@@ -47,8 +47,7 @@ export function SymbolCard() {
             <span className={styles.currency}>{info.currency}</span>
             {quote?.change != null && quote.changePct !== null && (
               <span className={tone}>
-                {formatSigned(quote.change, info.decimals)} ({quote.changePct > 0 ? '+' : ''}
-                {formatPercent(quote.changePct)})
+                {formatChange(quote.change, quote.changePct, info.decimals)}
               </span>
             )}
           </div>

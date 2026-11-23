@@ -33,3 +33,8 @@ export function formatSigned(value: number, decimals: number): string {
   const text = formatPrice(value, decimals);
   return value > 0 ? `+${text}` : text;
 }
+
+/** Change and change percent, as the legend and the symbol card show it: "+0.18 (+0.77%)". */
+export function formatChange(change: number, changePct: number, decimals: number): string {
+  return `${formatSigned(change, decimals)} (${changePct > 0 ? '+' : ''}${formatPercent(changePct)})`;
+}

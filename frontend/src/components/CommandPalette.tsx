@@ -1,5 +1,5 @@
 import { Command as CommandIcon, X } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 
 import { useUiStore } from '../store/uiStore.ts';
 import { filterCommands, type Command } from './commands.ts';
@@ -25,14 +25,14 @@ function PalettePanel({ attrs }: { attrs: OverlayAttrs }) {
   const listId = useId();
   const titleId = useId();
 
-  const results = useMemo(() => filterCommands(commands, query), [commands, query]);
-  const groups = useMemo(() => {
-    const byGroup = new Map<string, Command[]>();
-    for (const c of results) byGroup.set(c.group, [...(byGroup.get(c.group) ?? []), c]);
-    return [...byGroup];
-  }, [results]);
+  // Commands are rebuilt each render (cheap, ~100 items), so no memo would ever hit.
+  const byGroup = new Map<string, Command[]>();
+  for (const c of filterCommands(commands, query)) {
+    byGroup.set(c.group, [...(byGroup.get(c.group) ?? []), c]);
+  }
+  const groups = [...byGroup];
   // Keyboard order follows the grouped display.
-  const flat = useMemo(() => groups.flatMap(([, list]) => list), [groups]);
+  const flat = groups.flatMap(([, list]) => list);
   const activeIndex = Math.min(active, Math.max(flat.length - 1, 0));
   const activeCommand = flat[activeIndex];
 
@@ -70,6 +70,10 @@ function PalettePanel({ attrs }: { attrs: OverlayAttrs }) {
       case 'Escape':
         event.preventDefault();
         close();
+        break;
+      case 'Tab':
+        // The input is the only stop inside the dialog: keep focus trapped here.
+        event.preventDefault();
         break;
     }
   };

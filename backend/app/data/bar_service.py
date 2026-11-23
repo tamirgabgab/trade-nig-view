@@ -423,7 +423,8 @@ class BarService:
         if len(frame) == 0:
             return Quote(symbol=info, error="no data")
         last = float(frame.close[-1])
-        year = frame.time >= frame.time[-1] - YEAR_SECONDS
+        # Bars are sorted by time: the 52-week window is a suffix (a view, no mask or copy).
+        year = int(np.searchsorted(frame.time, int(frame.time[-1]) - YEAR_SECONDS))
         ranges = Quote(
             symbol=info,
             time=int(frame.time[-1]),
@@ -432,8 +433,8 @@ class BarService:
             spark=tuple(float(c) for c in frame.close[-SPARK_BARS:]),
             day_low=float(frame.low[-1]),
             day_high=float(frame.high[-1]),
-            low_52w=float(frame.low[year].min()),
-            high_52w=float(frame.high[year].max()),
+            low_52w=float(frame.low[year:].min()),
+            high_52w=float(frame.high[year:].max()),
         )
         if len(frame) == 1:
             return ranges

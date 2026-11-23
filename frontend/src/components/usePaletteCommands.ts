@@ -2,6 +2,8 @@ import { effectiveParams, instanceLabel, useIndicatorList } from '../api/indicat
 import { useSymbols } from '../api/market.ts';
 import { CHART_TYPES } from '../chart/chartTypes.ts';
 import { RANGE_LABEL, RANGES } from '../chart/visibleRange.ts';
+import { useShallow } from 'zustand/react/shallow';
+
 import { useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
@@ -11,14 +13,22 @@ import { addIndicator, removeIndicator } from './indicatorActions.ts';
 import { INTERVALS } from './intervals.ts';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery.ts';
 
-const onOff = (on: boolean) => (on ? 'Turn off' : 'Turn on');
-
 /** Everything the Ctrl+K palette can do, built from the current state (first match wins). */
 export function usePaletteCommands(): Command[] {
-  const chart = useChartStore();
+  // Subscribe only to what the labels show; actions read the stores when they run.
+  const chart = useChartStore(
+    useShallow((s) => ({
+      interval: s.interval,
+      chartType: s.chartType,
+      scaleMode: s.scaleMode,
+      autoScale: s.autoScale,
+      adjusted: s.adjusted,
+    })),
+  );
   const instances = useIndicatorStore((s) => s.instances);
-  const toggleVisible = useIndicatorStore((s) => s.toggleVisible);
-  const ui = useUiStore();
+  const watchlist = useUiStore((s) => s.watchlist);
+  const act = useChartStore.getState;
+  const ui = useUiStore.getState;
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const narrow = useMediaQuery(NARROW_QUERY);
@@ -30,15 +40,14 @@ export function usePaletteCommands(): Command[] {
     const spec = specs.find((s) => s.id === instance.id);
     if (spec === undefined) continue;
     const label = instanceLabel(spec, effectiveParams(spec, instance.params));
-    const group = 'On the chart';
-    const base = { group, keywords: spec.name };
+    const base = { group: 'On the chart', keywords: spec.name };
     commands.push(
       {
         ...base,
         id: `edit-${instance.uid}`,
         label: `${label}: Edit settings`,
         run: () => {
-          ui.openSettings(instance.uid);
+          ui().openSettings(instance.uid);
         },
       },
       {
@@ -46,7 +55,7 @@ export function usePaletteCommands(): Command[] {
         id: `learn-${instance.uid}`,
         label: `${label}: Learn`,
         run: () => {
-          ui.openLearn(instance.uid);
+          ui().openLearn(instance.uid);
         },
       },
       {
@@ -54,7 +63,7 @@ export function usePaletteCommands(): Command[] {
         id: `vis-${instance.uid}`,
         label: `${label}: ${instance.visible ? 'Hide' : 'Show'}`,
         run: () => {
-          toggleVisible(instance.uid);
+          useIndicatorStore.getState().toggleVisible(instance.uid);
         },
       },
       {
@@ -75,7 +84,7 @@ export function usePaletteCommands(): Command[] {
       hint: chart.interval === option.interval ? 'current' : option.text,
       keywords: 'timeframe',
       run: () => {
-        chart.setInterval(option.interval);
+        act().setInterval(option.interval);
       },
     });
   }
@@ -86,7 +95,7 @@ export function usePaletteCommands(): Command[] {
       label: `Chart type: ${type.label}`,
       hint: chart.chartType === type.id ? 'current' : undefined,
       run: () => {
-        chart.setChartType(type.id);
+        act().setChartType(type.id);
       },
     });
   }
@@ -98,47 +107,58 @@ export function usePaletteCommands(): Command[] {
       hint: range,
       keywords: 'range zoom',
       run: () => {
-        chart.selectRange(range);
+        act().selectRange(range);
       },
     });
   }
+  const toggles: [string, boolean, string, string, () => void][] = [
+    [
+      'log',
+      chart.scaleMode === 'log',
+      'logarithmic scale',
+      'log',
+      () => {
+        act().toggleScaleMode('log');
+      },
+    ],
+    [
+      'percent',
+      chart.scaleMode === 'percent',
+      'percent scale',
+      '%',
+      () => {
+        act().toggleScaleMode('percent');
+      },
+    ],
+    [
+      'auto',
+      chart.autoScale,
+      'auto-fit price scale',
+      'auto',
+      () => {
+        act().setAutoScale(!chart.autoScale);
+      },
+    ],
+    [
+      'adjusted',
+      chart.adjusted,
+      'dividend adjustment',
+      'ADJ',
+      () => {
+        act().setAdjusted(!chart.adjusted);
+      },
+    ],
+  ];
+  for (const [id, on, what, hint, run] of toggles) {
+    commands.push({
+      id,
+      group: 'Chart',
+      label: `${on ? 'Turn off' : 'Turn on'} ${what}`,
+      hint,
+      run,
+    });
+  }
   commands.push(
-    {
-      id: 'log',
-      group: 'Chart',
-      label: `${onOff(chart.scaleMode === 'log')} logarithmic scale`,
-      hint: 'log',
-      run: () => {
-        chart.toggleScaleMode('log');
-      },
-    },
-    {
-      id: 'percent',
-      group: 'Chart',
-      label: `${onOff(chart.scaleMode === 'percent')} percent scale`,
-      hint: '%',
-      run: () => {
-        chart.toggleScaleMode('percent');
-      },
-    },
-    {
-      id: 'auto',
-      group: 'Chart',
-      label: `${onOff(chart.autoScale)} auto-fit price scale`,
-      hint: 'auto',
-      run: () => {
-        chart.setAutoScale(!chart.autoScale);
-      },
-    },
-    {
-      id: 'adjusted',
-      group: 'Chart',
-      label: `${onOff(chart.adjusted)} dividend adjustment`,
-      hint: 'ADJ',
-      run: () => {
-        chart.setAdjusted(!chart.adjusted);
-      },
-    },
     {
       id: 'theme',
       group: 'View',
@@ -149,10 +169,10 @@ export function usePaletteCommands(): Command[] {
     {
       id: 'watchlist',
       group: 'View',
-      label: `${(narrow ? ui.watchlist.floating : ui.watchlist.docked) ? 'Hide' : 'Show'} watchlist`,
+      label: `${(narrow ? watchlist.floating : watchlist.docked) ? 'Hide' : 'Show'} watchlist`,
       keywords: 'sidebar',
       run: () => {
-        ui.toggleWatchlist(narrow);
+        ui().toggleWatchlist(narrow);
       },
     },
     {
@@ -161,7 +181,7 @@ export function usePaletteCommands(): Command[] {
       label: 'Show keyboard shortcuts',
       hint: '?',
       run: () => {
-        ui.setShortcutsOpen(true);
+        ui().setShortcutsOpen(true);
       },
     },
   );
@@ -173,7 +193,7 @@ export function usePaletteCommands(): Command[] {
       hint: info.exchange,
       keywords: info.symbol,
       run: () => {
-        chart.setSymbol(info.symbol);
+        act().setSymbol(info.symbol);
       },
     });
   }
