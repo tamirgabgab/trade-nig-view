@@ -189,6 +189,20 @@
   - frontend: 165 בדיקות, כולל markers ב-`ChartEngine` ו-composite בבדיקת component.
   - E2E: 6. החדשה מוסיפה Envelope, משנה את ה-basis ל-EMA, ומוסיפה MA Cross. הערכים ב-legend נבדקים מול SMA/EMA שחושבו ב-TypeScript.
 
+## R3b — תיקונים אחרי code review (2026-11-23)
+הרצנו `/code-review high` על `bc41eb0..HEAD`. הסקירה העלתה 6 ממצאים, וכולם תוקנו:
+1. 🔴 **offset לא נכלל ב-lookback.**
+   - הבעיה: עם offset גדול, ערכים בתחילת החלון יצאו NaN או שגויים. הבאג היה קיים כבר מ-R3a.
+   - התיקון: `IndicatorSpec.total_lookback` מוסיף את ה-offset במקום אחד מרכזי, וה-API משתמש בו.
+   - בדיקה חדשה: כל 19 האינדיקטורים, עם offset של עד 500, יוצאים זהים בחלון ובהיסטוריה מלאה. וידאנו שהבדיקה נכשלת בלי התיקון (14 כשלים).
+2. 🔴 **KAMA:** ה-lookback מחושב עכשיו לפי `max(fast, slow)`, ו-`fast > slow` נדחה עם 422.
+3. **McGinley:**
+   - ירידה של יותר מ-50% בנר אחד גרמה ב-Pine לתנודות של ±1e245. עכשיו רמה ≤ 0 מוחלפת ב-EMA באותו נר. זו סטייה מכוונת מ-Pine; בכל מקרה אחר הערכים זהים.
+   - בדרך נמצא ותוקן `OverflowError` כשהיחס $(x/M)^4$ חורג מטווח float. ב-Pine זה inf, ולכן הצעד הוא 0.
+4. **ARCHITECTURE:** עודכנו §3.2 (טבלת lookback לפי סוג, ו-offset), §4 (פורמט markers, משמעות `warmup`, שגיאות 422) ו-§5.1 (`option_labels`, ‏`lookback`, ‏`MA_TYPES`, ‏markers).
+5. **Composites:** נוספו golden models ל-MA Cross (fast, slow ו-crosses מול `golden_crosses` לפי Pine), ל-Ribbon ול-Envelope, על 6 סוגים ועל כל ה-datasets. נוספו גם hand vectors ב-`test_composites.py`.
+6. **`warmup`:** תועד ב-`IndicatorSpec` וב-API שה-warmup שייך ל-output שמתחיל אחרון. warmup נפרד לכל output יתווסף ב-P4 אם יידרש.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -224,6 +238,7 @@
 | 2026-11-22 | D2/D4/D6 לפי ההמלצה: TA-Lib אופציונלי לבדיקות, KAMA/T3/ZLEMA נכללים, פאנל הגדרות חי | המשתמש ביקש לממש S1–S3 בלי לבחור | PLAN §7 |
 | 2026-11-23 | R3a: תשובת compute בעמודות (`time[]`, `outputs{}`); offset ≥ 0 בלבד; פאנל הגדרות צד חי (לא חלון OK/Cancel); סדר פרמטרים Length/Source/Offset כמו ב-TV; `ta-lib` כתלות dev בלבד | יעילות, no-lookahead, D6 | ARCHITECTURE §4, §5.1 |
 | 2026-11-23 | R3b: markers מצוירים על ה-series הראשי, ולא על series נסתר, כדי שהחיצים יישבו מתחת לנר ומעליו; McGinley לפי Pine (חלוקה באפס = `na`, ואז seed חדש מה-EMA); KAMA ו-T3 לפי TA-Lib; ב-"Moving Average" הכללי, לסוגים עם inputs נוספים (ALMA, KAMA, T3, LSMA offset) יש defaults, ואת ה-inputs האלה חושפים האינדיקטורים הייעודיים | נאמנות ל-TV ול-TA-Lib, ממשק פשוט | PLAN §5 |
+| 2026-11-23 | אחרי code review: offset נכלל ב-lookback (`total_lookback`); ב-KAMA ה-lookback לפי `max(fast, slow)` ו-`fast > slow` נדחה; ב-McGinley רמה ≤ 0 מוחלפת ב-EMA (סטייה מכוונת מ-Pine, שמתנודד ל-±1e200) | נכונות חוזה ה-lookback וגרף שמיש | ARCHITECTURE §3.2 |
 | 2026-11-22 | `PLAN.md` כתוכנית העבודה ל-sessions הבאים: R3 מתפצל ל-R3a/R3b/R3c, ו-L1 (דפי לימוד לממוצעים) ו-U1 (UX) נכנסים לפני R4 | בקשת המשתמש להתמקד בממוצעים נעים ובמתמטיקה שלהם וב-UX | [PLAN.md](PLAN.md) |
 
 ## שאלות פתוחות אליך
@@ -252,7 +267,7 @@
 - גלישה אופקית מתחת ל-960px (סרגל הכלים העליון). קיים מ-R2 ומתוכנן ל-U1.
 - **R3b:** החיצים של MA Cross קטנים (גודל ברירת המחדל של lightweight-charts), ואי אפשר לשנות את הצבעים שלהם בפאנל. ל-U1.
 - **R3b:** כמה צבעי ברירת מחדל חוזרים על עצמם (ה-basis של Envelope, הקו המהיר של MA Cross וקו 2 של ה-Ribbon הם כתומים, כמו ב-TV). אפשר לשנות בפאנל.
-- **R3b:** הצעדים `code-review` ו-`simplify` מ-PLAN §8 לא הורצו כ-subagents בסבב הלילה. נעשתה סקירה עצמית של ה-diff. אפשר להריץ אותם בתחילת S4.
+- **R3b:** `code-review` הורץ ותוקן (ראה למעלה). `simplify` (PLAN §8) עדיין לא הורץ.
 - Vitest מדווח שה-jsdom environment נוצר 5 פעמים (אופטימיזציה אופציונלית, לא דחוף).
 
 ## הערות סביבה
@@ -330,3 +345,4 @@
 - המשך הריצה האוטונומית (S1 → S2 → S3) לבקשת המשתמש.
 - נבנו: 11 ממוצעים חדשים ב-`core`, ‏`MA_TYPES` עם 15 סוגים, 4 composites, ‏`option_labels`, golden models לכל הסוגים, TA-Lib ל-5 נוספים, property tests לפי מחלקה, 15 learn stubs, 18 שורות TV cross-check, ובצד ה-frontend חיצי crossover ו-select עם שמות תצוגה. נוסף גם E2E.
 - נמצא ותוקן: חלוקה באפס ב-McGinley (נמצאה ב-hypothesis). הכול ירוק.
+- המשך באותו יום: `/code-review high` מצא 6 ממצאים, וכולם תוקנו. בדרך נמצא גם `OverflowError` ב-McGinley ותוקן. 9/9 gates ירוקים, ‏backend 1,118 בדיקות.

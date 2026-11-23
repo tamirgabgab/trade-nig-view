@@ -141,10 +141,23 @@ computation (verified by test). For recursive filters the seed influence after $
 → RMA residual $\approx e^{-25}\approx 1.4\times10^{-11}$, below the $10^{-9}$ test tolerance. When the data start is reached,
 the true series start is used (identical to full history by construction).
 
+The lookback is **per spec** (`IndicatorSpec.lookback(params)`, R3b); the default is `max(25·n, 250)` with n = the
+longest `*length*` parameter. Filters whose seed fades more slowly define their own:
+
+| Indicator / MA type | Lookback | Why |
+|---|---|---|
+| T3 | `max(50·n, 250)` | six cascaded EMAs |
+| KAMA | `max(25·n, 25·((S+1)/2)² + n)`, S = `max(fast, slow)` | the slowest smoothing is $s^2$, seed fades like $(1-s^2)^k$ (≈ 6,000 bars for S = 30) |
+| Composites (MA Cross, Ribbon, Envelope, generic MA) | max over their averages' lookbacks | |
+
+On top of that, `IndicatorSpec.total_lookback` adds the plot `offset` (a shift of k bars shows the value of bar
+t − k at bar t, so k more bars are needed); the API reports and uses `total_lookback`. A test computes every registered
+indicator over a window with large offsets and compares it with the full history.
+
 **Lookback contract with lazy history (E5, defined in R2b, consumed in R3a).** The chart asks for indicator values over
 exactly the bars it has loaded: `start = time of the oldest loaded bar`, `end = time of the newest`. The backend, not
-the frontend, adds the warm-up: it loads `lookback = max(25·n, 250)` extra bars before `start` (n = the longest length
-parameter of the indicator). When older history is prepended, the frontend recomputes the indicator for the new
+the frontend, adds the warm-up: it loads `lookback` extra bars before `start` (per spec, see above; at least
+`max(25·n, 250)` with n = the longest length parameter, plus the plot offset). When older history is prepended, the frontend recomputes the indicator for the new
 `[start, end]` and replaces its series (no client-side stitching of two computations). Values for bars that were
 already shown therefore do not change, except within floating-point tolerance, which the R3a harness asserts.
 
@@ -166,7 +179,7 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 | `GET /bars` | `symbol`, `interval` (`1h`\|`4h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `before?` (epoch seconds, exclusive: only bars starting earlier; paging cursor), `adjusted=true`, `transform=none`\|`heikin_ashi`, `until?` | `{symbol, interval, adjusted, transform, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, stale, warnings}`; intraday `time` is UTC epoch seconds, daily+ `'YYYY-MM-DD'`; for intraday `start`/`end`/`until` select whole sessions | R1 (1h/4h R1b, `before`/`transform` R2b) |
 | `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error}]` from the two latest unadjusted daily bars; per-symbol `error` instead of failing the request | R1a |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
-| `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted, transform}` (`start`/`end` = epoch seconds of bar starts, inclusive) | `{id, version, params (resolved), time:[t], outputs:{<name>:[value\|null]}, markers?, warmup, lookback}` — column arrays aligned with `time`; `null` = warm-up/NaN | R3 |
+| `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted, transform}` (`start`/`end` = epoch seconds of bar starts, inclusive) | `{id, version, params (resolved), time:[t], outputs:{<name>:[value\|null]}, warmup, lookback}` — column arrays aligned with `time`; `null` = warm-up/NaN. A `markers` output holds `+1` (up) / `-1` (down) / `null`. `warmup` = first valid bar of the output that starts **last** (a composite's faster outputs start earlier); `lookback` = `total_lookback` (incl. offset). Cross-parameter errors (e.g. KAMA `fast > slow`, HMA length 1) are 422 `invalid_params` | R3 |
 | `GET /analysis/gaps` | `symbol`, `interval`, `min_pct=0`, `include_partial=false`, `until?` | `[{start_time, direction, top, bottom, size_pct, filled, fill_time?, max_fill_pct}]` | R5 |
 | `GET /analysis/pivots` | `symbol`, `interval`, `left=5`, `right=5`, `until?` | `[{time, kind:"high"\|"low", price, confirmed_time}]` | R5 |
 | `GET /analysis/levels` | `symbol`, `interval`, `until?` | `{prev_day, prev_week, prev_month:{high, low, close}, high_52w, low_52w}` | R5 |
@@ -190,6 +203,7 @@ class ParamSpec:
     max: float | None = None
     step: float | None = None
     options: tuple[str, ...] = ()  # for enum/source: ("close","open","high","low","hl2","hlc3","ohlc4")
+    option_labels: tuple[str, ...] = ()  # R3b: display names of `options`, e.g. "HMA (Hull)"; empty = ids
     label: str = ""
 
 @dataclass(frozen=True)
@@ -214,14 +228,15 @@ class IndicatorSpec:
     outputs: tuple[OutputSpec, ...]
     levels: tuple[float, ...] = ()        # e.g. (70, 50, 30)
     fills: tuple[tuple[str, str], ...] = ()  # e.g. (("upper","lower"),)
-    warmup: Callable[[Mapping[str, Any]], int]  # number of NaN bars at the start
+    warmup: Callable[[Mapping[str, Any]], int]  # NaN bars at the start of the output that starts last
+    lookback: Callable[[Mapping[str, Any]], int] = length_lookback  # R3a/R3b, see section 3.2
     compute: Callable[..., Mapping[str, np.ndarray]]  # pure: (BarFrame, **params) -> {output: ndarray}
     learn_slug: str              # "bollinger-bands" -> docs/indicators/bollinger-bands.md
     intraday_only: bool = False  # VWAP
 ```
 
 `GET /indicators` serialises everything except `warmup`/`compute`/`lookback` (R3a: `ParamSpec` also has `label`, `step`,
-`options`; `OutputSpec` has `label`; `offset` is limited to `>= 0` so a plotted value never reads a later bar). The frontend builds the settings dialog purely from
+`options`; `OutputSpec` has `label`; `offset` is limited to `>= 0` so a plotted value never reads a later bar; R3b: `ParamSpec.option_labels`). Moving-average types live in one dispatcher, `app/indicators/ma.py` `MA_TYPES` (15 types with warm-up, lookback and minimum length), used by every MA indicator and composite. A `markers` output is drawn by `ChartEngine` as arrows on the main price series (`createSeriesMarkers`: +1 = `arrowUp` below the bar, −1 = `arrowDown` above it); legends skip it. The frontend builds the settings dialog purely from
 `params` + `outputs` → adding an indicator needs no frontend change.
 
 ### 5.2 Drawings document (schema version 1)
