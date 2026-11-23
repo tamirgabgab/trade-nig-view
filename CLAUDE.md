@@ -49,11 +49,11 @@ ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.
 ("An Application Control policy has blocked this file", os error 4551).
 
 ## 4. Repo map
-- `backend/` — FastAPI app (`app/api`, `app/data/{providers,cache}`, `app/indicators`, `app/analysis`, `app/replay`, `app/models`, `app/storage`) and `tests/` (`unit`, `api`, `golden`, `property`, `fixtures`).
-- `frontend/` — React app (`src/api`, `src/chart`, `src/indicators`, `src/drawings`, `src/components`, `src/store`, `src/styles`), `e2e/`.
+- `backend/` — FastAPI app (`app/api`, `app/data/{providers,cache}`, `app/indicators`, `app/analysis`, `app/models`, `app/storage`, `app/errors.py`, `app/config.py`), `config/universe.toml`, and `tests/` (`unit`, `api`, `golden`, `property`, `fixtures`).
+- `frontend/` — React app (`src/api`, `src/chart`, `src/drawings`, `src/components`, `src/store`, `src/styles`, `src/test`), `e2e/`.
 - `docs/` — `ROADMAP.md`, `ARCHITECTURE.md`, `TRADINGVIEW_RESEARCH.md`, `adr/`, `indicators/` (learn pages).
-- `scripts/` — setup/dev/test/lint in `.ps1` + `.sh`.
-- `.github/workflows/` — CI (ubuntu + windows).
+- `scripts/` — setup, dev, test, lint, update, gen-api in `.ps1` + `.sh`; `make-fixtures.ps1`, `install-shortcut.ps1` (Windows only).
+- `.github/workflows/` — CI (quality gates on ubuntu + windows, e2e on ubuntu).
 
 ## 5. Conventions
 - **Python 3.13** (`>=3.12`), full type hints, `pyright` strict (not mypy: its native `librt` is blocked by SAC), ruff lint+format (line length 100). snake_case; modules small;
