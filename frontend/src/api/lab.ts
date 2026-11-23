@@ -1,6 +1,6 @@
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 
-import { apiGet, apiPost, isRecord } from './client.ts';
+import { apiGet, apiPost, fieldsOf, isRecord, type Schemas } from './client.ts';
 import type { Params } from './indicators.ts';
 
 /**
@@ -92,62 +92,74 @@ const maybeNums = (v: unknown): (number | null)[] =>
   Array.isArray(v) ? (v as unknown[]).map(num) : [];
 
 function parseStats(v: unknown): Stats {
-  const r = isRecord(v) ? v : {};
+  const f = fieldsOf<Schemas['StatsBlock']>(isRecord(v) ? v : {});
   return {
-    n: num(r['n']) ?? 0,
-    mean: num(r['mean']),
-    median: num(r['median']),
-    std: num(r['std']),
-    hitRate: num(r['hit_rate']),
+    n: num(f('n')) ?? 0,
+    mean: num(f('mean')),
+    median: num(f('median')),
+    std: num(f('std')),
+    hitRate: num(f('hit_rate')),
   };
 }
 
 function parseStudy(v: unknown): Study | null {
   if (!isRecord(v)) return null;
-  const h = isRecord(v['histogram']) ? v['histogram'] : {};
-  const ci = Array.isArray(v['ci95']) ? (v['ci95'] as unknown[]) : [];
+  const f = fieldsOf<Schemas['LabStudy']>(v);
+  const histogram = f('histogram');
+  const h = fieldsOf<Schemas['Histogram']>(isRecord(histogram) ? histogram : {});
+  const ci = f('ci95');
+  const bounds = Array.isArray(ci) ? (ci as unknown[]) : [];
   return {
-    horizon: num(v['horizon']) ?? 0,
-    events: parseStats(v['events']),
-    baseline: parseStats(v['baseline']),
-    edge: num(v['edge']),
-    se: num(v['se']),
-    tStat: num(v['t_stat']),
-    ci95: [num(ci[0]), num(ci[1])],
+    horizon: num(f('horizon')) ?? 0,
+    events: parseStats(f('events')),
+    baseline: parseStats(f('baseline')),
+    edge: num(f('edge')),
+    se: num(f('se')),
+    tStat: num(f('t_stat')),
+    ci95: [num(bounds[0]), num(bounds[1])],
     histogram: {
-      edges: nums(h['edges']),
-      events: nums(h['events']),
-      baseline: nums(h['baseline']),
+      edges: nums(h('edges')),
+      events: nums(h('events')),
+      baseline: nums(h('baseline')),
     },
-    eventIndex: nums(v['event_index']),
+    eventIndex: nums(f('event_index')),
   };
 }
 
 export function parseLab(body: unknown): LabResult {
-  if (!isRecord(body) || !Array.isArray(body['time'])) throw new Error('Unexpected lab response');
-  const indicators = Array.isArray(body['indicators']) ? (body['indicators'] as unknown[]) : [];
+  if (!isRecord(body)) throw new Error('Unexpected lab response');
+  const f = fieldsOf<Schemas['LabResponse']>(body);
+  const time = f('time');
+  if (!Array.isArray(time)) throw new Error('Unexpected lab response');
+  const indicators = f('indicators');
   return {
-    time: (body['time'] as unknown[]).filter(
+    time: (time as unknown[]).filter(
       (t): t is string | number => typeof t === 'string' || typeof t === 'number',
     ),
-    open: nums(body['open']),
-    high: nums(body['high']),
-    low: nums(body['low']),
-    close: nums(body['close']),
-    volume: nums(body['volume']),
-    indicators: indicators.flatMap((item) => {
-      if (!isRecord(item) || typeof item['id'] !== 'string') return [];
-      const outputs = isRecord(item['outputs']) ? item['outputs'] : {};
+    open: nums(f('open')),
+    high: nums(f('high')),
+    low: nums(f('low')),
+    close: nums(f('close')),
+    volume: nums(f('volume')),
+    indicators: (Array.isArray(indicators) ? (indicators as unknown[]) : []).flatMap((item) => {
+      if (!isRecord(item)) return [];
+      const g = fieldsOf<Schemas['LabIndicatorResult']>(item);
+      const id = g('id');
+      const outputs = g('outputs');
+      const params = g('params');
+      if (typeof id !== 'string') return [];
       return [
         {
-          id: item['id'],
-          params: (isRecord(item['params']) ? item['params'] : {}) as Params,
-          outputs: Object.fromEntries(Object.entries(outputs).map(([k, v]) => [k, maybeNums(v)])),
-          displayShift: num(item['display_shift']) ?? 0,
+          id,
+          params: (isRecord(params) ? params : {}) as Params,
+          outputs: Object.fromEntries(
+            Object.entries(isRecord(outputs) ? outputs : {}).map(([k, v]) => [k, maybeNums(v)]),
+          ),
+          displayShift: num(g('display_shift')) ?? 0,
         },
       ];
     }),
-    study: parseStudy(body['study']),
+    study: parseStudy(f('study')),
   };
 }
 
@@ -185,19 +197,24 @@ export interface LearnEntry {
 
 function parseIndex(body: unknown): LearnEntry[] {
   if (!isRecord(body) || !Array.isArray(body['pages'])) throw new Error('Unexpected learn index');
-  return (body['pages'] as unknown[]).flatMap((p) =>
-    isRecord(p) && typeof p['slug'] === 'string' && typeof p['title'] === 'string'
-      ? [
-          {
-            slug: p['slug'],
-            title: p['title'],
-            kind: p['kind'] === 'concept' ? 'concept' : 'indicator',
-            category: typeof p['category'] === 'string' ? p['category'] : null,
-            indicatorId: typeof p['indicator_id'] === 'string' ? p['indicator_id'] : null,
-          },
-        ]
-      : [],
-  );
+  return (body['pages'] as unknown[]).flatMap((p) => {
+    if (!isRecord(p)) return [];
+    const f = fieldsOf<Schemas['LearnIndexEntry']>(p);
+    const slug = f('slug');
+    const title = f('title');
+    const category = f('category');
+    const indicatorId = f('indicator_id');
+    if (typeof slug !== 'string' || typeof title !== 'string') return [];
+    return [
+      {
+        slug,
+        title,
+        kind: f('kind') === 'concept' ? 'concept' : 'indicator',
+        category: typeof category === 'string' ? category : null,
+        indicatorId: typeof indicatorId === 'string' ? indicatorId : null,
+      },
+    ];
+  });
 }
 
 /** Every learn page (indicators and concepts), for the index and the palette. */

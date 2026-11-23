@@ -51,14 +51,19 @@ def missing_sections(markdown: str) -> list[str]:
 
 
 def indicator_ids(block: Any) -> list[str]:  # JSON: dict / list / scalar
-    """Indicator ids a lab block names: every string ``"indicator"`` value (an int is an index
-    into the block's own list) and every id (string, or ``"id"`` of an object) in an
-    ``"indicators"`` list."""
+    """Indicator ids a lab block names: every ``"indicator"`` value that is a string or an
+    object with an ``"id"`` (an int is an index into the block's own list) and every id
+    (string, or ``"id"`` of an object) in an ``"indicators"`` list."""
     found: list[str] = []
     if isinstance(block, dict):
         for key, value in cast("dict[str, Any]", block).items():
             if key == "indicator" and isinstance(value, str):
                 found.append(value)
+            # A combo rule's side: {"indicator": {"id": ..., "params": ...}, "output": ...}.
+            if key == "indicator" and isinstance(value, dict):
+                ref_id: Any = cast("dict[str, Any]", value).get("id")
+                if isinstance(ref_id, str):
+                    found.append(ref_id)
             if key == "indicators" and isinstance(value, list):
                 for item in cast("list[Any]", value):
                     ref: Any = (
@@ -90,6 +95,11 @@ def test_lab_block_helpers() -> None:
     assert lab_blocks(page) == ['{"kind": "param", "indicator": "rsi"}\n']
     block = {"kind": "combo", "indicators": [{"id": "ema"}, "sma"], "c": [{"indicator": 0}]}
     assert indicator_ids(block) == ["ema", "sma"]
+    rule: dict[str, Any] = {
+        "left": {"indicator": {"id": "rsi", "params": {}}, "output": "rsi"},
+        "right": {"value": 30},
+    }
+    assert indicator_ids({"kind": "combo", "rules": [rule]}) == ["rsi"]
 
 
 def test_v2_pages_are_known() -> None:
