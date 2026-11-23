@@ -19,6 +19,8 @@ import { ChartView, type FocusRequest } from './ChartView.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
+import { ChartContextMenu } from './ChartContextMenu.tsx';
+import { ConfirmDialog } from './ConfirmDialog.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
 import { legendValues } from './legendValues.ts';
@@ -61,7 +63,16 @@ export function ChartArea({ className }: ChartAreaProps) {
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
   const setAutoScale = useChartStore((s) => s.setAutoScale);
   const learn = usePresence(useUiStore((s) => s.learnFor));
-  const [scrollToLatest, setScrollToLatest] = useState(0);
+  const [command, setCommand] = useState<{ seq: number; kind: 'latest' | 'reset' } | null>(null);
+  const runCommand = (kind: 'latest' | 'reset') => {
+    setCommand((c) => ({ seq: (c?.seq ?? 0) + 1, kind }));
+  };
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number; price: number | null } | null>(null);
+  const contextMenu = usePresence(menuAt);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const indicatorCount = useIndicatorStore((s) => s.instances.length);
+  const removeAll = useIndicatorStore((s) => s.removeAll);
+  const restoreAll = useIndicatorStore((s) => s.restoreAll);
   const [offLatest, setOffLatest] = useState(false);
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
   const firstRun = useIndicatorStore((s) => s.seq === 0);
@@ -106,6 +117,8 @@ export function ChartArea({ className }: ChartAreaProps) {
   // Chart image: the title band names the symbol and its latest bar (read when the image comes).
   const snapshot = useUiStore((s) => s.snapshot);
   const showToast = useUiStore((s) => s.showToast);
+  const openSettingsPanel = useUiStore((s) => s.openSettings);
+  const openLearnDrawer = useUiStore((s) => s.openLearn);
   const snapshotText = useRef({ title: '', detail: '', file: '' });
   useEffect(() => {
     const last = legendValues(bars, null);
@@ -271,7 +284,8 @@ export function ChartArea({ className }: ChartAreaProps) {
         onVisibleRangeChange={onVisibleRangeChange}
         onPaneLayout={setPaneLayout}
         onAutoScaleChange={setAutoScale}
-        scrollToLatest={scrollToLatest}
+        command={command}
+        onContextMenu={setMenuAt}
         theme={theme}
         snapshot={snapshot}
         onSnapshot={onSnapshot}
@@ -283,7 +297,42 @@ export function ChartArea({ className }: ChartAreaProps) {
           icon={<ChevronsRight size={18} />}
           tooltipSide="left"
           onClick={() => {
-            setScrollToLatest((n) => n + 1);
+            runCommand('latest');
+          }}
+        />
+      )}
+      {contextMenu.shown !== null && (
+        <ChartContextMenu
+          at={contextMenu.shown}
+          decimals={decimals}
+          attrs={contextMenu.attrs}
+          onClose={() => {
+            setMenuAt(null);
+          }}
+          onResetView={() => {
+            runCommand('reset');
+          }}
+          onRemoveAll={() => {
+            setConfirmClear(true);
+          }}
+        />
+      )}
+      {confirmClear && (
+        <ConfirmDialog
+          title="Remove all indicators?"
+          message={`This removes ${indicators.views.map((v) => v.label).join(', ')} from the chart, with their settings.`}
+          confirmLabel={`Remove ${String(indicatorCount)} indicator${indicatorCount === 1 ? '' : 's'}`}
+          onCancel={() => {
+            setConfirmClear(false);
+          }}
+          onConfirm={() => {
+            setConfirmClear(false);
+            openSettingsPanel(null);
+            openLearnDrawer(null);
+            const removed = removeAll();
+            showToast(`Removed ${String(removed.length)} indicators`, () => {
+              restoreAll(removed);
+            });
           }}
         />
       )}

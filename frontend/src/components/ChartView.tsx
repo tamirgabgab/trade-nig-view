@@ -34,8 +34,10 @@ interface ChartViewProps {
   onPaneLayout: PaneLayoutListener;
   /** Auto-fit turned off or on from the price axis (drag, double-click). Must be stable. */
   onAutoScaleChange: (autoScale: boolean) => void;
-  /** Bumped to scroll to the latest bar (0 = never asked). */
-  scrollToLatest: number;
+  /** Each new command (by `seq`) runs once: jump to the latest bar, or reset the view. */
+  command: { seq: number; kind: 'latest' | 'reset' } | null;
+  /** Right-click on the chart: where, and the price there (null below the price pane). Stable. */
+  onContextMenu: (at: { x: number; y: number; price: number | null }) => void;
   /** UI theme: a change repaints the chart from the CSS tokens. */
   theme: string;
   /** Each new request (by `seq`) calls `onSnapshot` once with the chart image. */
@@ -59,7 +61,8 @@ export const ChartView = memo(function ChartView({
   onVisibleRangeChange,
   onPaneLayout,
   onAutoScaleChange,
-  scrollToLatest,
+  command,
+  onContextMenu,
   theme,
   snapshot,
   onSnapshot,
@@ -70,6 +73,7 @@ export const ChartView = memo(function ChartView({
   const focusSeqRef = useRef<number | null>(null);
   const themeRef = useRef(theme);
   const snapshotSeqRef = useRef(snapshot?.seq ?? 0);
+  const commandSeqRef = useRef(command?.seq ?? 0);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -122,8 +126,12 @@ export const ChartView = memo(function ChartView({
   }, [scaleMode, autoScale]);
 
   useEffect(() => {
-    if (scrollToLatest > 0) engineRef.current?.scrollToLatest();
-  }, [scrollToLatest]);
+    const engine = engineRef.current;
+    if (command === null || engine === null || command.seq === commandSeqRef.current) return;
+    commandSeqRef.current = command.seq;
+    if (command.kind === 'latest') engine.scrollToLatest();
+    else engine.resetView();
+  }, [command]);
 
   useEffect(() => {
     const engine = engineRef.current;
@@ -140,5 +148,20 @@ export const ChartView = memo(function ChartView({
     focusSeqRef.current = focus.seq;
   }, [focus]);
 
-  return <div ref={containerRef} className={styles.canvas} data-testid="chart-canvas" />;
+  return (
+    <div
+      ref={containerRef}
+      className={styles.canvas}
+      data-testid="chart-canvas"
+      onContextMenu={(event) => {
+        event.preventDefault();
+        const top = event.currentTarget.getBoundingClientRect().top;
+        onContextMenu({
+          x: event.clientX,
+          y: event.clientY,
+          price: engineRef.current?.priceAt(event.clientY - top) ?? null,
+        });
+      }}
+    />
+  );
 });

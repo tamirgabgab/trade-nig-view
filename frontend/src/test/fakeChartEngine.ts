@@ -103,6 +103,16 @@ export class FakeChartEngine {
     this.themes += 1;
   }
 
+  resets = 0;
+
+  resetView(): void {
+    this.resets += 1;
+  }
+
+  priceAt(y: number): number | null {
+    return y < 100 ? 200 - y : null;
+  }
+
   scrollToLatest(): void {
     this.scrolledToLatest += 1;
   }

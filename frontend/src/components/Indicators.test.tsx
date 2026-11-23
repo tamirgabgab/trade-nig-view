@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { App } from '../App.tsx';
@@ -280,6 +280,42 @@ describe('indicators on the chart', () => {
     await addEma(user);
     const alert = await within(legend()).findByRole('alert');
     expect(alert).toHaveTextContent("'length' must be >= 1");
+  });
+
+  it('right-click: copy the price, reset the view, remove all indicators after a named confirm', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    useIndicatorStore.getState().add('wma', { length: 30, source: 'close', offset: 0 });
+    useIndicatorStore.getState().add('ema', { length: 9, source: 'close', offset: 0 });
+    const user = userEvent.setup();
+    // After setup: user-event installs its own clipboard stub.
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderWithQuery(<App />);
+    await screen.findByText('WMA 30');
+    const canvas = screen.getByTestId('chart-canvas');
+
+    // The fake engine prices y = 40 at 160.
+    fireEvent.contextMenu(canvas, { clientX: 100, clientY: 40 });
+    await user.click(screen.getByRole('menuitem', { name: 'Copy price 160.00' }));
+    expect(writeText).toHaveBeenCalledWith('160.00');
+
+    fireEvent.contextMenu(canvas, { clientX: 100, clientY: 40 });
+    await user.click(screen.getByRole('menuitem', { name: 'Reset chart view' }));
+    expect(liveEngine().resets).toBe(1);
+
+    fireEvent.contextMenu(canvas, { clientX: 100, clientY: 40 });
+    await user.click(screen.getByRole('menuitem', { name: 'Remove all indicators…' }));
+    const confirm = screen.getByRole('alertdialog', { name: 'Remove all indicators?' });
+    expect(confirm).toHaveTextContent('WMA 30, EMA 9');
+    expect(within(confirm).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await user.click(within(confirm).getByRole('button', { name: 'Remove 2 indicators' }));
+    expect(screen.queryByRole('list', { name: 'Indicators on the chart' })).not.toBeInTheDocument();
+
+    const toast = screen.getByText('Removed 2 indicators').closest('div');
+    if (toast === null) throw new Error('no toast');
+    await user.click(within(toast).getByRole('button', { name: 'Undo' }));
+    expect(await screen.findByRole('list', { name: 'Indicators on the chart' })).toHaveTextContent(
+      'WMA 30',
+    );
   });
 
   it('restores saved indicators on the next visit', async () => {

@@ -576,6 +576,21 @@ export class ChartEngine {
     return this.chart.takeScreenshot();
   }
 
+  /** Back to the opening view: the latest bars and an auto-fitted price axis. */
+  resetView(): void {
+    if (this.bars.length > 0) {
+      this.chart.timeScale().setVisibleLogicalRange(initialRange(this.bars.length));
+    }
+    this.chart.priceScale('right').applyOptions({ autoScale: true });
+    this.checkAutoScale();
+  }
+
+  /** Price at `y` px from the top of the chart, or null below the price pane. */
+  priceAt(y: number): number | null {
+    if (y < 0 || y > (this.chart.panes()[0]?.getHeight() ?? 0)) return null;
+    return this.main.coordinateToPrice(y);
+  }
+
   /** Scroll to the latest bar, keeping the zoom. */
   scrollToLatest(): void {
     this.chart.timeScale().scrollToRealTime();

@@ -33,6 +33,9 @@ export interface IndicatorState {
   /** Remove an instance; returns it and its position so `restore` can undo the removal. */
   remove: (uid: string) => Removed | null;
   restore: (removed: Removed) => void;
+  /** Remove every instance; returns them for `restoreAll` (undo). */
+  removeAll: () => IndicatorInstance[];
+  restoreAll: (instances: IndicatorInstance[]) => void;
 }
 
 export interface Removed {
@@ -149,6 +152,14 @@ export const useIndicatorStore = create<IndicatorState>()(
         if (instance === undefined) return null;
         set({ instances: instances.filter((i) => i.uid !== uid) });
         return { instance, index };
+      },
+      removeAll: () => {
+        const removed = get().instances;
+        set({ instances: [] });
+        return removed;
+      },
+      restoreAll: (instances) => {
+        set((s) => ({ instances: [...instances, ...s.instances].slice(0, MAX_INSTANCES) }));
       },
       restore: ({ instance, index }) => {
         set((s) => {
