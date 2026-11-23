@@ -28,6 +28,7 @@ V2_PAGES: set[str] = {
     "ma-ribbon",
     "mcginley",
     "moving-average",
+    "rsi",
     "sma",
     "smma",
     "swma",
