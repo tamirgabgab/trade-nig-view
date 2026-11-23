@@ -143,7 +143,12 @@ class ComputeResponse(BaseModel):
     outputs: dict[str, list[float | None]] = Field(
         description="One value per bar in `time`; null during warm-up"
     )
-    warmup: int = Field(description="Bars without a value at the start of the full history")
+    warmup: int = Field(
+        description=(
+            "Bars without a value at the start of the full history, for the output that starts "
+            "last (a composite's faster outputs can start earlier)"
+        )
+    )
     lookback: int = Field(description="Extra history bars loaded before `start`")
 
 
@@ -158,8 +163,9 @@ def compute_indicator(
 ) -> ComputeResponse:
     """Indicator values for the bars in ``[start, end]``.
 
-    ``lookback = max(25 n, 250)`` extra bars before ``start`` are loaded so the first returned
-    values are warmed up exactly as in a full-history computation (ARCHITECTURE section 3.2).
+    ``lookback`` extra bars before ``start`` (per spec, at least ``max(25 n, 250)``, plus the plot
+    offset) are loaded so the first returned values are warmed up exactly as in a full-history
+    computation (ARCHITECTURE section 3.2).
     """
     spec = get_spec(request.id)
     params = resolve_params(spec, request.params)
@@ -174,7 +180,7 @@ def compute_indicator(
     )
     frame = result.frame
     first = 0 if request.start is None else int(np.searchsorted(frame.time, request.start))
-    lookback = spec.lookback(params)
+    lookback = spec.total_lookback(params)
     lo = max(first - lookback, 0)
     outputs = spec.run(frame.take(slice(lo, None)), params)
     shown = frame.take(slice(first, None))

@@ -5,7 +5,9 @@ r"""McGinley Dynamic (John McGinley, 1990).
 
 An EMA whose speed adapts to the distance from price: the 4th power slows it when price runs away
 above it and speeds it up below. Seed = the first EMA value (TradingView's built-in script).
-A zero divisor gives ``na`` and the next bar re-seeds from the EMA, as in Pine.
+A zero divisor gives ``na`` and the next bar re-seeds from the EMA, as in Pine. A level <= 0
+(after a one-bar drop of more than about half, where Pine oscillates to +-1e200) is replaced
+by the EMA on that bar.
 Warm-up :math:`n-1`. TradingView default: length 14, source close.
 """
 

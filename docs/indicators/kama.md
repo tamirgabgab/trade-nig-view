@@ -10,7 +10,7 @@ with $f = 2/(\text{fast}+1)$, $s = 2/(\text{slow}+1)$.
 |---|---|---|
 | Efficiency length | 10 | Kaufman / TA-Lib default |
 | Fast | 2 | Kaufman default |
-| Slow | 30 | Kaufman default |
+| Slow | 30 | Kaufman default (Fast must not exceed Slow) |
 | Source | close | TradingView default |
 
 ## Warm-up

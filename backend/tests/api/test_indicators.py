@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings
+from app.indicators.catalog import CATALOG
 from app.main import create_app
 from app.models.bars import date_to_ts
 from tests.conftest import IsolatedSettings
@@ -153,6 +154,58 @@ def test_start_end_window_matches_the_full_history(long_client: TestClient) -> N
     first = full["time"].index("2025-03-03")
     expected = full["outputs"]["ma"][first : first + len(window["time"])]
     np.testing.assert_allclose(window["outputs"]["ma"], expected, rtol=1e-9)
+
+
+def _nan(values: list[float | None]) -> np.ndarray:
+    return np.array([np.nan if v is None else v for v in values], dtype=np.float64)
+
+
+def _stress_params(indicator: str) -> dict[str, object]:
+    """Inputs that need the most history: a large plot offset where there is one."""
+    stress: dict[str, dict[str, object]] = {
+        "ma": {"ma_type": "ema", "length": 9, "offset": 400},
+        "t3": {"length": 5, "offset": 300},
+        "kama": {"length": 10, "fast": 30, "slow": 30},
+    }
+    params = dict(stress.get(indicator, {}))
+    names = {p.name for p in CATALOG[indicator].params}
+    if "offset" in names and indicator != "lsma" and "offset" not in params:
+        params = {**params, "offset": 500}
+    return params
+
+
+@pytest.mark.parametrize("indicator", sorted(CATALOG))
+def test_every_indicator_window_matches_the_full_history(
+    long_client: TestClient, indicator: str
+) -> None:
+    """The lookback contract for every spec, including large plot offsets (the offset moves older
+    values into the window, so it needs that much more history)."""
+    request = {"symbol": "AAPL", "id": indicator, "params": _stress_params(indicator)}
+    full = long_client.post("/api/indicators/compute", json=request).json()
+    window = long_client.post(
+        "/api/indicators/compute", json={**request, "start": epoch("2025-03-03")}
+    ).json()
+    first = full["time"].index("2025-03-03")
+    for name, values in window["outputs"].items():
+        expected = _nan(full["outputs"][name][first:])
+        np.testing.assert_allclose(_nan(values), expected, rtol=1e-9, equal_nan=True, err_msg=name)
+
+
+def test_offset_adds_to_the_lookback(client: TestClient) -> None:
+    body = client.post(
+        "/api/indicators/compute",
+        json={"symbol": "AAA", "id": "sma", "params": {"length": 9, "offset": 500}},
+    ).json()
+    assert body["lookback"] == 250 + 500
+
+
+def test_kama_rejects_fast_longer_than_slow(client: TestClient) -> None:
+    response = client.post(
+        "/api/indicators/compute",
+        json={"symbol": "AAA", "id": "kama", "params": {"fast": 60, "slow": 30}},
+    )
+    assert response.status_code == 422
+    assert "'fast'" in response.json()["detail"]
 
 
 def test_ema_window_equals_golden_full_history(long_client: TestClient) -> None:

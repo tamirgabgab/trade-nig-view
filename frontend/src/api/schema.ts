@@ -120,8 +120,9 @@ export interface paths {
          * Compute Indicator
          * @description Indicator values for the bars in ``[start, end]``.
          *
-         *     ``lookback = max(25 n, 250)`` extra bars before ``start`` are loaded so the first returned
-         *     values are warmed up exactly as in a full-history computation (ARCHITECTURE section 3.2).
+         *     ``lookback`` extra bars before ``start`` (per spec, at least ``max(25 n, 250)``, plus the plot
+         *     offset) are loaded so the first returned values are warmed up exactly as in a full-history
+         *     computation (ARCHITECTURE section 3.2).
          */
         post: operations["compute_indicator_api_indicators_compute_post"];
         delete?: never;
@@ -257,7 +258,7 @@ export interface components {
             };
             /**
              * Warmup
-             * @description Bars without a value at the start of the full history
+             * @description Bars without a value at the start of the full history, for the output that starts last (a composite's faster outputs can start earlier)
              */
             warmup: number;
             /**

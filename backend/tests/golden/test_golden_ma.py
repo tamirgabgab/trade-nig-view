@@ -13,6 +13,7 @@ from tests.golden.harness import compare, golden_frames
 from tests.golden.models import (
     GOLDEN_MA,
     golden_alma,
+    golden_crosses,
     golden_kama,
     golden_lsma,
     golden_shift,
@@ -132,3 +133,53 @@ def test_generic_ma_matches_golden_model(ma_type: str) -> None:
     length = max(14, MA_TYPES[ma_type].min_length)
     actual = CATALOG["ma"].run(frame, {"ma_type": ma_type, "length": length, "offset": 2})["ma"]
     compare(actual, golden_shift(_expected(ma_type, frame, frame.close.tolist(), length), 2))
+
+
+COMPOSITE_TYPES = ("sma", "ema", "hma", "kama", "vwma", "t3")
+
+
+@pytest.mark.parametrize("fast_type", COMPOSITE_TYPES)
+@pytest.mark.parametrize("data", sorted(FRAMES))
+def test_ma_cross_matches_golden_model(fast_type: str, data: str, scoreboard: list[Row]) -> None:
+    frame = FRAMES[data]
+    params = {"fast_type": fast_type, "fast_length": 9, "slow_type": "ema", "slow_length": 21}
+    out = CATALOG["ma_cross"].run(frame, params)
+    x, v = frame.close.tolist(), frame.volume.tolist()
+    fast = GOLDEN_MA[fast_type](x, 9, v)
+    slow = GOLDEN_MA["ema"](x, 21, v)
+    compare(out["fast"], fast)
+    compare(out["slow"], slow)
+    stats = compare(out["crosses"], golden_crosses(fast, slow))
+    scoreboard.append(
+        {
+            "check": "golden",
+            "indicator": "ma_cross",
+            "params": f"{fast_type} 9 / ema 21",
+            "data": data,
+            "bars_compared": stats.compared,
+            "max_abs_err": stats.max_abs,
+            "max_rel_err": stats.max_rel,
+        }
+    )
+
+
+@pytest.mark.parametrize("ma_type", COMPOSITE_TYPES)
+def test_ma_ribbon_matches_golden_model(ma_type: str) -> None:
+    frame = FRAMES["data/AAPL"]
+    lengths = (5, 20, 50, 100)
+    params = {"ma_type": ma_type, **{f"length_{i}": n for i, n in enumerate(lengths, start=1)}}
+    out = CATALOG["ma_ribbon"].run(frame, params)
+    x, v = frame.close.tolist(), frame.volume.tolist()
+    for i, n in enumerate(lengths, start=1):
+        compare(out[f"ma_{i}"], GOLDEN_MA[ma_type](x, n, v))
+
+
+@pytest.mark.parametrize("ma_type", COMPOSITE_TYPES)
+@pytest.mark.parametrize("percent", [0.0, 2.5, 10.0])
+def test_envelope_matches_golden_model(ma_type: str, percent: float) -> None:
+    frame = FRAMES["data/MSFT"]
+    out = CATALOG["envelope"].run(frame, {"length": 20, "percent": percent, "ma_type": ma_type})
+    basis = GOLDEN_MA[ma_type](frame.close.tolist(), 20, frame.volume.tolist())
+    compare(out["basis"], basis)
+    compare(out["upper"], [b * (1 + percent / 100) for b in basis])
+    compare(out["lower"], [b * (1 - percent / 100) for b in basis])

@@ -270,11 +270,39 @@ def test_t3_with_factor_zero_is_a_triple_ema() -> None:
     np.testing.assert_allclose(y[18:], triple[18:])
 
 
-def test_mcginley_reseeds_from_the_ema_after_a_zero_divisor() -> None:
-    """Length 1 and a halving drive M negative and then huge until (x/M)^4 underflows to 0:
-    Pine gives na there and takes the EMA (= x for n = 1) on the next bar."""
-    x = arr(2, 1, 1, 1, 1, 1, 1, 1, 1, 1)
-    y = core.mcginley(x, 1)
-    gap = np.flatnonzero(np.isnan(y))
-    assert gap.size == 1
-    assert y[gap[0] + 1] == x[gap[0] + 1]
+def test_mcginley_falls_back_to_the_ema_below_zero() -> None:
+    """Length 1 and a halving drive the step below zero (Pine: -14); the EMA (= x for n = 1)
+    takes its place on that bar."""
+    y = core.mcginley(arr(2, 1, 1, 1), 1)
+    np.testing.assert_allclose(y, arr(2, 1, 1, 1))
+
+
+def test_mcginley_zero_divisor_is_na_then_reseeds() -> None:
+    """(x/M)^4 underflowing to 0 (Pine: na), then the EMA (= x for n = 1) on the next bar."""
+    np.testing.assert_allclose(core.mcginley(arr(1, 1e-90, 5), 1), arr(1, NAN, 5), equal_nan=True)
+
+
+def test_mcginley_overflowing_ratio_is_a_zero_step() -> None:
+    """(x/M)^4 overflowing (Pine: inf) leaves the level unchanged instead of raising."""
+    np.testing.assert_allclose(core.mcginley(arr(1e-90, 1e90), 1), arr(1e-90, 1e-90))
+
+
+def test_mcginley_survives_a_one_bar_crash() -> None:
+    """A drop from 100 to 20 made Pine's recursion oscillate to +-1e245; with the EMA fallback
+    there is no gap and every value is a positive price (it may still undershoot the new level,
+    as McGinley does in Pine whenever its level stays positive)."""
+    x = np.r_[np.full(30, 100.0), np.full(30, 20.0)]
+    y = core.mcginley(x, 14)
+    assert not np.isnan(y[13:]).any()
+    assert y[13:].min() > 0.0
+    assert y[13:].max() <= 100.0 + 1e-9
+    assert abs(y[-1] - 20.0) < 10.0
+
+
+def test_mcginley_equals_pine_while_the_level_stays_positive() -> None:
+    x = np.random.default_rng(11).lognormal(4.6, 0.02, 400)
+    y = core.mcginley(x, 10)
+    level = float(core.ema(x, 10)[9])
+    for t in range(10, len(x)):
+        level += (x[t] - level) / (10 * (x[t] / level) ** 4)
+        assert y[t] == pytest.approx(level, rel=1e-12)

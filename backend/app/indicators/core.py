@@ -274,13 +274,29 @@ def vwma(x: FloatArray, volume: FloatArray, length: int) -> FloatArray:
     return out
 
 
+def _mcginley_divisor(length: int, value: float, level: float) -> float:
+    r""":math:`n\,(x/M)^4` with IEEE semantics (Python raises on overflow; Pine gives inf, so the
+    step is 0). A zero level gives 0, i.e. ``na``."""
+    if level == 0.0:
+        return 0.0
+    try:
+        return length * (value / level) ** 4
+    except OverflowError:
+        return math.inf
+
+
 def mcginley(x: FloatArray, length: int) -> FloatArray:
     r"""McGinley Dynamic :math:`M_t = M_{t-1} + \frac{x_t - M_{t-1}}{n\,(x_t/M_{t-1})^4}`.
 
     Pine semantics (TradingView's built-in script): wherever :math:`M_{t-1}` is ``na`` the value
-    is :math:`\mathrm{EMA}_n(x)_t`, so the first value is the EMA seed; a zero divisor (a zero
-    level, or :math:`(x_t/M_{t-1})^4` underflowing) gives ``na`` and the next bar re-seeds from the
-    EMA.
+    is :math:`\mathrm{EMA}_n(x)_t`, so the first value is the EMA seed; a zero divisor gives ``na``
+    and the next bar re-seeds from the EMA.
+
+    One deliberate deviation: a drop of more than about half in one bar makes the step overshoot
+    below zero, and Pine then oscillates through values like :math:`\pm 10^{200}` until the divisor
+    underflows. Prices are positive, so a level :math:`\le 0` is replaced by
+    :math:`\mathrm{EMA}_n(x)_t` on that bar (the same fallback Pine uses after ``na``, without the
+    gap). Wherever Pine's level stays positive the values are identical.
     """
     x = as_float(x)
     seed = ema(x, length).tolist()
@@ -291,8 +307,10 @@ def mcginley(x: FloatArray, length: int) -> FloatArray:
         if math.isnan(level):
             level = seed[t]
         else:
-            divisor = 0.0 if level == 0.0 else length * (value / level) ** 4
+            divisor = _mcginley_divisor(length, value, level)
             level = level + (value - level) / divisor if divisor != 0.0 else math.nan
+            if level <= 0.0:  # overshoot below zero: fall back to the EMA on this bar
+                level = seed[t]
         out.append(level)
     return np.asarray(out, dtype=np.float64)
 

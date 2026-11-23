@@ -8,21 +8,35 @@ r"""Kaufman Adaptive Moving Average (Perry Kaufman, 1995).
 with :math:`f = \frac{2}{F+1}`, :math:`s = \frac{2}{S+1}`. A trending market (ER near 1) makes it
 an EMA of length F; a choppy one (ER near 0) an EMA of length S. Seed :math:`K_{n-1} = x_{n-1}`,
 first value at bar :math:`n` (identical to TA-Lib). Not a TradingView built-in (decision D4).
-Defaults (Kaufman): 10, 2, 30.
+Defaults (Kaufman): 10, 2, 30; ``fast > slow`` is rejected.
 """
 
 from __future__ import annotations
 
 from app.indicators import core
 from app.indicators.ma import KAMA_FAST, KAMA_SLOW, kama_lookback, length_param, source_param
-from app.indicators.registry import IndicatorSpec, OutputSpec, Params, ParamSpec
+from app.indicators.registry import (
+    IndicatorSpec,
+    InvalidParamsError,
+    OutputSpec,
+    Params,
+    ParamSpec,
+)
 from app.models.bars import BarFrame, FloatArray
 
 
 def compute(frame: BarFrame, params: Params) -> dict[str, FloatArray]:
+    fast, slow = int(params["fast"]), int(params["slow"])
+    if fast > slow:
+        raise InvalidParamsError(f"'fast' ({fast}) must not be longer than 'slow' ({slow})")
     x = core.source(frame, str(params["source"]))
-    y = core.kama(x, int(params["length"]), int(params["fast"]), int(params["slow"]))
-    return {"ma": y}
+    return {"ma": core.kama(x, int(params["length"]), fast, slow)}
+
+
+def lookback(params: Params) -> int:
+    """The smoothing ranges over [f^2, s^2]; the slower end (the longer of the two EMA lengths)
+    sets how fast the seed fades."""
+    return kama_lookback(int(params["length"]), max(int(params["fast"]), int(params["slow"])))
 
 
 SPEC = IndicatorSpec(
@@ -44,5 +58,5 @@ SPEC = IndicatorSpec(
     compute=compute,
     learn_slug="kama",
     description="Speeds up in trends and slows down in noise, using Kaufman's efficiency ratio.",
-    lookback=lambda p: kama_lookback(int(p["length"]), int(p["slow"])),
+    lookback=lookback,
 )

@@ -197,7 +197,8 @@ def golden_vwma(x: Sequence[float], volume: Sequence[float], n: int) -> list[flo
 
 def golden_mcginley(x: Sequence[float], n: int) -> list[float]:
     """Pine: ``mg := na(mg[1]) ? ta.ema(src, n) : mg[1] + (src - mg[1]) / (n * pow(src/mg[1], 4))``
-    with division by zero = ``na``."""
+    with division by zero = ``na`` and overflow = inf, plus ChartLab's rule that a level <= 0 is
+    replaced by the EMA."""
     seed = golden_ema(x, n)
     out: list[float] = []
     previous = NAN
@@ -206,9 +207,15 @@ def golden_mcginley(x: Sequence[float], n: int) -> list[float]:
             current = seed[t]
         else:
             try:
-                current = previous + (x[t] - previous) / (n * (x[t] / previous) ** 4)
+                ratio4 = (x[t] / previous) ** 4
+            except OverflowError:  # Pine: inf, so the step is 0
+                ratio4 = math.inf
+            try:
+                current = previous + (x[t] - previous) / (n * ratio4)
             except ZeroDivisionError:
                 current = NAN
+            if current <= 0:  # ChartLab: a non-positive level falls back to the EMA
+                current = seed[t]
         out.append(current)
         previous = current
     return out
@@ -249,6 +256,23 @@ def golden_zlema(x: Sequence[float], n: int) -> list[float]:
     d = (n - 1) // 2
     momentum = [NAN if t < d else 2 * x[t] - x[t - d] for t in range(len(x))]
     return golden_ema_of(momentum, n)
+
+
+def golden_crosses(fast: Sequence[float], slow: Sequence[float]) -> list[float]:
+    """Pine ``ta.crossover`` (+1) / ``ta.crossunder`` (-1) of ``fast`` and ``slow``, else na."""
+    out: list[float] = [NAN]
+    for t in range(1, len(fast)):
+        now = (fast[t], slow[t])
+        before = (fast[t - 1], slow[t - 1])
+        if any(math.isnan(v) for v in (*now, *before)):
+            out.append(NAN)
+        elif now[0] > now[1] and before[0] <= before[1]:
+            out.append(1.0)
+        elif now[0] < now[1] and before[0] >= before[1]:
+            out.append(-1.0)
+        else:
+            out.append(NAN)
+    return out[: len(fast)]
 
 
 def golden_vwma_type(x: Sequence[float], n: int, volume: Sequence[float]) -> list[float]:

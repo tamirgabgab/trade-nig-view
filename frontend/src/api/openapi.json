@@ -334,7 +334,7 @@
           "indicators"
         ],
         "summary": "Compute Indicator",
-        "description": "Indicator values for the bars in ``[start, end]``.\n\n``lookback = max(25 n, 250)`` extra bars before ``start`` are loaded so the first returned\nvalues are warmed up exactly as in a full-history computation (ARCHITECTURE section 3.2).",
+        "description": "Indicator values for the bars in ``[start, end]``.\n\n``lookback`` extra bars before ``start`` (per spec, at least ``max(25 n, 250)``, plus the plot\noffset) are loaded so the first returned values are warmed up exactly as in a full-history\ncomputation (ARCHITECTURE section 3.2).",
         "operationId": "compute_indicator_api_indicators_compute_post",
         "requestBody": {
           "content": {
@@ -650,7 +650,7 @@
           "warmup": {
             "type": "integer",
             "title": "Warmup",
-            "description": "Bars without a value at the start of the full history"
+            "description": "Bars without a value at the start of the full history, for the output that starts last (a composite's faster outputs can start earlier)"
           },
           "lookback": {
             "type": "integer",
