@@ -24,12 +24,26 @@ export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
   const [tab, setTab] = useState<Tab>('page');
   const titleId = useId();
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  const tablist = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
   const view = views.find((v) => v.instance.uid === learnFor);
   const spec = view?.spec;
 
+  // Focus the selected tab on open and on a switch to another indicator; give focus back to
+  // the Learn button that opened the drawer when it closes.
   useEffect(() => {
-    tabRefs.current.page?.focus();
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && !tablist.current?.parentElement?.contains(active)) {
+      opener.current = active;
+    }
+    tablist.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
   }, [learnFor]);
+  useEffect(
+    () => () => {
+      opener.current?.focus();
+    },
+    [],
+  );
 
   if (view === undefined || spec === undefined) return null;
   const tabs = spec.category === 'moving_averages' ? TABS : TABS.slice(0, 1);
@@ -71,7 +85,13 @@ export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
           }}
         />
       </header>
-      <div className={styles.tabs} role="tablist" aria-label="Learn sections" onKeyDown={onTabKey}>
+      <div
+        ref={tablist}
+        className={styles.tabs}
+        role="tablist"
+        aria-label="Learn sections"
+        onKeyDown={onTabKey}
+      >
         {tabs.map((t) => (
           <button
             key={t.id}

@@ -183,3 +183,23 @@ def test_a_long_iir_reports_a_truncated_impulse() -> None:
     assert _measure("smma", length=4000).truncated
     assert not _measure("smma", length=20).truncated
     assert math.isfinite(_measure("smma", length=4000).ramp_lag)
+
+
+@pytest.mark.parametrize("indicator", ["sma", "hma", "alma"])
+def test_a_long_fir_is_not_reported_truncated(indicator: str) -> None:
+    # The tap budget is the IIR rule (25 n), but an FIR kernel ends after n taps: nothing is cut.
+    r = _measure(indicator, length=1500)
+    assert not r.truncated
+    if indicator == "sma":
+        assert r.lag == pytest.approx(749.5, abs=EXACT)
+
+
+def test_scaled_nonlinear_outputs_are_normalised_by_their_gain() -> None:
+    # Envelope bands are 1.1 and 0.9 x an adaptive KAMA basis: same unit step and lag as the basis.
+    spec = CATALOG["envelope"]
+    outs = {r.name: r for r in filter_response(spec, resolve_params(spec, {"ma_type": "kama"}))}
+    basis = outs["basis"]
+    assert basis.reason == ADAPTIVE
+    for band in ("upper", "lower"):
+        assert outs[band].ramp_lag == pytest.approx(basis.ramp_lag, abs=1e-6)
+        np.testing.assert_allclose(outs[band].step, basis.step, rtol=0, atol=1e-9)

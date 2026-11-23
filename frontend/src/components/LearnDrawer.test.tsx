@@ -73,6 +73,9 @@ beforeEach(() => {
     '/api/indicators/response': (_url, init) => {
       const body = JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as ResponseBody;
       responses.push(body);
+      if (body.id === 'smma') {
+        return jsonResponse({ title: 'Unprocessable', status: 422, detail: 'bad params' }, 422);
+      }
       return jsonResponse(boxcar(body));
     },
   });
@@ -167,12 +170,24 @@ describe('learn drawer', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('complementary', { name: /Exponential/ })).not.toBeInTheDocument();
-
     const toggle = screen.getByRole('button', { name: 'Learn: Exponential Moving Average' });
+    expect(toggle).toHaveFocus();
+
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await screen.findByRole('complementary', { name: /Exponential/ });
     await user.click(toggle);
     expect(screen.queryByRole('complementary', { name: /Exponential/ })).not.toBeInTheDocument();
+  });
+
+  it('reports a failed comparison instead of dropping it silently', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<App />);
+    const drawer = await openLearn(user, 'sma', 'Simple Moving Average');
+    await user.click(within(drawer).getByRole('tab', { name: 'Filter view' }));
+    await within(drawer).findByRole('table');
+
+    await user.selectOptions(within(drawer).getByLabelText('Compare with'), 'smma');
+    expect(await within(drawer).findByRole('alert')).toHaveTextContent('Could not measure SMMA');
   });
 });

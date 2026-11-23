@@ -54,7 +54,11 @@ export function ResponsePlot({
 }: ResponsePlotProps) {
   const titleId = useId();
   const [active, setActive] = useState<number | null>(null);
-  const first = series[0];
+  // The hover / arrow-key cursor walks the longest series, so every series' tail can be read.
+  const first = series.reduce<PlotSeries | undefined>(
+    (a, s) => (a === undefined || s.x.length > a.x.length ? s : a),
+    undefined,
+  );
   if (first === undefined || first.x.length === 0) return null;
 
   const allX = series.flatMap((s) => s.x);
@@ -90,8 +94,10 @@ export function ResponsePlot({
     activeX === null || activeX === undefined
       ? null
       : series.map((s) => {
-          const value = s.y[nearestIndex(s.x, activeX)];
-          return { s, value: value === null || value === undefined ? null : value };
+          // Past a series' last point (a short kernel next to a long one) it has no value.
+          const value =
+            activeX > (s.x.at(-1) ?? -Infinity) ? null : s.y[nearestIndex(s.x, activeX)];
+          return { s, value: value ?? null };
         });
 
   const onPointerMove = (event: PointerEvent<SVGSVGElement>) => {

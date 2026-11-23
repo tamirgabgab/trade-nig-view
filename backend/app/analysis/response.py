@@ -48,6 +48,9 @@ SLOPE = 0.1
 LINEAR_RTOL = 1e-9
 #: A tap counts as visible on the plot when it is above this fraction of the largest tap.
 VISIBLE = 1e-4
+#: A cut impulse whose last tap is above this fraction of the largest still has a tail that
+#: matters for the measures (an FIR that ends before the cut has an exact-zero tail).
+TAIL = 1e-12
 
 ADAPTIVE = (
     "The smoothing depends on the input itself (superposition fails), so there is no single "
@@ -183,14 +186,18 @@ def filter_response(spec: IndicatorSpec, params: Params) -> list[OutputResponse]
     results: list[OutputResponse] = []
     for name, reason in reasons.items():
         if reason is not None:
-            step = (steps[name][start:] - BASE) / STEP
-            ramp_lag = float((ramp_in[-1] - ramps[name][-1]) / SLOPE)
+            # A scaled output (an envelope band) settles at gain x input: the flat bar before the
+            # step gives that gain.
+            gain = float(steps[name][start - 1] / BASE)
+            step = (steps[name][start:] / gain - BASE) / STEP
+            ramp_lag = float((ramp_in[-1] - ramps[name][-1] / gain) / SLOPE)
             results.append(OutputResponse(name, labels[name], reason, _shown(step, 1.0), ramp_lag))
             continue
         h = impulses[name][start:]
         gain = float(h.sum())
         # On a ramp a + b t a linear filter gives gain (a + b (t - lag)).
         ramp_lag = float((ramp_in[-1] - ramps[name][-1] / gain) / SLOPE)
+        peak = float(np.abs(h).max())
         results.append(
             OutputResponse(
                 name,
@@ -203,7 +210,7 @@ def filter_response(spec: IndicatorSpec, params: Params) -> list[OutputResponse]
                 lag=float(np.arange(len(h)) @ h / gain),
                 nrf=float(h @ h),
                 frequency=_frequency(h),
-                truncated=taps < wanted,
+                truncated=taps < wanted and abs(float(h[-1])) > TAIL * peak,
             )
         )
     return results

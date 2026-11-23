@@ -126,7 +126,8 @@ export function FilterView({ spec, params }: FilterViewProps) {
       out: selected,
     },
   ];
-  const other = compare.data?.outputs[0];
+  // A placeholder is the previous comparison's data: never show it under the new label.
+  const other = compare.isPlaceholderData ? undefined : compare.data?.outputs[0];
   if (compareSpec !== undefined && other !== undefined && otherParams !== null) {
     const suffix = 'length' in otherParams ? ` ${String(otherParams['length'])}` : '';
     items.push({ label: `${compareSpec.shortName}${suffix}`, out: other });
@@ -209,6 +210,11 @@ export function FilterView({ spec, params }: FilterViewProps) {
         </ul>
       )}
 
+      {compare.isError && compareSpec !== undefined && (
+        <p className={styles.note} role="alert">
+          Could not measure {compareSpec.shortName}: {compare.error.message}
+        </p>
+      )}
       {items
         .filter((m) => m.out.reason !== null)
         .map((m) => (
