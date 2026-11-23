@@ -31,26 +31,25 @@ interface LegendOHLCProps {
   flashKey?: string | null;
 }
 
-function Field({ name, value, tone }: { name: string; value: string; tone: string }) {
+function Field({
+  name,
+  value,
+  tone,
+  flash,
+}: {
+  name: string;
+  value: string;
+  tone: string;
+  flash?: PriceFlash;
+}) {
   return (
     <span className={styles.field}>
       <span className={styles.name}>{name}</span>
-      <span className={tone} data-field={name}>
-        {value}
-      </span>
-    </span>
-  );
-}
-
-function CloseField({ value, tone, flash }: { value: string; tone: string; flash: PriceFlash }) {
-  return (
-    <span className={styles.field}>
-      <span className={styles.name}>C</span>
       <span
-        key={flash.tick}
+        key={flash?.tick}
         className={tone}
-        data-field="C"
-        data-flash={flash.direction ?? undefined}
+        data-field={name}
+        data-flash={flash?.direction ?? undefined}
       >
         {value}
       </span>
@@ -83,7 +82,7 @@ export function LegendOHLC({
             <Field name="O" value={formatPrice(values.open, decimals)} tone={tone} />
             <Field name="H" value={formatPrice(values.high, decimals)} tone={tone} />
             <Field name="L" value={formatPrice(values.low, decimals)} tone={tone} />
-            <CloseField value={formatPrice(values.close, decimals)} tone={tone} flash={flash} />
+            <Field name="C" value={formatPrice(values.close, decimals)} tone={tone} flash={flash} />
             {values.change !== null && values.changePct !== null && (
               <span className={tone} data-field="change">
                 {formatSigned(values.change, decimals)} ({values.changePct > 0 ? '+' : ''}

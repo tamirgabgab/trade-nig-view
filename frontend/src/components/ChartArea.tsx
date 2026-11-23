@@ -9,7 +9,7 @@ import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
-import { useUiStore } from '../store/uiStore.ts';
+import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
 import { IconButton } from './IconButton.tsx';
@@ -61,6 +61,16 @@ export function ChartArea({ className }: ChartAreaProps) {
   const firstRun = useIndicatorStore((s) => s.seq === 0);
   const legendFocus = useUiStore((s) => s.legendFocus);
   const emphasis = useUiStore((s) => s.emphasis);
+  const setEmphasis = useUiStore((s) => s.setEmphasis);
+  useEffect(() => {
+    if (emphasis === null) return;
+    const timer = window.setTimeout(() => {
+      setEmphasis(null);
+    }, EMPHASIS_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [emphasis, setEmphasis]);
 
   const data = history.data;
   const bars = history.bars;

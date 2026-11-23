@@ -20,7 +20,7 @@ export function IndicatorsDialog() {
 function IndicatorsPanel({ closing }: { closing: boolean }) {
   const setOpen = useUiStore((s) => s.setIndicatorsDialog);
   const add = useIndicatorStore((s) => s.add);
-  const emphasize = useUiStore((s) => s.emphasize);
+  const setEmphasis = useUiStore((s) => s.setEmphasis);
   const count = useIndicatorStore((s) => s.instances.length);
   const registry = useIndicatorList();
   const [query, setQuery] = useState('');
@@ -61,7 +61,7 @@ function IndicatorsPanel({ closing }: { closing: boolean }) {
   const choose = (id: string) => {
     const spec = registry.data?.find((s) => s.id === id);
     if (spec === undefined || full) return;
-    emphasize(add(spec.id, defaultParams(spec)));
+    setEmphasis(add(spec.id, defaultParams(spec)));
     close();
   };
 

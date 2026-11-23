@@ -7,7 +7,7 @@ export interface Toast {
   /** Bumped per toast, so a new toast restarts the timer even with the same text. */
   seq: number;
   message: string;
-  undo: (() => void) | null;
+  undo: () => void;
 }
 
 /** Transient UI state (not persisted): which overlay is open. */
@@ -27,17 +27,15 @@ export interface UiState {
   /** Indicator whose legend row is hovered or focused: its lines stand out, the others dim. */
   legendFocus: string | null;
   setLegendFocus: (uid: string | null) => void;
-  /** Indicator just added: drawn thicker for EMPHASIS_MS. */
+  /** Indicator just added: drawn thicker for EMPHASIS_MS (ChartArea clears it). */
   emphasis: string | null;
-  emphasize: (uid: string) => void;
+  setEmphasis: (uid: string | null) => void;
   shortcutsOpen: boolean;
   setShortcutsOpen: (open: boolean) => void;
   toast: Toast | null;
-  showToast: (message: string, undo?: () => void) => void;
+  showToast: (message: string, undo: () => void) => void;
   dismissToast: () => void;
 }
-
-let emphasisTimer: number | undefined;
 
 export const useUiStore = create<UiState>()((set) => ({
   symbolSearch: { open: false, seed: '' },
@@ -64,12 +62,8 @@ export const useUiStore = create<UiState>()((set) => ({
     set({ legendFocus: uid });
   },
   emphasis: null,
-  emphasize: (uid) => {
-    window.clearTimeout(emphasisTimer);
+  setEmphasis: (uid) => {
     set({ emphasis: uid });
-    emphasisTimer = window.setTimeout(() => {
-      set({ emphasis: null });
-    }, EMPHASIS_MS);
   },
   shortcutsOpen: false,
   setShortcutsOpen: (open) => {
@@ -77,7 +71,7 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   toast: null,
   showToast: (message, undo) => {
-    set((s) => ({ toast: { seq: (s.toast?.seq ?? 0) + 1, message, undo: undo ?? null } }));
+    set((s) => ({ toast: { seq: (s.toast?.seq ?? 0) + 1, message, undo } }));
   },
   dismissToast: () => {
     set({ toast: null });
