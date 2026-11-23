@@ -7,14 +7,12 @@ For bar :math:`t` in period :math:`P_k` (the k-th period of the data that has ba
    L^{prev}_t = \min_{i \in P_{k-1}} L_i, \qquad
    C^{prev}_t = C_{\text{last bar of } P_{k-1}}
 
-Periods are UTC calendar days, ISO weeks (Monday 00:00 UTC to Sunday) or UTC calendar months of
-each bar's open time (``frame.time``). The output is ``NaN`` on the first period of the data, which
+Periods are days, ISO weeks (Monday to Sunday) or calendar months of each bar's **session date**:
+``frame.session`` for intraday bars (the exchange's session, so a futures session that opens at
+18:00 New York is one day), else the bar's UTC date (daily+ bars are stamped with their session
+date at 00:00 UTC). The output is ``NaN`` on the first period of the data, which
 has no earlier period. Once a bar of :math:`P_k` exists :math:`P_{k-1}` is complete, so the value
 at bar :math:`t` uses only bars :math:`\le t`.
-
-Shortcut: UTC periods, upgrade to exchange-session periods when 24h markets need it. A US equity
-session (09:30-16:00 New York) always lies inside one UTC day, so the day periods match its
-sessions; 24h markets (forex, futures) roll at 00:00 UTC instead of the exchange's session close.
 
 Warm-up: data-dependent (the bars before the second period); declared 0, as for VWAP. The values
 depend on where the first period starts, so the compute endpoint loads the whole history (as OBV).
@@ -34,9 +32,8 @@ PERIODS = ("day", "week", "month")
 _MONDAY_OFFSET = 3
 
 
-def period_keys(time: IntArray, period: str) -> IntArray:
-    """Non-decreasing period number of each bar: UTC day, ISO week (from Monday) or month."""
-    days = time // SECONDS_PER_DAY
+def period_keys(days: IntArray, period: str) -> IntArray:
+    """Non-decreasing period number of each bar from its day number: day, ISO week or month."""
     if period == "day":
         return days
     if period == "week":
@@ -69,7 +66,8 @@ def prev_hlc(
 
 
 def compute(frame: BarFrame, params: Params) -> dict[str, FloatArray]:
-    keys = period_keys(frame.time, str(params["period"]))
+    days = frame.time // SECONDS_PER_DAY if frame.session is None else frame.session
+    keys = period_keys(days, str(params["period"]))
     high, low, close = prev_hlc(frame.high, frame.low, frame.close, keys)
     return {"high": high, "low": low, "close": close}
 
@@ -104,6 +102,6 @@ SPEC = IndicatorSpec(
     warmup=lambda _p: 0,
     compute=compute,
     learn_slug="previous-hlc",
-    description="High, low and close of the previous day, week or month (UTC periods).",
+    description="High, low and close of the previous day, week or month (by trading session).",
     lookback=lambda _p: WHOLE_HISTORY,
 )

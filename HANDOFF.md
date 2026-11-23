@@ -490,7 +490,7 @@
 - **החלטת תכנון:** קווי H/L/C ו-pivots הם **אינדיקטורים ב-registry** ‏(`prev_hlc`, ‏`pivots`), ולא endpoints נפרדים. כך הם מקבלים את כל ה-harness ‏(golden, ‏properties ו-no-lookahead), את ה-legend, את פאנל ההגדרות, ובהמשך גם את ה-replay, ממימוש אחד. ‏`/analysis/pivots` ו-`/analysis/levels` מ-ARCHITECTURE בוטלו.
 - **‏Backend** (נכתב ע"י agent ברקע, ונבדק ושולב):
   - ‏`analysis/gaps.py` ו-`GET /api/analysis/gaps`: ‏gaps מלאים, ואופציונלית גם חלקיים; סף גודל; מעקב סגירה; עומק הסגירה; תמיכה ב-`until`.
-  - ‏`prev_hlc`: תקופות לפי UTC. ‏shortcut מתועד: בשווקי 24 שעות התקופה מתחלפת ב-00:00 UTC ולא בסגירת הבורסה.
+  - ‏`prev_hlc`: תקופה (יום, שבוע או חודש) לפי תאריך ה-session. ב-intraday זה `frame.session`, כך ש-session של חוזים עתידיים שנפתח ב-18:00 בניו יורק נחשב יום אחד.
   - ‏`pivots`: שמירה ב-strict משני הצדדים. הערך נשמר בבר המאשר ‏(p+R), ולכן אין מידע מהעתיד. שדה התצוגה `display_shift` מצייר אותו על בר ה-pivot עצמו.
 - **‏Frontend:**
   - תפריט Structure.
@@ -499,7 +499,19 @@
   - קווי מדרגה ‏(`line_type: step`) ונקודות ‏(`shape: circle`).
   - ‏`chartDataStore` משתף נתונים בין הגרף לפאנלים.
 - **פתוח אצל המשתמש:** ‏`nvda_gaps.json` נוצר מה-fixture הסינתטי של ה-E2E. כדי לבדוק אותו ידנית מול TradingView צריך את ה-fixture האמיתי מ-`make-fixtures.ps1`.
-- **לא ודאי (נבדק מול TradingView בדמו):** כלל השוויון ב-pivots; האם הבר של ה-gap עצמו נחשב לסגירה חלקית.
+- **לא ודאי (נבדק מול TradingView בדמו):** כלל השוויון ב-pivots.
+- **ponytail:** הקוד רזה, ולא נמצא מה לקצץ.
+- **code-review ‏(high):** חמישה ממצאים, שלושה חשובים ושניים קטנים. כולם תוקנו:
+  - ה-Data window הציג ערכי markers בבר הלא נכון. נקודת pivot מוצגת עכשיו עם ההזזה שלה, על הבר שבו היא מצוירת. חיצי ה-crosses נשמטים, כמו ב-legend.
+  - "יום קודם" חושב לפי היום ב-UTC, ולכן בחוזים עתידיים ובמט"ח (session שחוצה חצות) הוא ערבב שני sessions. עכשיו הוא לפי `frame.session`. הבדיקות מול ה-golden מעבירות לו עכשיו את תאריך ה-session. ה-golden model עצמו לא שונה.
+  - ‏gap חלקי שהבר שלו עצמו כבר סגר הוצג כפתוח. עכשיו הבר של gap חלקי נכלל בבדיקת הסגירה. זה שינוי הגדרה, ולכן ה-golden model עודכן יחד עם המימוש.
+  - ‏(קטן) מעבר ל-Heikin Ashi או שינוי בהגדרות ה-gaps גרם להבהוב ריק. עכשיו מפתח השאילתה הוא סימבול, interval ו-adjusted בלבד, עם `keepPreviousData`.
+  - ‏(קטן) הערות תיעוד היו מוצמדות לטיפוסים הלא נכונים ב-uiStore.
+- **simplify:** לא הורץ. אין כפילות שמצדיקה אותו.
+- **בדיקות:**
+  - frontend: 288.
+  - E2E: 16. נוסף: תפריט Structure, רשימת ה-gaps, וה-Data window עוקב אחרי ה-crosshair.
+  - backend: 2,006.
 
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |

@@ -46,7 +46,11 @@ export function DataWindow() {
           <h3 className={styles.heading}>{view.label}</h3>
           <dl className={styles.list}>
             {view.outputs.map((output) => {
-              const value = output.values[index];
+              // Markers: a dot (pivots) shows its price on the bar it is drawn on; arrows (crosses)
+              // hold direction codes, not prices, and are left out as in the legend.
+              const dot = output.plot === 'markers' && output.style.shape !== undefined;
+              if (output.plot === 'markers' && !dot) return null;
+              const value = output.values[index + (dot ? output.displayShift : 0)];
               const volume =
                 output.style.format === 'volume' || output.style.price_scale === 'volume';
               return (

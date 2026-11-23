@@ -73,7 +73,10 @@ def test_gap_fields(e2e_client: TestClient) -> None:
         assert g["bottom"] < g["top"]
         assert g["direction"] in {"up", "down"}
         if g["filled_time"] is not None:
-            assert g["filled_time"] > g["time"]
+            # A partial gap can be filled by its own bar (it overlaps the previous one).
+            assert g["filled_time"] > g["time"] or (
+                g["kind"] == "partial" and g["filled_time"] == g["time"]
+            )
             assert g["fill_price"] == (g["bottom"] if g["direction"] == "up" else g["top"])
 
 

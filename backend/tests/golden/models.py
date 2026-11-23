@@ -556,5 +556,9 @@ def golden_gaps(
         direction, kind, top, bottom = zone
         size_pct = (top - bottom) / c[k - 1] * 100.0
         if size_pct >= min_pct:
-            gaps.append(GoldenGap(k, direction, kind, top, bottom, size_pct))
+            gap = GoldenGap(k, direction, kind, top, bottom, size_pct)
+            # A partial gap's own bar overlaps the previous one: it can already trade into it.
+            if kind == "partial":
+                gap.see(k, h[k], lo[k])
+            gaps.append(gap)
     return gaps

@@ -57,8 +57,9 @@ def test_prev_hlc_no_lookahead_and_golden(
     spec = CATALOG["prev_hlc"]
     check_no_lookahead(spec, frame, {"period": period}, _ks(data, frame))
     out = spec.run(frame, {"period": period})
+    days = frame.time if frame.session is None else frame.session * 86_400
     want = golden_prev_hlc(
-        frame.time.tolist(), frame.high.tolist(), frame.low.tolist(), frame.close.tolist(), period
+        days.tolist(), frame.high.tolist(), frame.low.tolist(), frame.close.tolist(), period
     )
     for name, values in zip(("high", "low", "close"), want, strict=True):
         np.testing.assert_array_equal(out[name], values)

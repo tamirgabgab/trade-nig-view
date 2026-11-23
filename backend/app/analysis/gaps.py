@@ -9,7 +9,9 @@ Definitions (docs/TRADINGVIEW_RESEARCH.md section 6), for bar :math:`t \ge 1`:
   :math:`[C_{t-1}, O_t]` (ordered).
 * **Size**: :math:`(\text{top} - \text{bottom}) / C_{t-1} \cdot 100 \ge` ``min_pct``.
 * **Fill**: a gap up is filled at the first :math:`k > t` with :math:`L_k \le \text{bottom}`, a
-  gap down at the first :math:`k > t` with :math:`H_k \ge \text{top}`.
+  gap down at the first :math:`k > t` with :math:`H_k \ge \text{top}`. A partial gap's own bar
+  overlaps the previous bar, so for it :math:`k \ge t` (it can be filled on the bar that made
+  it); a full gap's bar never reaches back into its zone.
 * **Fill price** (deepest penetration into the zone so far): for a gap up the lowest low after
   :math:`t` if it is below ``top`` (for a gap down the highest high after :math:`t` if it is
   above ``bottom``), ``None`` while no bar has entered the zone. Once filled it is ``bottom`` (gap
@@ -48,20 +50,20 @@ class Gap:
 
 
 def _fill(
-    frame: BarFrame, t: int, direction: GapDirection, top: float, bottom: float
+    frame: BarFrame, first: int, direction: GapDirection, top: float, bottom: float
 ) -> tuple[int | None, float | None]:
-    """(filled_index, fill_price) of a gap at bar ``t`` given the bars after it."""
+    """(filled_index, fill_price) of a gap given the bars from ``first`` on."""
     if direction == "up":
-        after = frame.low[t + 1 :]
+        after = frame.low[first:]
         hits = np.flatnonzero(after <= bottom)
         if hits.size:
-            return t + 1 + int(hits[0]), bottom
+            return first + int(hits[0]), bottom
         deepest = float(after.min()) if after.size else top
         return None, deepest if deepest < top else None
-    after = frame.high[t + 1 :]
+    after = frame.high[first:]
     hits = np.flatnonzero(after >= top)
     if hits.size:
-        return t + 1 + int(hits[0]), top
+        return first + int(hits[0]), top
     deepest = float(after.max()) if after.size else bottom
     return None, deepest if deepest > bottom else None
 
@@ -83,14 +85,15 @@ def find_gaps(frame: BarFrame, min_pct: float, partial: bool) -> list[Gap]:
     for i in np.flatnonzero(found).tolist():
         t = i + 1
         direction: GapDirection = "up" if up[i] else "down"
+        is_full = bool(full_up[i] or full_down[i])
         top_i, bottom_i = float(top[i]), float(bottom[i])
-        filled_index, fill_price = _fill(frame, t, direction, top_i, bottom_i)
+        filled_index, fill_price = _fill(frame, t + 1 if is_full else t, direction, top_i, bottom_i)
         gaps.append(
             Gap(
                 index=t,
                 time=int(frame.time[t]),
                 direction=direction,
-                kind="full" if full_up[i] or full_down[i] else "partial",
+                kind="full" if is_full else "partial",
                 top=top_i,
                 bottom=bottom_i,
                 size_pct=float(size_pct[i]),

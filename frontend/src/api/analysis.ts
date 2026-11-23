@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 import type { SeriesQuery } from './indicators.ts';
@@ -53,9 +53,13 @@ export function useGaps(
   series: SeriesQuery | null,
   options: { enabled: boolean; minPct: number; partial: boolean },
 ): Gap[] {
+  // Gaps are of the real bars: the chart type (Heikin Ashi) does not change them.
+  const key = series === null ? null : [series.symbol, series.interval, series.adjusted];
   const query = useQuery({
-    queryKey: ['gaps', series, options.minPct, options.partial],
+    queryKey: ['gaps', key, options.minPct, options.partial],
     enabled: options.enabled && series !== null,
+    // A new setting or symbol keeps the old zones until the new ones are in (no blank flash).
+    placeholderData: keepPreviousData,
     queryFn: ({ signal }) => {
       if (series === null) return NO_GAPS;
       const params = new URLSearchParams({

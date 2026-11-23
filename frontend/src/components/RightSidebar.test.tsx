@@ -77,6 +77,26 @@ describe('RightSidebar', () => {
   it('switches the panel between watchlist, data window and gaps', async () => {
     stubWindow(false);
     const user = userEvent.setup();
+    const pivotsView = {
+      instance: { uid: 'p1', id: 'pivots', params: {}, styles: {}, visible: true },
+      spec: undefined,
+      params: {},
+      label: 'Pivots 1 1',
+      error: null,
+      isFetching: false,
+      outputs: [
+        {
+          name: 'high',
+          label: 'Pivot high',
+          plot: 'markers' as const,
+          style: { shape: 'circle', position: 'above' },
+          color: '#f23645',
+          lineWidth: 2,
+          values: [null, 13],
+          displayShift: 1,
+        },
+      ],
+    };
     const gap: Gap = {
       time: '2026-11-18',
       filledTime: null,
@@ -94,7 +114,7 @@ describe('RightSidebar', () => {
       ],
       decimals: 2,
       hasVolume: true,
-      views: [],
+      views: [pivotsView],
       gaps: [gap],
     });
     renderWithQuery(<RightSidebar />);
@@ -108,6 +128,10 @@ describe('RightSidebar', () => {
       useChartDataStore.getState().setHoverIndex(0);
     });
     expect(data).toHaveTextContent('Close10.50');
+    // The pivot of bar 1 (confirmed one bar later) shows on bar 0, where its dot is drawn.
+    expect(within(data).getByRole('region', { name: 'Pivots 1 1' })).toHaveTextContent(
+      'Pivot high13.00',
+    );
     expect(watchlist()).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Show gaps' }));

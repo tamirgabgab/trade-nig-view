@@ -12,9 +12,10 @@ export interface Toast {
 
 export type SnapshotMode = 'copy' | 'download';
 
-/** The modal dialogs; at most one is open, so they can never stack. */
+/** What the right side panel shows. */
 export type SidebarTab = 'watchlist' | 'data' | 'gaps';
 
+/** The modal dialogs; at most one is open, so they can never stack. */
 export type Modal =
   | 'symbols'
   | 'indicators'
@@ -51,8 +52,8 @@ export interface UiState {
   setEmphasis: (uid: string | null) => void;
   /** Forget panels, hover focus and emphasis of removed indicators (one uid, or all). */
   forgetIndicator: (uid?: string) => void;
-  /** Watchlist column on a wide window; floating panel below 1100 px (closed by default). */
-  /** The right panel: open (docked on a wide window, floating on a narrow one) and its tab. */
+  /** The right panel: open (docked on a wide window, floating below 1100 px, closed by default)
+   *  and its tab. */
   watchlist: { docked: boolean; floating: boolean };
   sidebarTab: SidebarTab;
   /** A widget button: open the panel on `tab`, or close it when it already shows `tab`. */

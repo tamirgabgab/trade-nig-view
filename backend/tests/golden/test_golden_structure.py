@@ -50,8 +50,10 @@ ALL = _all_frames()
 def test_prev_hlc_matches_golden_model(period: str, data: str, scoreboard: list[Row]) -> None:
     frame = ALL[data]
     out = CATALOG["prev_hlc"].run(frame, {"period": period})
+    # The period of an intraday bar is its session date's (as the spec defines it).
+    days = frame.time if frame.session is None else frame.session * 86_400
     want = golden_prev_hlc(
-        frame.time.tolist(), frame.high.tolist(), frame.low.tolist(), frame.close.tolist(), period
+        days.tolist(), frame.high.tolist(), frame.low.tolist(), frame.close.tolist(), period
     )
     stats = [compare(out[name], w) for name, w in zip(("high", "low", "close"), want, strict=True)]
     assert all(s.max_abs == 0.0 for s in stats)  # selections, not arithmetic: exact

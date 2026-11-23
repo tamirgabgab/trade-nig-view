@@ -57,16 +57,17 @@ def test_gap_down_fills_when_high_reaches_top() -> None:
 def test_partial_gaps_only_when_asked_and_not_full() -> None:
     frame = bars([
         (100, 102, 98, 100),  # 0
-        (103, 104, 99, 101),  # 1: ranges overlap, O 103 > C 100 -> partial up [100, 103]
-        (99, 100, 97, 98),    # 2: O 99 < C 101 -> partial down [99, 101]; low 97 fills gap 1
+        (103, 104, 99, 101),  # 1: ranges overlap, O 103 > C 100 -> partial up [100, 103];
+                              #    its own low 99 already trades back below 100: filled on bar 1
+        (99, 100, 97, 98),    # 2: O 99 < C 101 -> partial down [99, 101]; its high 100 enters
     ])  # fmt: skip
     assert find_gaps(frame, 0.5, partial=False) == []
     up, down = find_gaps(frame, 0.5, partial=True)
     assert (up.direction, up.kind, up.top, up.bottom, up.size_pct) == ("up", "partial", 103, 100, 3)
-    assert (up.filled_index, up.fill_price) == (2, 100.0)
+    assert (up.filled_index, up.fill_price) == (1, 100.0)
     assert (down.direction, down.kind, down.top, down.bottom) == ("down", "partial", 101, 99)
     assert down.size_pct == pytest.approx(2 / 101 * 100)
-    assert (down.filled_index, down.fill_price) == (None, None)
+    assert (down.filled_index, down.fill_price) == (None, 100.0)
 
 
 def test_min_pct_filters_small_gaps() -> None:

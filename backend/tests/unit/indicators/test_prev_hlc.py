@@ -81,8 +81,28 @@ def test_empty_frame(period: str) -> None:
 
 def test_period_keys_before_1970_and_week_boundary() -> None:
     times = np.array([ts("1969-12-28T12:00"), ts("1969-12-29T00:00"), ts("1970-01-04T23:59")])
-    np.testing.assert_array_equal(period_keys(times, "week"), [-1, 0, 0])
-    np.testing.assert_array_equal(period_keys(times, "month"), [-1, -1, 0])
+    days = times // 86_400
+    np.testing.assert_array_equal(period_keys(days, "week"), [-1, 0, 0])
+    np.testing.assert_array_equal(period_keys(days, "month"), [-1, -1, 0])
+
+
+def test_intraday_days_follow_the_session_not_the_utc_date() -> None:
+    # A futures session opening at 22:00 UTC: its evening bar belongs to the next session day.
+    times = np.array([ts("2026-11-18T20:00"), ts("2026-11-18T22:00"), ts("2026-11-19T10:00")])
+    session = np.array([ts("2026-11-18T00:00"), ts("2026-11-19T00:00"), ts("2026-11-19T00:00")])
+    bars = BarFrame(
+        time=times,
+        open=arr(10, 20, 30),
+        high=arr(11, 21, 31),
+        low=arr(9, 19, 29),
+        close=arr(10, 20, 30),
+        adj_close=arr(10, 20, 30),
+        volume=arr(1, 1, 1),
+    ).with_session(session // 86_400)
+    out = PREV.run(bars)
+    # Both bars of the 19th's session see the 18th's session (one bar) as the previous day.
+    np.testing.assert_array_equal(out["high"], arr(NAN, 11, 11))
+    np.testing.assert_array_equal(out["close"], arr(NAN, 10, 10))
 
 
 def test_spec_contract() -> None:
