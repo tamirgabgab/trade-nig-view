@@ -69,8 +69,11 @@ export function ChartArea({ className }: ChartAreaProps) {
   };
   const [menuAt, setMenuAt] = useState<{ x: number; y: number; price: number | null } | null>(null);
   const contextMenu = usePresence(menuAt);
+  // Stable: ActionMenu re-subscribes its click-away listener when onClose changes.
+  const closeContextMenu = useCallback(() => {
+    setMenuAt(null);
+  }, []);
   const [confirmClear, setConfirmClear] = useState(false);
-  const indicatorCount = useIndicatorStore((s) => s.instances.length);
   const removeAll = useIndicatorStore((s) => s.removeAll);
   const restoreAll = useIndicatorStore((s) => s.restoreAll);
   const [offLatest, setOffLatest] = useState(false);
@@ -306,9 +309,7 @@ export function ChartArea({ className }: ChartAreaProps) {
           at={contextMenu.shown}
           decimals={decimals}
           attrs={contextMenu.attrs}
-          onClose={() => {
-            setMenuAt(null);
-          }}
+          onClose={closeContextMenu}
           onResetView={() => {
             runCommand('reset');
           }}
@@ -321,7 +322,7 @@ export function ChartArea({ className }: ChartAreaProps) {
         <ConfirmDialog
           title="Remove all indicators?"
           message={`This removes ${indicators.views.map((v) => v.label).join(', ')} from the chart, with their settings.`}
-          confirmLabel={`Remove ${String(indicatorCount)} indicator${indicatorCount === 1 ? '' : 's'}`}
+          confirmLabel={`Remove ${String(indicators.views.length)} indicator${indicators.views.length === 1 ? '' : 's'}`}
           onCancel={() => {
             setConfirmClear(false);
           }}

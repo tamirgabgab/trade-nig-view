@@ -26,9 +26,7 @@ function Range({
   const at = high > low ? Math.min(Math.max((value - low) / (high - low), 0), 1) : 0.5;
   return (
     <div className={styles.range}>
-      <div className={styles.rangeHead}>
-        <span>{label}</span>
-      </div>
+      <span className={styles.rangeHead}>{label}</span>
       <div className={styles.track} aria-hidden="true">
         <span className={styles.marker} style={{ left: `${String(at * 100)}%` }} />
       </div>
