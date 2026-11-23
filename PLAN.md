@@ -40,17 +40,21 @@ Goal: every one of the 29 indicators has a complete learn page and a live "Try i
 Python implementation as the chart. The MA family already has full pages and the filter view (L1); Phase 2 brings
 every other indicator to that level and adds what L1 lacked (live sliders, reading guide, exercises).
 
-Every page follows **template v2** (`docs/indicators/README.md`): What it measures · Formula · Defaults and why ·
-Warm-up · How to read it · Filter view (linear filters only) · Differences vs TradingView · Pitfalls · Exercise.
+Every page follows **template v2** (`docs/indicators/README.md`): What it measures · Formula (coloured symbols, a
+"where" table after every equation) · Defaults · Warm-up · How to read it · Why it works (derivations + an event
+study) · Combine with · Differences vs TradingView · Pitfalls · Exercise.
 
 #### P2a — Learn platform (Opus 5.5 · high)
-- [ ] "Try it" tab in the learn drawer, for any indicator: a small read-only chart of the current symbol with the
-  indicator, and sliders/selects generated from the registry params (min/max/step), debounced `/indicators/compute`
-- [ ] Learn index: every page by category, from the palette (`Ctrl+K`) and a sidebar button; search by name
-- [ ] Template v2 + a page lint test (backend): every `learn_slug` has a page with the required sections; frontend
-  test that every page's math parses with KaTeX
-- [ ] Refresh the 19 full L1 pages (the MA family, MA Cross, MA Ribbon, Envelope) to template v2 (add "How to read it" and "Exercise")
-- [ ] Exercise cards: "Start in Replay" opens the replay on a given symbol and date with the indicator on
+- [x] Lab backend: synthetic scenarios (`app/analysis/synthetic.py`), rule conditions and an event study with episodes,
+  edge, standard error, 95 % interval and histograms (`conditions.py`, `events.py`), `POST /learn/lab`, `GET /learn`
+- [x] Widgets inside the pages (```` ```lab ```` blocks): `param` (one parameter on a slider), `event` (what followed a
+  signal), `combo` (up to three rules and their AND), `replay` (exercise card: Start in Replay on a symbol and date);
+  every widget runs on a random stock (six scenarios, new-sample button) or any symbol of the universe
+- [x] "Try it" tab in the learn drawer, for any indicator: every registry param live on the same data picker
+- [x] Learn index: every page by category, from the palette (`Ctrl+K`) and a sidebar button; search by name
+- [x] Template v2 + a page lint test (backend: sections of the v2 pages in order, every lab block valid with
+  registered ids); frontend test that every page's math renders with KaTeX
+- [ ] Refresh the 19 full L1 pages (the MA family, MA Cross, MA Ribbon, Envelope) to template v2
 
 #### P2b — Oscillators (Opus 5.5 · high)
 - [ ] RSI (Wilder's RMA as an IIR filter, why 70/30, failure swings and divergences), Stochastic (%K/%D, fast vs slow),

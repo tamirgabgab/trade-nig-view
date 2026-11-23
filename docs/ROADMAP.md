@@ -278,9 +278,12 @@ Phase-2 plan.
 - Already delivered by L1 (Phase 1): in-app learn pages (`docs/indicators/<slug>.md` rendered with KaTeX in the learn
   drawer), a "frequency response" view for linear filters ($|H(e^{j\omega})|$, group delay/lag, step and impulse) and
   an MA-vs-MA compare.
-- Remaining: full pages for every indicator (math, what it measures, why the defaults, pitfalls, e.g. OBV level depends
-  on start date, EMA seed, BB population σ); interactive sliders on real data (debounced `/indicators/compute`);
-  glossary; guided exercises using Replay. Rounds P2a–P2d: see [PLAN.md §0.3](../PLAN.md).
+- P2a (learn platform): learn index, interactive widgets inside the pages on a random stock (scenarios) or any symbol
+  (move a parameter, event studies, combine rules), a Try it tab, exercise cards that start the replay, template v2 and
+  the MA family's pages rewritten to it.
+- Remaining: full pages for every other indicator (math, what it measures, why the defaults, pitfalls, e.g. OBV level
+  depends on start date, EMA seed, BB population σ); concept pages; glossary; guided exercises using Replay. Rounds
+  P2b–P2d: see [PLAN.md §0.3](../PLAN.md).
 
 ### Phase 3 — Custom indicators (Python plugin API)
 - `plugins/` folder, `IndicatorSpec` entry point, hot reload (watchfiles), sandboxing level appropriate for a local
