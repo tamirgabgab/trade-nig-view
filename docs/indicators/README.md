@@ -63,7 +63,7 @@ count and the edge change, and why?" or "start Replay on AAPL at <date>".
 - Colour a symbol with `\textcolor{#RRGGBB}{...}` in the colour of its line in the registry (the chart and the labs
   draw it in that colour). Price and plain variables stay uncoloured.
 - Colours must read on the dark and the light theme. A registry colour too pale for white paper takes a darker shade
-  of the same hue in equations: HMA `#FFCA28` → `#F9A825`, ZLEMA `#D4E157` → `#AFB42B`, ALMA `#29B6F6` → `#039BE5`,
+  of the same hue in equations: HMA `#FFCA28` → `#F9A825`, ZLEMA `#D4E157` → `#AFB42B`, ALMA `#29B6F6` → `#039BE5`, VWMA `#66BB6A` → `#43A047`, McGinley `#FFA726` → `#FB8C00`,
   RSI MA `#FDD835` → `#F9A825`, Ribbon MA 1 `#F7A600` → `#E69500`. Other symbols that are not lines: `#2962FF` blue,
   `#FF6D00` orange, `#089981` green, `#F23645` red, `#7E57C2` purple, `#00BCD4` cyan, `#787B86` grey.
 - Every displayed equation is followed by a "where" table (symbol, meaning, units / typical range).

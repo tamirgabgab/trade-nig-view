@@ -16,7 +16,27 @@ from app.indicators.catalog import CATALOG
 LEARN_DIR: Path = REPO_ROOT / "docs" / "indicators"  # Settings.learn_dir's default
 
 #: Pages rewritten to the v2 structure (add a slug here once its page follows ``V2_SECTIONS``).
-V2_PAGES: set[str] = set()
+V2_PAGES: set[str] = {
+    "alma",
+    "dema",
+    "ema",
+    "envelope",
+    "hma",
+    "kama",
+    "lsma",
+    "ma-cross",
+    "ma-ribbon",
+    "mcginley",
+    "moving-average",
+    "sma",
+    "smma",
+    "swma",
+    "t3",
+    "tema",
+    "vwma",
+    "wma",
+    "zlema",
+}
 
 V2_SECTIONS = (
     "What it measures",
