@@ -12,7 +12,7 @@ trading agent can plug in later.
 > symbol card with market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot.
 > U1c (structural cleanup), R4a and R4b done: drawing tools (lines, rectangle, text, Fib retracement and extension,
 > parallel channel, price/date ranges) with magnet, floating toolbar, settings panel, per-symbol persistence and a
-> trash menu. Next: R5 (market structure).
+> trash menu. R5 done: market structure (gaps, previous-period levels, pivots, Data window). Next: R6.
 > See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
@@ -37,7 +37,7 @@ trading agent can plug in later.
 | UX pass 2: watchlist sparklines and symbol card, market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot (U1b) | ✅ Done |
 | Drawing tools 1: trend line, ray, extended line, horizontal line/ray, vertical line, rectangle, text; select, move, resize, Shift 45°, weak/strong magnet, lock/hide all, Del with undo, floating toolbar, live settings panel, saved per symbol and shown on every interval (R4a) | ✅ Done |
 | Drawing tools 2: Fib retracement and trend-based extension (editable level table, bands, ratio+price labels), parallel channel, price / date / date-and-price ranges (change, bars, time span, volume), trash menu to remove drawings, indicators or both with confirmation and undo, `Alt+F` (R4b) | ✅ Done |
-| Gaps, pivots, previous-period levels, 52-week high/low, data window (R5) | ⏳ Planned |
+| Market structure (R5): Structure menu; gap zones (open in colour, filled faded) with a Gaps panel (min size, partial gaps, click to scroll); previous day/week/month high, low, close as step lines; pivot points (5/5 fractals, drawn on the pivot bar); Data window with every value under the crosshair | ✅ Done |
 | Layouts, watchlists, undo/redo, shortcuts, settings (R6) | ⏳ Planned |
 | Bar Replay with no-lookahead guarantee (R7) | ⏳ Planned |
 | Learn pages, custom indicators, backtesting, paper agent (Phases 2–5) | 🗺️ Roadmap |

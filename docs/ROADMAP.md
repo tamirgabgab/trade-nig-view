@@ -17,7 +17,7 @@
 | L1 | Learn v1 for the MA family (from Phase 2) | M | ✅ (2026-11-23) |
 | U1 | UX pass (U1a polish + motion + half screen; U1b watchlist, palette, theme) | L | ✅ U1a + U1b (2026-11-23) |
 | R4 | Drawing tools v1 (R4a core + lines/shapes/text; R4b Fib, channel, ranges) | L | ✅ R4a + R4b (2026-11-23) |
-| R5 | Market structure & reference values | M | |
+| R5 | Market structure & reference values | M | ✅ (2026-11-23) |
 | R6 | Persistence, layouts & UX polish | L | |
 | R7 | Bar Replay | M | |
 | Review | Phase-1 review, Phase-2 plan | S | |
@@ -198,10 +198,11 @@ pivot highs/lows (N-bar fractals, confirmed `R` bars later) as markers; data win
 Out of scope: auto trendlines, auto Fib, volume profile.
 
 Tasks
-- [ ] `analysis/gaps.py`, `pivots.py`, `levels.py` + hand vectors + properties (no lookahead, fill monotonicity)
-- [ ] API endpoints + tests
-- [ ] Frontend: `GapZonesPrimitive`, `GapsPanel`, level lines (price lines), pivot markers, `DataWindow`
-- [ ] Hand-checked NVDA 1D gap list for a fixture window → `tests/golden/nvda_gaps.json`
+- [x] `analysis/gaps.py` + hand vectors, golden scalar model, properties (no lookahead, fill monotonicity); previous-period levels and pivots are **registry indicators** (`prev_hlc`, `pivots`) so they get the indicator harness, legend, settings and replay for free
+- [x] `GET /api/analysis/gaps` + tests; `display_shift` on `/indicators/compute` (pivots are stored at the confirming bar, drawn on the pivot bar)
+- [x] Frontend: `GapLayer` primitive, Gaps panel, step lines, dot markers, Data window; right-sidebar tabs (Watchlist / Data window / Gaps); "Structure" menu
+- [ ] NVDA 1D gap list → `tests/golden/nvda_gaps.json`: generated from the committed (synthetic) e2e fixture; the hand check against TradingView needs the real fixture from `make-fixtures.ps1` (user)
+- User decision: no 52-week high/low lines (the symbol card already shows the 52-week range)
 
 DoD: gaps on NVDA 1D match the hand-checked list; all analysis functions tested; toggles in a "Structure" menu.
 

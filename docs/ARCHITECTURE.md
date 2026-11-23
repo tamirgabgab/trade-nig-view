@@ -76,7 +76,7 @@ flowchart LR
 | `data/cache/` | `BarCache` (SQLite), range bookkeeping, incremental fetch planning |
 | `data/` (`bar_service.py`, `resample.py`, `validate.py`, `adjust.py`, `ratelimit.py`, `universe.py`) | Orchestration: cache → provider → validate; per request: truncate(`until`) → adjust → resample → window/limit |
 | `indicators/` | One file per indicator (pure function) + `registry.py` + `core.py` (sma/ema/rma/stdev primitives) |
-| `analysis/` | Filter response of an indicator (`response.py`, L1); later gaps, pivots, prev-period levels, 52w high/low, Heikin Ashi transform |
+| `analysis/` | Filter response of an indicator (`response.py`, L1), Heikin Ashi transform, gaps (`gaps.py`, R5). Pivots and previous-period levels are registry indicators (`indicators/pivots.py`, `prev_hlc.py`); an indicator's `display_shift` draws its outputs left of their (causal) bar |
 | `replay/` | Cursor semantics helpers (`truncate_until`), later the event clock shared with the backtester |
 | `storage/` | SQLite repositories for watchlists, layouts, drawings (`app.db`), schema migrations |
 
@@ -185,9 +185,7 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 | `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted, transform}` (`start`/`end` = epoch seconds of bar starts, inclusive) | `{id, version, params (resolved), time:[t], outputs:{<name>:[value\|null]}, warmup, lookback}` — column arrays aligned with `time`; `null` = warm-up/NaN. A `markers` output holds `+1` (up) / `-1` (down) / `null`. `warmup` = first valid bar of the output that starts **last** (a composite's faster outputs start earlier); `lookback` = `total_lookback` (incl. offset). Cross-parameter errors (e.g. KAMA `fast > slow`, HMA length 1) are 422 `invalid_params` | R3 |
 | `POST /indicators/response` | `{id, params}` | Filter view: `{id, outputs:[{name, label, linear, reason, step, ramp_lag, impulse, dc_gain, lag, nrf, frequency:{period, magnitude_db, group_delay}, truncated}]}` measured by running the indicator on synthetic bars (`app/analysis/response.py`). Linearity is tested (superposition + volume independence); a non-linear output gets `step`/`ramp_lag` and a `reason`, its other fields `null`. Only outputs that follow the price (a fixed non-zero multiple of it on flat bars) are listed, so oscillators and volume lines (RSI, MACD, OBV, ...) return an empty list (R3c). POST (not the PLAN's GET) because `params` is a free-form object, as in `/indicators/compute` | L1 |
 | `GET /learn/{slug}` | — | `{slug, markdown}` from `docs/indicators/<slug>.md`; only slugs a registered indicator names are served (404 `learn_page_not_found` otherwise) | L1 |
-| `GET /analysis/gaps` | `symbol`, `interval`, `min_pct=0`, `include_partial=false`, `until?` | `[{start_time, direction, top, bottom, size_pct, filled, fill_time?, max_fill_pct}]` | R5 |
-| `GET /analysis/pivots` | `symbol`, `interval`, `left=5`, `right=5`, `until?` | `[{time, kind:"high"\|"low", price, confirmed_time}]` | R5 |
-| `GET /analysis/levels` | `symbol`, `interval`, `until?` | `{prev_day, prev_week, prev_month:{high, low, close}, high_52w, low_52w}` | R5 |
+| `GET /analysis/gaps` | `symbol`, `interval=1D`, `min_pct=1` (0–50), `partial=false`, `adjusted=true`, `until?` | `{symbol, interval, gaps:[{time, filled_time\|null, direction, kind:"full"\|"partial", top, bottom, size_pct, fill_price\|null}]}` over the interval's whole history, by time; times in the bars' format | R5 |
 | `GET /drawings/{symbol}` / `PUT` | body = drawings document (§5.2) | document with `revision` | R4 |
 | `GET /layouts` · `GET/PUT/DELETE /layouts/{name}` | layout document | | R6 |
 | `GET /watchlists` · `GET/PUT/DELETE /watchlists/{name}` | `{name, sections:[{title, symbols:[...]}]}` | | R2 (read default) / R6 (edit) |
