@@ -35,9 +35,7 @@ export function searchIndicators(specs: readonly IndicatorInfo[], query: string)
       groups.push({ label, indicators: matches.map((m) => m.spec), best: first.rank });
     }
   }
-  return groups
-    .sort((a, b) => a.best - b.best)
-    .map(({ label, indicators }) => ({ label, indicators }));
+  return groups.sort((a, b) => a.best - b.best);
 }
 
 /** True for a plain `/` typed outside a text field (opens the indicators dialog). */
