@@ -367,10 +367,37 @@
 - **`Ctrl+K`:** פלטת פקודות על סימבולים, הוספת אינדיקטורים, פעולות גרף (interval, סוג גרף, טווחים, log, %, auto, ADJ), פעולות תצוגה (theme, ‏Watchlist, קיצורים) ופעולות על אינדיקטורים קיימים (עריכה, Learn, הסתרה, הסרה עם Undo).
   - מצב ה-Watchlist עבר ל-uiStore.
 - **בדיקות:**
-  - frontend: 226 (היו 208).
+  - frontend: 230 (היו 208).
   - E2E: 13 (היו 10): הורדת PNG, ‏`Ctrl+K`, קליק ימני.
+  - `test.sh`: כל 9 השערים ירוקים.
   - backend: 1,856.
   - נמצא ותוקן: הסבולת בבדיקת ה-property של VWAP הייתה שגויה במחירים שליליים (באג בבדיקה מ-R3c, שה-hypothesis מצא).
+- **ניקוי (ponytail ← code-review high ← simplify):**
+  - **ponytail:** מונה האינדיקטורים מה-views, ‏`onClose` יציב לתפריט, ו-div מיותר אחד נמחק.
+  - **code review:** 9 ממצאים. תוקנו 8:
+    - פס הכותרת בצילום לא התאים למסך HiDPI.
+    - לחיצה שנייה על המצלמה לא סגרה את התפריט.
+    - חלון האישור לא חסם את ה-hotkeys.
+    - Undo פתח מחדש פאנל של אינדיקטור שהוסר.
+    - Download PNG לא עבד ב-Firefox.
+    - `Alt+S` לא עבד ב-Mac.
+    - ה-toast כתב "1 indicators".
+    - צבע הטקסט של כפתור המחיקה לא היה token.
+    לא שונה: `PalettePanel` בתבנית Dialog/Panel, כמו בשאר הדיאלוגים.
+  - **simplify** (4 סוקרים):
+    - `setTheme` שולח מחדש רק את הנרות ואת ה-volume.
+    - `MarketStatus` עם memo, ושעות המסחר משתמשות ב-`zoneOffsetSeconds` הקיים.
+    - `useChartSnapshot` בונה את הטקסט רק כשמצלמים.
+    - `indicatorActions`: הוספה והסרה משותפות לכל המקומות. ההוספה מהפלטה מודיעה כשהגרף מלא.
+    - `useAppHotkeys` עם `useGlobalHotkey`: כל הקיצורים במקום אחד, וארבעה hooks נמחקו.
+    - הפלטה נרשמת רק לשדות שהיא מציגה, ו-Tab נלכד בה.
+    - `formatChange` משותף; ‏`themeStore` עם `sanitizePersisted`; ‏searchsorted ב-backend.
+    - **דולג** (שינויי מבנה גדולים בקוד שקדם לסבב):
+      - מעטפת משותפת לשלושת דיאלוגי החיפוש.
+      - `ChartTypeMenu` מעל `ActionMenu`.
+      - שדה `modal` אחד במקום דגלים נפרדים.
+      - העברת ה-engine ל-ChartArea במקום props של "בקשה".
+  - **E2E:** בדיקת הקליק הימני נכשלה לפעמים, כי היא לחצה לפני שהנרות נטענו. נוספה המתנה לנרות.
 - **שמות קבצים:** `marketStatus.ts` שונה ל-`marketHours.ts`, כי לצד `MarketStatus.tsx` הוא היה שובר את Windows (כלל ב-CLAUDE.md).
 
 ## יומן החלטות

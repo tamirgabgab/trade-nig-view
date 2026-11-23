@@ -172,7 +172,8 @@ test('Ctrl+K finds a symbol and an action', async ({ page }) => {
 });
 
 test('right-click opens the chart menu', async ({ page }) => {
-  await expect(legend(page)).toContainText('Apple Inc.');
+  // Bars loaded (the close is shown): only then is there a price under the pointer.
+  await expect(legend(page).locator('[data-field="C"]')).toBeVisible();
   await page.getByTestId('chart-canvas').click({ button: 'right', position: { x: 300, y: 200 } });
   const menu = page.getByRole('menu', { name: 'Chart' });
   await expect(menu.getByRole('menuitem', { name: /^Copy price \d/ })).toBeVisible();
