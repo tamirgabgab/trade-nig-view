@@ -9,7 +9,7 @@ Available in Pine as a function, used by other indicators (e.g. RVI); shown here
 from __future__ import annotations
 
 from app.indicators import core
-from app.indicators.ma import offset_param, source_param
+from app.indicators.ma import offset_param, offset_shift, source_param
 from app.indicators.registry import IndicatorSpec, OutputSpec, Params
 from app.models.bars import BarFrame, FloatArray
 
@@ -29,8 +29,9 @@ SPEC = IndicatorSpec(
     inputs=("open", "high", "low", "close"),
     params=(source_param(), offset_param()),
     outputs=(OutputSpec("ma", "SWMA", "line", "#8D6E63"),),
-    warmup=lambda p: 3 + int(p["offset"]),
+    warmup=lambda p: 3 + offset_shift(p),
     compute=compute,
     learn_slug="swma",
     description="Fixed 1-2-2-1 weights over four bars.",
+    shift=offset_shift,
 )

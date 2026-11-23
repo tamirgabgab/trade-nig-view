@@ -14,8 +14,9 @@ Defaults (Kaufman): 10, 2, 30; ``fast > slow`` is rejected.
 from __future__ import annotations
 
 from app.indicators import core
-from app.indicators.ma import KAMA_FAST, KAMA_SLOW, kama_lookback, length_param, source_param
+from app.indicators.ma import kama_lookback, length_param, ma_warmup, source_param
 from app.indicators.registry import (
+    MIN_LOOKBACK,
     IndicatorSpec,
     InvalidParamsError,
     OutputSpec,
@@ -34,9 +35,8 @@ def compute(frame: BarFrame, params: Params) -> dict[str, FloatArray]:
 
 
 def lookback(params: Params) -> int:
-    """The smoothing ranges over [f^2, s^2]; the slower end (the longer of the two EMA lengths)
-    sets how fast the seed fades."""
-    return kama_lookback(int(params["length"]), max(int(params["fast"]), int(params["slow"])))
+    """The slow end of the smoothing range sets how fast the seed fades."""
+    return max(kama_lookback(int(params["length"]), int(params["slow"])), MIN_LOOKBACK)
 
 
 SPEC = IndicatorSpec(
@@ -49,12 +49,12 @@ SPEC = IndicatorSpec(
     inputs=("open", "high", "low", "close"),
     params=(
         length_param(10, label="Efficiency length"),
-        ParamSpec("fast", "int", KAMA_FAST, "Fast EMA length", min=1, max=200, step=1),
-        ParamSpec("slow", "int", KAMA_SLOW, "Slow EMA length", min=1, max=200, step=1),
+        ParamSpec("fast", "int", core.KAMA_FAST, "Fast EMA length", min=1, max=200, step=1),
+        ParamSpec("slow", "int", core.KAMA_SLOW, "Slow EMA length", min=1, max=200, step=1),
         source_param(),
     ),
     outputs=(OutputSpec("ma", "KAMA", "line", "#EF5350"),),
-    warmup=lambda p: int(p["length"]),
+    warmup=lambda p: ma_warmup("kama", int(p["length"])),
     compute=compute,
     learn_slug="kama",
     description="Speeds up in trends and slows down in noise, using Kaufman's efficiency ratio.",

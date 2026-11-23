@@ -147,11 +147,12 @@ longest `*length*` parameter. Filters whose seed fades more slowly define their 
 | Indicator / MA type | Lookback | Why |
 |---|---|---|
 | T3 | `max(50·n, 250)` | six cascaded EMAs |
-| KAMA | `max(25·n, 25·((S+1)/2)² + n)`, S = `max(fast, slow)` | the slowest smoothing is $s^2$, seed fades like $(1-s^2)^k$ (≈ 6,000 bars for S = 30) |
+| KAMA | `max(25·n, 25·((S+1)/2)² + n, 250)`, S = `slow` (`fast > slow` is rejected) | the slowest smoothing is $s^2$, seed fades like $(1-s^2)^k$ (≈ 6,000 bars for S = 30) |
 | Composites (MA Cross, Ribbon, Envelope, generic MA) | max over their averages' lookbacks | |
 
-On top of that, `IndicatorSpec.total_lookback` adds the plot `offset` (a shift of k bars shows the value of bar
-t − k at bar t, so k more bars are needed); the API reports and uses `total_lookback`. A test computes every registered
+On top of that, `IndicatorSpec.total_lookback` adds the spec's plot shift (`IndicatorSpec.shift`, the `offset`
+param of MAs that call `core.shift`; LSMA's regression `offset` is not a shift): a shift of k bars shows the value of bar
+t − k at bar t, so k more bars are needed. The API reports and uses `total_lookback`. A test computes every registered
 indicator over a window with large offsets and compares it with the full history.
 
 **Lookback contract with lazy history (E5, defined in R2b, consumed in R3a).** The chart asks for indicator values over

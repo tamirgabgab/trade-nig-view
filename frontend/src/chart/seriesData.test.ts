@@ -11,6 +11,7 @@ import {
   toCandles,
   toHollowCandles,
   toLine,
+  toMarkers,
   toVolume,
 } from './seriesData.ts';
 
@@ -157,5 +158,22 @@ describe('prependedCount', () => {
     expect(prependedCount([], BARS)).toBe(0);
     expect(prependedCount(BARS, [older, ...BARS.slice(1)])).toBe(0);
     expect(prependedCount(BARS, [older, ...BARS, older])).toBe(0);
+  });
+});
+
+describe('toMarkers', () => {
+  it('merges several marker outputs in time order, with up/down colours and a fallback', () => {
+    const a = { values: [null, -1, 1], color: '#111111', upColor: '#00ff00' };
+    const b = { values: [1, 0, -1], color: '#222222' };
+    expect(toMarkers([a, b], DATES)).toEqual([
+      { time: DATES[0], position: 'belowBar', shape: 'arrowUp', color: '#222222' },
+      { time: DATES[1], position: 'aboveBar', shape: 'arrowDown', color: '#111111' },
+      { time: DATES[2], position: 'belowBar', shape: 'arrowUp', color: '#00ff00' },
+      { time: DATES[2], position: 'aboveBar', shape: 'arrowDown', color: '#222222' },
+    ]);
+  });
+
+  it('ignores values past the last bar', () => {
+    expect(toMarkers([{ values: [null, null, null, 1], color: '#111111' }], DATES)).toEqual([]);
   });
 });

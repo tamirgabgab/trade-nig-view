@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from app.indicators import core
 from app.indicators.ma import (
-    MA_TYPES,
     apply_ma,
     length_param,
     ma_lookback,
+    ma_warmup,
     offset_param,
+    offset_shift,
     source_param,
     type_param,
 )
@@ -38,9 +39,10 @@ SPEC = IndicatorSpec(
     inputs=("open", "high", "low", "close", "volume"),
     params=(type_param("sma"), length_param(9), source_param(), offset_param()),
     outputs=(OutputSpec("ma", "MA", "line", "#2962FF"),),
-    warmup=lambda p: MA_TYPES[str(p["ma_type"])].warmup(int(p["length"])) + int(p["offset"]),
+    warmup=lambda p: ma_warmup(str(p["ma_type"]), int(p["length"])) + offset_shift(p),
     compute=compute,
     learn_slug="moving-average",
     description="Pick any average (SMA, EMA, Hull, KAMA, ...) from one entry.",
     lookback=lambda p: ma_lookback(str(p["ma_type"]), int(p["length"])),
+    shift=offset_shift,
 )

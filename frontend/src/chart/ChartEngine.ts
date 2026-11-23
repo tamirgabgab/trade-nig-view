@@ -19,13 +19,13 @@ import {
   type LineWidth,
   type LogicalRange as LwcLogicalRange,
   type MouseEventParams,
-  type SeriesMarkerBar,
   type SeriesType,
   type Time,
   type UTCTimestamp,
 } from 'lightweight-charts';
 
 import type { Bar } from '../api/bars.ts';
+import type { OutputInfo } from '../api/indicators.ts';
 import type { ChartType, ScaleMode } from './chartTypes.ts';
 import { rafLatest, type RafLatest } from './rafLatest.ts';
 import {
@@ -38,10 +38,12 @@ import {
   toCandles,
   toHollowCandles,
   toLine,
+  toMarkers,
   toValueLine,
   toVolume,
   type ChartTime,
   type LogicalRange,
+  type MarkerPoint,
 } from './seriesData.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
 import { DISPLAY_TIME_ZONE } from './timeZone.ts';
@@ -92,12 +94,13 @@ export interface ScaleOptions {
 
 /**
  * One indicator output on the price pane: a line, or markers (arrows on the price bars: +1 = up
- * arrow below the bar, -1 = down arrow above it, null = none).
+ * arrow below the bar, -1 = down arrow above it, null = none). Histogram and area plots are drawn
+ * as lines until the oscillator panes (R4).
  */
 export interface IndicatorLine {
   /** Stable id (instance uid + output name). */
   key: string;
-  plot: 'line' | 'markers';
+  plot: OutputInfo['plot'];
   /** One value per bar given to `setBars` (null = no value, e.g. warm-up). */
   values: readonly (number | null)[];
   color: string;
@@ -106,32 +109,6 @@ export interface IndicatorLine {
   /** Marker colours (default: `color`). */
   upColor?: string | undefined;
   downColor?: string | undefined;
-}
-
-/** Markers of `lines` on `times` (by bar index), sorted by time as lightweight-charts requires. */
-export function toMarkers(
-  lines: readonly IndicatorLine[],
-  times: readonly ChartTime[],
-): SeriesMarkerBar<ChartTime>[] {
-  const found: { index: number; marker: SeriesMarkerBar<ChartTime> }[] = [];
-  for (const line of lines) {
-    if (line.plot !== 'markers' || !line.visible) continue;
-    line.values.forEach((value, index) => {
-      const time = times[index];
-      if (value === null || value === 0 || time === undefined) return;
-      const up = value > 0;
-      found.push({
-        index,
-        marker: {
-          time,
-          position: up ? 'belowBar' : 'aboveBar',
-          shape: up ? 'arrowUp' : 'arrowDown',
-          color: (up ? line.upColor : line.downColor) ?? line.color,
-        },
-      });
-    });
-  }
-  return found.sort((a, b) => a.index - b.index).map((f) => f.marker);
 }
 
 interface LineEntry {
@@ -160,8 +137,7 @@ export class ChartEngine {
   private times: ChartTime[] = [];
   private decimals = 2;
   private readonly lines = new Map<string, LineEntry>();
-  private markerLines: readonly IndicatorLine[] = [];
-  private markerTimes: readonly ChartTime[] | null = null;
+  private markerData: (Omit<MarkerPoint, 'time'> & { time: Time })[] = [];
   private markers: ISeriesMarkersPluginApi<Time> | null = null;
 
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
@@ -249,8 +225,8 @@ export class ChartEngine {
    * matched to the current bars by index. Data is only re-sent when values or bars changed.
    */
   setIndicatorLines(all: readonly IndicatorLine[]): void {
-    const lines = all.filter((line) => line.plot === 'line');
-    this.setMarkers(all.filter((line) => line.plot === 'markers'));
+    const lines = all.filter((line) => line.plot !== 'markers');
+    this.setMarkers(all.filter((line) => line.plot === 'markers' && line.visible));
     const keep = new Set(lines.map((line) => line.key));
     for (const [key, entry] of this.lines) {
       if (keep.has(key)) continue;
@@ -284,34 +260,16 @@ export class ChartEngine {
 
   /** Marker outputs sit on the main series, so they follow the candles' highs and lows. */
   private setMarkers(lines: readonly IndicatorLine[]): void {
-    const same =
-      this.markerTimes === this.times &&
-      lines.length === this.markerLines.length &&
-      lines.every((line, i) => {
-        const old = this.markerLines[i];
-        return (
-          old !== undefined &&
-          old.key === line.key &&
-          old.values === line.values &&
-          old.visible === line.visible &&
-          old.color === line.color &&
-          old.upColor === line.upColor &&
-          old.downColor === line.downColor
-        );
-      });
-    if (same) return;
-    this.markerLines = lines;
-    this.markerTimes = this.times;
+    this.markerData = withTime(toMarkers(lines, this.times));
     this.renderMarkers();
   }
 
   private renderMarkers(): void {
-    const markers = withTime(toMarkers(this.markerLines, this.times));
     if (this.markers === null) {
-      if (markers.length === 0) return;
-      this.markers = createSeriesMarkers(this.main, markers);
+      if (this.markerData.length === 0) return;
+      this.markers = createSeriesMarkers(this.main, this.markerData);
     } else {
-      this.markers.setMarkers(markers);
+      this.markers.setMarkers(this.markerData);
     }
   }
 

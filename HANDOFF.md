@@ -203,6 +203,28 @@
 5. **Composites:** נוספו golden models ל-MA Cross (fast, slow ו-crosses מול `golden_crosses` לפי Pine), ל-Ribbon ול-Envelope, על 6 סוגים ועל כל ה-datasets. נוספו גם hand vectors ב-`test_composites.py`.
 6. **`warmup`:** תועד ב-`IndicatorSpec` וב-API שה-warmup שייך ל-output שמתחיל אחרון. warmup נפרד לכל output יתווסף ב-P4 אם יידרש.
 
+## R3b — simplify (2026-11-23)
+הרצנו `simplify` על `bc41eb0..HEAD` עם ארבעה סוקרים (Reuse, Simplification, Efficiency, Altitude), תחת המגבלות: בלי לשנות ids, פרמטרים, פלטים או ערכים, ובלי לגעת ב-golden models. כל הפלטים וה-warmups של 111 מקרים על 5 datasets יצאו **זהים ביט-לביט** לפני ואחרי.
+- **Backend:**
+  - `IndicatorSpec.shift` (הזזת הגרף) מחליף את הניחוש לפי שם הפרמטר `"offset"`. ה-offset של LSMA הוא offset של רגרסיה, ולכן כבר לא מוסיף lookback.
+  - `ma_warmup` ו-`offset_shift` ב-`ma.py`. ה-specs של t3, ‏kama, ‏alma, ‏lsma וה-composites לוקחים warmup ו-lookback מ-`MA_TYPES` במקום להעתיק נוסחאות.
+  - `MA_TYPES` נכתב מחדש עם `_plain` ו-warmup ברירת מחדל `n-1`.
+  - `ma_cross._legs`.
+  - `core.shift` משתמש ב-`lagged`, ו-`ema_recursive` משתמש ב-`adaptive_recursion`, כך שיש לולאת IIR אחת בלבד.
+  - קבועי ברירת המחדל של KAMA ו-ALMA עברו ל-`core`.
+  - ה-lookback של KAMA לפי `slow` עם רצפה של 250.
+- **Frontend:**
+  - `toMarkers` עבר ל-`seriesData.ts` ונכתב כלולאה אחת לפי סדר הזמן, בלי מיון.
+  - `setMarkers` שומר את מערך ה-markers המוכן, בלי השוואה ידנית של 7 שדות. החלפת סוג גרף משתמשת במערך השמור.
+  - `IndicatorLine.plot` מקבל את כל סוגי ה-plot. ההחלטה "histogram/area כקווים עד R4" נמצאת עכשיו רק ב-`ChartEngine`.
+  - `valueOutputs` משותף ל-legend ולחלון ההגדרות.
+- **דילגנו (בכוונה):**
+  - hook של `validate` ב-registry (KAMA ו-HMA בדחייה לפני טעינת נתונים): ההתנהגות זהה (422), ונשקול כשיהיו עוד בדיקות בין-פרמטריות.
+  - kernel משולב ל-HMA: משנה ערכים ב-5e-16.
+  - EMA inline ב-McGinley: חוסך 1.7ms ומסבך את הלולאה.
+  - prefix sums ל-VWMA: משנה נומריקה.
+  - איחוד `ma_indicator` עם ה-specs המותאמים: refactor גדול מדי.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -347,3 +369,4 @@
 - נבנו: 11 ממוצעים חדשים ב-`core`, ‏`MA_TYPES` עם 15 סוגים, 4 composites, ‏`option_labels`, golden models לכל הסוגים, TA-Lib ל-5 נוספים, property tests לפי מחלקה, 15 learn stubs, 18 שורות TV cross-check, ובצד ה-frontend חיצי crossover ו-select עם שמות תצוגה. נוסף גם E2E.
 - נמצא ותוקן: חלוקה באפס ב-McGinley (נמצאה ב-hypothesis). הכול ירוק.
 - המשך באותו יום: `/code-review high` מצא 6 ממצאים, וכולם תוקנו. בדרך נמצא גם `OverflowError` ב-McGinley ותוקן. 9/9 gates ירוקים, ‏backend 1,118 בדיקות.
+- `simplify` על R3b: ניקוי reuse ו-altitude בלי שינוי ערכים (אומת ביט-לביט). 9/9 gates ירוקים, ‏backend 1,119, ‏frontend 167, ‏e2e 6/6.

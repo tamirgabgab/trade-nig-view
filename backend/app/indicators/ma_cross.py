@@ -18,10 +18,10 @@ import numpy as np
 
 from app.indicators import core
 from app.indicators.ma import (
-    MA_TYPES,
     apply_ma,
     length_param,
     ma_lookback,
+    ma_warmup,
     source_param,
     type_param,
 )
@@ -40,25 +40,18 @@ def crossings(fast: FloatArray, slow: FloatArray) -> FloatArray:
     return out
 
 
+def _legs(params: Params) -> tuple[tuple[str, int], tuple[str, int]]:
+    """(type, length) of the fast and the slow average."""
+    return (
+        (str(params["fast_type"]), int(params["fast_length"])),
+        (str(params["slow_type"]), int(params["slow_length"])),
+    )
+
+
 def compute(frame: BarFrame, params: Params) -> dict[str, FloatArray]:
     x = core.source(frame, str(params["source"]))
-    fast = apply_ma(str(params["fast_type"]), x, int(params["fast_length"]), frame.volume)
-    slow = apply_ma(str(params["slow_type"]), x, int(params["slow_length"]), frame.volume)
+    fast, slow = (apply_ma(t, x, n, frame.volume) for t, n in _legs(params))
     return {"fast": fast, "slow": slow, "crosses": crossings(fast, slow)}
-
-
-def warmup(params: Params) -> int:
-    return max(
-        MA_TYPES[str(params["fast_type"])].warmup(int(params["fast_length"])),
-        MA_TYPES[str(params["slow_type"])].warmup(int(params["slow_length"])),
-    )
-
-
-def lookback(params: Params) -> int:
-    return max(
-        ma_lookback(str(params["fast_type"]), int(params["fast_length"])),
-        ma_lookback(str(params["slow_type"]), int(params["slow_length"])),
-    )
 
 
 SPEC = IndicatorSpec(
@@ -87,9 +80,9 @@ SPEC = IndicatorSpec(
             style={"up": "#089981", "down": "#F23645"},
         ),
     ),
-    warmup=warmup,
+    warmup=lambda p: max(ma_warmup(t, n) for t, n in _legs(p)),
     compute=compute,
     learn_slug="ma-cross",
     description="Fast and slow averages with arrows where they cross (golden / death cross).",
-    lookback=lookback,
+    lookback=lambda p: max(ma_lookback(t, n) for t, n in _legs(p)),
 )

@@ -12,7 +12,7 @@ TradingView default: window 9, offset 0.85, sigma 6, source close.
 from __future__ import annotations
 
 from app.indicators import core
-from app.indicators.ma import length_param, source_param
+from app.indicators.ma import length_param, ma_warmup, source_param
 from app.indicators.registry import IndicatorSpec, OutputSpec, Params, ParamSpec
 from app.models.bars import BarFrame, FloatArray
 
@@ -39,13 +39,21 @@ SPEC = IndicatorSpec(
     inputs=("open", "high", "low", "close"),
     params=(
         length_param(9, label="Window size"),
-        ParamSpec("alma_offset", "float", 0.85, "Offset", min=0.0, max=1.0, step=0.01),
-        ParamSpec("sigma", "float", 6.0, "Sigma", min=0.1, max=100.0, step=0.5),
+        ParamSpec(
+            "alma_offset",
+            "float",
+            core.ALMA_DEFAULT_OFFSET,
+            "Offset",
+            min=0.0,
+            max=1.0,
+            step=0.01,
+        ),
+        ParamSpec("sigma", "float", core.ALMA_DEFAULT_SIGMA, "Sigma", min=0.1, max=100.0, step=0.5),
         source_param(),
         ParamSpec("floor", "bool", False, "Floor offset"),
     ),
     outputs=(OutputSpec("ma", "ALMA", "line", "#29B6F6"),),
-    warmup=lambda p: int(p["length"]) - 1,
+    warmup=lambda p: ma_warmup("alma", int(p["length"])),
     compute=compute,
     learn_slug="alma",
     description="Gaussian-weighted window shifted towards recent bars: smooth with little lag.",

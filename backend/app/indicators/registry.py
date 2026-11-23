@@ -78,6 +78,10 @@ def length_lookback(params: Params) -> int:
     return max(LOOKBACK_PER_LENGTH * max(lengths, default=0), MIN_LOOKBACK)
 
 
+def no_shift(_params: Params) -> int:
+    return 0
+
+
 @dataclass(frozen=True, slots=True)
 class IndicatorSpec:
     """Registry entry: metadata for the UI plus the pure compute function."""
@@ -99,18 +103,16 @@ class IndicatorSpec:
     description: str = ""
     levels: tuple[float, ...] = ()
     lookback: CountFn = length_lookback
+    #: Plot offset in bars (``core.shift``) the outputs are moved right by; 0 if none.
+    shift: CountFn = no_shift
 
     def total_lookback(self, params: Params) -> int:
-        """History needed before the first requested bar: ``lookback`` plus the plot ``offset``.
+        """History needed before the first requested bar: ``lookback`` plus the plot shift.
 
-        A plot offset of k bars moves the value of bar t - k onto bar t, so k more bars are needed
-        for the first shown value to be warmed up. Every spec gets this here, once. (LSMA's
-        ``offset`` is a regression offset that needs no extra history; it only loads a few more
-        bars than necessary.)
+        A plot shift of k bars moves the value of bar t - k onto bar t, so k more bars are needed
+        for the first shown value to be warmed up.
         """
-        offset = params.get("offset", 0)
-        shift = offset if isinstance(offset, int) and not isinstance(offset, bool) else 0
-        return self.lookback(params) + max(shift, 0)
+        return self.lookback(params) + self.shift(params)
 
     def defaults(self) -> dict[str, ParamValue]:
         return {p.name: p.default for p in self.params}

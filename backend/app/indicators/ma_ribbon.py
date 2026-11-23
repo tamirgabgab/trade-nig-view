@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from app.indicators import core
 from app.indicators.ma import (
-    MA_TYPES,
     apply_ma,
     length_param,
     ma_lookback,
+    ma_warmup,
     source_param,
     type_param,
 )
@@ -60,7 +60,7 @@ SPEC = IndicatorSpec(
         OutputSpec(name, f"MA {i}", "line", color, line_width=1)
         for i, (name, _, color) in enumerate(LINES, start=1)
     ),
-    warmup=lambda p: max(MA_TYPES[str(p["ma_type"])].warmup(n) for n in _lengths(p)),
+    warmup=lambda p: max(ma_warmup(str(p["ma_type"]), n) for n in _lengths(p)),
     compute=compute,
     learn_slug="ma-ribbon",
     description="Four averages of one type (20/50/100/200) drawn as a fan.",

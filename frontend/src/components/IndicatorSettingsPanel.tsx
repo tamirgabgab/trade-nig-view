@@ -13,7 +13,7 @@ import { LINE_WIDTHS, useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorSettingsPanel.module.css';
 import { parseParamInput } from './paramInput.ts';
-import type { IndicatorView } from './useChartIndicators.ts';
+import { valueOutputs, type IndicatorView } from './useChartIndicators.ts';
 
 /** Changes to number fields reach the chart this long after the last keystroke. */
 export const APPLY_DELAY_MS = 250;
@@ -219,42 +219,40 @@ function SettingsForm({ view, spec }: { view: IndicatorView; spec: IndicatorInfo
           <h3 id={`${titleId}-style`} className={styles.section}>
             Style
           </h3>
-          {view.outputs
-            .filter((output) => output.plot !== 'markers')
-            .map((output) => (
-              <div key={output.name} className={styles.styleRow}>
-                <span className={styles.label}>{output.label}</span>
-                <input
-                  type="color"
-                  className={styles.color}
-                  aria-label={`${output.label} colour`}
-                  value={output.color}
-                  onChange={(event) => {
-                    setStyle(uid, output.name, {
-                      color: event.target.value,
-                      lineWidth: output.lineWidth,
-                    });
-                  }}
-                />
-                <select
-                  className={styles.control}
-                  aria-label={`${output.label} line width`}
-                  value={output.lineWidth}
-                  onChange={(event) => {
-                    setStyle(uid, output.name, {
-                      color: output.color,
-                      lineWidth: Number(event.target.value),
-                    });
-                  }}
-                >
-                  {LINE_WIDTHS.map((width) => (
-                    <option key={width} value={width}>
-                      {width}px
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
+          {valueOutputs(view).map((output) => (
+            <div key={output.name} className={styles.styleRow}>
+              <span className={styles.label}>{output.label}</span>
+              <input
+                type="color"
+                className={styles.color}
+                aria-label={`${output.label} colour`}
+                value={output.color}
+                onChange={(event) => {
+                  setStyle(uid, output.name, {
+                    color: event.target.value,
+                    lineWidth: output.lineWidth,
+                  });
+                }}
+              />
+              <select
+                className={styles.control}
+                aria-label={`${output.label} line width`}
+                value={output.lineWidth}
+                onChange={(event) => {
+                  setStyle(uid, output.name, {
+                    color: output.color,
+                    lineWidth: Number(event.target.value),
+                  });
+                }}
+              >
+                {LINE_WIDTHS.map((width) => (
+                  <option key={width} value={width}>
+                    {width}px
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
         </section>
       </div>
       <div className={styles.footer}>

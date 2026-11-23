@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from app.indicators import core
 from app.indicators.ma import (
-    MA_TYPES,
     apply_ma,
     length_param,
     ma_lookback,
+    ma_warmup,
     source_param,
     type_param,
 )
@@ -48,7 +48,7 @@ SPEC = IndicatorSpec(
         OutputSpec("basis", "Basis", "line", "#FF6D00", line_width=1),
         OutputSpec("lower", "Lower", "line", "#2962FF", line_width=1),
     ),
-    warmup=lambda p: MA_TYPES[str(p["ma_type"])].warmup(int(p["length"])),
+    warmup=lambda p: ma_warmup(str(p["ma_type"]), int(p["length"])),
     compute=compute,
     learn_slug="envelope",
     description="An average with bands a fixed percentage above and below it.",

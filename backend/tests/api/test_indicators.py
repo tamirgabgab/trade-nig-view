@@ -199,6 +199,14 @@ def test_offset_adds_to_the_lookback(client: TestClient) -> None:
     assert body["lookback"] == 250 + 500
 
 
+def test_lsma_regression_offset_needs_no_extra_history(client: TestClient) -> None:
+    body = client.post(
+        "/api/indicators/compute",
+        json={"symbol": "AAA", "id": "lsma", "params": {"length": 9, "offset": 500}},
+    ).json()
+    assert body["lookback"] == 250
+
+
 def test_kama_rejects_fast_longer_than_slow(client: TestClient) -> None:
     response = client.post(
         "/api/indicators/compute",

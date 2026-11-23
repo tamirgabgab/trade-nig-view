@@ -14,8 +14,8 @@ TradingView default: length 25, offset 0, source close.
 from __future__ import annotations
 
 from app.indicators import core
-from app.indicators.ma import MAX_OFFSET, length_param, source_param
-from app.indicators.registry import IndicatorSpec, OutputSpec, Params, ParamSpec
+from app.indicators.ma import length_param, ma_warmup, offset_param, source_param
+from app.indicators.registry import IndicatorSpec, OutputSpec, Params
 from app.models.bars import BarFrame, FloatArray
 
 
@@ -34,11 +34,11 @@ SPEC = IndicatorSpec(
     inputs=("open", "high", "low", "close"),
     params=(
         length_param(25),
-        ParamSpec("offset", "int", 0, "Offset", min=0, max=MAX_OFFSET, step=1),
+        offset_param(),  # the regression offset, not a plot shift
         source_param(),
     ),
     outputs=(OutputSpec("ma", "LSMA", "line", "#7E57C2"),),
-    warmup=lambda p: int(p["length"]) - 1,
+    warmup=lambda p: ma_warmup("lsma", int(p["length"])),
     compute=compute,
     learn_slug="lsma",
     description="End point of the least-squares line through the last n bars.",

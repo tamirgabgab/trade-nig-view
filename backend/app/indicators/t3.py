@@ -12,15 +12,15 @@ built-in (decision D4). Defaults (Tillson): length 5, volume factor 0.7.
 from __future__ import annotations
 
 from app.indicators import core
-from app.indicators.ma import length_param, offset_param, source_param
-from app.indicators.registry import (
-    LOOKBACK_PER_LENGTH,
-    MIN_LOOKBACK,
-    IndicatorSpec,
-    OutputSpec,
-    Params,
-    ParamSpec,
+from app.indicators.ma import (
+    length_param,
+    ma_lookback,
+    ma_warmup,
+    offset_param,
+    offset_shift,
+    source_param,
 )
+from app.indicators.registry import IndicatorSpec, OutputSpec, Params, ParamSpec
 from app.models.bars import BarFrame, FloatArray
 
 
@@ -47,9 +47,10 @@ SPEC = IndicatorSpec(
         offset_param(),
     ),
     outputs=(OutputSpec("ma", "T3", "line", "#5C6BC0"),),
-    warmup=lambda p: 6 * (int(p["length"]) - 1) + int(p["offset"]),
+    warmup=lambda p: ma_warmup("t3", int(p["length"])) + offset_shift(p),
     compute=compute,
     learn_slug="t3",
     description="Six cascaded EMAs combined for a smooth line with reduced lag.",
-    lookback=lambda p: max(2 * LOOKBACK_PER_LENGTH * int(p["length"]), MIN_LOOKBACK),
+    lookback=lambda p: ma_lookback("t3", int(p["length"])),
+    shift=offset_shift,
 )

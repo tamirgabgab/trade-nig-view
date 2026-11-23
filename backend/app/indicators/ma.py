@@ -22,24 +22,24 @@ from app.indicators.registry import (
     OutputSpec,
     Params,
     ParamSpec,
-    length_lookback,
 )
 from app.models.bars import BarFrame, FloatArray
 
 MaFn = Callable[[FloatArray, int, FloatArray], FloatArray]
 
-#: KAMA's slowest smoothing is s^2 with s = 2/(S+1): the seed fades like (1 - s^2)^k.
-KAMA_SLOW = 30
-KAMA_FAST = 2
+
+def _default_warmup(n: int) -> int:
+    return n - 1
 
 
 def _default_lookback(n: int) -> int:
     return LOOKBACK_PER_LENGTH * n
 
 
-def kama_lookback(n: int, slow: int = KAMA_SLOW) -> int:
-    r"""Bars until KAMA's seed weight is below :math:`e^{-25}` even in a flat market:
-    :math:`25 / s^2` with :math:`s = \frac{2}{S+1}` (6,006 bars for S = 30)."""
+def kama_lookback(n: int, slow: int = core.KAMA_SLOW) -> int:
+    r"""Bars until KAMA's seed weight is below :math:`e^{-25}` even in a flat market. Its slowest
+    smoothing is :math:`s^2` with :math:`s = \frac{2}{S+1}`, so the seed fades like
+    :math:`(1 - s^2)^k`: :math:`25 / s^2` bars (6,006 for S = 30)."""
     return max(LOOKBACK_PER_LENGTH * n, int(LOOKBACK_PER_LENGTH * ((slow + 1) / 2) ** 2) + n)
 
 
@@ -50,63 +50,49 @@ class MaType:
     id: str
     label: str
     fn: MaFn
-    warmup: Callable[[int], int]
+    warmup: Callable[[int], int] = _default_warmup
     lookback: Callable[[int], int] = _default_lookback
     min_length: int = 1
     uses_volume: bool = False
 
 
-def _types() -> dict[str, MaType]:
-    entries = (
-        MaType("sma", "SMA", lambda x, n, _v: core.sma(x, n), lambda n: n - 1),
-        MaType("ema", "EMA", lambda x, n, _v: core.ema(x, n), lambda n: n - 1),
-        MaType("wma", "WMA", lambda x, n, _v: core.wma(x, n), lambda n: n - 1),
-        MaType("smma", "SMMA (RMA)", lambda x, n, _v: core.rma(x, n), lambda n: n - 1),
-        MaType("dema", "DEMA", lambda x, n, _v: core.dema(x, n), lambda n: 2 * (n - 1)),
-        MaType("tema", "TEMA", lambda x, n, _v: core.tema(x, n), lambda n: 3 * (n - 1)),
+def _plain(f: Callable[[FloatArray, int], FloatArray]) -> MaFn:
+    """An MA of ``(x, n)`` as an ``MaFn`` (ignores volume)."""
+    return lambda x, n, _v: f(x, n)
+
+
+MA_TYPES: dict[str, MaType] = {
+    t.id: t
+    for t in (
+        MaType("sma", "SMA", _plain(core.sma)),
+        MaType("ema", "EMA", _plain(core.ema)),
+        MaType("wma", "WMA", _plain(core.wma)),
+        MaType("smma", "SMMA (RMA)", _plain(core.rma)),
+        MaType("dema", "DEMA", _plain(core.dema), lambda n: 2 * (n - 1)),
+        MaType("tema", "TEMA", _plain(core.tema), lambda n: 3 * (n - 1)),
         MaType(
             "hma",
             "HMA (Hull)",
-            lambda x, n, _v: core.hma(x, n),
+            _plain(core.hma),
             lambda n: n + core.hma_lengths(n)[1] - 2,
             min_length=core.HMA_MIN_LENGTH,
         ),
-        MaType("lsma", "LSMA", lambda x, n, _v: core.lsma(x, n), lambda n: n - 1),
-        MaType("alma", "ALMA", lambda x, n, _v: core.alma(x, n), lambda n: n - 1),
+        MaType("lsma", "LSMA", _plain(core.lsma)),
+        MaType("alma", "ALMA", _plain(core.alma)),
         MaType("swma", "SWMA", lambda x, _n, _v: core.swma(x), lambda _n: 3),
-        MaType(
-            "vwma",
-            "VWMA",
-            lambda x, n, v: core.vwma(x, v, n),
-            lambda n: n - 1,
-            uses_volume=True,
-        ),
-        MaType("mcginley", "McGinley", lambda x, n, _v: core.mcginley(x, n), lambda n: n - 1),
-        MaType(
-            "kama",
-            "KAMA",
-            lambda x, n, _v: core.kama(x, n, KAMA_FAST, KAMA_SLOW),
-            lambda n: n,
-            lookback=kama_lookback,
-        ),
+        MaType("vwma", "VWMA", lambda x, n, v: core.vwma(x, v, n), uses_volume=True),
+        MaType("mcginley", "McGinley", _plain(core.mcginley)),
+        MaType("kama", "KAMA", _plain(core.kama), lambda n: n, lookback=kama_lookback),
         MaType(
             "t3",
             "T3 (Tillson)",
-            lambda x, n, _v: core.t3(x, n),
+            _plain(core.t3),
             lambda n: 6 * (n - 1),
             lookback=lambda n: 2 * LOOKBACK_PER_LENGTH * n,
         ),
-        MaType(
-            "zlema",
-            "ZLEMA",
-            lambda x, n, _v: core.zlema(x, n),
-            lambda n: n - 1 + core.zlema_lag(n),
-        ),
+        MaType("zlema", "ZLEMA", _plain(core.zlema), lambda n: n - 1 + core.zlema_lag(n)),
     )
-    return {t.id: t for t in entries}
-
-
-MA_TYPES: dict[str, MaType] = _types()
+}
 MA_TYPE_IDS: tuple[str, ...] = tuple(MA_TYPES)
 
 MAX_LENGTH = 5000
@@ -121,8 +107,17 @@ def apply_ma(type_id: str, x: FloatArray, length: int, volume: FloatArray) -> Fl
     return ma.fn(x, length, volume)
 
 
+def ma_warmup(type_id: str, length: int) -> int:
+    return MA_TYPES[type_id].warmup(length)
+
+
 def ma_lookback(type_id: str, length: int) -> int:
     return max(MA_TYPES[type_id].lookback(length), MIN_LOOKBACK)
+
+
+def offset_shift(params: Params) -> int:
+    """``IndicatorSpec.shift`` of indicators whose ``offset`` is a plot offset."""
+    return int(params["offset"])
 
 
 def source_param(default: str = "close") -> ParamSpec:
@@ -168,10 +163,7 @@ def ma_indicator(
         return {"ma": core.shift(y, int(params["offset"]))}
 
     def warmup(params: Params) -> int:
-        return kind.warmup(int(params["length"])) + int(params["offset"])
-
-    def lookback(params: Params) -> int:
-        return max(ma_lookback(ma_type, int(params["length"])), length_lookback(params))
+        return kind.warmup(int(params["length"])) + offset_shift(params)
 
     short = kind.label.split(" ")[0]
     return IndicatorSpec(
@@ -194,5 +186,6 @@ def ma_indicator(
         compute=compute,
         learn_slug=learn_slug or ma_type,
         description=description,
-        lookback=lookback,
+        lookback=lambda p: ma_lookback(ma_type, int(p["length"])),
+        shift=offset_shift,
     )

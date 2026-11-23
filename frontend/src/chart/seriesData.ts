@@ -165,6 +165,46 @@ export function toValueLine(
   });
 }
 
+/** Values and colours of one marker output (see `toMarkers`). */
+export interface MarkerSource {
+  values: readonly (number | null)[];
+  color: string;
+  upColor?: string | undefined;
+  downColor?: string | undefined;
+}
+
+export interface MarkerPoint {
+  time: ChartTime;
+  position: 'belowBar' | 'aboveBar';
+  shape: 'arrowUp' | 'arrowDown';
+  color: string;
+}
+
+/**
+ * Arrows for marker outputs (by bar index: +1 = up arrow below the bar, -1 = down arrow above it,
+ * null or 0 = none), in time order as lightweight-charts requires. Colours default to `color`.
+ */
+export function toMarkers(
+  lines: readonly MarkerSource[],
+  times: readonly ChartTime[],
+): MarkerPoint[] {
+  const out: MarkerPoint[] = [];
+  times.forEach((time, i) => {
+    for (const line of lines) {
+      const value = line.values[i];
+      if (value === null || value === undefined || value === 0) continue;
+      const up = value > 0;
+      out.push({
+        time,
+        position: up ? 'belowBar' : 'aboveBar',
+        shape: up ? 'arrowUp' : 'arrowDown',
+        color: (up ? line.upColor : line.downColor) ?? line.color,
+      });
+    }
+  });
+  return out;
+}
+
 /**
  * How many bars were prepended when `next` replaced `previous` (older history loaded), or 0 if
  * `next` is not `previous` with older bars in front (a different data set or a refresh).

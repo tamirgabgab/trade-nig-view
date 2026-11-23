@@ -5,7 +5,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import { formatPrice } from './formatNumber.ts';
 import { IconButton } from './IconButton.tsx';
 import styles from './IndicatorLegend.module.css';
-import type { IndicatorView } from './useChartIndicators.ts';
+import { valueOutputs, type IndicatorView } from './useChartIndicators.ts';
 
 const ICON = 14;
 
@@ -38,21 +38,19 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
           >
             <span className={styles.label}>{view.label}</span>
             {visible &&
-              view.outputs
-                .filter((output) => output.plot !== 'markers')
-                .map((output) => {
-                  const value = output.values[index];
-                  return (
-                    <span
-                      key={output.name}
-                      className={styles.value}
-                      style={{ color: output.color }}
-                      data-output={output.name}
-                    >
-                      {value === null || value === undefined ? '—' : formatPrice(value, decimals)}
-                    </span>
-                  );
-                })}
+              valueOutputs(view).map((output) => {
+                const value = output.values[index];
+                return (
+                  <span
+                    key={output.name}
+                    className={styles.value}
+                    style={{ color: output.color }}
+                    data-output={output.name}
+                  >
+                    {value === null || value === undefined ? '—' : formatPrice(value, decimals)}
+                  </span>
+                );
+              })}
             {view.error !== null && (
               <span className={styles.error} role="alert" title={view.error.message}>
                 <TriangleAlert size={ICON} aria-hidden="true" />

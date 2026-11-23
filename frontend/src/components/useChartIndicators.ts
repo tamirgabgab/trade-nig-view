@@ -42,6 +42,11 @@ export interface IndicatorView {
   isFetching: boolean;
 }
 
+/** Outputs with a value per bar (legend values, style rows); markers have neither. */
+export function valueOutputs(view: IndicatorView): OutputView[] {
+  return view.outputs.filter((output) => output.plot !== 'markers');
+}
+
 const NO_VALUES: Record<string, (number | null)[]> = {};
 const EMPTY: (number | null)[] = [];
 
@@ -118,8 +123,7 @@ export function useChartIndicators(
       views.flatMap((view) =>
         view.outputs.map((output): IndicatorLine => ({
           key: `${view.instance.uid}:${output.name}`,
-          // Histogram and area plots arrive with the oscillators (R4); until then, lines.
-          plot: output.plot === 'markers' ? 'markers' : 'line',
+          plot: output.plot,
           values: output.values,
           color: output.color,
           lineWidth: output.lineWidth,

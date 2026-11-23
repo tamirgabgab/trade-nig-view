@@ -96,6 +96,23 @@ def fir(x: FloatArray, weights: FloatArray) -> FloatArray:
     return out
 
 
+def adaptive_recursion(
+    x: FloatArray, coefficient: FloatArray, start: int, seed: float
+) -> FloatArray:
+    r""":math:`y_t = y_{t-1} + c_t\,(x_t - y_{t-1})` from ``start`` on, with :math:`y_{start-1} =`
+    ``seed`` (not output). Earlier outputs are ``NaN``."""
+    out = nan_like(x)
+    level = seed
+    values = x[start:].tolist()
+    rates = coefficient[start:].tolist()
+    tail: list[float] = []
+    for value, rate in zip(values, rates, strict=True):
+        level += rate * (value - level)
+        tail.append(level)
+    out[start:] = tail
+    return out
+
+
 def ema_recursive(x: FloatArray, alpha: float, length: int) -> FloatArray:
     r"""First-order IIR :math:`y_t = y_{t-1} + \alpha\,(x_t - y_{t-1})`.
 
@@ -108,18 +125,12 @@ def ema_recursive(x: FloatArray, alpha: float, length: int) -> FloatArray:
         raise ValueError(f"alpha must be in (0, 1], got {alpha}")
     if length < 1:
         raise ValueError(f"length must be >= 1, got {length}")
-    out = nan_like(x)
     seed_at = first_valid(x) + length - 1
     if seed_at >= len(x):
-        return out
-    level = float(np.mean(x[seed_at - length + 1 : seed_at + 1]))
-    out[seed_at] = level
-    values = x[seed_at + 1 :].tolist()
-    tail: list[float] = []
-    for value in values:
-        level += alpha * (value - level)
-        tail.append(level)
-    out[seed_at + 1 :] = tail
+        return nan_like(x)
+    seed = float(np.mean(x[seed_at - length + 1 : seed_at + 1]))
+    out = adaptive_recursion(x, np.full(len(x), alpha), seed_at + 1, seed)
+    out[seed_at] = seed
     return out
 
 
@@ -159,23 +170,6 @@ def lagged(x: FloatArray, d: int) -> FloatArray:
     out = nan_like(x)
     if d < len(x):
         out[d:] = x[: len(x) - d]
-    return out
-
-
-def adaptive_recursion(
-    x: FloatArray, coefficient: FloatArray, start: int, seed: float
-) -> FloatArray:
-    r""":math:`y_t = y_{t-1} + c_t\,(x_t - y_{t-1})` from ``start`` on, with :math:`y_{start-1} =`
-    ``seed`` (not output). Earlier outputs are ``NaN``."""
-    out = nan_like(x)
-    level = seed
-    values = x[start:].tolist()
-    rates = coefficient[start:].tolist()
-    tail: list[float] = []
-    for value, rate in zip(values, rates, strict=True):
-        level += rate * (value - level)
-        tail.append(level)
-    out[start:] = tail
     return out
 
 
@@ -231,8 +225,15 @@ def lsma(x: FloatArray, length: int, offset: int = 0) -> FloatArray:
     return fir(x, linreg_weights(length, offset))
 
 
+ALMA_DEFAULT_OFFSET = 0.85
+ALMA_DEFAULT_SIGMA = 6.0
+
+
 def alma_weights(
-    length: int, offset: float = 0.85, sigma: float = 6.0, floor: bool = False
+    length: int,
+    offset: float = ALMA_DEFAULT_OFFSET,
+    sigma: float = ALMA_DEFAULT_SIGMA,
+    floor: bool = False,
 ) -> FloatArray:
     r"""Gaussian window :math:`w_j = e^{-(j-m)^2 / (2 s^2)}`, :math:`m = \text{offset}\,(n-1)`
     (floored if ``floor``), :math:`s = n/\sigma`, normalised; oldest to newest (Pine
@@ -247,7 +248,11 @@ def alma_weights(
 
 
 def alma(
-    x: FloatArray, length: int, offset: float = 0.85, sigma: float = 6.0, floor: bool = False
+    x: FloatArray,
+    length: int,
+    offset: float = ALMA_DEFAULT_OFFSET,
+    sigma: float = ALMA_DEFAULT_SIGMA,
+    floor: bool = False,
 ) -> FloatArray:
     """Arnaud Legoux MA: a Gaussian-weighted window shifted towards recent bars."""
     return fir(x, alma_weights(length, offset, sigma, floor))
@@ -315,7 +320,12 @@ def mcginley(x: FloatArray, length: int) -> FloatArray:
     return np.asarray(out, dtype=np.float64)
 
 
-def kama(x: FloatArray, length: int, fast: int = 2, slow: int = 30) -> FloatArray:
+#: Kaufman's defaults for the fast and slow EMA lengths.
+KAMA_FAST = 2
+KAMA_SLOW = 30
+
+
+def kama(x: FloatArray, length: int, fast: int = KAMA_FAST, slow: int = KAMA_SLOW) -> FloatArray:
     r"""Kaufman adaptive MA (TA-Lib semantics).
 
     Efficiency ratio :math:`ER_t = \frac{|x_t - x_{t-n}|}{\sum_{i=0}^{n-1}|x_{t-i} - x_{t-i-1}|}`
@@ -380,9 +390,4 @@ def shift(y: FloatArray, offset: int) -> FloatArray:
     """
     if offset < 0:
         raise ValueError("offset must be >= 0 (a negative offset would read future bars)")
-    if offset == 0:
-        return y
-    out = nan_like(y)
-    if offset < len(y):
-        out[offset:] = y[: len(y) - offset]
-    return out
+    return y if offset == 0 else lagged(y, offset)
