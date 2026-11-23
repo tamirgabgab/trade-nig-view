@@ -62,7 +62,11 @@ def default_watchlist(universe: Universe) -> WatchlistDocument:
 
 
 def _canonical(universe: Universe, sections: list[WatchlistSection]) -> list[WatchlistSection]:
-    """Sections with canonical symbols; unknown, repeated or too many symbols are a 422."""
+    """Sections with canonical symbols; unknown, repeated or too many symbols, or two sections
+    with one title, are a 422."""
+    titles = [s.title for s in sections]
+    if len(set(titles)) != len(titles):
+        raise InvalidWatchlistError("Two sections have the same title")
     seen: set[str] = set()
     result: list[WatchlistSection] = []
     for section in sections:

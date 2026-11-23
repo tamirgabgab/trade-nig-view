@@ -3,7 +3,9 @@ import { useChartStore } from './chartStore.ts';
 import { useHistoryStore } from './historyStore.ts';
 import { useIndicatorStore } from './indicatorStore.ts';
 import { useLayoutStore } from './layoutStore.ts';
-import { applyLayout, currentLayout, saveAs, saveNow } from './layoutSync.ts';
+import { waitFor } from '@testing-library/react';
+
+import { applyLayout, currentLayout, saveAs, saveNow, startLayoutSync } from './layoutSync.ts';
 
 let puts: { name: string; body: Record<string, unknown> }[];
 
@@ -67,13 +69,48 @@ afterEach(() => {
 });
 
 describe('layout sync', () => {
-  it('saves the chart, and after a save elsewhere (409) saves on top of that revision', async () => {
-    backend({ Unnamed: 3 });
+  it('loads the open layout, saves the chart, and after a save elsewhere (409) saves on top', async () => {
+    const revisions = { Unnamed: 3 };
+    backend(revisions);
+    const stop = startLayoutSync();
+    await waitFor(() => {
+      expect(useChartStore.getState().symbol).toBe('NVDA'); // the stored layout
+    });
+    revisions.Unnamed = 5; // another window saved meanwhile
     useChartStore.getState().setSymbol('TSLA');
     await saveNow();
-    expect(puts.map((p) => p.body['revision'])).toEqual([0, 3]);
-    expect(puts[1]?.body).toMatchObject({ symbol: 'TSLA', chart_type: 'candles' });
-    expect(useLayoutStore.getState()).toMatchObject({ revision: 4, status: 'saved' });
+    stop();
+    expect(puts.map((p) => p.body['revision'])).toEqual([3, 5]);
+    expect(puts[1]?.body).toMatchObject({ symbol: 'TSLA', chart_type: 'line' });
+    expect(useLayoutStore.getState()).toMatchObject({ revision: 6, status: 'saved' });
+  });
+
+  it('saves nothing until the stored layout could be read, then retries the read', async () => {
+    let up = false;
+    puts = [];
+    stubApi({
+      '/api/layouts/Unnamed': (_url, init) => {
+        if (!up) return Promise.reject(new TypeError('Failed to fetch'));
+        if (init?.method === 'PUT') {
+          puts.push({ name: 'Unnamed', body: {} });
+          return jsonResponse({ name: 'Unnamed', revision: 1, symbol: 'AAPL' });
+        }
+        return jsonResponse({ title: 'Not found', status: 404, code: 'layout_not_found' }, 404);
+      },
+    });
+    const stop = startLayoutSync([10]);
+    await waitFor(() => {
+      expect(useLayoutStore.getState().status).toBe('error');
+    });
+    await saveNow();
+    expect(puts).toEqual([]);
+    up = true;
+    await waitFor(() => {
+      expect(useLayoutStore.getState().status).toBe('saved');
+    });
+    await saveNow();
+    stop();
+    expect(puts).toHaveLength(1);
   });
 
   it('opens a layout: chart, indicators (uids go on after theirs), view later; clears undo', () => {

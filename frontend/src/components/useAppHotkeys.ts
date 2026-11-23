@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { useUiStore } from '../store/uiStore.ts';
 import { opensIndicators } from './indicatorSearch.ts';
 import { useDrawingStore } from '../store/drawingStore.ts';
@@ -23,7 +25,18 @@ export function useAppHotkeys(): void {
   useGlobalHotkey(opensSymbolSearch, (event) => {
     ui().openModal('symbols', event.key.toUpperCase());
   });
-  useGlobalHotkey(savesLayout, saveLayoutNow);
+  // Ctrl+S also while a dialog is open (the global hotkeys pause then): never the browser's save.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!savesLayout(event)) return;
+      event.preventDefault();
+      saveLayoutNow();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
   useGlobalHotkey(undoesChart, () => {
     useHistoryStore.getState().undo();
   });

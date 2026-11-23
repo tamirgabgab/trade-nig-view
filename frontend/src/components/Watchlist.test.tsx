@@ -144,4 +144,62 @@ describe('market parsers', () => {
     });
     expect(saved.at(-1)?.sections.at(-1)?.symbols).toEqual(['GBPUSD=X', 'AAPL']);
   });
+
+  it('keeps an edit made while the previous one is saving, and drops symbols gone from the universe', async () => {
+    useUiStore.setState(useUiStore.getInitialState());
+    useWatchlistStore.setState({ active: 'Mine' });
+    const saved: { revision: number; sections: { symbols: string[] }[] }[] = [];
+    let release: (() => void) | undefined;
+    stubApi({
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/watchlists': {
+        body: {
+          watchlists: [
+            {
+              name: 'Mine',
+              revision: 1,
+              updated_at: '',
+              schema_version: 1,
+              sections: [{ title: 'All', symbols: ['AAPL', 'TSLA', 'GONE', '^GSPC'] }],
+            },
+          ],
+        },
+      },
+      '/api/watchlists/Mine': (_url, init) => {
+        const body = JSON.parse(init?.body as string) as (typeof saved)[number];
+        saved.push(body);
+        const reply = jsonResponse({ ...body, name: 'Mine', revision: body.revision + 1 });
+        // The first save is slow: the second edit happens meanwhile.
+        return saved.length > 1
+          ? reply
+          : new Promise<Response>((resolve) => {
+              release = () => {
+                void reply.then(resolve);
+              };
+            });
+      },
+    });
+    renderWithQuery(<Watchlist />);
+    const symbols = () =>
+      [...document.querySelectorAll('tr[data-symbol]')].map((r) => r.getAttribute('data-symbol'));
+    fireEvent.contextMenu(await rowFor('AAPL'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Remove AAPL from the watchlist' }));
+    await waitFor(() => {
+      expect(saved).toHaveLength(1);
+    });
+    fireEvent.contextMenu(await rowFor('TSLA'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Remove TSLA from the watchlist' }));
+    release?.();
+    await waitFor(() => {
+      expect(saved).toHaveLength(2);
+    });
+    expect(saved.map((b) => [b.revision, b.sections[0]?.symbols])).toEqual([
+      [1, ['TSLA', '^GSPC']],
+      [2, ['^GSPC']],
+    ]);
+    await waitFor(() => {
+      expect(symbols()).toEqual(['^GSPC']);
+    });
+  });
 });

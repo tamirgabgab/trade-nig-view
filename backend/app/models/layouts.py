@@ -28,6 +28,8 @@ MAX_INDICATORS = 20
 def _plain_name(value: str) -> str:
     if "/" in value or any(unicodedata.category(ch) == "Cc" for ch in value):
         raise ValueError("a name cannot contain '/' or control characters")
+    if set(value) == {"."}:
+        raise ValueError("a name cannot be only dots (a URL path step)")
     return value
 
 

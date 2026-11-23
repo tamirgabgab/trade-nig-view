@@ -4,6 +4,9 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import TypeAdapter, ValidationError
+
+from app.models.layouts import DocumentName
 
 BB: dict[str, Any] = {
     "uid": "i1",
@@ -116,3 +119,10 @@ def test_bad_names_are_422(client: TestClient, name: str) -> None:
 def test_names_are_stripped(client: TestClient) -> None:
     assert put(client, "%20Main%20", 0).json()["name"] == "Main"
     assert client.get("/api/layouts/Main").status_code == 200
+
+
+@pytest.mark.parametrize("name", [".", "..", " ... "])
+def test_names_of_only_dots_are_refused(name: str) -> None:
+    # A URL path cannot carry them (the browser collapses "." and ".."), so test the type itself.
+    with pytest.raises(ValidationError, match="only dots"):
+        TypeAdapter(DocumentName).validate_python(name)

@@ -28,6 +28,14 @@ export function registerViewCapture(capture: ViewCapture | null): void {
   captureView = capture ?? (() => ({ stretches: {}, visibleRange: null }));
 }
 
+/** The view to save: a layout just opened keeps its own until its bars are in. */
+function view(): Pick<LayoutState, 'stretches' | 'visibleRange'> {
+  const pending = useLayoutStore.getState().pending;
+  return pending === null
+    ? captureView()
+    : { stretches: pending.stretches, visibleRange: pending.visibleRange };
+}
+
 /** The chart as it is now, as a layout. */
 export function currentLayout(): LayoutState {
   const c = useChartStore.getState();
@@ -39,7 +47,8 @@ export function currentLayout(): LayoutState {
     autoScale: c.autoScale,
     adjusted: c.adjusted,
     indicators: useIndicatorStore.getState().instances,
-    ...captureView(),
+    // A layout just opened shows its own view once its bars are in; until then that is the view.
+    ...view(),
   };
 }
 
@@ -78,7 +87,11 @@ export function applyLayout(layout: SavedLayout): void {
 
 let inFlight: Promise<void> | null = null;
 let again = false;
+/** A save asked for while the page closes: every save until then survives the unload. */
+let keepaliveWanted = false;
 let timer: number | undefined;
+/** The open layout was read from the backend: saving it cannot overwrite what is stored. */
+let loaded = false;
 
 async function saveOnce(keepalive: boolean): Promise<void> {
   const { name, revision } = useLayoutStore.getState();
@@ -104,6 +117,8 @@ async function saveOnce(keepalive: boolean): Promise<void> {
 /** Save the open layout now (one save at a time; a change meanwhile saves again after it). */
 export function saveNow(keepalive = false): Promise<void> {
   window.clearTimeout(timer);
+  keepaliveWanted ||= keepalive;
+  if (!loaded) return Promise.resolve();
   if (inFlight !== null) {
     again = true;
     return inFlight;
@@ -114,16 +129,21 @@ export function saveNow(keepalive = false): Promise<void> {
     let more = true;
     while (more) {
       again = false;
-      await saveOnce(keepalive);
+      await saveOnce(keepaliveWanted);
       more = changedMeanwhile();
     }
     inFlight = null;
+    keepaliveWanted = false;
   })();
   return inFlight;
 }
 
 /** Save the open layout now and say so (Ctrl+S, the menu). */
 export function saveLayoutNow(): void {
+  if (!loaded) {
+    useUiStore.getState().showToast('The layout is not loaded yet; it saves once it is');
+    return;
+  }
   void saveNow().then(() => {
     const { status, name } = useLayoutStore.getState();
     useUiStore
@@ -134,7 +154,7 @@ export function saveLayoutNow(): void {
 
 /** Save a moment after the last change. */
 export function scheduleSave(): void {
-  if (useLayoutStore.getState().status === 'loading') return;
+  if (!loaded) return;
   window.clearTimeout(timer);
   timer = window.setTimeout(() => {
     void saveNow();
@@ -154,6 +174,8 @@ export async function openLayout(name: string): Promise<void> {
 
 /** Save the chart under a new name and make it the open layout; false if the name is taken. */
 export async function saveAs(name: string, { replace }: { replace: boolean }): Promise<boolean> {
+  // Pending saves of the old layout first, so its revision below is the last one.
+  await saveNow();
   const old = useLayoutStore.getState();
   try {
     const saved = await saveLayout(name, 0, currentLayout());
@@ -167,26 +189,45 @@ export async function saveAs(name: string, { replace }: { replace: boolean }): P
 }
 
 /** Load the open layout from the backend, then keep saving it; returns the stop function. */
-export function startLayoutSync(): () => void {
+export function startLayoutSync(retryMs = [2000, 5000, 10_000, 30_000]): () => void {
   const { name } = useLayoutStore.getState();
   useLayoutStore.setState({ status: 'loading' });
-  void fetchLayout(name)
-    .then((layout) => {
-      if (layout === null) useLayoutStore.setState({ revision: 0, status: 'saved' });
-      else applyLayout(layout);
-    })
-    .catch(() => {
-      useLayoutStore.setState({ status: 'error' });
-    });
+  loaded = false;
+  let stopped = false;
+  let retry: number | undefined;
+  // Until the stored layout is read, nothing is saved (the backend may still be starting).
+  const load = (attempt: number) => {
+    fetchLayout(name)
+      .then((layout) => {
+        if (stopped) return;
+        if (layout === null) useLayoutStore.setState({ revision: 0, status: 'saved' });
+        else applyLayout(layout);
+        loaded = true;
+      })
+      .catch(() => {
+        if (stopped) return;
+        useLayoutStore.setState({ status: 'error' });
+        retry = window.setTimeout(
+          () => {
+            load(attempt + 1);
+          },
+          retryMs[Math.min(attempt, retryMs.length - 1)],
+        );
+      });
+  };
+  load(0);
   const offChart = useChartStore.subscribe(scheduleSave);
   const offIndicators = useIndicatorStore.subscribe((s, prev) => {
     if (s.instances !== prev.instances) scheduleSave();
   });
   const onPageHide = () => {
-    if (useLayoutStore.getState().status !== 'loading') void saveNow(true);
+    void saveNow(true);
   };
   window.addEventListener('pagehide', onPageHide);
   return () => {
+    stopped = true;
+    loaded = false;
+    window.clearTimeout(retry);
     offChart();
     offIndicators();
     window.removeEventListener('pagehide', onPageHide);

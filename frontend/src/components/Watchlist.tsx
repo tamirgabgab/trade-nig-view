@@ -190,7 +190,7 @@ export function Watchlist() {
         </thead>
         <tbody>
           {sections.map((section, sectionIndex) => (
-            <Fragment key={section.title}>
+            <Fragment key={sectionIndex}>
               <tr
                 className={styles.section}
                 onDragOver={(event) => {

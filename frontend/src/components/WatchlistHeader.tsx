@@ -142,6 +142,7 @@ export function WatchlistHeader({ editor }: { editor: Editor }) {
           label={dialog[naming.shown].label}
           initial={dialog[naming.shown].initial}
           submitLabel={dialog[naming.shown].submit}
+          maxLength={naming.shown.startsWith('section') ? 40 : 60}
           onSubmit={async (text) => {
             switch (naming.shown) {
               case 'watchlistNew':
@@ -153,6 +154,9 @@ export function WatchlistHeader({ editor }: { editor: Editor }) {
                 editor.edit((s) => addSection(s, text));
                 return null;
               default:
+                if (sections.some((s, i) => s.title === text && i !== section)) {
+                  return `There is a section “${text}”.`;
+                }
                 editor.edit((s) => renameSection(s, section, text));
                 return null;
             }

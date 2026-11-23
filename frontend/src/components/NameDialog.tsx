@@ -14,12 +14,12 @@ interface NameDialogProps {
   /** Verb-first, e.g. "Rename layout". */
   submitLabel: string;
   attrs?: OverlayAttrs | undefined;
+  /** Longest name the backend accepts (section titles: 40). */
+  maxLength?: number;
   /** Resolves to an error to show (e.g. the name is taken), or null when done. */
   onSubmit: (name: string) => Promise<string | null>;
   onClose: () => void;
 }
-
-const MAX = 60;
 
 /** Ask for a name (layout, watchlist, section): validated on submit, Enter submits. */
 export function NameDialog({
@@ -28,6 +28,7 @@ export function NameDialog({
   initial,
   submitLabel,
   attrs,
+  maxLength = 60,
   onSubmit,
   onClose,
 }: NameDialogProps) {
@@ -38,8 +39,9 @@ export function NameDialog({
   const trimmed = name.trim();
 
   const submit = async () => {
-    if (trimmed === '' || trimmed.includes('/')) {
-      setError('Use 1 to 60 characters, without "/".');
+    // "." and ".." would be read as path steps in the URL.
+    if (trimmed === '' || trimmed.includes('/') || /^\.+$/.test(trimmed)) {
+      setError(`Use 1 to ${String(maxLength)} characters, without "/" and not only dots.`);
       return;
     }
     setBusy(true);
@@ -74,7 +76,7 @@ export function NameDialog({
           ref={inputRef}
           className={shell.input}
           value={name}
-          maxLength={MAX}
+          maxLength={maxLength}
           aria-invalid={error !== null || undefined}
           aria-describedby={error === null ? undefined : 'name-dialog-error'}
           onChange={(event) => {

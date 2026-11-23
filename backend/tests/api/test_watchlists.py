@@ -68,6 +68,7 @@ INVALID: list[tuple[list[dict[str, Any]], str]] = [
     ([{"title": "A", "symbols": ["^IDX", "IDX"]}], "invalid_watchlist"),
     ([{"title": "", "symbols": []}], "validation_error"),
     ([{"title": "A", "symbols": [], "x": 1}], "validation_error"),
+    ([{"title": "A", "symbols": []}, {"title": "A", "symbols": []}], "invalid_watchlist"),
     ([{"title": f"S{i}", "symbols": []} for i in range(31)], "validation_error"),
 ]
 
