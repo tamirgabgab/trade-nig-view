@@ -5,7 +5,6 @@ import { ChartEngine, type IndicatorLine, type PaneLayoutListener } from '../cha
 import type { ChartType, ScaleMode } from '../chart/chartTypes.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { readChartTheme } from '../chart/theme.ts';
-import type { SnapshotMode } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 
 /** A viewport the chart should jump to; `seq` changes on every request (same range re-applies). */
@@ -34,16 +33,12 @@ interface ChartViewProps {
   onPaneLayout: PaneLayoutListener;
   /** Auto-fit turned off or on from the price axis (drag, double-click). Must be stable. */
   onAutoScaleChange: (autoScale: boolean) => void;
-  /** Each new command (by `seq`) runs once: jump to the latest bar, or reset the view. */
-  command: { seq: number; kind: 'latest' | 'reset' } | null;
+  /** The engine once created (null when disposed), for one-shot actions. Must be stable. */
+  onEngine: (engine: ChartEngine | null) => void;
   /** Right-click on the chart: where, and the price there (null below the price pane). Stable. */
   onContextMenu: (at: { x: number; y: number; price: number | null }) => void;
   /** UI theme: a change repaints the chart from the CSS tokens. */
   theme: string;
-  /** Each new request (by `seq`) calls `onSnapshot` once with the chart image. */
-  snapshot: { seq: number; mode: SnapshotMode } | null;
-  /** Must be a stable function. */
-  onSnapshot: (image: HTMLCanvasElement, mode: SnapshotMode) => void;
 }
 
 /** Hosts one ChartEngine in a div. Re-renders only when its props change (memo). */
@@ -61,19 +56,15 @@ export const ChartView = memo(function ChartView({
   onVisibleRangeChange,
   onPaneLayout,
   onAutoScaleChange,
-  command,
+  onEngine,
   onContextMenu,
   theme,
-  snapshot,
-  onSnapshot,
 }: ChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<ChartEngine | null>(null);
   const shownKeyRef = useRef<string | null>(null);
   const focusSeqRef = useRef<number | null>(null);
   const themeRef = useRef(theme);
-  const snapshotSeqRef = useRef(snapshot?.seq ?? 0);
-  const commandSeqRef = useRef(command?.seq ?? 0);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -84,6 +75,7 @@ export const ChartView = memo(function ChartView({
     const offPanes = engine.onPaneLayout(onPaneLayout);
     const offAutoScale = engine.onAutoScaleChange(onAutoScaleChange);
     engineRef.current = engine;
+    onEngine(engine);
     return () => {
       offHover();
       offRange();
@@ -91,9 +83,10 @@ export const ChartView = memo(function ChartView({
       offAutoScale();
       engine.dispose();
       engineRef.current = null;
+      onEngine(null);
       shownKeyRef.current = null;
     };
-  }, [onHover, onVisibleRangeChange, onPaneLayout, onAutoScaleChange]);
+  }, [onHover, onVisibleRangeChange, onPaneLayout, onAutoScaleChange, onEngine]);
 
   // Chart type first, so the bars below are drawn once with the right series.
   useEffect(() => {
@@ -124,21 +117,6 @@ export const ChartView = memo(function ChartView({
   useEffect(() => {
     engineRef.current?.setScale({ mode: scaleMode, autoScale });
   }, [scaleMode, autoScale]);
-
-  useEffect(() => {
-    const engine = engineRef.current;
-    if (command === null || engine === null || command.seq === commandSeqRef.current) return;
-    commandSeqRef.current = command.seq;
-    if (command.kind === 'latest') engine.scrollToLatest();
-    else engine.resetView();
-  }, [command]);
-
-  useEffect(() => {
-    const engine = engineRef.current;
-    if (snapshot === null || engine === null || snapshot.seq === snapshotSeqRef.current) return;
-    snapshotSeqRef.current = snapshot.seq;
-    onSnapshot(engine.snapshot(), snapshot.mode);
-  }, [snapshot, onSnapshot]);
 
   // Each focus request is applied once (a new object with the same `seq` is ignored).
   useEffect(() => {

@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useBarHistory } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
-import type { PaneLayout } from '../chart/ChartEngine.ts';
+import type { ChartEngine, PaneLayout } from '../chart/ChartEngine.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
@@ -62,10 +62,11 @@ export function ChartArea({ className }: ChartAreaProps) {
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
   const setAutoScale = useChartStore((s) => s.setAutoScale);
   const learn = usePresence(useUiStore((s) => s.learnFor));
-  const [command, setCommand] = useState<{ seq: number; kind: 'latest' | 'reset' } | null>(null);
-  const runCommand = (kind: 'latest' | 'reset') => {
-    setCommand((c) => ({ seq: (c?.seq ?? 0) + 1, kind }));
-  };
+  // The chart engine, for one-shot actions (jump to latest, reset view, snapshot).
+  const engineRef = useRef<ChartEngine | null>(null);
+  const onEngine = useCallback((engine: ChartEngine | null) => {
+    engineRef.current = engine;
+  }, []);
   const [menuAt, setMenuAt] = useState<{ x: number; y: number; price: number | null } | null>(null);
   const contextMenu = usePresence(menuAt);
   // Stable: ActionMenu re-subscribes its click-away listener when onClose changes.
@@ -115,8 +116,7 @@ export function ChartArea({ className }: ChartAreaProps) {
     latest.current = history;
   });
 
-  const snapshot = useUiStore((s) => s.snapshot);
-  const onSnapshot = useChartSnapshot({
+  useChartSnapshot(engineRef, {
     bars,
     decimals,
     info,
@@ -253,11 +253,9 @@ export function ChartArea({ className }: ChartAreaProps) {
         onVisibleRangeChange={onVisibleRangeChange}
         onPaneLayout={setPaneLayout}
         onAutoScaleChange={setAutoScale}
-        command={command}
+        onEngine={onEngine}
         onContextMenu={setMenuAt}
         theme={theme}
-        snapshot={snapshot}
-        onSnapshot={onSnapshot}
       />
       {offLatest && (
         <IconButton
@@ -266,7 +264,7 @@ export function ChartArea({ className }: ChartAreaProps) {
           icon={<ChevronsRight size={18} />}
           tooltipSide="left"
           onClick={() => {
-            runCommand('latest');
+            engineRef.current?.scrollToLatest();
           }}
         />
       )}
@@ -277,7 +275,7 @@ export function ChartArea({ className }: ChartAreaProps) {
           attrs={contextMenu.attrs}
           onClose={closeContextMenu}
           onResetView={() => {
-            runCommand('reset');
+            engineRef.current?.resetView();
           }}
         />
       )}

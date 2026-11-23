@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
 import type { Bar } from '../api/bars.ts';
 import type { SymbolInfo } from '../api/market.ts';
+import type { ChartEngine } from '../chart/ChartEngine.ts';
 import { readChartTheme } from '../chart/theme.ts';
 import { useUiStore, type SnapshotMode } from '../store/uiStore.ts';
 import { formatPrice } from './formatNumber.ts';
@@ -17,21 +18,24 @@ interface SnapshotInput {
 }
 
 /**
- * A stable handler for the chart image (ChartView is memoised): adds the title band (symbol,
- * name, interval, exchange; latest OHLC and date), then copies or downloads it and says so in a
- * toast. The text is built from the latest input only when an image arrives.
+ * Answer each snapshot request (toolbar, palette, context menu, Alt+S): take the chart image, add
+ * the title band (symbol, name, interval, exchange; latest OHLC and date), copy or download it and
+ * say so in a toast. The text is built from the latest input only when a request comes.
  */
 export function useChartSnapshot(
+  engineRef: RefObject<ChartEngine | null>,
   input: SnapshotInput,
-): (image: HTMLCanvasElement, mode: SnapshotMode) => void {
+): void {
+  const request = useUiStore((s) => s.snapshot);
   const showToast = useUiStore((s) => s.showToast);
   const latest = useRef(input);
   useEffect(() => {
     latest.current = input;
   });
+  const handled = useRef(request?.seq ?? 0);
 
-  return useCallback(
-    (image, mode) => {
+  const take = useCallback(
+    (image: HTMLCanvasElement, mode: SnapshotMode) => {
       const { bars, decimals, info, symbol, interval } = latest.current;
       const last = legendValues(bars, null);
       const price = (v: number) => formatPrice(v, decimals);
@@ -63,4 +67,11 @@ export function useChartSnapshot(
     },
     [showToast],
   );
+
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (request === null || engine === null || request.seq === handled.current) return;
+    handled.current = request.seq;
+    take(engine.snapshot(), request.mode);
+  }, [request, engineRef, take]);
 }
