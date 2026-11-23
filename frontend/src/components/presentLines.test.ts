@@ -30,6 +30,7 @@ describe('presentLines', () => {
     expect(shown[0]).toBe(lines[0]);
     expect(shown[1]?.color).toBe('rgba(41, 98, 255, 0.2)');
     expect(shown[1]?.values).toBe(lines[1]?.values);
+    expect(shown[1]?.style).toBe(lines[1]?.style); // a plain line: no data re-send
   });
 
   it('dims the histogram, marker and fill colours of the others too', () => {

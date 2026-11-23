@@ -67,7 +67,7 @@
 .section {
   margin: var(--space-4) 0 var(--space-2);
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;

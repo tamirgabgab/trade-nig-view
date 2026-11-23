@@ -33,6 +33,15 @@ button {
   outline-offset: 1px;
 }
 
+/* Key caps (tooltips, hints, the shortcuts dialog adjust them locally). */
+kbd {
+  padding: 0 5px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

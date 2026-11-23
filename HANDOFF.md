@@ -299,7 +299,7 @@
 
 ## U1a — מה נבנה (2026-11-23, S6a)
 קדמה לו סקירת UX/UI עם עמוד הצעות והדגמות חיות (Artifact). המשתמש בחר: להישאר עם הצבעים של TV, תנועה שקטה, חצי מסך מספיק, פרופיל UX, כל ההצעות, בשני סבבים.
-- **פרופיל וטוקנים:** `.ux-profile.md`; ‏`--font-size-xs` מ-11 ל-12px; ‏tokens לתנועה (`--duration-base` 200, ‏`--duration-slow` 300, ‏`--duration-exit` 150, ‏`--ease-out`/`--ease-in`); צללים רכים עם קו הארה עליון (`--shadow-overlay`, ‏`--shadow-panel`) במקום 40–45% שחור.
+- **פרופיל וטוקנים:** `.ux-profile.md`; ‏`--font-size-xs` (11px) נמחק, וכל ה-meta עובר ל-`--font-size-sm` (12px); ‏tokens לתנועה (`--duration-base` 200, ‏`--duration-exit` 150, ‏`--ease-out`/`--ease-in`); ‏`kbd` גלובלי אחד; צללים רכים עם קו הארה עליון (`--shadow-overlay`, ‏`--shadow-panel`) במקום 40–45% שחור.
 - **כפתורים:** כפתורים של "coming in Rn" בשקיפות 50% עם נקודה כתומה. ה-tooltip הוא אלמנט אמיתי (ולא `::after`), והקיצור מוצג בתוכו כ-`kbd`. ה-tooltips מתחילים בפועל ("Add indicator", "Edit settings: EMA 9"). ב-ChartTypeMenu יש עכשיו טבעת focus.
 - **אנימציות:**
   - `SlidingPill`: גלולה שמחליקה בין כפתורי ה-interval והטווח.
@@ -322,7 +322,29 @@
 - **באגים שנתפסו בבדיקות:**
   1. **(E2E)** פאנל שיוצא באנימציה החזיר את ה-focus לכפתור שפתח אותו 150ms אחרי הסגירה, וגנב אותו מדיאלוג שנפתח בינתיים (אותיות שהוקלדו בחיפוש אבדו). עכשיו `restoreFocus` מחזיר focus רק אם הוא עדיין על ה-body או בתוך הפאנל.
   2. **(צילום)** בזמן ריחוף, מילוי ה-RSI נעשה חזק במקום חלש, כי `withAlpha` החזיר צבע rgba כמו שהוא. עכשיו הוא מכפיל את ה-alpha.
-- **בדיקות:** ‏frontend: 206 (היו 189); ‏E2E: 10 (היו 8): Watchlist צף ב-960, ‏`?`, ‏Undo; ‏backend: 1,854. ב-ux-audit אין גלישה ב-1280 וב-960, ואין שגיאות ב-console.
+- **ניקוי (ponytail ← code-review high ← simplify):**
+  - **ponytail:** איחוד של `CloseField` לתוך `Field`; ה-timer של ה-emphasis עבר ממשתנה גלובלי במודול ל-effect; ה-undo ב-toast הוא חובה.
+  - **code review:** 10 ממצאים. תוקנו 9:
+    - ה-Learn drawer לא הציג אנימציית יציאה.
+    - דיאלוג הקיצורים לא חסם את ה-hotkeys האחרים, ונפתח modal על modal.
+    - העמעום לא חל על histogram ועל fills.
+    - הבזק שגוי בזמן החלפת ADJ.
+    - פתיחה מחדש בזמן אנימציית יציאה החזירה state ישן (נוסף `key` ב-`usePresence`).
+    - גרירת ציר שהסתיימה מחוץ לגרף לא כיבתה את `auto`.
+    - משך ההבהוב של שורה חדשה לא תאם את משך ההדגשה.
+    - Esc כפול סגר גם את ה-Watchlist הצף.
+    - הדגשה עד 4px הוסברה בתיעוד.
+    הממצא היחיד שלא שונה: שני רכיבים בקובץ `ShortcutsDialog.tsx`, באותה תבנית Dialog/Panel כמו `IndicatorsDialog` ו-`SymbolSearchDialog`.
+  - **simplify** (4 סוקרים: שימוש חוזר, פישוט, יעילות, עומק):
+    - `isBareKeyOutsideField` משותף ל-3 ה-hotkeys, ו-`selectModalOpen` אחד.
+    - `usePresence` מחזיר `attrs` לפריסה, ונמחקו שכפולים.
+    - ה-presence של ה-Learn drawer עבר ל-ChartArea, וה-latch נמחק.
+    - עמעום של קו רגיל כבר לא שולח את ה-data מחדש.
+    - blur בתוך השורה לא מאפס את העמעום.
+    - `usePriceFlash` לא מרנדר פעמיים בתנועת crosshair.
+    - `kbd` גלובלי; ‏`--font-size-xs` ו-`--duration-slow` נמחקו; משכי האנימציה של ה-toast וההבהוב נקבעים מ-TS.
+    - **דולג:** keyframes משותפים, כי CSS Modules מחליף את שמות האנימציות בשמות מקומיים; רכיב `ModalDialog` משותף, ‏`useDismiss` ו-`useTimeout`, כי אלה שינויי מבנה גדולים מהסבב; ‏`BandFill` בזמן קבוע לפס קבוע (רווח קטן).
+- **בדיקות:** ‏frontend: 208 (היו 189); ‏E2E: 10 (היו 8): Watchlist צף ב-960, ‏`?`, ‏Undo; ‏backend: 1,854. `test.sh`: כל 9 השערים ירוקים. ב-ux-audit אין גלישה ב-1280 וב-960, ואין שגיאות ב-console.
 
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |

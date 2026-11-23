@@ -9,27 +9,31 @@ function exitMs(): number {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : EXIT_MS;
 }
 
+export type OverlayAttrs = Presence<unknown>['attrs'];
+
 export interface Presence<T> {
   shown: T | null;
   closing: boolean;
   /** Bumped when the value comes back after a close: use it as the overlay's React `key` so a
    *  reopen during the exit starts fresh (state, focus) instead of reviving the closing one. */
   key: number;
+  /** Spread on the overlay's root: exit keyframes (`data-closing`) and no focus or clicks. */
+  attrs: { 'data-closing': true | undefined; inert: boolean };
 }
 
 /**
  * Keep the last non-null `value` rendered for one exit animation after it turns null, so an
- * overlay can animate out instead of vanishing. `closing` is true during that time: render the
- * overlay with `data-closing` (exit keyframes) and `inert` (no focus, no clicks).
+ * overlay can animate out instead of vanishing. `closing` is true during that time.
  */
 export function usePresence<T>(value: T | null): Presence<T> {
   const [state, setState] = useState({ shown: value, open: value !== null, key: 0 });
   const open = value !== null;
-  // Adjusting state while rendering is React's documented pattern for "derive from a prop change".
+  // Adjusting state while rendering is React's documented pattern for "derive from a prop change";
+  // React re-renders at once, so the return below always sees the adjusted state.
   if (open && (value !== state.shown || !state.open)) {
     setState({ shown: value, open: true, key: state.open ? state.key : state.key + 1 });
   } else if (!open && state.open) {
-    setState({ ...state, open: false, shown: exitMs() === 0 ? null : state.shown });
+    setState({ shown: exitMs() === 0 ? null : state.shown, open: false, key: state.key });
   }
 
   useEffect(() => {
@@ -42,9 +46,13 @@ export function usePresence<T>(value: T | null): Presence<T> {
     };
   }, [open, state.shown]);
 
-  if (open) return { shown: value, closing: false, key: state.open ? state.key : state.key + 1 };
-  const shown = state.open && exitMs() === 0 ? null : state.shown;
-  return { shown, closing: shown !== null, key: state.key };
+  const closing = !state.open && state.shown !== null;
+  return {
+    shown: state.shown,
+    closing,
+    key: state.key,
+    attrs: { 'data-closing': closing || undefined, inert: closing },
+  };
 }
 
 /**

@@ -1,21 +1,17 @@
 import { useEffect } from 'react';
 
-import { useUiStore } from '../store/uiStore.ts';
+import { selectModalOpen, useUiStore } from '../store/uiStore.ts';
+import { isBareKeyOutsideField } from './keyTarget.ts';
 
 /** True for `?` typed outside a text field. */
 export function opensShortcuts(event: KeyboardEvent): boolean {
-  if (event.key !== '?' || event.ctrlKey || event.metaKey || event.altKey) return false;
-  if (event.defaultPrevented) return false;
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return true;
-  if (target.isContentEditable) return false;
-  return !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+  return event.key === '?' && isBareKeyOutsideField(event);
 }
 
 /** `?` anywhere outside a text field opens the keyboard shortcuts dialog. */
 export function useShortcutsHotkey(): void {
   const setOpen = useUiStore((s) => s.setShortcutsOpen);
-  const blocked = useUiStore((s) => s.shortcutsOpen || s.indicatorsDialog || s.symbolSearch.open);
+  const blocked = useUiStore(selectModalOpen);
   useEffect(() => {
     if (blocked) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {

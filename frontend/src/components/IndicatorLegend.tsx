@@ -1,7 +1,7 @@
 import { BookOpen, Eye, EyeOff, Settings2, TriangleAlert, X } from 'lucide-react';
 
 import { useIndicatorStore } from '../store/indicatorStore.ts';
-import { useUiStore } from '../store/uiStore.ts';
+import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import { formatPrice, formatVolume } from './formatNumber.ts';
 import { IconButton } from './IconButton.tsx';
 import styles from './IndicatorLegend.module.css';
@@ -50,6 +50,7 @@ export function IndicatorLegend({
             className={[styles.row, visible ? '' : styles.hidden].join(' ')}
             data-indicator={uid}
             data-new={emphasis === uid || undefined}
+            style={emphasis === uid ? { animationDuration: `${String(EMPHASIS_MS)}ms` } : undefined}
             onMouseEnter={() => {
               setLegendFocus(uid);
             }}
@@ -59,8 +60,9 @@ export function IndicatorLegend({
             onFocus={() => {
               setLegendFocus(uid);
             }}
-            onBlur={() => {
-              setLegendFocus(null);
+            onBlur={(event) => {
+              // Tabbing between the row's own buttons keeps the focus on this indicator.
+              if (!event.currentTarget.contains(event.relatedTarget)) setLegendFocus(null);
             }}
           >
             <span className={styles.label}>{view.label}</span>

@@ -1,4 +1,5 @@
 import { CATEGORY_LABELS, type IndicatorInfo } from '../api/indicators.ts';
+import { isBareKeyOutsideField } from './keyTarget.ts';
 
 export interface IndicatorGroup {
   label: string;
@@ -40,10 +41,5 @@ export function searchIndicators(specs: readonly IndicatorInfo[], query: string)
 
 /** True for a plain `/` typed outside a text field (opens the indicators dialog). */
 export function opensIndicators(event: KeyboardEvent): boolean {
-  if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return false;
-  if (event.defaultPrevented) return false;
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return true;
-  if (target.isContentEditable) return false;
-  return !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+  return event.key === '/' && isBareKeyOutsideField(event);
 }

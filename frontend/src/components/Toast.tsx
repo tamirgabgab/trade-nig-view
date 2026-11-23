@@ -5,13 +5,13 @@ import styles from './Toast.module.css';
 import { usePresence } from './usePresence.ts';
 
 /** A toast stays this long unless dismissed or undone. */
-export const TOAST_MS = 5000;
+const TOAST_MS = 5000;
 
 /** Bottom-centre notice with Undo, e.g. after removing an indicator. */
 export function Toast() {
   const toast = useUiStore((s) => s.toast);
   const dismiss = useUiStore((s) => s.dismissToast);
-  const { shown, closing } = usePresence(toast);
+  const { shown, attrs } = usePresence(toast);
 
   useEffect(() => {
     if (toast === null) return;
@@ -23,13 +23,7 @@ export function Toast() {
 
   if (shown === null) return null;
   return (
-    <div
-      className={styles.toast}
-      role="status"
-      data-closing={closing || undefined}
-      inert={closing}
-      key={shown.seq}
-    >
+    <div className={styles.toast} role="status" {...attrs} key={shown.seq}>
       <span>{shown.message}</span>
       <button
         type="button"
@@ -41,7 +35,11 @@ export function Toast() {
       >
         Undo
       </button>
-      <span className={styles.timer} aria-hidden="true" />
+      <span
+        className={styles.timer}
+        style={{ animationDuration: `${String(TOAST_MS)}ms` }}
+        aria-hidden="true"
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import { DRAWING_TOOL_GROUPS } from './drawingTools.ts';
 import styles from './ShortcutsDialog.module.css';
 import dialog from './SymbolSearchDialog.module.css';
-import { restoreFocus, usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence, type OverlayAttrs } from './usePresence.ts';
 
 interface Shortcut {
   keys: string[];
@@ -41,12 +41,12 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
 /** `?` dialog listing every keyboard shortcut. */
 export function ShortcutsDialog() {
   const open = useUiStore((s) => s.shortcutsOpen);
-  const { shown, closing, key } = usePresence(open ? true : null);
+  const { shown, attrs, key } = usePresence(open ? true : null);
   if (shown === null) return null;
-  return <ShortcutsPanel key={key} closing={closing} />;
+  return <ShortcutsPanel key={key} attrs={attrs} />;
 }
 
-function ShortcutsPanel({ closing }: { closing: boolean }) {
+function ShortcutsPanel({ attrs }: { attrs: OverlayAttrs }) {
   const setOpen = useUiStore((s) => s.setShortcutsOpen);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -67,8 +67,7 @@ function ShortcutsPanel({ closing }: { closing: boolean }) {
   return (
     <div
       className={dialog.backdrop}
-      data-closing={closing || undefined}
-      inert={closing}
+      {...attrs}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

@@ -125,8 +125,7 @@ export function ChartTypeMenu() {
       {menu.shown && (
         <div
           id={menuId}
-          data-closing={menu.closing || undefined}
-          inert={menu.closing}
+          {...menu.attrs}
           role="menu"
           aria-label="Chart type"
           className={styles.menu}

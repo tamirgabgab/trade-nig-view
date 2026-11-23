@@ -54,8 +54,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
         <section
           className={[styles.panel, narrow ? styles.floating : ''].join(' ')}
           aria-labelledby="watchlist-title"
-          data-closing={(narrow && panel.closing) || undefined}
-          inert={panel.closing}
+          {...panel.attrs}
         >
           <div className={styles.panelHeader}>
             <span id="watchlist-title">Watchlist</span>

@@ -19,6 +19,7 @@ import { LegendOHLC } from './LegendOHLC.tsx';
 import { legendValues } from './legendValues.ts';
 import { presentLines } from './presentLines.ts';
 import { Toast } from './Toast.tsx';
+import { usePresence } from './usePresence.ts';
 import { useChartIndicators } from './useChartIndicators.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
 
@@ -54,10 +55,7 @@ export function ChartArea({ className }: ChartAreaProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
   const setAutoScale = useChartStore((s) => s.setAutoScale);
-  const learnOpen = useUiStore((s) => s.learnFor !== null);
-  // Loaded on first use, then kept mounted so it can animate out.
-  const [learnLoaded, setLearnLoaded] = useState(false);
-  if (learnOpen && !learnLoaded) setLearnLoaded(true);
+  const learn = usePresence(useUiStore((s) => s.learnFor));
   const [scrollToLatest, setScrollToLatest] = useState(0);
   const [offLatest, setOffLatest] = useState(false);
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
@@ -195,7 +193,7 @@ export function ChartArea({ className }: ChartAreaProps) {
         />
         {firstRun && bars.length > 0 && (
           <p className={styles.hint}>
-            Press <kbd className={styles.hintKey}>/</kbd> to add an indicator
+            Press <kbd>/</kbd> to add an indicator
           </p>
         )}
       </LegendOHLC>
@@ -242,9 +240,14 @@ export function ChartArea({ className }: ChartAreaProps) {
       )}
       <IndicatorSettingsPanel views={indicators.views} />
       <Toast />
-      {learnLoaded && (
+      {learn.shown !== null && (
         <Suspense fallback={null}>
-          <LearnDrawer views={indicators.views} />
+          <LearnDrawer
+            key={learn.key}
+            views={indicators.views}
+            learnFor={learn.shown}
+            attrs={learn.attrs}
+          />
         </Suspense>
       )}
       {history.isLoadingOlder && (

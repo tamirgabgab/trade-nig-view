@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 
-import { useUiStore } from '../store/uiStore.ts';
+import { selectModalOpen, useUiStore } from '../store/uiStore.ts';
 import { opensIndicators } from './indicatorSearch.ts';
 
 /** `/` anywhere outside a text field opens the indicators dialog, as on TradingView. */
 export function useIndicatorsHotkey(): void {
   const setOpen = useUiStore((s) => s.setIndicatorsDialog);
-  const blocked = useUiStore((s) => s.indicatorsDialog || s.symbolSearch.open || s.shortcutsOpen);
+  const blocked = useUiStore(selectModalOpen);
   useEffect(() => {
     if (blocked) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {

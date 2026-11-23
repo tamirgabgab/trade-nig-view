@@ -6,7 +6,7 @@ import { FilterView } from './FilterView.tsx';
 import { IconButton } from './IconButton.tsx';
 import styles from './LearnDrawer.module.css';
 import { LearnPage } from './LearnPage.tsx';
-import { restoreFocus, usePresence } from './usePresence.ts';
+import { restoreFocus, type OverlayAttrs } from './usePresence.ts';
 import type { IndicatorView } from './useChartIndicators.ts';
 
 type Tab = 'page' | 'filter';
@@ -19,8 +19,16 @@ const TABS: { id: Tab; label: string }[] = [
  * Right-hand drawer (over the watchlist, the chart stays visible) with the learn page of the
  * indicator whose book icon was pressed and, for averages, its measured filter response.
  */
-export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
-  const { shown: learnFor, closing, key } = usePresence(useUiStore((s) => s.learnFor));
+export function LearnDrawer({
+  views,
+  learnFor,
+  attrs,
+}: {
+  views: readonly IndicatorView[];
+  /** Instance shown (ChartArea keeps it during the exit animation, see usePresence). */
+  learnFor: string;
+  attrs: OverlayAttrs;
+}) {
   const openLearn = useUiStore((s) => s.openLearn);
   const [tab, setTab] = useState<Tab>('page');
   const titleId = useId();
@@ -33,22 +41,18 @@ export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
   // Focus the selected tab on open and on a switch to another indicator; give focus back to
   // the Learn button that opened the drawer when it closes.
   useEffect(() => {
-    if (learnFor === null) return;
     const active = document.activeElement;
     if (active instanceof HTMLElement && !tablist.current?.parentElement?.contains(active)) {
       opener.current = active;
     }
     tablist.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
-  }, [learnFor, key]);
-  // ChartArea keeps the drawer mounted once loaded, so focus goes back when it stops showing.
-  const present = learnFor !== null;
+  }, [learnFor]);
   useEffect(() => {
-    if (!present) return;
     const drawer = tablist.current?.parentElement;
     return () => {
       restoreFocus(opener.current, drawer);
     };
-  }, [present]);
+  }, []);
 
   if (view === undefined || spec === undefined) return null;
   const tabs = spec.category === 'moving_averages' ? TABS : TABS.slice(0, 1);
@@ -67,8 +71,7 @@ export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
   return (
     <aside
       className={styles.drawer}
-      data-closing={closing || undefined}
-      inert={closing}
+      {...attrs}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {

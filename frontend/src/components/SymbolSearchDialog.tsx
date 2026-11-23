@@ -5,18 +5,18 @@ import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { searchSymbols } from './symbolSearch.ts';
-import { restoreFocus, usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence, type OverlayAttrs } from './usePresence.ts';
 import styles from './SymbolSearchDialog.module.css';
 
 /** Modal symbol search: type to filter, arrows to move, Enter to pick, Esc to close. */
 export function SymbolSearchDialog() {
   const { open, seed } = useUiStore((s) => s.symbolSearch);
-  const { shown, closing, key } = usePresence(open ? seed : null);
+  const { shown, attrs, key } = usePresence(open ? seed : null);
   if (shown === null) return null;
-  return <SearchPanel key={key} seed={shown} closing={closing} />;
+  return <SearchPanel key={key} seed={shown} attrs={attrs} />;
 }
 
-function SearchPanel({ seed, closing }: { seed: string; closing: boolean }) {
+function SearchPanel({ seed, attrs }: { seed: string; attrs: OverlayAttrs }) {
   const close = useUiStore((s) => s.closeSymbolSearch);
   const setSymbol = useChartStore((s) => s.setSymbol);
   const current = useChartStore((s) => s.symbol);
@@ -83,8 +83,7 @@ function SearchPanel({ seed, closing }: { seed: string; closing: boolean }) {
   return (
     <div
       className={styles.backdrop}
-      data-closing={closing || undefined}
-      inert={closing}
+      {...attrs}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

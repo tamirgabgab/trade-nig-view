@@ -14,7 +14,7 @@ import { LINE_WIDTHS, useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorSettingsPanel.module.css';
 import { parseParamInput } from './paramInput.ts';
-import { restoreFocus, usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence, type OverlayAttrs } from './usePresence.ts';
 import { valueOutputs, type IndicatorView } from './useChartIndicators.ts';
 
 /** Changes to number fields reach the chart this long after the last keystroke. */
@@ -26,7 +26,7 @@ interface IndicatorSettingsPanelProps {
 
 /** Side panel with the open instance's inputs and style; every change applies live. */
 export function IndicatorSettingsPanel({ views }: IndicatorSettingsPanelProps) {
-  const { shown: uid, closing, key } = usePresence(useUiStore((s) => s.settingsFor));
+  const { shown: uid, attrs, key } = usePresence(useUiStore((s) => s.settingsFor));
   const view = views.find((v) => v.instance.uid === uid);
   if (view?.spec === undefined) return null;
   return (
@@ -34,7 +34,7 @@ export function IndicatorSettingsPanel({ views }: IndicatorSettingsPanelProps) {
       key={`${view.instance.uid}-${String(key)}`}
       view={view}
       spec={view.spec}
-      closing={closing}
+      attrs={attrs}
     />
   );
 }
@@ -52,11 +52,11 @@ function draftOf(spec: IndicatorInfo, params: Params): Record<string, string> {
 function SettingsForm({
   view,
   spec,
-  closing,
+  attrs,
 }: {
   view: IndicatorView;
   spec: IndicatorInfo;
-  closing: boolean;
+  attrs: OverlayAttrs;
 }) {
   const uid = view.instance.uid;
   const close = useUiStore((s) => s.openSettings);
@@ -134,8 +134,7 @@ function SettingsForm({
     <aside
       ref={panelRef}
       className={styles.panel}
-      data-closing={closing || undefined}
-      inert={closing}
+      {...attrs}
       role="dialog"
       aria-modal="false"
       aria-labelledby={titleId}

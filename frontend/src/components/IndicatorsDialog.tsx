@@ -7,17 +7,17 @@ import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorsDialog.module.css';
 import { searchIndicators } from './indicatorSearch.ts';
 import dialog from './SymbolSearchDialog.module.css';
-import { restoreFocus, usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence, type OverlayAttrs } from './usePresence.ts';
 
 /** Modal indicator picker: type to filter, arrows to move, Enter to add, Esc to close. */
 export function IndicatorsDialog() {
   const open = useUiStore((s) => s.indicatorsDialog);
-  const { shown, closing, key } = usePresence(open ? true : null);
+  const { shown, attrs, key } = usePresence(open ? true : null);
   if (shown === null) return null;
-  return <IndicatorsPanel key={key} closing={closing} />;
+  return <IndicatorsPanel key={key} attrs={attrs} />;
 }
 
-function IndicatorsPanel({ closing }: { closing: boolean }) {
+function IndicatorsPanel({ attrs }: { attrs: OverlayAttrs }) {
   const setOpen = useUiStore((s) => s.setIndicatorsDialog);
   const add = useIndicatorStore((s) => s.add);
   const setEmphasis = useUiStore((s) => s.setEmphasis);
@@ -98,8 +98,7 @@ function IndicatorsPanel({ closing }: { closing: boolean }) {
   return (
     <div
       className={dialog.backdrop}
-      data-closing={closing || undefined}
-      inert={closing}
+      {...attrs}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

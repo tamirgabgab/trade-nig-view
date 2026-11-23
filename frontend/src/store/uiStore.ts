@@ -37,6 +37,11 @@ export interface UiState {
   dismissToast: () => void;
 }
 
+/** Any modal dialog open: the global hotkeys stay quiet so modals never stack. */
+export function selectModalOpen(s: UiState): boolean {
+  return s.symbolSearch.open || s.indicatorsDialog || s.shortcutsOpen;
+}
+
 export const useUiStore = create<UiState>()((set) => ({
   symbolSearch: { open: false, seed: '' },
   openSymbolSearch: (seed = '') => {

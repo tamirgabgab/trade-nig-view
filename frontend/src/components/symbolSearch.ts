@@ -1,4 +1,5 @@
 import type { SymbolInfo } from '../api/market.ts';
+import { isBareKeyOutsideField } from './keyTarget.ts';
 
 export interface SymbolGroup {
   group: string;
@@ -42,10 +43,5 @@ export function searchSymbols(symbols: readonly SymbolInfo[], query: string): Sy
 
 /** True when a key press on the page should open symbol search (a letter or digit, no modifier). */
 export function opensSymbolSearch(event: KeyboardEvent): boolean {
-  if (event.ctrlKey || event.metaKey || event.altKey || event.defaultPrevented) return false;
-  if (!/^[a-z0-9]$/i.test(event.key)) return false;
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return true;
-  if (target.isContentEditable) return false;
-  return !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+  return /^[a-z0-9]$/i.test(event.key) && isBareKeyOutsideField(event);
 }

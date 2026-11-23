@@ -59,7 +59,7 @@
   height: 2px;
   background: var(--color-accent);
   transform-origin: left;
-  animation: drain 5s linear forwards;
+  animation: drain linear forwards; /* duration: TOAST_MS, set inline */
 }
 
 @keyframes drain {

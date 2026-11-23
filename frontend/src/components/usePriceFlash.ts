@@ -14,7 +14,9 @@ export interface PriceFlash {
 export function usePriceFlash(value: number | null, identity: string | null): PriceFlash {
   const initial: PriceFlash = { direction: null, tick: 0 };
   const [state, setState] = useState({ value, identity, flash: initial });
-  if (value !== state.value || identity !== state.identity) {
+  // Nothing to compare while there is no identity (crosshair on an older bar): skip the update.
+  const tracked = identity !== null || state.identity !== null;
+  if (tracked && (value !== state.value || identity !== state.identity)) {
     const previous = state.value;
     const flash: PriceFlash =
       identity !== null && identity === state.identity && value !== null && previous !== null
