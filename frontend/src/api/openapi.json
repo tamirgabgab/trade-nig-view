@@ -412,13 +412,35 @@
         }
       }
     },
+    "/api/learn": {
+      "get": {
+        "tags": [
+          "learn"
+        ],
+        "summary": "Learn Index",
+        "description": "Every learn page: one per indicator learn slug, plus the concept pages that exist.",
+        "operationId": "learn_index_api_learn_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnIndex"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/learn/{slug}": {
       "get": {
         "tags": [
           "learn"
         ],
         "summary": "Learn Page",
-        "description": "The page of a registered indicator's ``learn_slug`` (only those: no path is built from\narbitrary input).",
+        "description": "The page of a registered indicator's ``learn_slug`` or of a concept (only those: no path\nis built from arbitrary input).",
         "operationId": "learn_page_api_learn__slug__get",
         "parameters": [
           {
@@ -438,6 +460,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LearnPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/learn/lab": {
+      "post": {
+        "tags": [
+          "learn"
+        ],
+        "summary": "Learn Lab",
+        "description": "Bars (synthetic scenario or a symbol's last bars), indicators computed over all of them,\nand, when there are conditions, an event study of the forward returns after the signal\n(``app.analysis.events``: an illustration, not a backtest).",
+        "operationId": "learn_lab_api_learn_lab_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabResponse"
                 }
               }
             }
@@ -1281,6 +1345,34 @@
         ],
         "title": "ComputeResponse"
       },
+      "Condition": {
+        "properties": {
+          "left": {
+            "$ref": "#/components/schemas/Operand"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "lt",
+              "gt",
+              "crosses_above",
+              "crosses_below"
+            ],
+            "title": "Op"
+          },
+          "right": {
+            "$ref": "#/components/schemas/Operand"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "left",
+          "op",
+          "right"
+        ],
+        "title": "Condition"
+      },
       "Drawing": {
         "properties": {
           "id": {
@@ -1765,6 +1857,41 @@
         "title": "HealthResponse",
         "description": "Response body of ``GET /api/health``."
       },
+      "Histogram": {
+        "properties": {
+          "edges": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Edges",
+            "description": "22 shared bin edges (1st-99th baseline percentile)"
+          },
+          "events": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Events",
+            "description": "Fraction of event returns per bin"
+          },
+          "baseline": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Baseline",
+            "description": "Fraction of baseline returns per bin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "edges",
+          "events",
+          "baseline"
+        ],
+        "title": "Histogram"
+      },
       "IndicatorInfo": {
         "properties": {
           "id": {
@@ -1890,6 +2017,329 @@
         ],
         "title": "Interval",
         "description": "Bar intervals served by the API.\n\n``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and\n``1W``/``1M`` from ``1D``."
+      },
+      "LabIndicator": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Id",
+            "description": "Indicator id"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Missing parameters use defaults"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "LabIndicator"
+      },
+      "LabIndicatorResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Parameters used (defaults filled in)"
+          },
+          "outputs": {
+            "additionalProperties": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Outputs",
+            "description": "One value per bar in `time`; null during warm-up"
+          },
+          "display_shift": {
+            "type": "integer",
+            "title": "Display Shift",
+            "description": "As in /api/indicators/compute"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "params",
+          "outputs",
+          "display_shift"
+        ],
+        "title": "LabIndicatorResult"
+      },
+      "LabRequest": {
+        "properties": {
+          "source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SyntheticSource"
+              },
+              {
+                "$ref": "#/components/schemas/SymbolSource"
+              }
+            ],
+            "title": "Source",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "symbol": "#/components/schemas/SymbolSource",
+                "synthetic": "#/components/schemas/SyntheticSource"
+              }
+            }
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/LabIndicator"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Indicators"
+          },
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/Condition"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Conditions",
+            "description": "ANDed; an empty list means no event study"
+          },
+          "horizon": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Horizon",
+            "description": "Forward return horizon in bars",
+            "default": 10
+          }
+        },
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "LabRequest"
+      },
+      "LabResponse": {
+        "properties": {
+          "time": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Time",
+            "description": "Bar times, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)"
+          },
+          "open": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Open"
+          },
+          "high": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "High"
+          },
+          "low": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Low"
+          },
+          "close": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Close"
+          },
+          "volume": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Volume"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/LabIndicatorResult"
+            },
+            "type": "array",
+            "title": "Indicators"
+          },
+          "study": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LabStudy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when there are no conditions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "time",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "indicators",
+          "study"
+        ],
+        "title": "LabResponse"
+      },
+      "LabStudy": {
+        "properties": {
+          "horizon": {
+            "type": "integer",
+            "title": "Horizon"
+          },
+          "events": {
+            "$ref": "#/components/schemas/StatsBlock",
+            "description": "Forward log returns after the counted signal bars"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/StatsBlock",
+            "description": "Forward log returns after every bar"
+          },
+          "edge": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge",
+            "description": "Mean of events minus mean of baseline"
+          },
+          "se": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Se",
+            "description": "Standard error of the event mean"
+          },
+          "t_stat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T Stat"
+          },
+          "ci95": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Ci95",
+            "description": "[low, high] of edge +- 1.96 se"
+          },
+          "histogram": {
+            "$ref": "#/components/schemas/Histogram"
+          },
+          "event_index": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Event Index",
+            "description": "Bar indices (into `time`) of the counted events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "horizon",
+          "events",
+          "baseline",
+          "edge",
+          "se",
+          "t_stat",
+          "ci95",
+          "histogram",
+          "event_index"
+        ],
+        "title": "LabStudy"
       },
       "LayoutDocument": {
         "properties": {
@@ -2201,6 +2651,84 @@
         "title": "LayoutUpdate",
         "description": "``PUT`` body: the whole layout, and the revision it was based on (optimistic locking)."
       },
+      "LearnIndex": {
+        "properties": {
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/LearnIndexEntry"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "Indicator pages by category then title, then concept pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages"
+        ],
+        "title": "LearnIndex"
+      },
+      "LearnIndexEntry": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "indicator",
+              "concept"
+            ],
+            "title": "Kind"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "moving_averages",
+                  "bands",
+                  "oscillators",
+                  "volatility",
+                  "volume",
+                  "structure"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "Indicator category; null for concept pages"
+          },
+          "indicator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indicator Id",
+            "description": "Indicator the page is about; null for concepts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "kind",
+          "category",
+          "indicator_id"
+        ],
+        "title": "LearnIndexEntry"
+      },
       "LearnPage": {
         "properties": {
           "slug": {
@@ -2218,6 +2746,67 @@
           "markdown"
         ],
         "title": "LearnPage"
+      },
+      "Operand": {
+        "properties": {
+          "indicator": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indicator",
+            "description": "Index into the request's `indicators` list"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output",
+            "description": "Output name of that indicator"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "high",
+                  "low",
+                  "close"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Operand",
+        "description": "Exactly one of ``{indicator, output}``, ``{price}`` or ``{value}``."
       },
       "OutputInfo": {
         "properties": {
@@ -2749,6 +3338,81 @@
         ],
         "title": "ResponseRequest"
       },
+      "Scenario": {
+        "type": "string",
+        "enum": [
+          "random_walk",
+          "uptrend",
+          "range",
+          "reversal",
+          "shock",
+          "volatility_regime"
+        ],
+        "title": "Scenario"
+      },
+      "StatsBlock": {
+        "properties": {
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean"
+          },
+          "median": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median"
+          },
+          "std": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Std",
+            "description": "Sample standard deviation (ddof=1); null if n < 2"
+          },
+          "hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Rate",
+            "description": "Share of returns > 0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "n",
+          "mean",
+          "median",
+          "std",
+          "hit_rate"
+        ],
+        "title": "StatsBlock"
+      },
       "SymbolInfo": {
         "properties": {
           "symbol": {
@@ -2832,6 +3496,77 @@
         ],
         "title": "SymbolInfo",
         "description": "One tradable or reference instrument."
+      },
+      "SymbolSource": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "symbol",
+            "title": "Kind"
+          },
+          "symbol": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval",
+            "default": "1D"
+          },
+          "bars": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 100.0,
+            "title": "Bars",
+            "description": "The last `bars` bars of the history",
+            "default": 500
+          },
+          "adjusted": {
+            "type": "boolean",
+            "title": "Adjusted",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "symbol"
+        ],
+        "title": "SymbolSource"
+      },
+      "SyntheticSource": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "synthetic",
+            "title": "Kind"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/Scenario",
+            "default": "random_walk"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 1
+          },
+          "bars": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 100.0,
+            "title": "Bars",
+            "description": "Number of bars",
+            "default": 500
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "SyntheticSource"
       },
       "Transform": {
         "type": "string",

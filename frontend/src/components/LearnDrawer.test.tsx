@@ -199,4 +199,71 @@ describe('learn drawer', () => {
     await user.selectOptions(within(drawer).getByLabelText('Compare with'), 'smma');
     expect(await within(drawer).findByRole('alert')).toHaveTextContent('Could not measure SMMA');
   });
+
+  it('turns a lab block into a live example and opens pages from the index, with Try it', async () => {
+    const user = userEvent.setup();
+    const labs: { indicators: { id: string; params: Record<string, unknown> }[] }[] = [];
+    const page = `${PAGE}\n\n\`\`\`lab\n{"kind": "param", "indicator": "sma", "vary": "length", "min": 2, "max": 50}\n\`\`\`\n`;
+    stubApi({
+      '/api/health': { body: HEALTH_OK },
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
+      '/api/indicators': { body: INDICATORS },
+      '/api/learn/sma': { body: { slug: 'sma', markdown: page } },
+      '/api/learn': {
+        body: {
+          pages: [
+            {
+              slug: 'sma',
+              title: 'Simple Moving Average',
+              kind: 'indicator',
+              category: 'moving_averages',
+              indicator_id: 'sma',
+            },
+          ],
+        },
+      },
+      '/api/learn/lab': (_url, init) => {
+        const body = JSON.parse(init?.body as string) as (typeof labs)[number];
+        labs.push(body);
+        return jsonResponse({
+          time: ['2026-01-01', '2026-01-02', '2026-01-03'],
+          open: [1, 2, 3],
+          high: [1, 2, 3],
+          low: [1, 2, 3],
+          close: [10, 11, 12],
+          volume: [1, 1, 1],
+          indicators: [
+            {
+              id: 'sma',
+              params: body.indicators[0]?.params ?? {},
+              outputs: { ma: [null, 10.5, 11.5] },
+              display_shift: 0,
+            },
+          ],
+          study: null,
+        });
+      },
+    });
+    renderWithQuery(<App />);
+    await screen.findByText('Apple Inc. · 1D · NASDAQ');
+
+    // From the index: the page opens without SMA on the chart.
+    await user.click(screen.getByRole('button', { name: 'Learn pages' }));
+    await user.click(await screen.findByRole('option', { name: /Simple Moving Average/ }));
+    const drawer = await screen.findByRole('complementary', { name: 'Simple Moving Average' });
+
+    // The lab block: a slider for the length and a chart computed by the backend.
+    const lab = await within(drawer).findByRole('region', { name: 'SMA: try length' });
+    expect(
+      await within(lab).findByRole('img', { name: /SMA with Length = 9/ }),
+    ).toBeInTheDocument();
+    expect(labs[0]?.indicators[0]).toMatchObject({ id: 'sma', params: { length: 9 } });
+
+    await user.click(within(drawer).getByRole('tab', { name: 'Try it' }));
+    expect(
+      await within(drawer).findByRole('img', { name: 'Simple Moving Average' }),
+    ).toBeInTheDocument();
+  });
 });

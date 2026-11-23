@@ -1,17 +1,22 @@
 import { X } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 
-import { useUiStore } from '../store/uiStore.ts';
+import { useIndicatorList } from '../api/indicators.ts';
+import { useLearnIndex } from '../api/lab.ts';
+import { PAGE_PREFIX, useUiStore } from '../store/uiStore.ts';
 import { FilterView } from './FilterView.tsx';
 import { IconButton } from './IconButton.tsx';
 import styles from './LearnDrawer.module.css';
+import { withDefaults } from './lab/labModel.ts';
+import { TryIt } from './lab/TryIt.tsx';
 import { LearnPage } from './LearnPage.tsx';
 import { restoreFocus, type OverlayAttrs } from './usePresence.ts';
 import type { IndicatorView } from './useChartIndicators.ts';
 
-type Tab = 'page' | 'filter';
+type Tab = 'page' | 'try' | 'filter';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'page', label: 'Page' },
+  { id: 'try', label: 'Try it' },
   { id: 'filter', label: 'Filter view' },
 ];
 
@@ -35,8 +40,19 @@ export function LearnDrawer({
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const tablist = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
+  // An indicator on the chart (its uid), or a page opened from the index ("page:<slug>").
   const view = views.find((v) => v.instance.uid === learnFor);
-  const spec = view?.spec;
+  const pageSlug = learnFor.startsWith(PAGE_PREFIX) ? learnFor.slice(PAGE_PREFIX.length) : null;
+  const registry = useIndicatorList().data;
+  const index = useLearnIndex().data;
+  const spec =
+    view?.spec ??
+    (pageSlug === null
+      ? undefined
+      : registry?.find((s) => s.id === index?.find((e) => e.slug === pageSlug)?.indicatorId));
+  const slug = spec?.learnSlug ?? pageSlug;
+  const title = spec?.name ?? index?.find((e) => e.slug === pageSlug)?.title ?? pageSlug ?? '';
+  const params = view?.params ?? (spec === undefined ? {} : withDefaults(spec, {}));
 
   // Focus the selected tab on open and on a switch to another indicator; give focus back to
   // the Learn button that opened the drawer when it closes.
@@ -54,8 +70,12 @@ export function LearnDrawer({
     };
   }, []);
 
-  if (view === undefined || spec === undefined) return null;
-  const tabs = spec.category === 'moving_averages' ? TABS : TABS.slice(0, 1);
+  if (slug === null) return null;
+  const tabs = TABS.filter(
+    (t) =>
+      t.id === 'page' ||
+      (spec !== undefined && (t.id === 'try' || spec.category === 'moving_averages')),
+  );
   const shown = tabs.some((t) => t.id === tab) ? tab : 'page';
 
   const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -83,9 +103,11 @@ export function LearnDrawer({
       <header className={styles.header}>
         <div className={styles.heading}>
           <h2 id={titleId} className={styles.title}>
-            {spec.name}
+            {title}
           </h2>
-          <span className={styles.subtitle}>{view.label}</span>
+          <span className={styles.subtitle}>
+            {view?.label ?? (spec === undefined ? 'Concept' : 'Learn page')}
+          </span>
         </div>
         <IconButton
           className={styles.close}
@@ -132,10 +154,12 @@ export function LearnDrawer({
         role="tabpanel"
         aria-labelledby={`${titleId}-${shown}`}
       >
-        {shown === 'page' ? (
-          <LearnPage slug={spec.learnSlug} />
+        {shown === 'page' || spec === undefined ? (
+          <LearnPage slug={slug} />
+        ) : shown === 'try' ? (
+          <TryIt key={learnFor} spec={spec} initial={params} />
         ) : (
-          <FilterView key={view.instance.uid} spec={spec} params={view.params} />
+          <FilterView key={learnFor} spec={spec} params={params} />
         )}
       </div>
     </aside>

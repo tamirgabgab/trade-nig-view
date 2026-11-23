@@ -7,6 +7,7 @@ import { CommandPalette } from './components/CommandPalette.tsx';
 import { DrawingToolbar } from './components/DrawingToolbar.tsx';
 import { IndicatorsDialog } from './components/IndicatorsDialog.tsx';
 import { LayoutDialogs } from './components/LayoutDialogs.tsx';
+import { LearnIndexDialog } from './components/LearnIndexDialog.tsx';
 import { RightSidebar } from './components/RightSidebar.tsx';
 import { SettingsDialog } from './components/SettingsDialog.tsx';
 import { ShortcutsDialog } from './components/ShortcutsDialog.tsx';
@@ -42,6 +43,7 @@ export function App() {
       <CommandPalette />
       <SettingsDialog />
       <LayoutDialogs />
+      <LearnIndexDialog />
     </div>
   );
 }

@@ -152,6 +152,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/learn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Learn Index
+         * @description Every learn page: one per indicator learn slug, plus the concept pages that exist.
+         */
+        get: operations["learn_index_api_learn_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/learn/{slug}": {
         parameters: {
             query?: never;
@@ -161,12 +181,34 @@ export interface paths {
         };
         /**
          * Learn Page
-         * @description The page of a registered indicator's ``learn_slug`` (only those: no path is built from
-         *     arbitrary input).
+         * @description The page of a registered indicator's ``learn_slug`` or of a concept (only those: no path
+         *     is built from arbitrary input).
          */
         get: operations["learn_page_api_learn__slug__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/learn/lab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn Lab
+         * @description Bars (synthetic scenario or a symbol's last bars), indicators computed over all of them,
+         *     and, when there are conditions, an event study of the forward returns after the signal
+         *     (``app.analysis.events``: an illustration, not a backtest).
+         */
+        post: operations["learn_lab_api_learn_lab_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -450,6 +492,16 @@ export interface components {
              */
             display_shift: number;
         };
+        /** Condition */
+        Condition: {
+            left: components["schemas"]["Operand"];
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "lt" | "gt" | "crosses_above" | "crosses_below";
+            right: components["schemas"]["Operand"];
+        };
         /** Drawing */
         Drawing: {
             /**
@@ -695,6 +747,24 @@ export interface components {
             /** Providers */
             providers: components["schemas"]["ProviderStatus"][];
         };
+        /** Histogram */
+        Histogram: {
+            /**
+             * Edges
+             * @description 22 shared bin edges (1st-99th baseline percentile)
+             */
+            edges: number[];
+            /**
+             * Events
+             * @description Fraction of event returns per bin
+             */
+            events: number[];
+            /**
+             * Baseline
+             * @description Fraction of baseline returns per bin
+             */
+            baseline: number[];
+        };
         /** IndicatorInfo */
         IndicatorInfo: {
             /**
@@ -751,6 +821,117 @@ export interface components {
          * @enum {string}
          */
         Interval: "1h" | "4h" | "1D" | "1W" | "1M";
+        /** LabIndicator */
+        LabIndicator: {
+            /**
+             * Id
+             * @description Indicator id
+             */
+            id: string;
+            /**
+             * Params
+             * @description Missing parameters use defaults
+             */
+            params?: {
+                [key: string]: boolean | number | string;
+            };
+        };
+        /** LabIndicatorResult */
+        LabIndicatorResult: {
+            /** Id */
+            id: string;
+            /**
+             * Params
+             * @description Parameters used (defaults filled in)
+             */
+            params: {
+                [key: string]: boolean | number | string;
+            };
+            /**
+             * Outputs
+             * @description One value per bar in `time`; null during warm-up
+             */
+            outputs: {
+                [key: string]: (number | null)[];
+            };
+            /**
+             * Display Shift
+             * @description As in /api/indicators/compute
+             */
+            display_shift: number;
+        };
+        /** LabRequest */
+        LabRequest: {
+            /** Source */
+            source: components["schemas"]["SyntheticSource"] | components["schemas"]["SymbolSource"];
+            /** Indicators */
+            indicators?: components["schemas"]["LabIndicator"][];
+            /**
+             * Conditions
+             * @description ANDed; an empty list means no event study
+             */
+            conditions?: components["schemas"]["Condition"][];
+            /**
+             * Horizon
+             * @description Forward return horizon in bars
+             * @default 10
+             */
+            horizon: number;
+        };
+        /** LabResponse */
+        LabResponse: {
+            /**
+             * Time
+             * @description Bar times, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)
+             */
+            time: (string | number)[];
+            /** Open */
+            open: number[];
+            /** High */
+            high: number[];
+            /** Low */
+            low: number[];
+            /** Close */
+            close: number[];
+            /** Volume */
+            volume: number[];
+            /** Indicators */
+            indicators: components["schemas"]["LabIndicatorResult"][];
+            /** @description Null when there are no conditions */
+            study: components["schemas"]["LabStudy"] | null;
+        };
+        /** LabStudy */
+        LabStudy: {
+            /** Horizon */
+            horizon: number;
+            /** @description Forward log returns after the counted signal bars */
+            events: components["schemas"]["StatsBlock"];
+            /** @description Forward log returns after every bar */
+            baseline: components["schemas"]["StatsBlock"];
+            /**
+             * Edge
+             * @description Mean of events minus mean of baseline
+             */
+            edge: number | null;
+            /**
+             * Se
+             * @description Standard error of the event mean
+             */
+            se: number | null;
+            /** T Stat */
+            t_stat: number | null;
+            /**
+             * Ci95
+             * @description [low, high] of edge +- 1.96 se
+             */
+            ci95: (number | null)[];
+            histogram: components["schemas"]["Histogram"];
+            /**
+             * Event Index
+             * @description Bar indices (into `time`) of the counted events
+             */
+            event_index: number[];
+        };
         /** LayoutDocument */
         LayoutDocument: {
             /** Symbol */
@@ -895,12 +1076,62 @@ export interface components {
              */
             revision: number;
         };
+        /** LearnIndex */
+        LearnIndex: {
+            /**
+             * Pages
+             * @description Indicator pages by category then title, then concept pages
+             */
+            pages: components["schemas"]["LearnIndexEntry"][];
+        };
+        /** LearnIndexEntry */
+        LearnIndexEntry: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "indicator" | "concept";
+            /**
+             * Category
+             * @description Indicator category; null for concept pages
+             */
+            category: ("moving_averages" | "bands" | "oscillators" | "volatility" | "volume" | "structure") | null;
+            /**
+             * Indicator Id
+             * @description Indicator the page is about; null for concepts
+             */
+            indicator_id: string | null;
+        };
         /** LearnPage */
         LearnPage: {
             /** Slug */
             slug: string;
             /** Markdown */
             markdown: string;
+        };
+        /**
+         * Operand
+         * @description Exactly one of ``{indicator, output}``, ``{price}`` or ``{value}``.
+         */
+        Operand: {
+            /**
+             * Indicator
+             * @description Index into the request's `indicators` list
+             */
+            indicator?: number | null;
+            /**
+             * Output
+             * @description Output name of that indicator
+             */
+            output?: string | null;
+            /** Price */
+            price?: ("open" | "high" | "low" | "close") | null;
+            /** Value */
+            value?: number | null;
         };
         /** OutputInfo */
         OutputInfo: {
@@ -1087,6 +1318,30 @@ export interface components {
             };
         };
         /**
+         * Scenario
+         * @enum {string}
+         */
+        Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime";
+        /** StatsBlock */
+        StatsBlock: {
+            /** N */
+            n: number;
+            /** Mean */
+            mean: number | null;
+            /** Median */
+            median: number | null;
+            /**
+             * Std
+             * @description Sample standard deviation (ddof=1); null if n < 2
+             */
+            std: number | null;
+            /**
+             * Hit Rate
+             * @description Share of returns > 0
+             */
+            hit_rate: number | null;
+        };
+        /**
          * SymbolInfo
          * @description One tradable or reference instrument.
          */
@@ -1141,6 +1396,50 @@ export interface components {
              * @description Local 'HH:MM' start of a trading session that spans midnight (CME futures '18:00', forex '17:00'); null when each session lies within one calendar day
              */
             session_start?: string | null;
+        };
+        /** SymbolSource */
+        SymbolSource: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "symbol";
+            /** Symbol */
+            symbol: string;
+            /** @default 1D */
+            interval: components["schemas"]["Interval"];
+            /**
+             * Bars
+             * @description The last `bars` bars of the history
+             * @default 500
+             */
+            bars: number;
+            /**
+             * Adjusted
+             * @default true
+             */
+            adjusted: boolean;
+        };
+        /** SyntheticSource */
+        SyntheticSource: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "synthetic";
+            /** @default random_walk */
+            scenario: components["schemas"]["Scenario"];
+            /**
+             * Seed
+             * @default 1
+             */
+            seed: number;
+            /**
+             * Bars
+             * @description Number of bars
+             * @default 500
+             */
+            bars: number;
         };
         /**
          * Transform
@@ -1443,6 +1742,26 @@ export interface operations {
             };
         };
     };
+    learn_index_api_learn_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearnIndex"];
+                };
+            };
+        };
+    };
     learn_page_api_learn__slug__get: {
         parameters: {
             query?: never;
@@ -1461,6 +1780,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LearnPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    learn_lab_api_learn_lab_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabResponse"];
                 };
             };
             /** @description Validation Error */

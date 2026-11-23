@@ -13,6 +13,9 @@ export interface Toast {
 export type SnapshotMode = 'copy' | 'download';
 
 /** What the right side panel shows. */
+/** `openLearn(\`${PAGE_PREFIX}${slug}\`)` opens a learn page without its indicator on the chart. */
+export const PAGE_PREFIX = 'page:';
+
 export type SidebarTab = 'watchlist' | 'objects' | 'data' | 'gaps';
 
 /** The modal dialogs; at most one is open, so they can never stack. */
@@ -31,6 +34,7 @@ export type Modal =
   | 'watchlistDelete'
   | 'sectionAdd'
   | 'sectionRename'
+  | 'learnIndex'
   | 'removeIndicators'
   | 'removeDrawings'
   | 'removeEverything';

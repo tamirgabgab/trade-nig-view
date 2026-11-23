@@ -1,4 +1,12 @@
-import { Bell, CalendarRange, ChartColumnBig, List, ListTree, TableProperties } from 'lucide-react';
+import {
+  Bell,
+  BookOpen,
+  CalendarRange,
+  ChartColumnBig,
+  List,
+  ListTree,
+  TableProperties,
+} from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 import { useUiStore, type SidebarTab } from '../store/uiStore.ts';
@@ -34,6 +42,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
   const { docked, floating } = useUiStore((s) => s.watchlist);
   const tab = useUiStore((s) => s.sidebarTab);
   const showSidebar = useUiStore((s) => s.showSidebar);
+  const openModal = useUiStore((s) => s.openModal);
   const closeFloating = useUiStore((s) => s.closeFloatingWatchlist);
   const open = narrow ? floating : docked;
   const panel = usePresence(open ? tab : null);
@@ -104,6 +113,15 @@ export function RightSidebar({ className }: RightSidebarProps) {
             />
           );
         })}
+        <IconButton
+          label="Learn pages"
+          icon={<BookOpen size={20} />}
+          tooltipSide="left"
+          aria-haspopup="dialog"
+          onClick={() => {
+            openModal('learnIndex');
+          }}
+        />
         <IconButton
           label="Alerts"
           icon={<Bell size={20} />}

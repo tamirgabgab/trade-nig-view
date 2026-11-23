@@ -1,0 +1,200 @@
+.lab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+.source,
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.segment {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.segment button {
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segment button[aria-pressed='true'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.select {
+  height: 28px;
+  max-width: 220px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.iconButton {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.segment button:focus-visible,
+.select:focus-visible,
+.iconButton:focus-visible,
+.slider input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.slider {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 200px;
+  color: var(--color-text);
+}
+
+.slider input {
+  flex: 1;
+  accent-color: var(--color-accent);
+}
+
+.value {
+  min-width: 56px;
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 400;
+}
+
+.study {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats th,
+.stats td {
+  padding: 3px var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+}
+
+.stats th:first-child {
+  color: var(--color-text);
+  font-weight: 400;
+  text-align: left;
+}
+
+.stats thead th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.edge {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.verdict {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.verdict[data-decided] {
+  color: var(--color-accent);
+}
+
+.histogram {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.histogram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.barBase {
+  fill: var(--color-text-muted);
+  opacity: 0.35;
+}
+
+.barEvent {
+  fill: var(--color-accent);
+  opacity: 0.8;
+}
+
+.keyBase {
+  color: var(--color-text);
+}
+
+.keyEvent {
+  color: var(--color-accent);
+}
+
+.zero {
+  stroke: var(--color-text-muted);
+  stroke-dasharray: 3 2;
+}
+
+.histTick,
+.histTickEnd {
+  fill: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.histTickEnd {
+  text-anchor: end;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-down);
+}

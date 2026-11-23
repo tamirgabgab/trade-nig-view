@@ -7,11 +7,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
-import { useUiStore } from '../store/uiStore.ts';
+import { PAGE_PREFIX, useUiStore } from '../store/uiStore.ts';
 import type { Command } from './commands.ts';
 import { addIndicator, removeIndicator } from './indicatorActions.ts';
 import { INTERVALS } from './intervals.ts';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery.ts';
+import { useLearnIndex } from '../api/lab.ts';
 
 /** Everything the Ctrl+K palette can do, built from the current state (first match wins). */
 export function usePaletteCommands(): Command[] {
@@ -28,6 +29,7 @@ export function usePaletteCommands(): Command[] {
   const instances = useIndicatorStore((s) => s.instances);
   const watchlist = useUiStore((s) => s.watchlist);
   const sidebarTab = useUiStore((s) => s.sidebarTab);
+  const learnPages = useLearnIndex().data;
   const act = useChartStore.getState;
   const ui = useUiStore.getState;
   const theme = useThemeStore((s) => s.theme);
@@ -181,6 +183,24 @@ export function usePaletteCommands(): Command[] {
       keywords,
       run: () => {
         ui().showSidebar(tab, narrow);
+      },
+    })),
+    {
+      id: 'learn-index',
+      group: 'Learn',
+      label: 'Open a learn page…',
+      keywords: 'learn education math explanation index',
+      run: () => {
+        ui().openModal('learnIndex');
+      },
+    },
+    ...(learnPages ?? []).map((page) => ({
+      id: `learn-${page.slug}`,
+      group: 'Learn',
+      label: `Learn: ${page.title}`,
+      keywords: `learn ${page.slug} math`,
+      run: () => {
+        ui().openLearn(`${PAGE_PREFIX}${page.slug}`);
       },
     })),
     {

@@ -1,0 +1,88 @@
+.figure {
+  margin: 0;
+}
+
+.caption {
+  color: var(--color-text-strong);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.readout {
+  min-height: 1.4em;
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  outline: none;
+}
+
+.svg:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.level {
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.paneFrame {
+  fill: none;
+  stroke: var(--color-border);
+}
+
+.tick,
+.axis,
+.axisEnd {
+  fill: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tick {
+  dominant-baseline: middle;
+  text-anchor: end;
+}
+
+.axisEnd {
+  text-anchor: end;
+}
+
+.price {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 1.25;
+}
+
+.line {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.marker {
+  fill: var(--color-accent);
+  stroke: var(--color-bg);
+  stroke-width: 1;
+}
+
+.cursor {
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
