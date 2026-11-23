@@ -30,7 +30,7 @@ V2_SECTIONS = (
     "Pitfalls",
     "Exercise",
 )
-LAB_KINDS = {"param", "event", "combo"}
+LAB_KINDS = {"param", "event", "combo", "replay"}
 _LAB_BLOCK = re.compile(r"^```lab[ \t]*\n(.*?)^```[ \t]*$", re.MULTILINE | re.DOTALL)
 
 ALL_PAGES = sorted(p.stem for p in LEARN_DIR.glob("*.md") if p.stem != "README")

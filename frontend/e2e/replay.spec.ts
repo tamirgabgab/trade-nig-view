@@ -50,3 +50,41 @@ test('replay AAPL from 2024-01-02: step 5 bars, the legend shows bar 5 and nothi
   const last = adjusted(present(rows.at(-1), 'last bar'));
   await expect(field(page, 'C')).toHaveText(price(last.close));
 });
+
+test('a learn page exercise starts the replay on its symbol, date and indicator', async ({
+  page,
+}) => {
+  // The SMA page with an exercise card on NVDA; the chart starts on AAPL, then goes weekly.
+  await page.route('**/api/learn/sma', async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as Record<string, unknown>;
+    const block = {
+      kind: 'replay',
+      symbol: 'NVDA',
+      date: '2024-01-02',
+      indicators: [{ id: 'sma', params: { length: 50 } }],
+    };
+    body['markdown'] = `# SMA\n\n## Exercise\n\n\`\`\`lab\n${JSON.stringify(block)}\n\`\`\`\n`;
+    await route.fulfill({ response, json: body });
+  });
+  const start = dailyRows('NVDA.csv').find((r) => r.date === '2024-01-02');
+  await page
+    .getByRole('group', { name: 'Interval' })
+    .getByRole('button', { name: '1 week' })
+    .click();
+
+  await page.getByRole('button', { name: 'Learn pages' }).click();
+  await page.keyboard.type('Simple Moving');
+  await page.keyboard.press('Enter');
+  const card = page.getByRole('region', { name: 'Replay exercise' });
+  await expect(card).toContainText('NVDA, daily, from 2024-01-02 with SMA 50');
+  await card.getByRole('button', { name: 'Start in Replay' }).click();
+
+  await expect(page.getByRole('toolbar', { name: 'Bar replay' })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(field(page, 'C')).toHaveText(price(adjusted(present(start, 'start bar')).close));
+  await expect(page.getByRole('list', { name: 'Indicators on the chart' })).toContainText('SMA 50');
+  await expect(
+    page.getByRole('group', { name: 'Interval' }).getByRole('button', { name: '1 day' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+});

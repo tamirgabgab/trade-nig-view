@@ -52,6 +52,20 @@
   font: inherit;
 }
 
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
 .iconButton {
   display: grid;
   place-items: center;
@@ -64,6 +78,7 @@
   cursor: pointer;
 }
 
+.action:focus-visible,
 .segment button:focus-visible,
 .select:focus-visible,
 .iconButton:focus-visible,

@@ -17,7 +17,10 @@ export interface ReplayState {
   speed: ReplaySpeed;
   /** Bumped by a jump (a new start bar): the chart then scrolls to the cursor. */
   jumps: number;
-  start: (symbol: string) => void;
+  /** A start date ('YYYY-MM-DD') still to apply once the symbol's bars are in (an exercise card). */
+  startDay: string | null;
+  /** Pick the start bar on `symbol`; with `day`, the chart starts at its last bar on or before it. */
+  start: (symbol: string, day?: string) => void;
   /** Show the bars up to and including this one; `jump`: a new start, bring it into view. */
   setCursor: (time: Bar['time'], jump?: boolean) => void;
   setPlaying: (playing: boolean) => void;
@@ -36,11 +39,12 @@ export const useReplayStore = create<ReplayState>()((set) => ({
   playing: false,
   speed: 1,
   jumps: 0,
-  start: (symbol) => {
-    set({ mode: 'picking', symbol, cursor: null, playing: false });
+  startDay: null,
+  start: (symbol, day) => {
+    set({ mode: 'picking', symbol, cursor: null, playing: false, startDay: day ?? null });
   },
   setCursor: (cursor, jump = false) => {
-    set((s) => ({ mode: 'on', cursor, jumps: jump ? s.jumps + 1 : s.jumps }));
+    set((s) => ({ mode: 'on', cursor, jumps: jump ? s.jumps + 1 : s.jumps, startDay: null }));
   },
   setPlaying: (playing) => {
     set({ playing });
@@ -49,6 +53,6 @@ export const useReplayStore = create<ReplayState>()((set) => ({
     set({ speed });
   },
   exit: () => {
-    set({ mode: 'off', symbol: null, cursor: null, playing: false });
+    set({ mode: 'off', symbol: null, cursor: null, playing: false, startDay: null });
   },
 }));

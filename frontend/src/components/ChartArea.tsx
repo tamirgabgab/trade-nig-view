@@ -27,6 +27,7 @@ import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { ChartContextMenu } from './ChartContextMenu.tsx';
 import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
 import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
+import { localDate } from './formatClock.ts';
 import { RemoveConfirm } from './RemoveConfirm.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
@@ -348,6 +349,16 @@ export function ChartArea({ className }: ChartAreaProps) {
       element.removeEventListener('pointerdown', onPick, true);
     };
   }, [picking, allBars]);
+  // A replay started at a date (a learn page's exercise): its last bar on or before that day, once
+  // this symbol's bars are in. A day before the loaded history leaves the pick to the user.
+  const startDay = picking && replay.symbol === symbol ? replay.startDay : null;
+  const loaded = !history.isLoading && data?.symbol === symbol && data.interval === interval;
+  useEffect(() => {
+    if (startDay === null || !loaded) return;
+    const bar = allBars.findLast((b) => localDate(b.time, timeZone) <= startDay);
+    if (bar === undefined) useReplayStore.setState({ startDay: null });
+    else useReplayStore.getState().setCursor(bar.time, true);
+  }, [startDay, loaded, allBars, timeZone]);
   // Keep the cursor in view while replaying (unless the user scrolled back); a new start bar
   // always comes into view.
   const jumps = useRef(replay.jumps);

@@ -29,3 +29,10 @@ export function formatBarTime(time: string | number, timeZone: string): string {
     ? `${day} ${pad(wall.getUTCHours())}:${pad(wall.getUTCMinutes())}`
     : day;
 }
+
+/** A bar's date ('YYYY-MM-DD') as the chart shows it: daily bars as they are, intraday bars in
+ *  the display time zone. */
+export function localDate(time: string | number, zone: string): string {
+  if (typeof time === 'string') return time;
+  return new Date((time + zoneOffsetSeconds(time, zone)) * 1000).toISOString().slice(0, 10);
+}

@@ -2,9 +2,8 @@ import { Pause, Play, Shuffle, StepForward, X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { Bar } from '../api/bars.ts';
-import { zoneOffsetSeconds } from '../chart/timeZone.ts';
 import { REPLAY_SPEEDS, useReplayStore, type ReplaySpeed } from '../store/replayStore.ts';
-import { formatBarTime } from './formatClock.ts';
+import { formatBarTime, localDate } from './formatClock.ts';
 import { IconButton } from './IconButton.tsx';
 import styles from './ReplayBar.module.css';
 import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
@@ -12,13 +11,6 @@ import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 const ICON = 18;
 /** A random start leaves room for warm-up before it and for the replay after it. */
 const RANDOM_MARGIN = 50;
-
-/** A bar's date ('YYYY-MM-DD') as the chart shows it: daily bars as they are, intraday bars in
- *  the display time zone. */
-function localDate(time: Bar['time'], zone: string): string {
-  if (typeof time === 'string') return time;
-  return new Date((time + zoneOffsetSeconds(time, zone)) * 1000).toISOString().slice(0, 10);
-}
 
 /**
  * Replay controls (R7), floating at the bottom of the chart. Picking: choose the start bar by a

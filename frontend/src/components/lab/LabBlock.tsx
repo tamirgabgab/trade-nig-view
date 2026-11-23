@@ -2,15 +2,17 @@ import { ComboLab, type ComboBlock } from './ComboLab.tsx';
 import { EventLab, type EventBlock } from './EventLab.tsx';
 import styles from './Lab.module.css';
 import { ParamLab, type ParamBlock } from './ParamLab.tsx';
+import { ReplayLab, type ReplayBlock } from './ReplayLab.tsx';
 
-type Block = ParamBlock | EventBlock | ComboBlock;
+type Block = ParamBlock | EventBlock | ComboBlock | ReplayBlock;
+const KINDS: readonly unknown[] = ['param', 'event', 'combo', 'replay'];
 
 function parse(source: string): Block | null {
   try {
     const value: unknown = JSON.parse(source);
     if (typeof value !== 'object' || value === null) return null;
     const kind = (value as { kind?: unknown }).kind;
-    return kind === 'param' || kind === 'event' || kind === 'combo' ? (value as Block) : null;
+    return KINDS.includes(kind) ? (value as Block) : null;
   } catch {
     return null;
   }
@@ -18,7 +20,8 @@ function parse(source: string): Block | null {
 
 /**
  * A ```lab block of a learn page (JSON) as its interactive widget: `param` (move one
- * parameter), `event` (what followed a signal) or `combo` (combine up to three rules).
+ * parameter), `event` (what followed a signal), `combo` (combine up to three rules) or `replay`
+ * (an exercise: start the bar replay on a symbol and date).
  */
 export function LabBlock({ source }: { source: string }) {
   const block = parse(source);
@@ -36,5 +39,7 @@ export function LabBlock({ source }: { source: string }) {
       return <EventLab block={block} />;
     case 'combo':
       return <ComboLab block={block} />;
+    case 'replay':
+      return <ReplayLab block={block} />;
   }
 }

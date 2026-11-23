@@ -55,15 +55,17 @@ Which other indicator(s) complement it and why (trend filter, trigger, confirmat
 ## Pitfalls
 
 ## Exercise
-One or two short tasks for the reader, e.g. "set the scenario to Range, move the threshold from 30 to 20: how do the
+One or two short tasks for the reader (with a `replay` block where it helps), e.g. "set the scenario to Range, move the threshold from 30 to 20: how do the
 count and the edge change, and why?" or "start Replay on AAPL at <date>".
 ```
 
 ### Equations and colours
 - Colour a symbol with `\textcolor{#RRGGBB}{...}` in the colour of its line in the registry (the chart and the labs
   draw it in that colour). Price and plain variables stay uncoloured.
-- Mid-tone colours only (they must read on the dark and the light theme): `#2962FF` blue, `#FF6D00` orange,
-  `#089981` green, `#F23645` red, `#7E57C2` purple, `#00BCD4` cyan, `#787B86` grey.
+- Colours must read on the dark and the light theme. A registry colour too pale for white paper takes a darker shade
+  of the same hue in equations: HMA `#FFCA28` → `#F9A825`, ZLEMA `#D4E157` → `#AFB42B`, ALMA `#29B6F6` → `#039BE5`,
+  RSI MA `#FDD835` → `#F9A825`, Ribbon MA 1 `#F7A600` → `#E69500`. Other symbols that are not lines: `#2962FF` blue,
+  `#FF6D00` orange, `#089981` green, `#F23645` red, `#7E57C2` purple, `#00BCD4` cyan, `#787B86` grey.
 - Every displayed equation is followed by a "where" table (symbol, meaning, units / typical range).
 
 ### Interactive labs
@@ -95,6 +97,14 @@ any symbol of the universe. Every number is computed by the backend's one implem
 - `param`: one parameter (`vary`) on a slider (`min`/`max` optional), optional `params` over the defaults.
 - `event`: an event study of `output` `op` `value` (`op`: `lt`, `gt`, `crosses_above`, `crosses_below`); the reader can
   move the threshold within `range`, change the comparison and the look-ahead (`horizon`, bars).
+- `replay`: a "Start in Replay" button for an exercise: the chart switches to `symbol` (the universe's provider
+  symbol, e.g. `SPY`, `^GSPC`) on daily bars, adds `indicators` (each `{"id", "params"}`) unless the same one is already
+  on, and starts the bar replay at the last bar on or before `date` (`YYYY-MM-DD`; daily history reaches about 20 years
+  back).
+
+  ```lab
+  {"kind": "replay", "symbol": "SPY", "date": "2020-02-19", "indicators": [{"id": "sma", "params": {"length": 50}}]}
+  ```
 - `combo`: up to three of `rules` at once (their AND), each rule's edge alone next to it. A rule's sides are
   `{"indicator": {"id", "params"}, "output"}`, `{"price": "close"}` or `{"value": n}`.
 

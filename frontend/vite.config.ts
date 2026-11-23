@@ -9,6 +9,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // The learn pages test reads ../docs/indicators (KaTeX check).
+    fs: { allow: ['.', '../docs'] },
     proxy: {
       '/api': { target: backendUrl, changeOrigin: true },
     },
