@@ -19,8 +19,8 @@ export function SnapshotMenu() {
   useEffect(() => {
     if (modalOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!event.altKey || event.ctrlKey || event.metaKey || event.key.toLowerCase() !== 's')
-        return;
+      // code, not key: Option+S on a Mac types "ß".
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.code !== 'KeyS') return;
       event.preventDefault();
       requestSnapshot('copy');
     };
@@ -52,6 +52,7 @@ export function SnapshotMenu() {
         <ActionMenu
           label="Snapshot"
           attrs={menu.attrs}
+          anchor={wrapperRef}
           style={{ left: 'auto', right: 0 }}
           onClose={close}
           items={[

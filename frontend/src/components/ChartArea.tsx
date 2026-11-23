@@ -73,7 +73,9 @@ export function ChartArea({ className }: ChartAreaProps) {
   const closeContextMenu = useCallback(() => {
     setMenuAt(null);
   }, []);
-  const [confirmClear, setConfirmClear] = useState(false);
+  const confirmClear = useUiStore((s) => s.confirmRemoveAll);
+  const setConfirmClear = useUiStore((s) => s.setConfirmRemoveAll);
+  const forgetIndicator = useUiStore((s) => s.forgetIndicator);
   const removeAll = useIndicatorStore((s) => s.removeAll);
   const restoreAll = useIndicatorStore((s) => s.restoreAll);
   const [offLatest, setOffLatest] = useState(false);
@@ -120,8 +122,6 @@ export function ChartArea({ className }: ChartAreaProps) {
   // Chart image: the title band names the symbol and its latest bar (read when the image comes).
   const snapshot = useUiStore((s) => s.snapshot);
   const showToast = useUiStore((s) => s.showToast);
-  const openSettingsPanel = useUiStore((s) => s.openSettings);
-  const openLearnDrawer = useUiStore((s) => s.openLearn);
   const snapshotText = useRef({ title: '', detail: '', file: '' });
   useEffect(() => {
     const last = legendValues(bars, null);
@@ -328,10 +328,10 @@ export function ChartArea({ className }: ChartAreaProps) {
           }}
           onConfirm={() => {
             setConfirmClear(false);
-            openSettingsPanel(null);
-            openLearnDrawer(null);
+            forgetIndicator();
             const removed = removeAll();
-            showToast(`Removed ${String(removed.length)} indicators`, () => {
+            const n = removed.length;
+            showToast(`Removed ${String(n)} indicator${n === 1 ? '' : 's'}`, () => {
               restoreAll(removed);
             });
           }}

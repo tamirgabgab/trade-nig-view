@@ -5,38 +5,9 @@ import { useSymbols, useUniverseQuotes } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { direction, formatPercent, formatPrice, formatSigned } from './formatNumber.ts';
 import { MarketStatus } from './MarketStatus.tsx';
+import { RangeBar } from './RangeBar.tsx';
 import styles from './SymbolCard.module.css';
 import { usePriceFlash } from './usePriceFlash.ts';
-
-/** A low–high range as a bar with a marker at `value` (day range, 52-week range). */
-function Range({
-  label,
-  low,
-  high,
-  value,
-  decimals,
-}: {
-  label: string;
-  low: number | null;
-  high: number | null;
-  value: number;
-  decimals: number;
-}) {
-  if (low === null || high === null) return null;
-  const at = high > low ? Math.min(Math.max((value - low) / (high - low), 0), 1) : 0.5;
-  return (
-    <div className={styles.range}>
-      <span className={styles.rangeHead}>{label}</span>
-      <div className={styles.track} aria-hidden="true">
-        <span className={styles.marker} style={{ left: `${String(at * 100)}%` }} />
-      </div>
-      <div className={styles.rangeEnds}>
-        <span>{formatPrice(low, decimals)}</span>
-        <span>{formatPrice(high, decimals)}</span>
-      </div>
-    </div>
-  );
-}
 
 /** Details of the charted symbol under the watchlist: price, ranges and market status. */
 export function SymbolCard() {
@@ -87,14 +58,14 @@ export function SymbolCard() {
           </div>
           {last !== null && (
             <>
-              <Range
+              <RangeBar
                 label="Day's range"
                 low={quote?.dayLow ?? null}
                 high={quote?.dayHigh ?? null}
                 value={last}
                 decimals={info.decimals}
               />
-              <Range
+              <RangeBar
                 label="52-week range"
                 low={quote?.low52w ?? null}
                 high={quote?.high52w ?? null}

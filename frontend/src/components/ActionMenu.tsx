@@ -1,5 +1,12 @@
 import { Check } from 'lucide-react';
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type RefObject,
+} from 'react';
 
 import styles from './ChartTypeMenu.module.css';
 import type { OverlayAttrs } from './usePresence.ts';
@@ -22,10 +29,12 @@ interface ActionMenuProps {
   onClose: (restoreFocus: boolean) => void;
   style?: CSSProperties;
   attrs?: OverlayAttrs;
+  /** The opener: a press on it is not a click away (its own click toggles the menu). */
+  anchor?: RefObject<HTMLElement | null>;
 }
 
 /** A list of actions in a popup (snapshot menu, chart context menu): arrows, Enter, Esc. */
-export function ActionMenu({ label, items, onClose, style, attrs }: ActionMenuProps) {
+export function ActionMenu({ label, items, onClose, style, attrs, anchor }: ActionMenuProps) {
   const [active, setActive] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -36,13 +45,14 @@ export function ActionMenu({ label, items, onClose, style, attrs }: ActionMenuPr
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
-      if (!ref.current?.contains(event.target as Node)) onClose(false);
+      const target = event.target as Node;
+      if (!ref.current?.contains(target) && !anchor?.current?.contains(target)) onClose(false);
     };
     document.addEventListener('mousedown', onPointerDown);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
     };
-  }, [onClose]);
+  }, [onClose, anchor]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const last = items.length - 1;

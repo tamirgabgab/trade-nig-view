@@ -28,6 +28,12 @@ describe('SnapshotMenu', () => {
     await user.click(camera);
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+    // A second press on the camera closes the menu (it does not reopen it).
+    await user.click(camera);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.click(camera);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('names the file after the symbol, interval and date', () => {

@@ -19,7 +19,8 @@ export function withTitleBand(
   detail: string,
   theme: ChartTheme,
 ): HTMLCanvasElement {
-  const ratio = chart.width / Math.max(chart.clientWidth || chart.width, 1) || 1;
+  // takeScreenshot() is in device pixels; the band and its text scale the same way.
+  const ratio = window.devicePixelRatio || 1;
   const band = Math.round(BAND * ratio);
   const out = document.createElement('canvas');
   out.width = chart.width;
@@ -60,6 +61,12 @@ export async function downloadImage(canvas: HTMLCanvasElement, fileName: string)
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
+  // Some browsers (Firefox) only download from an anchor in the document, and read the blob
+  // after the click returns: attach it, and free the URL a moment later.
+  document.body.append(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }

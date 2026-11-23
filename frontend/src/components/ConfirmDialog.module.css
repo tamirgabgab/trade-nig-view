@@ -43,7 +43,7 @@
 .danger {
   border: 0;
   background: var(--color-down);
-  color: #fff;
+  color: var(--color-on-danger);
   font-weight: 500;
 }
 

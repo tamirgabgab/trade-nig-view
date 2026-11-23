@@ -25,6 +25,7 @@
   --color-up-flash: rgb(8 153 129 / 32%);
   --color-down-flash: rgb(242 54 69 / 30%);
   --color-warning: #f7a600;
+  --color-on-danger: #ffffff;
   --color-focus: #2962ff;
 
   --color-chart-grid: #1c1c1c;

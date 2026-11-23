@@ -307,6 +307,9 @@ describe('indicators on the chart', () => {
     const confirm = screen.getByRole('alertdialog', { name: 'Remove all indicators?' });
     expect(confirm).toHaveTextContent('WMA 30, EMA 9');
     expect(within(confirm).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    // While it is open, global shortcuts do not stack another dialog on top.
+    await user.keyboard('a');
+    expect(screen.queryByRole('dialog', { name: 'Symbol search' })).not.toBeInTheDocument();
     await user.click(within(confirm).getByRole('button', { name: 'Remove 2 indicators' }));
     expect(screen.queryByRole('list', { name: 'Indicators on the chart' })).not.toBeInTheDocument();
 

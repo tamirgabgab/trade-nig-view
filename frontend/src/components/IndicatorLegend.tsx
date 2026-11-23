@@ -32,6 +32,7 @@ export function IndicatorLegend({
   const restore = useIndicatorStore((s) => s.restore);
   const showToast = useUiStore((s) => s.showToast);
   const setLegendFocus = useUiStore((s) => s.setLegendFocus);
+  const forgetIndicator = useUiStore((s) => s.forgetIndicator);
   const emphasis = useUiStore((s) => s.emphasis);
   const openSettings = useUiStore((s) => s.openSettings);
   const settingsFor = useUiStore((s) => s.settingsFor);
@@ -129,9 +130,7 @@ export function IndicatorLegend({
                 label={`Remove ${view.label}`}
                 icon={<X size={ICON} />}
                 onClick={() => {
-                  if (settingsFor === uid) openSettings(null);
-                  if (learnFor === uid) openLearn(null);
-                  setLegendFocus(null);
+                  forgetIndicator(uid);
                   const removed = remove(uid);
                   if (removed !== null) {
                     showToast(`Removed ${view.label}`, () => {

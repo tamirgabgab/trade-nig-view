@@ -36,6 +36,11 @@ export interface UiState {
   setShortcutsOpen: (open: boolean) => void;
   paletteOpen: boolean;
   setPaletteOpen: (open: boolean) => void;
+  /** The "Remove all indicators?" confirmation. */
+  confirmRemoveAll: boolean;
+  setConfirmRemoveAll: (open: boolean) => void;
+  /** Forget panels, hover focus and emphasis of removed indicators (one uid, or all). */
+  forgetIndicator: (uid?: string) => void;
   /** Watchlist column on a wide window; floating panel below 1100 px (closed by default). */
   watchlist: { docked: boolean; floating: boolean };
   toggleWatchlist: (narrow: boolean) => void;
@@ -50,7 +55,13 @@ export interface UiState {
 
 /** Any modal dialog open: the global hotkeys stay quiet so modals never stack. */
 export function selectModalOpen(s: UiState): boolean {
-  return s.symbolSearch.open || s.indicatorsDialog || s.shortcutsOpen || s.paletteOpen;
+  return (
+    s.symbolSearch.open ||
+    s.indicatorsDialog ||
+    s.shortcutsOpen ||
+    s.paletteOpen ||
+    s.confirmRemoveAll
+  );
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -88,6 +99,20 @@ export const useUiStore = create<UiState>()((set) => ({
   paletteOpen: false,
   setPaletteOpen: (open) => {
     set({ paletteOpen: open });
+  },
+  confirmRemoveAll: false,
+  setConfirmRemoveAll: (open) => {
+    set({ confirmRemoveAll: open });
+  },
+  forgetIndicator: (uid) => {
+    const gone = (current: string | null) =>
+      uid === undefined || current === uid ? null : current;
+    set((s) => ({
+      settingsFor: gone(s.settingsFor),
+      learnFor: gone(s.learnFor),
+      legendFocus: gone(s.legendFocus),
+      emphasis: gone(s.emphasis),
+    }));
   },
   watchlist: { docked: true, floating: false },
   toggleWatchlist: (narrow) => {

@@ -69,6 +69,7 @@ export function usePaletteCommands(): Command[] {
         id: `rm-${instance.uid}`,
         label: `${label}: Remove`,
         run: () => {
+          ui.forgetIndicator(instance.uid);
           const removed = remove(instance.uid);
           if (removed !== null)
             ui.showToast(`Removed ${label}`, () => {
