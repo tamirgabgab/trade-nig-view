@@ -87,7 +87,7 @@ export function IndicatorLegend({
               />
               <IconButton
                 className={styles.action}
-                label={`Settings: ${view.label}`}
+                label={`Edit settings: ${view.label}`}
                 icon={<Settings2 size={ICON} />}
                 pressed={settingsFor === uid}
                 disabled={view.spec === undefined}

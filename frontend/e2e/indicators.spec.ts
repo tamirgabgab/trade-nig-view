@@ -36,7 +36,7 @@ test('add EMA 20, change it to 50, hide and remove it', async ({ page }) => {
   await expect(row).toContainText('EMA 9 close');
   await expect(row.locator('[data-output="ma"]')).toHaveText(price(ema(closes, 9)));
 
-  await row.getByRole('button', { name: 'Settings: EMA 9 close' }).click();
+  await row.getByRole('button', { name: 'Edit settings: EMA 9 close' }).click();
   const panel = page.getByRole('dialog', { name: /EMA/ });
   const length = panel.getByRole('spinbutton', { name: 'Length' });
   await length.fill('20');
@@ -88,7 +88,7 @@ test('composites: Envelope with an EMA basis and MA Cross', async ({ page }) => 
   await expect(envelope.locator('[data-output="upper"]')).toHaveText(price(basis * 1.1));
   await expect(envelope.locator('[data-output="lower"]')).toHaveText(price(basis * 0.9));
 
-  await envelope.getByRole('button', { name: /^Settings: Env/ }).click();
+  await envelope.getByRole('button', { name: /^Edit settings: Env/ }).click();
   const panel = page.getByRole('dialog', { name: /^Env/ });
   await panel.getByRole('combobox', { name: 'Basis MA type' }).selectOption({ label: 'EMA' });
   await expect(envelope).toContainText('Env 20 10 close EMA');
@@ -156,7 +156,7 @@ test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI
   await expect(indicators(page)).toBeHidden();
 
   // Smoothing inputs stay greyed out until a smoothing is picked.
-  await pane.getByRole('button', { name: 'Settings: RSI 14 close' }).click();
+  await pane.getByRole('button', { name: 'Edit settings: RSI 14 close' }).click();
   const rsiPanel = page.getByRole('dialog', { name: /^RSI/ });
   await expect(rsiPanel.getByRole('spinbutton', { name: 'Smoothing length' })).toBeDisabled();
   await rsiPanel.getByRole('combobox', { name: 'Smoothing' }).selectOption({ label: 'SMA' });
@@ -178,7 +178,7 @@ test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI
   };
   await check(20);
 
-  await bands.getByRole('button', { name: /^Settings: BB/ }).click();
+  await bands.getByRole('button', { name: /^Edit settings: BB/ }).click();
   const bbPanel = page.getByRole('dialog', { name: /^BB/ });
   await bbPanel.getByRole('spinbutton', { name: 'Length' }).fill('30');
   await expect(bands).toContainText('BB 30 SMA close 2');

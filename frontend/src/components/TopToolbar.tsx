@@ -57,7 +57,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
       <span className={styles.separator} aria-hidden="true" />
       <ChartTypeMenu />
       <IconButton
-        label="Indicators"
+        label="Add indicator"
         text="Indicators"
         shortcut="/"
         icon={<ChartSpline size={ICON_SIZE} />}
@@ -91,13 +91,13 @@ export function TopToolbar({ className }: TopToolbarProps) {
         comingIn="R6"
       />
       <IconButton
-        label="Chart settings"
+        label="Open chart settings"
         tooltipSide="bottom-end"
         icon={<Settings size={ICON_SIZE} />}
         comingIn="R6"
       />
       <IconButton
-        label="Fullscreen"
+        label="Enter fullscreen"
         tooltipSide="bottom-end"
         icon={<Maximize2 size={ICON_SIZE} />}
         comingIn="R6"

@@ -17,7 +17,7 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
+  box-shadow: var(--shadow-overlay);
   animation: dialog-in var(--duration-fast) ease-out;
 }
 

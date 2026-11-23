@@ -30,7 +30,10 @@ export interface IconButtonProps extends Omit<
   tooltipSide?: TooltipSide;
 }
 
-/** Square toolbar button with a mandatory accessible label and a hover/focus tooltip. */
+/**
+ * Square toolbar button with a mandatory accessible label and a hover/focus tooltip that shows the
+ * shortcut as a key cap. Buttons of later rounds stay focusable but are dimmed and carry a small dot.
+ */
 export function IconButton({
   label,
   icon,
@@ -43,10 +46,6 @@ export function IconButton({
   onClick,
   ...rest
 }: IconButtonProps) {
-  const tooltipParts = [label];
-  if (shortcut) tooltipParts.push(`(${shortcut})`);
-  if (comingIn) tooltipParts.push(`— coming in ${comingIn}`);
-
   const classes = [styles.button, SIDE_CLASS[tooltipSide], text ? styles.withLabel : '', className]
     .filter(Boolean)
     .join(' ');
@@ -60,11 +59,16 @@ export function IconButton({
       aria-pressed={pressed}
       aria-disabled={comingIn ? true : undefined}
       aria-keyshortcuts={shortcut}
-      data-tooltip={tooltipParts.join(' ')}
       onClick={comingIn ? undefined : onClick}
     >
       {icon}
       {text && <span className={styles.label}>{text}</span>}
+      {/* Hidden from the a11y tree: the button's name is `label`, the shortcut is aria-keyshortcuts. */}
+      <span className={styles.tooltip} aria-hidden="true" data-testid="tooltip">
+        {label}
+        {shortcut && <kbd className={styles.kbd}>{shortcut}</kbd>}
+        {comingIn && <span className={styles.soon}>coming in {comingIn}</span>}
+      </span>
     </button>
   );
 }

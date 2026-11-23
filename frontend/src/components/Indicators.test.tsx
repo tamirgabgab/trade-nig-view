@@ -197,7 +197,7 @@ describe('indicators on the chart', () => {
     renderWithQuery(<App />);
     await addEma(user);
 
-    await user.click(screen.getByRole('button', { name: 'Settings: EMA 9 close' }));
+    await user.click(screen.getByRole('button', { name: 'Edit settings: EMA 9 close' }));
     const panel = screen.getByRole('dialog', { name: 'EMA 9 close' });
     const length = within(panel).getByRole('spinbutton', { name: 'Length' });
     expect(length).toHaveFocus();
@@ -250,14 +250,14 @@ describe('indicators on the chart', () => {
   it('opens from the toolbar, filters, and says when nothing matches', async () => {
     const user = userEvent.setup();
     renderWithQuery(<App />);
-    await user.click(screen.getByRole('button', { name: 'Indicators' }));
+    await user.click(screen.getByRole('button', { name: 'Add indicator' }));
     const dialog = screen.getByRole('dialog', { name: 'Indicators' });
     expect(await within(dialog).findAllByRole('option')).toHaveLength(4);
     await user.keyboard('zzz');
     expect(within(dialog).getByRole('status')).toHaveTextContent('No indicator matches “zzz”.');
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Indicators' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Indicators' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Add indicator' })).toHaveFocus();
   });
 
   it('shows a compute error on the legend row', async () => {
@@ -304,7 +304,7 @@ describe('indicators on the chart', () => {
     });
     expect(liveEngine().lines[2]?.values.slice(0, 3)).toEqual([null, 1, -1]);
 
-    await user.click(screen.getByRole('button', { name: 'Settings: MA Cross HMA 9 SMA 21' }));
+    await user.click(screen.getByRole('button', { name: 'Edit settings: MA Cross HMA 9 SMA 21' }));
     const panel = screen.getByRole('dialog', { name: 'MA Cross HMA 9 SMA 21' });
     const fastType = within(panel).getByRole('combobox', { name: 'Fast MA type' });
     expect(within(fastType).getByRole('option', { name: 'HMA (Hull)' })).toBeInTheDocument();

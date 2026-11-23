@@ -30,6 +30,28 @@
   cursor: default;
 }
 
+/* Features of a later round: clearly weaker than live controls, with a small "soon" dot. The
+   tooltip is a child, so it stays fully opaque. */
+.button[aria-disabled='true'] > :not(.tooltip) {
+  opacity: 0.5;
+}
+
+.button[aria-disabled='true']::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  opacity: 0.8;
+}
+
+.button[aria-disabled='true']:hover {
+  background: transparent;
+}
+
 .withLabel {
   padding: 0 var(--space-2);
 }
@@ -38,16 +60,19 @@
   font-size: var(--font-size-md);
 }
 
-/* Tooltip: pure CSS, shown on hover and on keyboard focus. */
-.button[data-tooltip]::after {
-  content: attr(data-tooltip);
+/* Tooltip: a real element (so the shortcut can be a key cap), shown on hover and on keyboard focus. */
+.tooltip {
   position: absolute;
   z-index: var(--z-tooltip);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--color-tooltip-bg);
   color: var(--color-tooltip-text);
   font-size: var(--font-size-sm);
+  font-weight: 400;
   line-height: 1.3;
   white-space: nowrap;
   pointer-events: none;
@@ -55,38 +80,52 @@
   transition: opacity var(--duration-fast) ease-out;
 }
 
-.button[data-tooltip]:hover::after,
-.button[data-tooltip]:focus-visible::after {
+.button:hover > .tooltip,
+.button:focus-visible > .tooltip {
   opacity: 1;
   transition-delay: 300ms;
 }
 
-.bottom::after {
+.kbd {
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: 16px;
+  opacity: 0.7;
+}
+
+.soon {
+  opacity: 0.7;
+}
+
+.bottom > .tooltip {
   top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
 }
 
-.top::after {
+.top > .tooltip {
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
 }
 
-.right::after {
+.right > .tooltip {
   top: 50%;
   left: calc(100% + 6px);
   transform: translateY(-50%);
 }
 
-.left::after {
+.left > .tooltip {
   top: 50%;
   right: calc(100% + 6px);
   transform: translateY(-50%);
 }
 
 /* Right-aligned with the button: for buttons near the right edge, so the tooltip stays on screen. */
-.bottomEnd::after {
+.bottomEnd > .tooltip {
   top: calc(100% + 6px);
   right: 0;
 }

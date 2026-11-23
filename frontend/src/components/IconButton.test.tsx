@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { IconButton } from './IconButton.tsx';
@@ -8,7 +8,8 @@ describe('IconButton', () => {
     render(<IconButton label="Trend line" shortcut="Alt+T" />);
     const button = screen.getByRole('button', { name: 'Trend line' });
 
-    expect(button).toHaveAttribute('data-tooltip', 'Trend line (Alt+T)');
+    expect(within(button).getByTestId('tooltip')).toHaveTextContent('Trend lineAlt+T');
+    expect(within(button).getByText('Alt+T').tagName).toBe('KBD');
     expect(button).toHaveAttribute('aria-keyshortcuts', 'Alt+T');
   });
 
@@ -32,7 +33,7 @@ describe('IconButton', () => {
 
     expect(onClick).not.toHaveBeenCalled();
     expect(button).toHaveAttribute('aria-disabled', 'true');
-    expect(button).toHaveAttribute('data-tooltip', 'Replay — coming in R7');
+    expect(within(button).getByTestId('tooltip')).toHaveTextContent('Replaycoming in R7');
   });
 
   it('exposes toggle state through aria-pressed', () => {

@@ -15,7 +15,7 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  box-shadow: var(--shadow-overlay);
   animation: menu-in var(--duration-fast) ease-out;
 }
 
@@ -39,9 +39,13 @@
   cursor: pointer;
 }
 
-.item:hover,
+.item:hover {
+  background: var(--color-hover);
+}
+
 .item:focus-visible {
-  outline: none;
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
   background: var(--color-hover);
 }
 

@@ -9,7 +9,7 @@
   width: min(300px, 100%);
   border-left: 1px solid var(--color-border-strong);
   background: var(--color-surface);
-  box-shadow: -8px 0 24px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-panel);
   animation: panel-in var(--duration-fast) ease-out;
 }
 
