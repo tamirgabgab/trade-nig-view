@@ -14,6 +14,8 @@ import { ResponsePlot, type PlotSeries } from './ResponsePlot.tsx';
 interface FilterViewProps {
   spec: IndicatorInfo;
   params: Params;
+  /** The output shown first (default: the first measured one). */
+  output?: string | undefined;
 }
 
 const SERIES = ['var(--color-series-1)', 'var(--color-series-2)'] as const;
@@ -34,11 +36,15 @@ function fixed(value: number | null, digits: number): string {
   return Number(text) === 0 ? (0).toFixed(digits) : text;
 }
 
-/** How far the step response rises above its final value, in % of it. */
-function overshoot(out: OutputResponse): number {
+/** How far the step response rises above its final value, in % of it; null for a band-pass
+ *  output (MACD), whose step settles at 0 (its measured DC gain is a rounding residue). */
+function overshoot(out: OutputResponse): number | null {
   const final = out.dcGain ?? 1;
+  if (Math.abs(final) < 1e-9) return null;
   return Math.max(0, (Math.max(...out.step) - final) / Math.abs(final)) * 100;
 }
+
+const percent = (value: number | null) => (value === null ? '—' : `${fixed(value, 1)} %`);
 
 /** Single-line moving averages another average can be compared with. */
 function comparable(specs: readonly IndicatorInfo[], current: string): IndicatorInfo[] {
@@ -84,11 +90,11 @@ function byPeriod(out: OutputResponse, pick: 'magnitudeDb' | 'groupDelay'): Curv
  * Filter view: the measured impulse, step and frequency response of one output, optionally next
  * to another moving average, with the lag / noise table.
  */
-export function FilterView({ spec, params }: FilterViewProps) {
+export function FilterView({ spec, params, output }: FilterViewProps) {
   const id = useId();
   const registry = useIndicatorList().data ?? [];
   const add = useIndicatorStore((s) => s.add);
-  const [outputName, setOutputName] = useState<string | null>(null);
+  const [outputName, setOutputName] = useState<string | null>(output ?? null);
   const [compareId, setCompareId] = useState('');
   const length = typeof params['length'] === 'number' ? params['length'] : 20;
   const [compareLength, setCompareLength] = useState(String(length));
@@ -115,7 +121,11 @@ export function FilterView({ spec, params }: FilterViewProps) {
   const outputs = primary.data?.outputs ?? [];
   const selected = outputs.find((o) => o.name === outputName) ?? outputs[0];
   if (selected === undefined) {
-    return (
+    return primary.isSuccess ? (
+      <p className={styles.note} role="status">
+        {spec.shortName} has no linear output to measure (it is not a filter of the price).
+      </p>
+    ) : (
       <p className={styles.note} role="status">
         Measuring…
       </p>
@@ -279,7 +289,7 @@ export function FilterView({ spec, params }: FilterViewProps) {
           <tr>
             <th scope="row">Step overshoot</th>
             {items.map((m) => (
-              <td key={m.label}>{`${fixed(overshoot(m.out), 1)} %`}</td>
+              <td key={m.label}>{percent(overshoot(m.out))}</td>
             ))}
           </tr>
         </tbody>

@@ -310,5 +310,25 @@ describe('learn drawer', () => {
     const table = await within(figure).findByRole('table');
     expect(within(table).getByRole('row', { name: /^Lag \(bars\)/ })).toHaveTextContent('—');
     expect(within(table).getByRole('row', { name: /DC gain/ })).toHaveTextContent('0.000');
+    expect(within(table).getByRole('row', { name: /overshoot/i })).toHaveTextContent('—');
+  });
+
+  it('says so when a filter block names an indicator with no linear output', async () => {
+    const user = userEvent.setup();
+    const page = `${PAGE}\n\n\`\`\`lab\n{"kind": "filter", "indicator": "sma"}\n\`\`\`\n`;
+    stubApi({
+      '/api/health': { body: HEALTH_OK },
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
+      '/api/indicators': { body: INDICATORS },
+      '/api/indicators/compute': () => jsonResponse({ detail: 'not needed' }, 500),
+      '/api/learn/sma': { body: { slug: 'sma', markdown: page } },
+      '/api/indicators/response': { body: { id: 'sma', outputs: [] } },
+    });
+    renderWithQuery(<App />);
+    const drawer = await openLearn(user, 'sma', 'Simple Moving Average');
+    const figure = await within(drawer).findByRole('region', { name: 'SMA: filter view' });
+    expect(await within(figure).findByRole('status')).toHaveTextContent('no linear output');
   });
 });

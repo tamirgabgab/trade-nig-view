@@ -165,5 +165,8 @@ def test_lab_blocks_are_valid(slug: str) -> None:
             assert rule.keys() >= RULE_REQUIRED, f"{where} rule {j}: needs {sorted(RULE_REQUIRED)}"
         if kind == "combo":
             assert len(rules) > 0, f"{where}: no rules"
+        if kind == "filter" and "output" in fields:
+            outputs = [o.name for o in CATALOG[fields["indicator"]].outputs]
+            assert fields["output"] in outputs, f"{where}: output not in {outputs}"
         unknown = sorted(set(indicator_ids(block)) - CATALOG.keys())
         assert not unknown, f"{where}: unknown indicator(s) {unknown}"

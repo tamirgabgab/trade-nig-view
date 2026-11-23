@@ -191,7 +191,7 @@ filters: impulse, a step response that returns to 0, and the magnitude against t
 mass of a kernel that sums to 0 is undefined). These figures are computed by running the real implementation.
 
 ```lab
-{"kind": "filter", "indicator": "macd"}
+{"kind": "filter", "indicator": "macd", "output": "macd"}
 ```
 
 - **Impulse:** the MACD taps are $\alpha_f p_f^k - \alpha_s p_s^k$: 0.0798, 0.0616, 0.0466, ... (the first is
@@ -210,7 +210,7 @@ drawer's grid: 41.5) at −2.47 dB, the signal to about 50 bars at −2.94 dB an
 −9.20 dB.
 
 ```lab
-{"kind": "filter", "indicator": "macd", "params": {"fast_length": 5, "slow_length": 35, "signal_length": 5}}
+{"kind": "filter", "indicator": "macd", "output": "macd", "params": {"fast_length": 5, "slow_length": 35, "signal_length": 5}}
 ```
 
 ## How to read it

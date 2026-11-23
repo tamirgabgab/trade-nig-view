@@ -7,6 +7,8 @@ export interface FilterBlock {
   kind: 'filter';
   indicator: string;
   params?: Params;
+  /** The output shown first, e.g. "macd" (default: the first measured one). */
+  output?: string;
 }
 
 /** A page's figure of a linear indicator: the Filter view (impulse, step, frequency response,
@@ -25,7 +27,7 @@ export function FilterLab({ block }: { block: FilterBlock }) {
   if (spec === undefined) return <p className={styles.note}>Loading…</p>;
   return (
     <section className={styles.lab} aria-label={`${spec.shortName}: filter view`}>
-      <FilterView spec={spec} params={withDefaults(spec, block.params)} />
+      <FilterView spec={spec} params={withDefaults(spec, block.params)} output={block.output} />
     </section>
   );
 }

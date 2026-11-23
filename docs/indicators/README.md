@@ -106,7 +106,8 @@ any symbol of the universe. Every number is computed by the backend's one implem
   {"kind": "replay", "symbol": "SPY", "date": "2020-02-19", "indicators": [{"id": "sma", "params": {"length": 50}}]}
   ```
 - `filter`: the measured Filter view of a linear indicator (impulse, step and frequency response, lag and noise; for a
-  band-pass output such as MACD, no lag), e.g. `{"kind": "filter", "indicator": "macd"}` or the RMA inside RSI:
+  band-pass output such as MACD, no lag); `output` picks the line shown first, e.g.
+  `{"kind": "filter", "indicator": "macd", "output": "macd"}`, or the RMA inside RSI:
   `{"kind": "filter", "indicator": "smma", "params": {"length": 14}}`.
 - `combo`: up to three of `rules` at once (their AND), each rule's edge alone next to it. A rule's sides are
   `{"indicator": {"id", "params"}, "output"}`, `{"price": "close"}` or `{"value": n}`.
