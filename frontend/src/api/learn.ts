@@ -22,7 +22,7 @@ export interface OutputResponse {
   /** Why it is not linear (no impulse / frequency response); null when it is. */
   reason: string | null;
   step: number[];
-  rampLag: number;
+  rampLag: number | null;
   impulse: number[] | null;
   dcGain: number | null;
   lag: number | null;
@@ -74,7 +74,7 @@ function parseOutput(item: unknown): OutputResponse {
     label,
     reason: typeof reason === 'string' ? reason : null,
     step: numbers(field('step'), 'step'),
-    rampLag: numOrNull(field('ramp_lag')) ?? Number.NaN,
+    rampLag: numOrNull(field('ramp_lag')),
     impulse: impulse === null ? null : numbers(impulse, 'impulse'),
     dcGain: numOrNull(field('dc_gain')),
     lag: numOrNull(field('lag')),

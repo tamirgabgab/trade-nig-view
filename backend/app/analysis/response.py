@@ -19,11 +19,14 @@ random walks, :math:`f(x_1 + 2x_2) = f(x_1) + 2f(x_2)`, and the output does not 
 volume series. Adaptive (KAMA, McGinley) and volume-weighted (VWMA) averages fail and get the
 step and ramp responses only, with the reason.
 
-Only outputs that follow the price are measured: on flat bars they sit at a fixed non-zero
-multiple of the price level (averages, envelope and Bollinger bands). Oscillators (RSI at 100,
-MACD at 0), volume lines (OBV, Volume SMA) and outputs that are empty on these synthetic bars
-(VWAP without sessions, a switched-off RSI smoothing) have no response in this sense and are
-left out, so their list is empty.
+Measured outputs either follow the price (on flat bars a fixed non-zero multiple of the price
+level: averages, envelope and Bollinger bands) or are **band-pass**: linear with zero DC gain, 0 on
+flat bars at any level (MACD, its signal and histogram, differences of averages). A band-pass
+output has an impulse, a step (that returns to 0) and a frequency response, but no lag (the centre
+of mass of a kernel that sums to 0 is undefined) and no ramp lag (on a ramp it settles at a
+constant, :math:`b\,(\bar k_{slow} - \bar k_{fast})` for MACD). Non-linear oscillators (RSI,
+Stochastic), volume lines (OBV, Volume SMA) and outputs that are empty on these synthetic bars
+(VWAP without sessions, a switched-off RSI smoothing) are left out.
 """
 
 from __future__ import annotations
@@ -83,7 +86,7 @@ class OutputResponse:
     label: str
     reason: str | None  # why it is not linear; None when it is
     step: FloatArray  # unit step response from the step bar on (settles at the DC gain)
-    ramp_lag: float  # bars behind a straight line once settled
+    ramp_lag: float | None  # bars behind a straight line once settled; None for band-pass
     impulse: FloatArray | None = None
     dc_gain: float | None = None
     lag: float | None = None
@@ -124,6 +127,11 @@ def _follows_price(at_base: float, at_double: float) -> bool:
         and at_base != 0.0
         and bool(np.isclose(at_double, 2.0 * at_base, rtol=LINEAR_RTOL, atol=0.0))
     )
+
+
+def _band_pass(at_base: float, at_double: float) -> bool:
+    """On flat bars the output is 0 whatever the level (a difference of averages)."""
+    return abs(at_base) <= LINEAR_RTOL * BASE and abs(at_double) <= LINEAR_RTOL * BASE
 
 
 def _close(a: FloatArray, b: FloatArray) -> bool:
@@ -202,7 +210,25 @@ def filter_response(spec: IndicatorSpec, params: Params) -> list[OutputResponse]
     labels = {o.name: o.label for o in spec.outputs}
     results: list[OutputResponse] = []
     for name, reason in reasons.items():
-        if not _follows_price(steps[name][start - 1], doubled[name][start - 1]):
+        flat, flat_doubled = steps[name][start - 1], doubled[name][start - 1]
+        if reason is None and _band_pass(flat, flat_doubled):
+            h = impulses[name][start:]
+            results.append(
+                OutputResponse(
+                    name,
+                    labels[name],
+                    None,
+                    _shown(np.cumsum(h), 0.0),
+                    None,
+                    impulse=_shown(h, 0.0),
+                    dc_gain=float(h.sum()),
+                    nrf=float(h @ h),
+                    frequency=_frequency(h),
+                    truncated=taps < wanted and abs(float(h[-1])) > TAIL * float(np.abs(h).max()),
+                )
+            )
+            continue
+        if not _follows_price(flat, flat_doubled):
             continue
         if reason is not None:
             # A scaled output (an envelope band) settles at gain x input: the flat bar before the

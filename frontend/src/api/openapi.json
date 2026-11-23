@@ -2895,9 +2895,16 @@
             "description": "Unit step response from the step bar on"
           },
           "ramp_lag": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Ramp Lag",
-            "description": "Bars behind a straight line once settled"
+            "description": "Bars behind a straight line once settled; null for a band-pass output"
           },
           "impulse": {
             "anyOf": [

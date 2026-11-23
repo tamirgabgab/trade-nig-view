@@ -1,10 +1,11 @@
 import { ComboLab, type ComboBlock } from './ComboLab.tsx';
 import { EventLab, type EventBlock } from './EventLab.tsx';
+import { FilterLab, type FilterBlock } from './FilterLab.tsx';
 import styles from './Lab.module.css';
 import { ParamLab, type ParamBlock } from './ParamLab.tsx';
 import { ReplayLab, type ReplayBlock } from './ReplayLab.tsx';
 
-type Block = ParamBlock | EventBlock | ComboBlock | ReplayBlock;
+type Block = ParamBlock | EventBlock | ComboBlock | ReplayBlock | FilterBlock;
 type Json = Record<string, unknown>;
 
 const isText = (v: unknown) => typeof v === 'string';
@@ -28,6 +29,7 @@ const SHAPES: Record<Block['kind'], (b: Json) => boolean> = {
     typeof b['value'] === 'number',
   combo: (b) => Array.isArray(b['rules']) && b['rules'].length > 0 && b['rules'].every(isRule),
   replay: (b) => isText(b['symbol']) && isText(b['date']),
+  filter: (b) => isText(b['indicator']),
 };
 
 function parse(source: string): Block | null {
@@ -44,7 +46,8 @@ function parse(source: string): Block | null {
 /**
  * A ```lab block of a learn page (JSON) as its interactive widget: `param` (move one
  * parameter), `event` (what followed a signal), `combo` (combine up to three rules) or `replay`
- * (an exercise: start the bar replay on a symbol and date).
+ * (an exercise: start the bar replay on a symbol and date) or `filter` (a linear indicator's
+ * measured Filter view).
  */
 export function LabBlock({ source }: { source: string }) {
   const block = parse(source);
@@ -64,5 +67,7 @@ export function LabBlock({ source }: { source: string }) {
       return <ComboLab block={block} />;
     case 'replay':
       return <ReplayLab block={block} />;
+    case 'filter':
+      return <FilterLab block={block} />;
   }
 }

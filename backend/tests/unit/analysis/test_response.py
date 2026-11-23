@@ -10,6 +10,7 @@ import math
 from collections.abc import Callable
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 from app.analysis.response import ADAPTIVE, MAX_TAPS, VOLUME, OutputResponse, filter_response
@@ -182,7 +183,9 @@ def test_composites_measure_every_line_output() -> None:
 def test_a_long_iir_reports_a_truncated_impulse() -> None:
     assert _measure("smma", length=4000).truncated
     assert not _measure("smma", length=20).truncated
-    assert math.isfinite(_measure("smma", length=4000).ramp_lag)
+    ramp_lag = _measure("smma", length=4000).ramp_lag
+    assert ramp_lag is not None
+    assert math.isfinite(ramp_lag)
 
 
 @pytest.mark.parametrize("indicator", ["sma", "hma", "alma"])
@@ -213,7 +216,7 @@ def test_every_indicator_gives_a_finite_response_or_none(indicator: str) -> None
     spec = CATALOG[indicator]
     for r in filter_response(spec, resolve_params(spec, {})):
         assert np.isfinite(r.step).all()
-        assert math.isfinite(r.ramp_lag)
+        assert r.ramp_lag is None or math.isfinite(r.ramp_lag)
         if r.impulse is not None:
             assert len(r.impulse) <= MAX_TAPS
             assert np.isfinite(r.impulse).all()
@@ -225,7 +228,7 @@ def test_every_indicator_gives_a_finite_response_or_none(indicator: str) -> None
     [
         ("bb", ["basis", "upper", "lower"]),
         ("rsi", []),
-        ("macd", []),
+        ("macd", ["hist", "macd", "signal"]),
         ("stoch", []),
         ("atr", []),
         ("obv", []),
@@ -233,9 +236,45 @@ def test_every_indicator_gives_a_finite_response_or_none(indicator: str) -> None
         ("vol_sma", []),
     ],
 )
-def test_only_price_following_outputs_are_measured(indicator: str, names: list[str]) -> None:
+def test_only_price_following_and_band_pass_outputs_are_measured(
+    indicator: str, names: list[str]
+) -> None:
     spec = CATALOG[indicator]
     assert [r.name for r in filter_response(spec, resolve_params(spec, {}))] == names
+
+
+def test_macd_is_a_band_pass_filter() -> None:
+    """MACD = EMA12 - EMA26: H = a1/(1 - p1 z^-1) - a2/(1 - p2 z^-1), zero DC gain, no lag; the
+    signal is H * EMA9 and the histogram H * (1 - EMA9). Golden: the closed form on the same
+    periods."""
+    spec = CATALOG["macd"]
+    out = {r.name: r for r in filter_response(spec, resolve_params(spec, {}))}
+    frequency = out["macd"].frequency
+    assert frequency is not None
+    z: npt.NDArray[np.complex128] = np.exp(-2j * np.pi / frequency.period).astype(np.complex128)
+
+    def ema(n: int) -> npt.NDArray[np.complex128]:
+        a = 2.0 / (n + 1)
+        return (a / (1 - (1 - a) * z)).astype(np.complex128)
+
+    golden = {"macd": ema(12) - ema(26)}
+    golden["signal"] = golden["macd"] * ema(9)
+    golden["hist"] = golden["macd"] * (1 - ema(9))
+    for name, h in golden.items():
+        r = out[name]
+        assert r.linear
+        assert r.lag is None
+        assert r.ramp_lag is None
+        assert r.dc_gain == pytest.approx(0.0, abs=1e-12)
+        # A step passes, then dies out (the plot stops within 1e-4 of the peak of the curve).
+        assert abs(r.step[-1]) <= 1e-4 * np.abs(r.step).max() * 1.0001
+        assert r.frequency is not None
+        expected = np.maximum(20 * np.log10(np.abs(h)), -120.0)
+        np.testing.assert_allclose(r.frequency.magnitude_db, expected, atol=1e-6)
+    # The band-pass peak: about a 55-bar cycle for MACD 12/26.
+    f = out["macd"].frequency
+    assert f is not None
+    assert 50 < f.period[int(np.argmax(f.magnitude_db))] < 60
 
 
 def test_bollinger_bands_are_not_linear_but_the_basis_is() -> None:

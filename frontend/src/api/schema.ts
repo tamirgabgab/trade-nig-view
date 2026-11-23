@@ -1181,9 +1181,9 @@ export interface components {
             step: number[];
             /**
              * Ramp Lag
-             * @description Bars behind a straight line once settled
+             * @description Bars behind a straight line once settled; null for a band-pass output
              */
-            ramp_lag: number;
+            ramp_lag: number | null;
             /**
              * Impulse
              * @description h_k from k = 0 (until it dies out)

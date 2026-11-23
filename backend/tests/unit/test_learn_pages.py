@@ -56,6 +56,7 @@ LAB_REQUIRED: dict[str, set[str]] = {
     "event": {"indicator", "output", "op", "value"},
     "combo": {"rules"},
     "replay": {"symbol", "date"},
+    "filter": {"indicator"},
 }
 RULE_REQUIRED = {"label", "left", "op", "right"}
 OPS = {"lt", "gt", "crosses_above", "crosses_below"}

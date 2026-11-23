@@ -246,7 +246,9 @@ class OutputResponseInfo(BaseModel):
     linear: bool
     reason: str | None = Field(description="Why there is no impulse/frequency response")
     step: list[float] = Field(description="Unit step response from the step bar on")
-    ramp_lag: float = Field(description="Bars behind a straight line once settled")
+    ramp_lag: float | None = Field(
+        description="Bars behind a straight line once settled; null for a band-pass output"
+    )
     impulse: list[float] | None = Field(description="h_k from k = 0 (until it dies out)")
     dc_gain: float | None
     lag: float | None = Field(description="Centre of mass of h_k (bars)")
