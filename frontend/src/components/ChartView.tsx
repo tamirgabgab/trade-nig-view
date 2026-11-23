@@ -5,6 +5,7 @@ import { ChartEngine, type IndicatorLine, type PaneLayoutListener } from '../cha
 import type { ChartType, ScaleMode } from '../chart/chartTypes.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { readChartTheme } from '../chart/theme.ts';
+import type { SnapshotMode } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 
 /** A viewport the chart should jump to; `seq` changes on every request (same range re-applies). */
@@ -37,6 +38,10 @@ interface ChartViewProps {
   scrollToLatest: number;
   /** UI theme: a change repaints the chart from the CSS tokens. */
   theme: string;
+  /** Each new request (by `seq`) calls `onSnapshot` once with the chart image. */
+  snapshot: { seq: number; mode: SnapshotMode } | null;
+  /** Must be a stable function. */
+  onSnapshot: (image: HTMLCanvasElement, mode: SnapshotMode) => void;
 }
 
 /** Hosts one ChartEngine in a div. Re-renders only when its props change (memo). */
@@ -56,12 +61,15 @@ export const ChartView = memo(function ChartView({
   onAutoScaleChange,
   scrollToLatest,
   theme,
+  snapshot,
+  onSnapshot,
 }: ChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<ChartEngine | null>(null);
   const shownKeyRef = useRef<string | null>(null);
   const focusSeqRef = useRef<number | null>(null);
   const themeRef = useRef(theme);
+  const snapshotSeqRef = useRef(snapshot?.seq ?? 0);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -116,6 +124,13 @@ export const ChartView = memo(function ChartView({
   useEffect(() => {
     if (scrollToLatest > 0) engineRef.current?.scrollToLatest();
   }, [scrollToLatest]);
+
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (snapshot === null || engine === null || snapshot.seq === snapshotSeqRef.current) return;
+    snapshotSeqRef.current = snapshot.seq;
+    onSnapshot(engine.snapshot(), snapshot.mode);
+  }, [snapshot, onSnapshot]);
 
   // Each focus request is applied once (a new object with the same `seq` is ignored).
   useEffect(() => {

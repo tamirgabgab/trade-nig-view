@@ -10,7 +10,10 @@ import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../cha
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
-import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
+import { EMPHASIS_MS, useUiStore, type SnapshotMode } from '../store/uiStore.ts';
+import { readChartTheme } from '../chart/theme.ts';
+import { formatPrice } from './formatNumber.ts';
+import { copyImage, downloadImage, snapshotFileName, withTitleBand } from './snapshot.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
 import { IconButton } from './IconButton.tsx';
@@ -99,6 +102,45 @@ export function ChartArea({ className }: ChartAreaProps) {
   useEffect(() => {
     latest.current = history;
   });
+
+  // Chart image: the title band names the symbol and its latest bar (read when the image comes).
+  const snapshot = useUiStore((s) => s.snapshot);
+  const showToast = useUiStore((s) => s.showToast);
+  const snapshotText = useRef({ title: '', detail: '', file: '' });
+  useEffect(() => {
+    const last = legendValues(bars, null);
+    const ohlc =
+      last === null
+        ? ''
+        : `O ${formatPrice(last.open, decimals)}  H ${formatPrice(last.high, decimals)}  L ${formatPrice(last.low, decimals)}  C ${formatPrice(last.close, decimals)}`;
+    snapshotText.current = {
+      title: [info?.display ?? shownSymbol, info?.name, shownInterval, info?.exchange]
+        .filter(Boolean)
+        .join(' · '),
+      detail: [ohlc, typeof last?.time === 'string' ? last.time : ''].filter(Boolean).join('   '),
+      file: snapshotFileName(info?.display ?? shownSymbol, shownInterval, new Date()),
+    };
+  });
+  const onSnapshot = useCallback(
+    (image: HTMLCanvasElement, mode: SnapshotMode) => {
+      const { title, detail, file } = snapshotText.current;
+      const out = withTitleBand(image, title, detail, readChartTheme());
+      const done =
+        mode === 'copy'
+          ? copyImage(out).then(() => 'Chart image copied')
+          : downloadImage(out, file).then(() => `Chart saved as ${file}`);
+      done.then(
+        (message) => {
+          showToast(message);
+        },
+        (error: unknown) => {
+          const reason = error instanceof Error ? error.message : String(error);
+          showToast(`Could not ${mode === 'copy' ? 'copy' : 'save'} the chart image (${reason})`);
+        },
+      );
+    },
+    [showToast],
+  );
   const onVisibleRangeChange = useCallback((range: LogicalRange | null) => {
     const h = latest.current;
     if (range !== null && range.from < LOAD_OLDER_THRESHOLD && h.hasOlder && !h.isLoadingOlder) {
@@ -231,6 +273,8 @@ export function ChartArea({ className }: ChartAreaProps) {
         onAutoScaleChange={setAutoScale}
         scrollToLatest={scrollToLatest}
         theme={theme}
+        snapshot={snapshot}
+        onSnapshot={onSnapshot}
       />
       {offLatest && (
         <IconButton

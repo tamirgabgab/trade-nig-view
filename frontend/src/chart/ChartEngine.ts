@@ -571,6 +571,11 @@ export class ChartEngine {
     };
   }
 
+  /** The chart as an image (panes, axes, drawings; no crosshair). */
+  snapshot(): HTMLCanvasElement {
+    return this.chart.takeScreenshot();
+  }
+
   /** Scroll to the latest bar, keeping the zoom. */
   scrollToLatest(): void {
     this.chart.timeScale().scrollToRealTime();

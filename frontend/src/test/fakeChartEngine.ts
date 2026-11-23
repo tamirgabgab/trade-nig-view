@@ -95,6 +95,10 @@ export class FakeChartEngine {
 
   themes = 0;
 
+  snapshot(): HTMLCanvasElement {
+    return document.createElement('canvas');
+  }
+
   setTheme(): void {
     this.themes += 1;
   }

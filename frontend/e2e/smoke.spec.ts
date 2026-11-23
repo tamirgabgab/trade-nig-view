@@ -146,3 +146,13 @@ test('? lists the keyboard shortcuts', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 });
+
+test('the camera menu saves the chart as a PNG with a title band', async ({ page }) => {
+  await expect(legend(page)).toContainText('Apple Inc.');
+  await page.getByRole('button', { name: 'Take a snapshot' }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: 'Download PNG' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^AAPL_1D_\d{4}-\d{2}-\d{2}\.png$/);
+  await expect(page.getByRole('status').filter({ hasText: 'Chart saved as' })).toBeVisible();
+});

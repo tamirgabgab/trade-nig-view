@@ -1,6 +1,5 @@
 import {
   BellPlus,
-  Camera,
   ChartSpline,
   Keyboard,
   Maximize2,
@@ -22,6 +21,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IntervalSwitcher } from './IntervalSwitcher.tsx';
+import { SnapshotMenu } from './SnapshotMenu.tsx';
 import styles from './Toolbar.module.css';
 
 const ICON_SIZE = 18;
@@ -125,12 +125,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
         icon={<Maximize2 size={ICON_SIZE} />}
         comingIn="R6"
       />
-      <IconButton
-        label="Take a snapshot"
-        icon={<Camera size={ICON_SIZE} />}
-        comingIn="R6"
-        tooltipSide="left"
-      />
+      <SnapshotMenu />
     </header>
   );
 }

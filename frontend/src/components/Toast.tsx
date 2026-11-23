@@ -7,7 +7,7 @@ import { usePresence } from './usePresence.ts';
 /** A toast stays this long unless dismissed or undone. */
 const TOAST_MS = 5000;
 
-/** Bottom-centre notice with Undo, e.g. after removing an indicator. */
+/** Bottom-centre notice, with Undo when the action can be undone (removing an indicator). */
 export function Toast() {
   const toast = useUiStore((s) => s.toast);
   const dismiss = useUiStore((s) => s.dismissToast);
@@ -25,16 +25,18 @@ export function Toast() {
   return (
     <div className={styles.toast} role="status" {...attrs} key={shown.seq}>
       <span>{shown.message}</span>
-      <button
-        type="button"
-        className={styles.undo}
-        onClick={() => {
-          shown.undo();
-          dismiss();
-        }}
-      >
-        Undo
-      </button>
+      {shown.undo !== null && (
+        <button
+          type="button"
+          className={styles.undo}
+          onClick={() => {
+            shown.undo?.();
+            dismiss();
+          }}
+        >
+          Undo
+        </button>
+      )}
       <span
         className={styles.timer}
         style={{ animationDuration: `${String(TOAST_MS)}ms` }}

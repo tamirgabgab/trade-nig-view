@@ -7,8 +7,10 @@ export interface Toast {
   /** Bumped per toast, so a new toast restarts the timer even with the same text. */
   seq: number;
   message: string;
-  undo: () => void;
+  undo: (() => void) | null;
 }
+
+export type SnapshotMode = 'copy' | 'download';
 
 /** Transient UI state (not persisted): which overlay is open. */
 export interface UiState {
@@ -33,7 +35,10 @@ export interface UiState {
   shortcutsOpen: boolean;
   setShortcutsOpen: (open: boolean) => void;
   toast: Toast | null;
-  showToast: (message: string, undo: () => void) => void;
+  showToast: (message: string, undo?: () => void) => void;
+  /** Chart image asked for (toolbar, palette, context menu, Alt+S); `seq` makes each one new. */
+  snapshot: { seq: number; mode: SnapshotMode } | null;
+  requestSnapshot: (mode: SnapshotMode) => void;
   dismissToast: () => void;
 }
 
@@ -76,7 +81,11 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   toast: null,
   showToast: (message, undo) => {
-    set((s) => ({ toast: { seq: (s.toast?.seq ?? 0) + 1, message, undo } }));
+    set((s) => ({ toast: { seq: (s.toast?.seq ?? 0) + 1, message, undo: undo ?? null } }));
+  },
+  snapshot: null,
+  requestSnapshot: (mode) => {
+    set((s) => ({ snapshot: { seq: (s.snapshot?.seq ?? 0) + 1, mode } }));
   },
   dismissToast: () => {
     set({ toast: null });
