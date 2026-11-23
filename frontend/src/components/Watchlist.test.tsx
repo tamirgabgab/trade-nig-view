@@ -1,7 +1,18 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { groupSymbols, parseQuotes, parseSymbols } from '../api/market.ts';
-import { QUOTES, renderWithQuery, stubApi, SYMBOLS } from '../test/render.tsx';
+import { useUiStore } from '../store/uiStore.ts';
+import { useWatchlistStore } from '../store/watchlistStore.ts';
+import {
+  defaultWatchlists,
+  jsonResponse,
+  QUOTES,
+  renderWithQuery,
+  stubApi,
+  SYMBOLS,
+} from '../test/render.tsx';
+import { SymbolSearchDialog } from './SymbolSearchDialog.tsx';
 import { Watchlist } from './Watchlist.tsx';
 
 afterEach(() => {
@@ -78,5 +89,59 @@ describe('market parsers', () => {
   it('rejects malformed responses', () => {
     expect(() => parseSymbols({})).toThrow('Unexpected /api/symbols response');
     expect(() => parseQuotes([{ symbol: 'A', last: 'x' }])).toThrow();
+  });
+
+  it('edits the list: drag to reorder, right-click to remove, + to add; each change is saved', async () => {
+    const user = userEvent.setup();
+    useUiStore.setState(useUiStore.getInitialState());
+    useWatchlistStore.setState({ active: 'Default' });
+    const saved: { revision: number; sections: { title: string; symbols: string[] }[] }[] = [];
+    stubApi({
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/watchlists': { body: defaultWatchlists() },
+      '/api/watchlists/Default': (_url, init) => {
+        const body = JSON.parse(init?.body as string) as (typeof saved)[number];
+        saved.push(body);
+        return jsonResponse({ ...body, name: 'Default', revision: saved.length, updated_at: '' });
+      },
+    });
+    renderWithQuery(
+      <>
+        <Watchlist />
+        <SymbolSearchDialog />
+      </>,
+    );
+    const symbols = () =>
+      [...document.querySelectorAll('tr[data-symbol]')].map((r) => r.getAttribute('data-symbol'));
+    await rowFor('TSLA');
+    expect(symbols()).toEqual(['^GSPC', 'AAPL', 'TSLA', 'GBPUSD=X']);
+
+    // Drag TSLA above AAPL.
+    fireEvent.dragStart(await rowFor('TSLA'));
+    fireEvent.drop(await rowFor('AAPL'));
+    await waitFor(() => {
+      expect(symbols()).toEqual(['^GSPC', 'TSLA', 'AAPL', 'GBPUSD=X']);
+    });
+
+    fireEvent.contextMenu(await rowFor('AAPL'));
+    await user.click(screen.getByRole('menuitem', { name: 'Remove AAPL from the watchlist' }));
+    await waitFor(() => {
+      expect(symbols()).toEqual(['^GSPC', 'TSLA', 'GBPUSD=X']);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Add symbol to the watchlist' }));
+    const search = screen.getByRole('dialog', { name: 'Add to Default' });
+    await user.type(within(search).getByRole('combobox'), 'AAPL');
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(symbols()).toEqual(['^GSPC', 'TSLA', 'GBPUSD=X', 'AAPL']);
+    });
+
+    // Saved in order, each on the previous revision.
+    await waitFor(() => {
+      expect(saved.map((b) => b.revision)).toEqual([0, 1, 2]);
+    });
+    expect(saved.at(-1)?.sections.at(-1)?.symbols).toEqual(['GBPUSD=X', 'AAPL']);
   });
 });

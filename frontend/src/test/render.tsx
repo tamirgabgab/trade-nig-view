@@ -39,7 +39,10 @@ export function stubApi(routes: Record<string, Route>): void {
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const parsed = new URL(url, 'http://localhost');
-      const route = routes[parsed.pathname];
+      // The built-in Default watchlist (the universe's groups) unless a test stubs its own.
+      const route =
+        routes[parsed.pathname] ??
+        (parsed.pathname === '/api/watchlists' ? { body: defaultWatchlists() } : undefined);
       if (route === undefined) {
         return Promise.resolve(new Response('{"detail":"no stub"}', { status: 404 }));
       }
@@ -284,3 +287,16 @@ export const MA_CROSS_SPEC = {
   learn_slug: 'ma-cross',
   description: 'Fast and slow averages with arrows where they cross.',
 };
+
+/** What GET /api/watchlists returns before any list is saved: SYMBOLS by group. */
+export function defaultWatchlists() {
+  const sections: { title: string; symbols: string[] }[] = [];
+  for (const info of SYMBOLS) {
+    const section = sections.find((s) => s.title === info.group);
+    if (section === undefined) sections.push({ title: info.group, symbols: [info.symbol] });
+    else section.symbols.push(info.symbol);
+  }
+  return {
+    watchlists: [{ name: 'Default', revision: 0, updated_at: '', schema_version: 1, sections }],
+  };
+}

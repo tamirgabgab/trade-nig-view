@@ -9,10 +9,12 @@ import {
   opensPalette,
   opensShortcuts,
   redoesChart,
+  savesLayout,
   undoesChart,
 } from './keyTarget.ts';
 import { opensSymbolSearch } from './symbolSearch.ts';
 import { useGlobalHotkey } from './useGlobalHotkey.ts';
+import { saveLayoutNow } from '../store/layoutSync.ts';
 
 /** Every global keyboard shortcut of the app, in one place (the `?` dialog lists them). */
 export function useAppHotkeys(): void {
@@ -21,6 +23,7 @@ export function useAppHotkeys(): void {
   useGlobalHotkey(opensSymbolSearch, (event) => {
     ui().openModal('symbols', event.key.toUpperCase());
   });
+  useGlobalHotkey(savesLayout, saveLayoutNow);
   useGlobalHotkey(undoesChart, () => {
     useHistoryStore.getState().undo();
   });

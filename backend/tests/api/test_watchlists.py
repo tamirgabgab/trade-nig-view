@@ -66,7 +66,6 @@ INVALID: list[tuple[list[dict[str, Any]], str]] = [
         "invalid_watchlist",
     ),
     ([{"title": "A", "symbols": ["^IDX", "IDX"]}], "invalid_watchlist"),
-    ([], "validation_error"),
     ([{"title": "", "symbols": []}], "validation_error"),
     ([{"title": "A", "symbols": [], "x": 1}], "validation_error"),
     ([{"title": f"S{i}", "symbols": []} for i in range(31)], "validation_error"),
@@ -84,3 +83,9 @@ def test_invalid_watchlists_are_422(
 
 def test_bad_name_is_422(client: TestClient) -> None:
     assert put(client, "a%7Fb", 0, DEFAULT_SECTIONS).status_code == 422
+
+
+def test_a_new_list_can_be_empty(client: TestClient) -> None:
+    response = client.put("/api/watchlists/Tech", json={"revision": 0, "sections": []})
+    assert response.status_code == 200
+    assert response.json()["sections"] == []

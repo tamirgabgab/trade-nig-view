@@ -6,6 +6,7 @@ import { ChartArea } from './components/ChartArea.tsx';
 import { CommandPalette } from './components/CommandPalette.tsx';
 import { DrawingToolbar } from './components/DrawingToolbar.tsx';
 import { IndicatorsDialog } from './components/IndicatorsDialog.tsx';
+import { LayoutDialogs } from './components/LayoutDialogs.tsx';
 import { RightSidebar } from './components/RightSidebar.tsx';
 import { SettingsDialog } from './components/SettingsDialog.tsx';
 import { ShortcutsDialog } from './components/ShortcutsDialog.tsx';
@@ -13,6 +14,7 @@ import { SymbolSearchDialog } from './components/SymbolSearchDialog.tsx';
 import { TopToolbar } from './components/TopToolbar.tsx';
 import { useAppHotkeys } from './components/useAppHotkeys.ts';
 import { recordHistory } from './store/historyStore.ts';
+import { startLayoutSync } from './store/layoutSync.ts';
 import { useThemeStore } from './store/themeStore.ts';
 
 /** Application shell: five regions laid out like a desktop charting terminal. */
@@ -25,6 +27,8 @@ export function App() {
   useAppHotkeys();
   // Undo/redo records every chart change from here on.
   useEffect(() => recordHistory(), []);
+  // The open layout is loaded from the backend, then saved after every change.
+  useEffect(() => startLayoutSync(), []);
   return (
     <div className={styles.shell}>
       <TopToolbar className={styles.top} />
@@ -37,6 +41,7 @@ export function App() {
       <ShortcutsDialog />
       <CommandPalette />
       <SettingsDialog />
+      <LayoutDialogs />
     </div>
   );
 }

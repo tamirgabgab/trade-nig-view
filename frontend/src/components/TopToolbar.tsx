@@ -8,7 +8,6 @@ import {
   Plus,
   Redo2,
   Rewind,
-  Save,
   Search,
   Settings,
   Sun,
@@ -23,6 +22,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IntervalSwitcher } from './IntervalSwitcher.tsx';
+import { LayoutMenu } from './LayoutMenu.tsx';
 import { useFullscreen } from './useFullscreen.ts';
 import { SnapshotMenu } from './SnapshotMenu.tsx';
 import { StructureMenu } from './StructureMenu.tsx';
@@ -110,7 +110,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
         onClick={redo}
       />
       <span className={styles.spacer} />
-      <span className={styles.layoutName}>Unnamed</span>
+      <LayoutMenu />
       <IconButton
         label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         tooltipSide="bottom-end"
@@ -126,12 +126,6 @@ export function TopToolbar({ className }: TopToolbarProps) {
         onClick={() => {
           openModal('shortcuts');
         }}
-      />
-      <IconButton
-        label="Save layout"
-        tooltipSide="bottom-end"
-        icon={<Save size={ICON_SIZE} />}
-        comingIn="R6"
       />
       <IconButton
         label="Open chart settings"

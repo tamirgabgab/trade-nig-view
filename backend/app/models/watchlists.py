@@ -27,7 +27,7 @@ class WatchlistUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     revision: int = Field(ge=0, description="Revision the client last read; 0 = create")
-    sections: list[WatchlistSection] = Field(min_length=1, max_length=MAX_SECTIONS)
+    sections: list[WatchlistSection] = Field(max_length=MAX_SECTIONS)
 
 
 class WatchlistDocument(BaseModel):

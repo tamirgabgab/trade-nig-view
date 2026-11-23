@@ -1,10 +1,11 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
 import { newDrawing } from './drawings/manager.ts';
 import { useChartStore } from './store/chartStore.ts';
 import { useDrawingStore } from './store/drawingStore.ts';
+import { useSettingsStore } from './store/settingsStore.ts';
 import { useThemeStore } from './store/themeStore.ts';
 import { useUiStore } from './store/uiStore.ts';
 import { liveEngine } from './test/fakeChartEngine.ts';
@@ -180,5 +181,33 @@ describe('App shell', () => {
     if (toast === null) throw new Error('no toast');
     await user.click(within(toast).getByRole('button', { name: 'Undo' }));
     expect(useDrawingStore.getState().drawings).toEqual([line]);
+  });
+
+  it('applies chart settings live: time zone, volume, last-price line, candle colours', async () => {
+    const user = userEvent.setup();
+    useSettingsStore.setState({
+      timeZone: 'Asia/Jerusalem',
+      upColor: null,
+      downColor: null,
+      lastPriceLine: true,
+      volume: true,
+    });
+    renderWithQuery(<App />);
+    await user.click(screen.getByRole('button', { name: 'Open chart settings' }));
+    const dialog = screen.getByRole('dialog', { name: 'Chart settings' });
+
+    await user.selectOptions(within(dialog).getByLabelText('Time zone'), 'UTC');
+    expect(screen.getByTitle('Chart time zone: UTC')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Volume' }));
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Last price line' }));
+    fireEvent.change(within(dialog).getByLabelText('Up'), { target: { value: '#2962ff' } });
+    expect(liveEngine().display).toEqual({
+      upColor: '#2962ff',
+      downColor: null,
+      lastPriceLine: false,
+      volume: false,
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Reset colors' }));
+    expect(liveEngine().display?.upColor).toBeNull();
   });
 });

@@ -3011,7 +3011,6 @@
             },
             "type": "array",
             "maxItems": 30,
-            "minItems": 1,
             "title": "Sections"
           }
         },

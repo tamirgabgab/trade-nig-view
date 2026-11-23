@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { adjusted, dailyRows, price } from './fixtures.ts';
+import { adjusted, dailyRows, freshStart, price } from './fixtures.ts';
 
 /** Reference EMA (SMA seed, alpha = 2/(n+1)), independent of the backend implementation. */
 function ema(values: readonly number[], n: number): number {
@@ -12,11 +12,7 @@ function ema(values: readonly number[], n: number): number {
 const indicators = (page: Page) => page.getByRole('list', { name: 'Indicators on the chart' });
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(() => {
-    localStorage.clear();
-  });
-  await page.reload();
+  await freshStart(page);
   await expect(page.getByLabel('Price legend')).toContainText('Apple Inc. · 1D · NASDAQ');
 });
 

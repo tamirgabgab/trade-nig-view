@@ -58,6 +58,13 @@ export function redoesChart(event: KeyboardEvent): boolean {
   );
 }
 
+/** Ctrl+S (Cmd+S): save the layout now (also inside fields, instead of the browser's save). */
+export function savesLayout(event: KeyboardEvent): boolean {
+  return (
+    (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.code === 'KeyS'
+  );
+}
+
 /** Alt+S: copy the chart image. `code`, not `key`: Option+S on a Mac types "ß". */
 export function copiesSnapshot(event: KeyboardEvent): boolean {
   return event.altKey && !event.ctrlKey && !event.metaKey && event.code === 'KeyS';

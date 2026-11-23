@@ -80,8 +80,10 @@ export async function apiPut<T>(
   path: string,
   body: unknown,
   parse: (body: unknown) => T,
+  init: RequestInit = {},
 ): Promise<T> {
   return apiGet(path, parse, {
+    ...init,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

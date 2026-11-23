@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+import { freshStart } from './fixtures.ts';
+
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(() => {
-    localStorage.clear();
-  });
-  await page.reload();
+  await freshStart(page);
   await expect(page.getByLabel('Price legend').locator('[data-field="C"]')).toBeVisible();
 });
 

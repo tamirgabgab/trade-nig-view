@@ -1,16 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { adjusted, dailyRows, present, price } from './fixtures.ts';
+import { adjusted, dailyRows, freshStart, present, price } from './fixtures.ts';
 
 const legend = (page: Page) => page.getByLabel('Price legend');
 const field = (page: Page, name: string) => legend(page).locator(`[data-field="${name}"]`);
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(() => {
-    localStorage.clear();
-  });
-  await page.reload();
+  await freshStart(page);
 });
 
 test('symbol search, interval and log scale end to end', async ({ page }) => {

@@ -18,6 +18,7 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
       { keys: ['/'], action: 'Add an indicator' },
       { keys: ['?'], action: 'Show keyboard shortcuts' },
       { keys: ['Alt+S'], action: 'Copy the chart image' },
+      { keys: ['Ctrl+S'], action: 'Save the layout' },
       { keys: ['Ctrl+Z'], action: 'Undo the last chart change' },
       { keys: ['Ctrl+Y'], action: 'Redo' },
       { keys: ['Esc'], action: 'Close a dialog, panel or menu' },

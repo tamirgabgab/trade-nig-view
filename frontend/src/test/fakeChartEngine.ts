@@ -56,6 +56,20 @@ export class FakeChartEngine {
     this.scales.push(options);
   }
 
+  stretches: Readonly<Record<string, number>> = {};
+
+  visibleLogicalRange(): LogicalRange | null {
+    return this.ranges.at(-1) ?? null;
+  }
+
+  paneStretches(): Record<string, number> {
+    return { ...this.stretches };
+  }
+
+  setPaneStretches(stretches: Readonly<Record<string, number>>): void {
+    this.stretches = stretches;
+  }
+
   setVisibleRange(range: LogicalRange): void {
     this.ranges.push(range);
   }

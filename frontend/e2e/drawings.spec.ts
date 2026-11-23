@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { freshStart } from './fixtures.ts';
+
 /** The drawings the backend has for AAPL (the e2e backend starts empty). */
 async function saved(page: Page) {
   const response = await page.request.get('/api/drawings/AAPL');
@@ -10,11 +12,7 @@ async function saved(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(() => {
-    localStorage.clear();
-  });
-  await page.reload();
+  await freshStart(page);
   await expect(page.getByLabel('Price legend').locator('[data-field="C"]')).toBeVisible();
 });
 

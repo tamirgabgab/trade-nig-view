@@ -12,6 +12,8 @@ import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../cha
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
+import { useLayoutStore } from '../store/layoutStore.ts';
+import { registerViewCapture, scheduleSave } from '../store/layoutSync.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { useStructureStore } from '../store/structureStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
@@ -153,6 +155,26 @@ export function ChartArea({ className }: ChartAreaProps) {
       h.loadOlder();
     }
     setOffLatest(range !== null && range.to < h.bars.length - 1);
+    scheduleSave();
+  }, []);
+
+  // The layout reads the pane sizes and the visible bars from the chart when it saves.
+  useEffect(() => {
+    registerViewCapture(() => {
+      const engine = engineRef.current;
+      const shown = latest.current.bars;
+      const range = engine?.visibleLogicalRange() ?? null;
+      const at = (i: number) => shown[Math.min(Math.max(Math.round(i), 0), shown.length - 1)]?.time;
+      const from = range === null ? undefined : at(range.from);
+      const to = range === null ? undefined : at(range.to);
+      return {
+        stretches: engine?.paneStretches() ?? {},
+        visibleRange: from === undefined || to === undefined ? null : { from, to },
+      };
+    });
+    return () => {
+      registerViewCapture(null);
+    };
   }, []);
 
   // Range buttons: once bars of the range's interval are in, load older pages until the range's
@@ -187,6 +209,24 @@ export function ChartArea({ className }: ChartAreaProps) {
     [history.isLoading, data, transform],
   );
   const indicators = useChartIndicators(series, bars);
+
+  // A layout just opened: once its bars are in, restore its pane sizes and visible bars.
+  const pendingView = useLayoutStore((s) => s.pending);
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (pendingView === null || engine === null || data === undefined || history.isLoading) return;
+    if (data.symbol !== pendingView.symbol || data.interval !== pendingView.interval) return;
+    engine.setPaneStretches(pendingView.stretches);
+    const range = pendingView.visibleRange;
+    if (range !== null && times.length > 0) {
+      const index = (t: string | number) => {
+        const i = times.findIndex((s) => s >= barSeconds(t));
+        return i < 0 ? times.length - 1 : i;
+      };
+      engine.setVisibleRange({ from: index(range.from), to: index(range.to) });
+    }
+    useLayoutStore.setState({ pending: null });
+  }, [pendingView, data, history.isLoading, times]);
 
   // Gap zones of the loaded bars (Structure menu), shared with the Gaps panel.
   const structure = useStructureStore();

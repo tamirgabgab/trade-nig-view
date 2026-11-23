@@ -239,6 +239,8 @@ export class ChartEngine {
     () => ({ up: this.theme.up, down: this.theme.down, filled: this.theme.textMuted }),
   );
   private lastLines: readonly IndicatorLine[] = [];
+  /** Pane heights to give own-pane indicators (by group) when their pane is created. */
+  private stretches = new Map<string, number>();
   private times: ChartTime[] = [];
   private decimals = 2;
   private readonly lines = new Map<string, LineEntry>();
@@ -458,7 +460,7 @@ export class ChartEngine {
         ? this.chart.addSeries(HistogramSeries, options, pane)
         : this.chart.addSeries(LineSeries, { ...options, crosshairMarkerRadius: 3 }, pane);
     if (line.ownPane && sibling === undefined) {
-      series.getPane().setStretchFactor(PANE_STRETCH);
+      series.getPane().setStretchFactor(this.stretches.get(line.group) ?? PANE_STRETCH);
       const element = series.getPane().getHTMLElement();
       if (element !== null) this.paneObserver?.observe(element);
     }
@@ -665,9 +667,32 @@ export class ChartEngine {
     return this.main.coordinateToPrice(y);
   }
 
+  /** The height factor of each own-pane indicator's pane (by group), as the user sized them. */
+  paneStretches(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const entry of this.lines.values()) {
+      if (entry.ownPane) out[entry.group] = entry.series.getPane().getStretchFactor();
+    }
+    return out;
+  }
+
+  /** Size the panes of these indicators (now, and when their pane is created later). */
+  setPaneStretches(stretches: Readonly<Record<string, number>>): void {
+    this.stretches = new Map(Object.entries(stretches));
+    for (const entry of this.lines.values()) {
+      const factor = this.stretches.get(entry.group);
+      if (entry.ownPane && factor !== undefined) entry.series.getPane().setStretchFactor(factor);
+    }
+  }
+
   /** Show these gap zones (bar indexes of the current bars) under the bars. */
   setGaps(zones: readonly GapZone[]): void {
     this.gapLayer.set(zones);
+  }
+
+  /** The visible bar indexes (fractional), or null without bars. */
+  visibleLogicalRange(): LogicalRange | null {
+    return this.chart.timeScale().getVisibleLogicalRange();
   }
 
   /** Scroll so the bar at `index` is in the middle, keeping the zoom. */

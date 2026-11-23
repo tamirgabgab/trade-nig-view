@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 /**
  * Reads the synthetic e2e fixtures (e2e/data) so the tests check the legend against the source
  * CSV rather than against hard-coded numbers (the golden model of the smoke test).
@@ -55,4 +56,29 @@ export function price(value: number, decimals = 2): string {
 export function present<T>(value: T | undefined, what: string): T {
   if (value === undefined) throw new Error(`fixture has no ${what}`);
   return value;
+}
+
+/**
+ * A clean start for every test: no saved layouts or watchlists on the (shared) e2e backend and
+ * nothing in localStorage, so no test opens on another test's chart.
+ */
+export async function freshStart(page: Page): Promise<void> {
+  for (const kind of ['layouts', 'watchlists'] as const) {
+    const response = await page.request.get(`/api/${kind}`);
+    const docs = ((await response.json()) as Record<string, { name: string; revision: number }[]>)[
+      kind
+    ];
+    for (const doc of docs ?? []) {
+      if (doc.revision > 0) {
+        await page.request.delete(
+          `/api/${kind}/${encodeURIComponent(doc.name)}?revision=${String(doc.revision)}`,
+        );
+      }
+    }
+  }
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.clear();
+  });
+  await page.reload();
 }
