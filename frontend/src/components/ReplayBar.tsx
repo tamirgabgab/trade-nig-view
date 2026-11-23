@@ -1,4 +1,4 @@
-import { ChevronsRight, Pause, Play, Shuffle, StepForward, X } from 'lucide-react';
+import { Pause, Play, Shuffle, StepForward, X } from 'lucide-react';
 
 import type { Bar } from '../api/bars.ts';
 import { barSeconds } from '../chart/visibleRange.ts';
@@ -17,7 +17,7 @@ const isoDate = (time: Bar['time']) => new Date(barSeconds(time) * 1000).toISOSt
 /**
  * Replay controls (R7), floating at the bottom of the chart. Picking: choose the start bar by a
  * click on the chart, a date or at random. Replaying: play/pause, step (Shift+→), speed, the
- * cursor's date, back to the present.
+ * cursor's date, exit (back to the present).
  */
 export function ReplayBar({
   bars,
@@ -106,12 +106,6 @@ export function ReplayBar({
         }}
       />
       <span className={styles.separator} aria-hidden="true" />
-      <IconButton
-        label="Back to the present"
-        icon={<ChevronsRight size={ICON} />}
-        tooltipSide="top"
-        onClick={replay.exit}
-      />
       <IconButton
         label="Exit replay"
         icon={<X size={ICON} />}
