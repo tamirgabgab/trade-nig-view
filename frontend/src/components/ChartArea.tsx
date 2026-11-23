@@ -37,6 +37,8 @@ import { useChartIndicators } from './useChartIndicators.ts';
 import { useChartSnapshot } from './useChartSnapshot.ts';
 import { useDrawingManager, useDrawingsSync } from './useDrawings.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
+import { altKey } from './keyTarget.ts';
+import { useGlobalHotkey } from './useGlobalHotkey.ts';
 import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 
 // Markdown + KaTeX load with the first learn page, not with the chart.
@@ -86,6 +88,10 @@ export function ChartArea({ className }: ChartAreaProps) {
     [attachDrawings],
   );
   useDrawingsSync(symbol);
+  // Alt+R: back to the latest bars at the default zoom.
+  useGlobalHotkey(altKey('KeyR'), () => {
+    engineRef.current?.resetView();
+  });
   const [menuAt, setMenuAt] = useState<{ x: number; y: number; price: number | null } | null>(null);
   const contextMenu = usePresence(menuAt);
   // Stable: ActionMenu re-subscribes its click-away listener when onClose changes.

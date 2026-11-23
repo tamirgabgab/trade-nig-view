@@ -23,3 +23,8 @@ div.dialog {
   gap: var(--space-1);
   color: var(--color-text);
 }
+
+/* Room for the longest zone name ("America/New York"). */
+.body > div:first-child {
+  grid-template-columns: 1fr 200px;
+}

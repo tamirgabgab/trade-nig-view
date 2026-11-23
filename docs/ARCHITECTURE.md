@@ -297,8 +297,17 @@ primitive that projects every anchor at paint time; `store/drawingStore.ts` + `u
 
 ### 5.3 Layout document
 
-`{schema_version, name, symbol, interval, chart_type, scale_mode, adjusted, indicators:[{instance_id, id, version,
-params, style, pane, visible}], pane_stretch:[...], visible_range?, drawings_ref: symbol}`.
+`{schema_version, name, revision, updated_at, symbol, interval, chart_type, scale_mode, auto_scale, adjusted,
+indicators:[{uid, id, params, styles:{<output>:{color, line_width}}, visible, pane_stretch}], visible_range:{from, to}|null}`
+(R6). Stored with watchlists (`{name, revision, sections:[{title, symbols}]}`) in `app.db` through one generic
+`storage/documents.py` (a table per kind, optimistic revisions, `migrate()` per schema version). The frontend keeps the
+open layout's name in localStorage, loads it on start and autosaves it a second after any change (and on `pagehide`
+with `keepalive`); on a 409 the window's chart wins on top of the newer revision. Drawings stay per symbol (§5.2), not in
+the layout.
+
+Undo/redo (R6) is one history of **snapshots** (`store/historyStore.ts`), not commands: chart (symbol + interval),
+indicator instances, or the drawings of one symbol, each with its state before and after. The stores' own changes are
+recorded by subscription; changes of one kind closer than 600 ms merge into one step; opening a layout clears it.
 
 ## 6. Time conventions
 

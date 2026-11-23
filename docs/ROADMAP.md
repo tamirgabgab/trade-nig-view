@@ -18,7 +18,7 @@
 | U1 | UX pass (U1a polish + motion + half screen; U1b watchlist, palette, theme) | L | ✅ U1a + U1b (2026-11-23) |
 | R4 | Drawing tools v1 (R4a core + lines/shapes/text; R4b Fib, channel, ranges) | L | ✅ R4a + R4b (2026-11-23) |
 | R5 | Market structure & reference values | M | ✅ (2026-11-23) |
-| R6 | Persistence, layouts & UX polish | L | |
+| R6 | Persistence, layouts & UX polish | L | ✅ (2026-11-23) |
 | R7 | Bar Replay | M | |
 | Review | Phase-1 review, Phase-2 plan | S | |
 
@@ -227,6 +227,15 @@ Proposed shortcuts (TradingView-like): typing a letter → symbol search; `Alt+H
 selection; `Esc` cancel/deselect; `/` indicators dialog; `Shift+→` replay step (R7); `Alt+Shift+H` hide all drawings.
 
 DoD: Playwright: configure a workspace (symbol, interval, 2 indicators, 3 drawings, pane resize), reload → identical; undo/redo round-trip tests.
+
+Done (2026-11-23, one round by the user's choice):
+- [x] Backend `storage/documents.py` (one SQLite table per kind, revisions) + `/api/layouts`, `/api/watchlists` + tests
+- [x] Layout menu with autosave (debounced, flushed on page hide), rename / copy / open / delete, `Ctrl+S`; pane sizes and visible bars restored once the bars are in
+- [x] Watchlists: lists, sections, add via search, drag to reorder, right-click menu; a built-in Default until one is saved
+- [x] Undo/redo: one history of snapshots (user's choice: symbol and interval switches included), quick changes of one kind merged; `store/historyStore.ts`
+- [x] Settings dialog (time zone incl. "exchange", candle colours, last-price line, volume); theme toggle and PNG snapshot came in U1
+- [x] Object tree tab; fullscreen; `Alt+R`
+- [x] Playwright `e2e/workspace.spec.ts`; every e2e test starts from an empty backend workspace (`freshStart`)
 
 Risks: schema drift between layout versions (migration functions + tests).
 
