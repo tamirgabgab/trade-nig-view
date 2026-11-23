@@ -6,7 +6,7 @@ import { FilterView } from './FilterView.tsx';
 import { IconButton } from './IconButton.tsx';
 import styles from './LearnDrawer.module.css';
 import { LearnPage } from './LearnPage.tsx';
-import { usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence } from './usePresence.ts';
 import type { IndicatorView } from './useChartIndicators.ts';
 
 type Tab = 'page' | 'filter';
@@ -39,12 +39,12 @@ export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
     }
     tablist.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
   }, [learnFor]);
-  useEffect(
-    () => () => {
-      opener.current?.focus();
-    },
-    [],
-  );
+  useEffect(() => {
+    const drawer = tablist.current?.parentElement;
+    return () => {
+      restoreFocus(opener.current, drawer);
+    };
+  }, []);
 
   if (view === undefined || spec === undefined) return null;
   const tabs = spec.category === 'moving_averages' ? TABS : TABS.slice(0, 1);

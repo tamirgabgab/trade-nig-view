@@ -34,3 +34,14 @@ export function usePresence<T>(value: T | null): { shown: T | null; closing: boo
   if (value !== null) return { shown: value, closing: false };
   return { shown: instant ? null : shown, closing: !instant && shown !== null };
 }
+
+/**
+ * Give focus back to `previous` when an overlay goes away, unless it has moved on meanwhile: an
+ * overlay that animates out unmounts after its exit, when another dialog may already own focus.
+ * Focus has not moved while it is on the body or still inside `overlay`.
+ */
+export function restoreFocus(previous: Element | null, overlay: Element | null | undefined): void {
+  const active = document.activeElement;
+  const free = active === null || active === document.body || overlay?.contains(active) === true;
+  if (free && previous instanceof HTMLElement && previous.isConnected) previous.focus();
+}

@@ -7,7 +7,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorsDialog.module.css';
 import { searchIndicators } from './indicatorSearch.ts';
 import dialog from './SymbolSearchDialog.module.css';
-import { usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence } from './usePresence.ts';
 
 /** Modal indicator picker: type to filter, arrows to move, Enter to add, Esc to close. */
 export function IndicatorsDialog() {
@@ -40,9 +40,10 @@ function IndicatorsPanel({ closing }: { closing: boolean }) {
 
   useEffect(() => {
     const previous = document.activeElement;
-    inputRef.current?.focus();
+    const input = inputRef.current;
+    input?.focus();
     return () => {
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      restoreFocus(previous, input?.closest('[role="dialog"]'));
     };
   }, []);
 

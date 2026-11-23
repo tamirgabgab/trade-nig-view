@@ -5,7 +5,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import { DRAWING_TOOL_GROUPS } from './drawingTools.ts';
 import styles from './ShortcutsDialog.module.css';
 import dialog from './SymbolSearchDialog.module.css';
-import { usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence } from './usePresence.ts';
 
 interface Shortcut {
   keys: string[];
@@ -57,9 +57,10 @@ function ShortcutsPanel({ closing }: { closing: boolean }) {
   // The close button is the only stop: focus it on open, give focus back on close.
   useEffect(() => {
     const previous = document.activeElement;
-    closeRef.current?.focus();
+    const button = closeRef.current;
+    button?.focus();
     return () => {
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      restoreFocus(previous, button?.closest('[role="dialog"]'));
     };
   }, []);
 

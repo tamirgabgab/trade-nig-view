@@ -60,6 +60,14 @@ test('add EMA 20, change it to 50, hide and remove it', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Remove EMA 50' }).click();
   await expect(indicators(page)).toBeHidden();
+
+  // Undo brings it back with its settings.
+  await page
+    .getByRole('status')
+    .filter({ hasText: 'Removed EMA 50' })
+    .getByRole('button', { name: 'Undo' })
+    .click();
+  await expect(indicators(page)).toContainText('EMA 50');
 });
 
 function sma(values: readonly number[], n: number): number {
@@ -168,7 +176,7 @@ test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI
 
   await addIndicator(page, 'bollinger', 'Bollinger Bands');
   const bands = indicators(page).getByRole('listitem').first();
-  await expect(bands).toContainText('BB 20 SMA close 2');
+  await expect(bands).toContainText('BB 20 2');
   const check = async (n: number) => {
     const basis = sma(closes, n);
     const width = 2 * stdev(closes, n);
@@ -181,11 +189,11 @@ test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI
   await bands.getByRole('button', { name: /^Edit settings: BB/ }).click();
   const bbPanel = page.getByRole('dialog', { name: /^BB/ });
   await bbPanel.getByRole('spinbutton', { name: 'Length' }).fill('30');
-  await expect(bands).toContainText('BB 30 SMA close 2');
+  await expect(bands).toContainText('BB 30 2');
   await check(30);
   await bbPanel.getByRole('button', { name: 'Close', exact: true }).click();
 
   await pane.getByRole('button', { name: 'Remove RSI 14' }).click();
   await expect(pane).toBeHidden();
-  await expect(bands).toContainText('BB 30 SMA close 2');
+  await expect(bands).toContainText('BB 30 2');
 });

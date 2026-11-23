@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 
-import { EXIT_MS, usePresence } from './usePresence.ts';
+import { EXIT_MS, restoreFocus, usePresence } from './usePresence.ts';
 
 function withMotion(reduced: boolean) {
   vi.stubGlobal(
@@ -56,5 +56,23 @@ describe('usePresence', () => {
     const { result, rerender } = setup('ema');
     rerender({ v: null });
     expect(result.current).toEqual({ shown: null, closing: false });
+  });
+});
+
+describe('restoreFocus', () => {
+  it('gives focus back unless another element took it meanwhile', () => {
+    document.body.innerHTML =
+      '<button id="opener">o</button><div id="overlay"><input id="in" /></div><input id="other" />';
+    const opener = document.getElementById('opener');
+    const overlay = document.getElementById('overlay');
+    const other = document.getElementById('other');
+
+    document.getElementById('in')?.focus();
+    restoreFocus(opener, overlay);
+    expect(document.activeElement).toBe(opener);
+
+    other?.focus();
+    restoreFocus(opener, overlay);
+    expect(document.activeElement).toBe(other);
   });
 });

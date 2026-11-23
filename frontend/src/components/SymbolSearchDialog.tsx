@@ -5,7 +5,7 @@ import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { searchSymbols } from './symbolSearch.ts';
-import { usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence } from './usePresence.ts';
 import styles from './SymbolSearchDialog.module.css';
 
 /** Modal symbol search: type to filter, arrows to move, Enter to pick, Esc to close. */
@@ -35,9 +35,10 @@ function SearchPanel({ seed, closing }: { seed: string; closing: boolean }) {
   // Focus the input on open and give focus back to where it was on close (focus restore).
   useEffect(() => {
     const previous = document.activeElement;
-    inputRef.current?.focus();
+    const input = inputRef.current;
+    input?.focus();
     return () => {
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      restoreFocus(previous, input?.closest('[role="dialog"]'));
     };
   }, []);
 

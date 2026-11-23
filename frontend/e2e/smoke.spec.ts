@@ -123,3 +123,26 @@ test('no horizontal page overflow at 1280 and 960 px', async ({ page }) => {
     expect(overflow, `overflow at ${String(width)} px`).toBeLessThanOrEqual(0);
   }
 });
+
+test('half a screen: the watchlist floats over the chart and picks a symbol', async ({ page }) => {
+  await page.setViewportSize({ width: 960, height: 800 });
+  await expect(legend(page)).toContainText('Apple Inc.');
+  const watchlist = page.getByRole('region', { name: 'Watchlist' });
+  await expect(watchlist).toBeHidden();
+
+  await page.getByRole('button', { name: 'Show watchlist' }).click();
+  await watchlist.getByText('NVDA', { exact: true }).click();
+  await expect(legend(page)).toContainText('NVIDIA');
+  await page.keyboard.press('Escape');
+  await expect(watchlist).toBeHidden();
+});
+
+test('? lists the keyboard shortcuts', async ({ page }) => {
+  await expect(legend(page)).toContainText('Apple Inc.');
+  await page.getByTestId('chart-canvas').click();
+  await page.keyboard.press('?');
+  const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await expect(dialog).toContainText('Add an indicator');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});

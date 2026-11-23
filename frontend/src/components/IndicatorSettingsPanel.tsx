@@ -14,7 +14,7 @@ import { LINE_WIDTHS, useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorSettingsPanel.module.css';
 import { parseParamInput } from './paramInput.ts';
-import { usePresence } from './usePresence.ts';
+import { restoreFocus, usePresence } from './usePresence.ts';
 import { valueOutputs, type IndicatorView } from './useChartIndicators.ts';
 
 /** Changes to number fields reach the chart this long after the last keystroke. */
@@ -89,10 +89,11 @@ function SettingsForm({
   // Focus the first field on open; on close apply what is still pending and restore focus.
   useEffect(() => {
     const previous = document.activeElement;
-    panelRef.current?.querySelector<HTMLElement>('input, select')?.focus();
+    const panel = panelRef.current;
+    panel?.querySelector<HTMLElement>('input, select')?.focus();
     return () => {
       flushRef.current();
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      restoreFocus(previous, panel);
     };
   }, []);
 
