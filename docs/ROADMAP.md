@@ -281,9 +281,11 @@ Phase-2 plan.
 - P2a (learn platform): learn index, interactive widgets inside the pages on a random stock (scenarios) or any symbol
   (move a parameter, event studies, combine rules), a Try it tab, exercise cards that start the replay, template v2 and
   the MA family's pages rewritten to it.
-- Remaining: full pages for every other indicator (math, what it measures, why the defaults, pitfalls, e.g. OBV level
-  depends on start date, EMA seed, BB population σ); concept pages; glossary; guided exercises using Replay. Rounds
-  P2b–P2d: see [PLAN.md §0.3](../PLAN.md).
+- P2b (oscillators): full pages for RSI, Stochastic and MACD (MACD's measured band-pass response as a figure inside
+  the page) and the "Combining indicators" concept page.
+- Remaining: full pages for bands, volatility, volume and structure (e.g. OBV level depends on start date, BB
+  population σ); concept pages; glossary; guided exercises using Replay. Rounds P2c–P2d: see
+  [PLAN.md §0.3](../PLAN.md).
 
 ### Phase 3 — Custom indicators (Python plugin API)
 - `plugins/` folder, `IndicatorSpec` entry point, hot reload (watchfiles), sandboxing level appropriate for a local
