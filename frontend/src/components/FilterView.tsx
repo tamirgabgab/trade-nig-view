@@ -92,6 +92,8 @@ export function FilterView({ spec, params }: FilterViewProps) {
   const [compareId, setCompareId] = useState('');
   const length = typeof params['length'] === 'number' ? params['length'] : 20;
   const [compareLength, setCompareLength] = useState(String(length));
+  // Validation shows on blur and clears as soon as the user edits again.
+  const [lengthBlurred, setLengthBlurred] = useState(false);
 
   const primary = useFilterResponse({ id: spec.id, params });
   const compareSpec = registry.find((s) => s.id === compareId);
@@ -132,6 +134,8 @@ export function FilterView({ spec, params }: FilterViewProps) {
     const suffix = 'length' in otherParams ? ` ${String(otherParams['length'])}` : '';
     items.push({ label: `${compareSpec.shortName}${suffix}`, out: other });
   }
+  const lengthParam = compareSpec?.params.find((p) => p.name === 'length');
+  const lengthError = lengthBlurred && otherParams === null;
   const linear = items.filter((m) => m.out.impulse !== null);
   const taps = Math.max(...linear.map((m) => m.out.impulse?.length ?? 0), 0);
 
@@ -171,7 +175,7 @@ export function FilterView({ spec, params }: FilterViewProps) {
             ))}
           </select>
         </label>
-        {compareSpec?.params.some((p) => p.name === 'length') === true && (
+        {lengthParam !== undefined && (
           <label className={styles.control}>
             <span>Length</span>
             <input
@@ -179,9 +183,14 @@ export function FilterView({ spec, params }: FilterViewProps) {
               type="number"
               inputMode="numeric"
               value={compareLength}
-              aria-invalid={otherParams === null}
+              aria-invalid={lengthError}
+              aria-describedby={lengthError ? `${id}-length-error` : undefined}
               onChange={(e) => {
                 setCompareLength(e.target.value);
+                setLengthBlurred(false);
+              }}
+              onBlur={() => {
+                setLengthBlurred(true);
               }}
             />
           </label>
@@ -198,6 +207,11 @@ export function FilterView({ spec, params }: FilterViewProps) {
           </button>
         )}
       </div>
+      {lengthError && lengthParam !== undefined && (
+        <p id={`${id}-length-error`} className={styles.error} role="alert">
+          Enter a whole number from {lengthParam.min ?? 1} to {lengthParam.max ?? '∞'}.
+        </p>
+      )}
 
       {items.length > 1 && (
         <ul className={styles.legend} aria-label="Series">

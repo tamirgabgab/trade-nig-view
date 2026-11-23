@@ -146,9 +146,18 @@ describe('learn drawer', () => {
     const length = within(drawer).getByLabelText('Length');
     await user.clear(length);
     await user.type(length, '0');
+    // Not while typing: only on blur, and it clears on the next edit.
+    expect(length).toHaveAttribute('aria-invalid', 'false');
+    await user.tab();
     expect(length).toHaveAttribute('aria-invalid', 'true');
+    expect(within(drawer).getByRole('alert')).toHaveTextContent(
+      'Enter a whole number from 1 to 5000.',
+    );
     expect(within(drawer).queryByRole('button', { name: /Add EMA/ })).not.toBeInTheDocument();
     expect(responses.some((r) => r.id === 'ema' && r.params['length'] === 0)).toBe(false);
+    await user.type(length, '5');
+    expect(length).toHaveAttribute('aria-invalid', 'false');
+    expect(within(drawer).queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('shows a tiny negative lag as zero', async () => {
