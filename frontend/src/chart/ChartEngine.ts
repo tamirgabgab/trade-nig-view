@@ -19,6 +19,7 @@ import {
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
   type LineWidth,
+  type Logical,
   type LogicalRange as LwcLogicalRange,
   type MouseEventParams,
   type SeriesType,
@@ -50,7 +51,11 @@ import {
   type MarkerPoint,
   type MarkerSource,
 } from './seriesData.ts';
+import { logicalToTime, timeToLogical } from '../drawings/anchors.ts';
+import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
+import { DrawingLayer } from './drawingLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
+import { barSeconds } from './visibleRange.ts';
 import { DISPLAY_TIME_ZONE } from './timeZone.ts';
 
 /** Price pane margins: the main series keeps the top 75%, leaving room for volume below. */
@@ -194,6 +199,12 @@ export class ChartEngine {
   private readonly hover: RafLatest<number | null>;
   private chartType: ChartType = 'candles';
   private bars: readonly Bar[] = [];
+  /** Bar open times in UTC epoch seconds (drawing anchors map onto them). */
+  private barTimes: number[] = [];
+  private readonly drawingLayer = new DrawingLayer(
+    (anchor) => this.project(anchor),
+    () => this.theme.background,
+  );
   private lastLines: readonly IndicatorLine[] = [];
   private times: ChartTime[] = [];
   private decimals = 2;
@@ -242,6 +253,7 @@ export class ChartEngine {
     });
     this.chart.priceScale(VOLUME_SCALE_ID).applyOptions({ scaleMargins: VOLUME_MARGINS });
     this.main = this.createMainSeries(this.chartType);
+    this.main.attachPrimitive(this.drawingLayer);
 
     this.hover = rafLatest((index) => {
       for (const listener of this.listeners) listener(index);
@@ -267,6 +279,7 @@ export class ChartEngine {
     const before = shift > 0 ? this.chart.timeScale().getVisibleLogicalRange() : null;
 
     this.bars = bars;
+    this.barTimes = bars.map((bar) => barSeconds(bar.time));
     this.decimals = decimals;
     this.hasVolume = hasVolume;
     this.times = chartTimes(bars, timeZone);
@@ -553,6 +566,7 @@ export class ChartEngine {
     this.markers = null;
     this.chart.removeSeries(this.main);
     this.main = this.createMainSeries(this.chartType);
+    this.main.attachPrimitive(this.drawingLayer);
     this.renderMain();
     this.renderMarkers();
   }
@@ -589,6 +603,56 @@ export class ChartEngine {
   priceAt(y: number): number | null {
     if (y < 0 || y > (this.chart.panes()[0]?.getHeight() ?? 0)) return null;
     return this.main.coordinateToPrice(y);
+  }
+
+  /** Show these drawings (plus the one being drawn) on the price pane. */
+  setDrawings(view: DrawingView): void {
+    this.drawingLayer.set(view);
+  }
+
+  /** Pixel position (price pane, CSS px) of a drawing anchor; null without bars. */
+  project(anchor: Anchor): Point | null {
+    const logical = timeToLogical(this.barTimes, anchor.time);
+    if (Number.isNaN(logical)) return null;
+    const x = this.chart.timeScale().logicalToCoordinate(logical as Logical);
+    const y = this.main.priceToCoordinate(anchor.price);
+    return x === null || y === null ? null : { x, y };
+  }
+
+  /** The anchor under a pixel of the price pane, with its bar index; null without bars. */
+  unproject(point: Point): { anchor: Anchor; logical: number } | null {
+    const logical = this.chart.timeScale().coordinateToLogical(point.x);
+    const price = this.main.coordinateToPrice(point.y);
+    if (logical === null || price === null || this.barTimes.length === 0) return null;
+    return { anchor: { time: logicalToTime(this.barTimes, logical), price }, logical };
+  }
+
+  /** The bar at a logical index (for the magnet), if loaded. */
+  barAt(logical: number): Bar | undefined {
+    return this.bars[Math.round(logical)];
+  }
+
+  /** Pixel y of a price on the price pane. */
+  priceToY(price: number): number | null {
+    return this.main.priceToCoordinate(price);
+  }
+
+  /** Size of the price pane's plot area in CSS px. */
+  paneSize(): { width: number; height: number } {
+    return {
+      width: this.chart.timeScale().width(),
+      height: this.chart.panes()[0]?.getHeight() ?? 0,
+    };
+  }
+
+  /** Let the chart pan and zoom with the mouse, or not (while a drawing is drawn or dragged). */
+  setPanZoom(enabled: boolean): void {
+    this.chart.applyOptions({ handleScroll: enabled, handleScale: enabled });
+  }
+
+  /** The element the chart draws in (drawing interaction listens on it). */
+  element(): HTMLElement {
+    return this.container;
   }
 
   /** Scroll to the latest bar, keeping the zoom. */

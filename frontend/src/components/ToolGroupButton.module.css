@@ -1,0 +1,27 @@
+.group {
+  position: relative;
+  display: inline-flex;
+}
+
+/* The small arrow at the button's bottom-right corner that opens the group's tools. */
+.more {
+  position: absolute;
+  right: -4px;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.more:hover,
+.more[aria-expanded='true'] {
+  background: var(--color-hover);
+  color: var(--color-text);
+}

@@ -1,100 +1,147 @@
-import { useState } from 'react';
+import {
+  ChevronRight,
+  Crosshair,
+  Eraser,
+  Eye,
+  EyeOff,
+  Lock,
+  LockOpen,
+  Magnet,
+  PencilLine,
+  Trash2,
+  ZoomIn,
+} from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 
-import { DRAWING_TOOL_GROUPS, MEASURE_ACTIONS, TOGGLE_ICONS } from './drawingTools.ts';
+import { useDrawingStore } from '../store/drawingStore.ts';
+import { ActionMenu } from './ActionMenu.tsx';
+import { TOOL_GROUPS } from './drawingTools.ts';
 import { IconButton } from './IconButton.tsx';
+import groupStyles from './ToolGroupButton.module.css';
+import { ToolGroupButton } from './ToolGroupButton.tsx';
 import styles from './Toolbar.module.css';
+import { usePresence } from './usePresence.ts';
 
 const ICON_SIZE = 20;
-const { Magnet, Lock, LockOpen, Eye, EyeOff, Trash2 } = TOGGLE_ICONS;
+const icon = (Icon: typeof Crosshair) => <Icon size={ICON_SIZE} strokeWidth={1.5} />;
 
-interface DrawingToolbarProps {
-  className?: string | undefined;
-}
-
-/**
- * Left vertical toolbar. In R0 it only keeps UI state (selected tool, toggles);
- * the DrawingManager that acts on it arrives in R4.
- */
-export function DrawingToolbar({ className }: DrawingToolbarProps) {
-  const [activeTool, setActiveTool] = useState('cursor');
-  const [magnet, setMagnet] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [hidden, setHidden] = useState(false);
+/** Left vertical toolbar: cursor, drawing tool groups, magnet, drawing mode, lock, hide. */
+export function DrawingToolbar({ className }: { className?: string | undefined }) {
+  const s = useDrawingStore();
+  const [magnetMenu, setMagnetMenu] = useState(false);
+  const menu = usePresence(magnetMenu ? true : null);
+  const magnetRef = useRef<HTMLDivElement>(null);
+  const closeMagnet = useCallback(() => {
+    setMagnetMenu(false);
+  }, []);
 
   return (
     <nav className={[styles.bar, styles.vertical, className].join(' ')} aria-label="Drawing tools">
-      {DRAWING_TOOL_GROUPS.map(({ id, label, icon: Icon, shortcut }) => (
-        <IconButton
-          key={id}
-          label={label}
-          {...(shortcut ? { shortcut } : {})}
-          icon={<Icon size={ICON_SIZE} strokeWidth={1.5} />}
-          pressed={activeTool === id}
-          tooltipSide="right"
-          onClick={() => {
-            setActiveTool(id);
-          }}
-        />
-      ))}
-      <span className={styles.separator} aria-hidden="true" />
-      {MEASURE_ACTIONS.map(({ id, label, icon: Icon }) => (
-        <IconButton
-          key={id}
-          label={label}
-          icon={<Icon size={ICON_SIZE} strokeWidth={1.5} />}
-          pressed={activeTool === id}
-          tooltipSide="right"
-          onClick={() => {
-            setActiveTool(id);
-          }}
-        />
-      ))}
-      <span className={styles.separator} aria-hidden="true" />
       <IconButton
-        label="Magnet mode"
-        icon={<Magnet size={ICON_SIZE} strokeWidth={1.5} />}
-        pressed={magnet}
+        label="Cross cursor"
+        icon={icon(Crosshair)}
+        pressed={s.tool === null}
         tooltipSide="right"
         onClick={() => {
-          setMagnet((value) => !value);
+          s.setTool(null);
+        }}
+      />
+      {TOOL_GROUPS.map((group) => (
+        <ToolGroupButton key={group.id} group={group} />
+      ))}
+      <IconButton label="Eraser" icon={icon(Eraser)} tooltipSide="right" comingIn="a later round" />
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton
+        label="Zoom in"
+        icon={icon(ZoomIn)}
+        tooltipSide="right"
+        comingIn="a later round"
+      />
+      <span className={styles.separator} aria-hidden="true" />
+      <div ref={magnetRef} className={groupStyles.group}>
+        <IconButton
+          label={s.magnet === 'strong' ? 'Strong magnet' : 'Magnet mode'}
+          icon={icon(Magnet)}
+          pressed={s.magnet !== 'off'}
+          tooltipSide="right"
+          onClick={() => {
+            s.setMagnet(s.magnet === 'off' ? 'weak' : 'off');
+          }}
+        />
+        <button
+          type="button"
+          className={groupStyles.more}
+          aria-label="Magnet: weak or strong"
+          aria-haspopup="menu"
+          aria-expanded={magnetMenu}
+          onClick={() => {
+            setMagnetMenu(!magnetMenu);
+          }}
+        >
+          <ChevronRight size={10} aria-hidden="true" />
+        </button>
+        {menu.shown && (
+          <ActionMenu
+            key={menu.key}
+            label="Magnet"
+            attrs={menu.attrs}
+            anchor={magnetRef}
+            style={{ top: 0, left: 'calc(100% + 6px)' }}
+            onClose={closeMagnet}
+            items={[
+              {
+                label: 'Weak magnet (near a price)',
+                radio: true,
+                checked: s.magnet === 'weak',
+                onSelect: () => {
+                  s.setMagnet('weak');
+                },
+              },
+              {
+                label: 'Strong magnet (always)',
+                radio: true,
+                checked: s.magnet === 'strong',
+                onSelect: () => {
+                  s.setMagnet('strong');
+                },
+              },
+            ]}
+          />
+        )}
+      </div>
+      <IconButton
+        label="Stay in drawing mode"
+        icon={icon(PencilLine)}
+        pressed={s.stayInDrawing}
+        tooltipSide="right"
+        onClick={() => {
+          s.toggle('stayInDrawing');
         }}
       />
       <IconButton
-        label={locked ? 'Unlock all drawings' : 'Lock all drawings'}
-        icon={
-          locked ? (
-            <Lock size={ICON_SIZE} strokeWidth={1.5} />
-          ) : (
-            <LockOpen size={ICON_SIZE} strokeWidth={1.5} />
-          )
-        }
-        pressed={locked}
+        label={s.lockAll ? 'Unlock all drawings' : 'Lock all drawings'}
+        icon={s.lockAll ? icon(Lock) : icon(LockOpen)}
+        pressed={s.lockAll}
         tooltipSide="right"
         onClick={() => {
-          setLocked((value) => !value);
+          s.toggle('lockAll');
         }}
       />
       <IconButton
-        label={hidden ? 'Show all drawings' : 'Hide all drawings'}
+        label={s.hideAll ? 'Show all drawings' : 'Hide all drawings'}
         shortcut="Alt+Shift+H"
-        icon={
-          hidden ? (
-            <EyeOff size={ICON_SIZE} strokeWidth={1.5} />
-          ) : (
-            <Eye size={ICON_SIZE} strokeWidth={1.5} />
-          )
-        }
-        pressed={hidden}
+        icon={s.hideAll ? icon(EyeOff) : icon(Eye)}
+        pressed={s.hideAll}
         tooltipSide="right"
         onClick={() => {
-          setHidden((value) => !value);
+          s.toggle('hideAll');
         }}
       />
       <IconButton
         label="Remove all drawings"
-        icon={<Trash2 size={ICON_SIZE} strokeWidth={1.5} />}
+        icon={icon(Trash2)}
         tooltipSide="right"
-        comingIn="R4"
+        comingIn="R4b"
       />
     </nav>
   );

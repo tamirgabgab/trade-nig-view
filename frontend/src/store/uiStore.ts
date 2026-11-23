@@ -31,6 +31,9 @@ export interface UiState {
   /** Instance whose learn drawer is open, or null (one side panel at a time). */
   learnFor: string | null;
   openLearn: (uid: string | null) => void;
+  /** Drawing whose settings panel is open, or null. */
+  drawingSettingsFor: string | null;
+  openDrawingSettings: (id: string | null) => void;
   /** Indicator whose legend row is hovered or focused: its lines stand out, the others dim. */
   legendFocus: string | null;
   setLegendFocus: (uid: string | null) => void;
@@ -67,11 +70,27 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   settingsFor: null,
   openSettings: (uid) => {
-    set(uid === null ? { settingsFor: null } : { settingsFor: uid, learnFor: null });
+    set(
+      uid === null
+        ? { settingsFor: null }
+        : { settingsFor: uid, learnFor: null, drawingSettingsFor: null },
+    );
   },
   learnFor: null,
   openLearn: (uid) => {
-    set(uid === null ? { learnFor: null } : { learnFor: uid, settingsFor: null });
+    set(
+      uid === null
+        ? { learnFor: null }
+        : { learnFor: uid, settingsFor: null, drawingSettingsFor: null },
+    );
+  },
+  drawingSettingsFor: null,
+  openDrawingSettings: (id) => {
+    set(
+      id === null
+        ? { drawingSettingsFor: null }
+        : { drawingSettingsFor: id, settingsFor: null, learnFor: null },
+    );
   },
   legendFocus: null,
   setLegendFocus: (uid) => {

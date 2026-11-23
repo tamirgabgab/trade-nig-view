@@ -32,7 +32,7 @@ describe('ShortcutsDialog', () => {
     await user.keyboard('?');
     const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' });
     expect(dialog).toHaveTextContent('Add an indicator');
-    expect(dialog).toHaveTextContent('Trend line tools');
+    expect(dialog).toHaveTextContent('Trend line');
     expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
     // While it is open, typing does not stack a symbol search on top.
     await user.keyboard('a');

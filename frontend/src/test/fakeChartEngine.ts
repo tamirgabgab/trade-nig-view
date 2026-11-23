@@ -1,3 +1,4 @@
+import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 /**
  * Test double for chart/ChartEngine.ts (jsdom has no canvas). Use with
  * `vi.mock('../chart/ChartEngine.ts', () => import('../test/fakeChartEngine.ts'))`.
@@ -94,6 +95,44 @@ export class FakeChartEngine {
   }
 
   themes = 0;
+  /** Last drawings shown, and the pan/zoom switch (drawing interaction). */
+  drawingView: DrawingView | null = null;
+  panZoom = true;
+  private readonly host = document.createElement('div');
+
+  element(): HTMLElement {
+    return this.host;
+  }
+
+  /** 10 px per bar from x = 0 and 1 px per price unit down from y = 200 (bar times: 1, 2, 3…). */
+  project(anchor: Anchor): Point | null {
+    return { x: (anchor.time - 1) * 10, y: 200 - anchor.price };
+  }
+
+  unproject(point: Point): { anchor: Anchor; logical: number } | null {
+    const logical = point.x / 10;
+    return { anchor: { time: Math.round(logical + 1), price: 200 - point.y }, logical };
+  }
+
+  barAt(): undefined {
+    return undefined;
+  }
+
+  priceToY(price: number): number {
+    return 200 - price;
+  }
+
+  paneSize(): { width: number; height: number } {
+    return { width: 800, height: 400 };
+  }
+
+  setPanZoom(enabled: boolean): void {
+    this.panZoom = enabled;
+  }
+
+  setDrawings(view: DrawingView): void {
+    this.drawingView = view;
+  }
 
   snapshot(): HTMLCanvasElement {
     return document.createElement('canvas');

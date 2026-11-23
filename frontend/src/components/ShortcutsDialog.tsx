@@ -1,5 +1,5 @@
 import { useUiStore } from '../store/uiStore.ts';
-import { DRAWING_TOOL_GROUPS } from './drawingTools.ts';
+import { TOOL_SHORTCUTS } from './drawingTools.ts';
 import { ModalShell } from './ModalShell.tsx';
 import styles from './ShortcutsDialog.module.css';
 import { usePresence } from './usePresence.ts';
@@ -30,10 +30,13 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
     ],
   },
   {
-    title: 'Drawing tools (coming in R4)',
-    shortcuts: DRAWING_TOOL_GROUPS.flatMap((tool) =>
-      tool.shortcut === undefined ? [] : [{ keys: [tool.shortcut], action: tool.label }],
-    ),
+    title: 'Drawing',
+    shortcuts: [
+      ...TOOL_SHORTCUTS.map((t) => ({ keys: [t.shortcut ?? ''], action: t.label })),
+      { keys: ['Shift'], action: 'Keep a line at 45 degrees while drawing' },
+      { keys: ['Del'], action: 'Delete the selected drawing' },
+      { keys: ['Alt+Shift+H'], action: 'Hide or show all drawings' },
+    ],
   },
 ];
 

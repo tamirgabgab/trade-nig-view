@@ -1,6 +1,8 @@
 import { useUiStore } from '../store/uiStore.ts';
 import { opensIndicators } from './indicatorSearch.ts';
-import { copiesSnapshot, opensPalette, opensShortcuts } from './keyTarget.ts';
+import { useDrawingStore } from '../store/drawingStore.ts';
+import { TOOL_SHORTCUTS } from './drawingTools.ts';
+import { altKey, copiesSnapshot, opensPalette, opensShortcuts } from './keyTarget.ts';
 import { opensSymbolSearch } from './symbolSearch.ts';
 import { useGlobalHotkey } from './useGlobalHotkey.ts';
 
@@ -22,5 +24,15 @@ export function useAppHotkeys(): void {
   });
   useGlobalHotkey(copiesSnapshot, () => {
     ui().requestSnapshot('copy');
+  });
+  // Drawing tools (Alt+T trend line, Alt+H horizontal, Alt+V vertical) and hide all.
+  for (const t of TOOL_SHORTCUTS) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- a constant list: same order every render
+    useGlobalHotkey(altKey(`Key${t.shortcut?.slice(-1) ?? ''}`), () => {
+      useDrawingStore.getState().setTool(t.type, t.group);
+    });
+  }
+  useGlobalHotkey(altKey('KeyH', true), () => {
+    useDrawingStore.getState().toggle('hideAll');
   });
 }

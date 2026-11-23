@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
 import { useChartStore } from './store/chartStore.ts';
+import { useDrawingStore } from './store/drawingStore.ts';
 import { useThemeStore } from './store/themeStore.ts';
 import { useUiStore } from './store/uiStore.ts';
 import { liveEngine } from './test/fakeChartEngine.ts';
@@ -22,6 +23,7 @@ beforeEach(() => {
   useChartStore.setState(useChartStore.getInitialState());
   useUiStore.setState(useUiStore.getInitialState());
   useThemeStore.setState({ theme: 'dark' });
+  useDrawingStore.setState({ tool: null, lastTool: {}, magnet: 'off' });
   stubApi({
     '/api/health': { body: HEALTH_OK },
     '/api/symbols': { body: SYMBOLS },
@@ -71,18 +73,26 @@ describe('App shell', () => {
     }
   });
 
-  it('selects one drawing tool at a time', async () => {
+  it('selects one drawing tool at a time, and back to the cursor', async () => {
     const user = userEvent.setup();
     renderWithQuery(<App />);
     const toolbar = screen.getByRole('navigation', { name: 'Drawing tools' });
     const cursor = within(toolbar).getByRole('button', { name: 'Cross cursor' });
-    const fib = within(toolbar).getByRole('button', { name: 'Gann and Fibonacci tools' });
+    const trend = within(toolbar).getByRole('button', { name: 'Trend line' });
 
     expect(cursor).toHaveAttribute('aria-pressed', 'true');
-    await user.click(fib);
-
-    expect(fib).toHaveAttribute('aria-pressed', 'true');
+    await user.click(trend);
+    expect(trend).toHaveAttribute('aria-pressed', 'true');
     expect(cursor).toHaveAttribute('aria-pressed', 'false');
+
+    // The group's arrow lists its tools; picking one makes it the group's button.
+    await user.click(within(toolbar).getByRole('button', { name: 'Trend line tools: all tools' }));
+    await user.click(screen.getByRole('menuitemradio', { name: /^Horizontal line/ }));
+    const horizontal = within(toolbar).getByRole('button', { name: 'Horizontal line' });
+    expect(horizontal).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(cursor);
+    expect(horizontal).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('toggles magnet mode', async () => {

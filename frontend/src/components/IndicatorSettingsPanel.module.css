@@ -209,3 +209,9 @@
     transform: translateX(8px);
   }
 }
+
+.note {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

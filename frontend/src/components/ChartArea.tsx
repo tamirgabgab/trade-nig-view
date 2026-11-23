@@ -18,6 +18,8 @@ import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { ChartContextMenu } from './ChartContextMenu.tsx';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
+import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
+import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
 import { removeAllIndicators } from './indicatorActions.ts';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
@@ -27,6 +29,7 @@ import { Toast } from './Toast.tsx';
 import { usePresence } from './usePresence.ts';
 import { useChartIndicators } from './useChartIndicators.ts';
 import { useChartSnapshot } from './useChartSnapshot.ts';
+import { useDrawingManager, useDrawingsSync } from './useDrawings.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
 
 // Markdown + KaTeX load with the first learn page, not with the chart.
@@ -64,9 +67,15 @@ export function ChartArea({ className }: ChartAreaProps) {
   const learn = usePresence(useUiStore((s) => s.learnFor));
   // The chart engine, for one-shot actions (jump to latest, reset view, snapshot).
   const engineRef = useRef<ChartEngine | null>(null);
-  const onEngine = useCallback((engine: ChartEngine | null) => {
-    engineRef.current = engine;
-  }, []);
+  const attachDrawings = useDrawingManager();
+  const onEngine = useCallback(
+    (engine: ChartEngine | null) => {
+      engineRef.current = engine;
+      attachDrawings(engine);
+    },
+    [attachDrawings],
+  );
+  useDrawingsSync(symbol);
   const [menuAt, setMenuAt] = useState<{ x: number; y: number; price: number | null } | null>(null);
   const contextMenu = usePresence(menuAt);
   // Stable: ActionMenu re-subscribes its click-away listener when onClose changes.
@@ -293,7 +302,9 @@ export function ChartArea({ className }: ChartAreaProps) {
           }}
         />
       )}
+      <DrawingFloatToolbar />
       <IndicatorSettingsPanel views={indicators.views} />
+      <DrawingSettingsPanel />
       <Toast />
       {learn.shown !== null && (
         <Suspense fallback={null}>

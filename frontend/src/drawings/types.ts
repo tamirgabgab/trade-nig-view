@@ -67,3 +67,21 @@ export interface Point {
   x: number;
   y: number;
 }
+
+/** What the chart shows: the drawings, which one is selected or hovered, the one being drawn. */
+export interface DrawingView {
+  drawings: readonly Drawing[];
+  selectedId: string | null;
+  hoverId: string | null;
+  /** The drawing being created (follows the pointer), or null. */
+  draft: Drawing | null;
+  hideAll: boolean;
+}
+
+export const NO_DRAWINGS: DrawingView = {
+  drawings: [],
+  selectedId: null,
+  hoverId: null,
+  draft: null,
+  hideAll: false,
+};

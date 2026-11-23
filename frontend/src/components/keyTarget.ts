@@ -20,6 +20,16 @@ export function opensPalette(event: KeyboardEvent): boolean {
   return (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k';
 }
 
+/** Alt+<letter> (no other modifier), by physical key: `code` is `KeyT` for Alt+T on any layout. */
+export function altKey(code: string, shift = false): (event: KeyboardEvent) => boolean {
+  return (event) =>
+    event.altKey &&
+    event.shiftKey === shift &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    event.code === code;
+}
+
 /** Alt+S: copy the chart image. `code`, not `key`: Option+S on a Mac types "ß". */
 export function copiesSnapshot(event: KeyboardEvent): boolean {
   return event.altKey && !event.ctrlKey && !event.metaKey && event.code === 'KeyS';
