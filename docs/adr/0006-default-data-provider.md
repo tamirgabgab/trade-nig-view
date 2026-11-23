@@ -1,6 +1,6 @@
 # ADR 0006 — Default data provider: yfinance; Tiingo fallback; fixtures offline
 
-- Status: Accepted (2026-11-22)
+- Status: Accepted (2026-11-22), amended at the Phase-1 review (2026-11-23)
 
 ## Context
 Free data sources (verified 2026-11-22, see TRADINGVIEW_RESEARCH §3): yfinance has the deepest free history and covers
@@ -26,3 +26,15 @@ captcha-issued key. Tiingo free: 50 req/h, 1,000/day, adjusted EOD for stocks/ET
 ## Alternatives
 - Twelve Data as default: official API but 800 credits/day is tight for 30 symbols × refresh + indicators. Rejected as default.
 - Paid feeds (Massive Starter, EODHD, Tiingo Power): better reliability; can be added later as providers without architectural change.
+
+## Amendment (Phase-1 review, 2026-11-23)
+The Decision above is kept as written; the code differs as follows:
+- Protocol as built (`app/data/providers/base.py`): `id`, `supports(symbol) -> bool`,
+  `fetch_daily(symbol, start, end) -> BarFrame`, `supports_hourly(symbol) -> bool`, `fetch_hourly(symbol, start, end)
+  -> BarFrame` (`symbol` is a `SymbolInfo`). There is no `rate_limit` spec: each provider owns its `TokenBucket`.
+- Default chain `DATA_PROVIDERS=yahoo,tiingo`; Twelve Data is not implemented.
+- Yahoo throttling: `TokenBucket(rate=2.0, capacity=4)` (2 req/s, burst 4), not 1 req/s. Tiingo: 50/h, burst 10.
+- Fixtures: `scripts/make_fixtures.py` (run by `scripts/make-fixtures.ps1`) downloads the whole universe (25 symbols),
+  daily (2015-01-01 → 2026-10-30, columns `date,open,high,low,close,adj_close,volume`) and 1h (2026-08-01 → 2026-10-30,
+  columns `time,open,high,low,close,volume`). No separate raw-close or dividend/split columns. These real fixtures are
+  not committed yet (they need the user's machine); tests run on small synthetic fixtures in `backend/tests/fixtures/`.

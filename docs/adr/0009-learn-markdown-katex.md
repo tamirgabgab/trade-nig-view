@@ -14,7 +14,7 @@ math (decision D3: KaTeX over MathJax for size and synchronous rendering) but no
   cannot inject markup.
 - `katex` is a direct dependency and `package.json` `overrides` maps every nested `katex` to it (`"$katex"`):
   `rehype-katex` 7 and `micromark-extension-math` 3 pin `^0.16`, which has advisory GHSA-238p-pmpm-9mq7 (fixed in
-  0.18.2). Rendering with 0.19.1 was verified on all 19 pages (`throwOnError`, `strict: 'error'`).
+  0.18.2). Rendering with 0.19.1 was verified on all pages, 19 at the time (`throwOnError`, `strict: 'error'`).
 - The drawer (`LearnDrawer`) is loaded with `React.lazy`, so the Markdown/KaTeX code and CSS are a separate chunk that
   only loads when a learn page is opened.
 
@@ -29,3 +29,6 @@ math (decision D3: KaTeX over MathJax for size and synchronous rendering) but no
 - Pre-rendering the pages to HTML in the backend: adds a Python Markdown/KaTeX toolchain and an HTML trust boundary.
   Rejected.
 - `marked` + manual KaTeX pass: hand-rolled math tokenising. Rejected.
+
+## Amendment (Phase-1 review, 2026-11-23)
+Decision holds. `docs/indicators/` now has a page per registered indicator (29), all rendered by the same pipeline.

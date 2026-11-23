@@ -1,6 +1,6 @@
 # ADR 0001 — Technology stack
 
-- Status: Accepted (2026-11-22)
+- Status: Accepted (2026-11-22), amended (httpx2; pyright replaces mypy)
 
 ## Context
 Single-user, local research platform. Developer machine is Windows 11 (PowerShell). Indicators, backtesting and the
@@ -58,3 +58,5 @@ Policy kept: patch/minor upgrades only, and nothing published less than two week
 - Deferred on purpose: `@playwright/test` 1.65 (the cloud sandbox ships the browser of 1.63; upgrade together with
   `npx playwright install` on the user's machine), `typescript` 7 (typescript-eslint 8.74 still requires `<6.1`),
   `@types/node` 26 (major; follows Node 26, we run Node 22 LTS as in CI and `engines`).
+- The Decision section above is kept as written on 2026-11-22: `httpx` there reads `httpx2` (Amendment 1), mypy reads
+  pyright strict (Amendment 2), and Zustand is now pinned `~5.1.0` in `frontend/package.json`.

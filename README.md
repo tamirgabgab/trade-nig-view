@@ -4,9 +4,10 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** R3c complete — 27 indicators: the moving-average family plus Bollinger Bands, RSI, MACD, Stochastic,
-> ATR, OBV, VWAP and Volume SMA, oscillators in their own panes, each verified like a DUT against scalar golden
-> models, TA-Lib and property tests. Learn drawer with derived formulas and measured filter responses (L1).
+> **Status:** Phase 1 (R0–R7) complete — 29 indicators: the moving-average family plus Bollinger Bands, RSI, MACD,
+> Stochastic, ATR, OBV, VWAP, Volume SMA, previous-period levels and pivots, oscillators in their own panes, each
+> verified like a DUT against scalar golden models, TA-Lib and property tests. Learn drawer with derived formulas and
+> measured filter responses (L1).
 > U1a done: quiet motion (sliding pills, exit animations, price flashes), undo for removals, legend focus,
 > RSI/Stochastic band shading, half-screen layout and a `?` shortcuts map. U1b done: watchlist sparklines and
 > symbol card with market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot.
@@ -18,7 +19,8 @@ trading agent can plug in later.
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
 ![ChartLab shell (R0)](docs/img/shell-r0.png)
-<!-- Replaced with a chart screenshot (real data) after the R2a demo. -->
+
+The screenshot above still shows the empty R0 shell; a screenshot of the current app (real data) has not been added yet.
 
 ## Features
 
@@ -27,7 +29,7 @@ trading agent can plug in later.
 | Research, architecture, ADRs | ✅ Done |
 | Scaffolding, CI, quality gates, dark app shell (R0) | ✅ Done |
 | Market data: yfinance + Tiingo fallback, SQLite cache, validated daily/weekly/monthly bars, live watchlist prices (R1a) | ✅ Done |
-| 1h and 4h intervals (session-aware, Israel time on the chart), generated API types, fixture download script (R1b) | ✅ Done |
+| 1h and 4h intervals (session-aware, shown in the display time zone: Israel by default, configurable in chart settings), generated API types, fixture download script (R1b) | ✅ Done |
 | Chart: candles + volume, OHLC legend on the crosshair, D/W/M intervals, symbol from the watchlist, pan/zoom (R2a) | ✅ Done |
 | Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ✅ Done |
 | Indicator engine + SMA, EMA, WMA, SMMA: `/` dialog, legend values under the crosshair, live settings, saved between visits (R3a) | ✅ Done |
@@ -41,7 +43,7 @@ trading agent can plug in later.
 | Market structure (R5): Structure menu; gap zones (open in colour, filled faded) with a Gaps panel (min size, partial gaps, click to scroll); previous day/week/month high, low, close as step lines; pivot points (5/5 fractals, drawn on the pivot bar); Data window with every value under the crosshair | ✅ Done |
 | Workspace (R6): named layouts that autosave (chart, indicators, pane sizes, visible bars) with rename / copy / open / delete and `Ctrl+S`; several watchlists (create, rename, delete, sections, add through search, drag to reorder, right-click menu); one undo/redo history for the chart (`Ctrl+Z` / `Ctrl+Y`: symbol and interval, indicators, drawings); chart settings (time zone, candle colours, last-price line, volume); object tree; fullscreen; `Alt+R` reset view | ✅ Done |
 | Bar replay (R7): start by a click, a date or at random; play/pause, `Shift+→` step, 0.5–10 bars/s; chart, legend, Data window, indicators and gaps end at the cursor; interval locked; no lookahead, tested for every registered indicator | ✅ Done |
-| Learn pages, custom indicators, backtesting, paper agent (Phases 2–5) | 🗺️ Roadmap |
+| Learn pages beyond L1 (interactive sliders on real data, exercises), custom indicators, backtesting, paper agent (Phases 2–5) | 🗺️ Roadmap |
 
 ## Quick start
 
@@ -97,11 +99,14 @@ cp .env.example .env
 ./scripts/test.sh
 ```
 
-Pip fallback (no uv): `cd backend; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -e . httpx2 pyright pytest pytest-cov hypothesis ruff`.
+Pip fallback (no uv): `cd backend; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -e . httpx2 pandas-stubs pyright pytest pytest-cov hypothesis ruff`
+(add `ta-lib` for the TA-Lib reference tests).
 
 Then open http://localhost:5173 (app) and http://127.0.0.1:8000/api/docs (API docs).
 
-Offline mode: set `OFFLINE=1` in `.env` to serve committed fixture data only (no network).
+Offline mode: set `OFFLINE=1` in `.env` to serve committed fixture data only (no network). The real fixtures
+(`backend/fixtures/`) are committed only once `.\scripts\make-fixtures.ps1` has run on a machine with internet
+access; until then offline mode has no symbol data.
 
 End-to-end tests (Playwright + Chromium; they start their own backend on synthetic data, ports 8010/5183):
 
@@ -124,7 +129,8 @@ Indicator verification: `cd backend; uv run python -m pytest tests/golden` write
 backend/    FastAPI app, data providers + cache, indicators, analysis, storage, tests
 frontend/   React + TypeScript + Vite app, ChartEngine wrapper, drawings, UI components
 docs/       ROADMAP, ARCHITECTURE, TRADINGVIEW_RESEARCH, ADRs, indicator learn pages
-scripts/    setup / dev / test / lint scripts (PowerShell + bash)
+scripts/    setup / dev / test / lint / update / gen-api scripts (PowerShell + bash), make-fixtures and
+            install-shortcut (PowerShell)
 ```
 
 ## Documentation
@@ -142,7 +148,8 @@ ChartLab is a private, local research tool. Market data comes from:
 - **[Tiingo](https://www.tiingo.com/)** (optional key, free tier) — fallback for stocks and ETFs.
 - Optional key-based providers (later): Twelve Data (free tier is internal, non-display use only), Massive (formerly
   Polygon.io), Stooq.
-- Committed CSV fixtures for tests and offline use.
+- Committed CSV fixtures: today only small synthetic test fixtures (`backend/tests/fixtures/`); real snapshots for
+  offline use (`backend/fixtures/`) are pending until `make-fixtures.ps1` runs.
 
 Respect each provider's terms. Do not redistribute downloaded data.
 

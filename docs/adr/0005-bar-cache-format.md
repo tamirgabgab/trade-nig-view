@@ -1,6 +1,6 @@
 # ADR 0005 — Bar cache stored in SQLite
 
-- Status: Accepted (2026-11-22)
+- Status: Accepted (2026-11-22); re-confirmed at the Phase-1 review (2026-11-23)
 
 ## Context
 We cache provider bars locally with incremental updates (fetch only missing ranges), range queries by time, and
@@ -22,3 +22,10 @@ disposable: deleting `bars.db` is always safe.
 - Parquet file per symbol/interval: great columnar reads, but upserts require rewriting files, concurrent writes need
   locking, and `pyarrow` is a ~40 MB dependency. Rejected for Phase 1.
 - DuckDB: excellent, but another engine for little gain at this size. Revisit for P4 analytics.
+
+## Amendment (Phase-1 review, 2026-11-23)
+Decision holds. The schema as built is described in the corrected ARCHITECTURE §8 (`app/data/cache/bar_cache.py`):
+`bars(symbol, interval, ts, ...)`, `coverage(symbol, interval, start_ts, end_ts, fetched_at, source)` and a `meta`
+table for the schema version. The refresh does not fetch "missing ranges": the first request downloads the full
+history, later ones re-download a recent tail (10 days daily, 5 days 1h) after `refresh_ttl_s`, and a mismatch on the
+overlap triggers a full reload (ARCHITECTURE §8). `4h` is resampled from `1h` on read, like `1W`/`1M` from `1D`.

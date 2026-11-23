@@ -1,6 +1,6 @@
 # ADR 0004 — Own drawing framework on Lightweight Charts v5 primitives
 
-- Status: Accepted (2026-11-22); re-confirmed at the Phase-1 review (2026-11-23)
+- Status: Accepted (2026-11-22); re-confirmed at the Phase-1 review (2026-11-23), implementation details amended
 
 ## Context
 Lightweight Charts has no drawing tools. Community v5 options found (2026-11-22):
@@ -30,4 +30,9 @@ Re-evaluated as planned. `lightweight-charts-drawing` (now under `deepentropy/`)
 covers 14 tools with unit-tested geometry, our persistence schema, undo/redo and replay, and found and fixed one
 real Lightweight Charts limitation (whole-index `logicalToCoordinate`, see ARCHITECTURE §5.2). **Decision unchanged.**
 Revisit when a library reaches 1.0 with a stable serialization API, and only for the long tail (patterns, Gann),
-behind `DrawingManager`. Sources: github.com/deepentropy/lightweight-charts-drawing/releases, pkgstats.com.
+behind `DrawingManager`.
+
+As built (differs from the Decision text above): **one** series primitive, `chart/drawingLayer.ts` (`DrawingLayer`),
+renders all drawings through its `paneViews`; there is no primitive per drawing, no primitive `hitTest` and no
+price/time axis views. Hit-testing is pure TS (`drawings/shapes.ts` `hitTest`, called by `DrawingManager`), shared with
+the canvas renderer. Phase 1 ships 14 tools (not ~12). Sources: github.com/deepentropy/lightweight-charts-drawing/releases, pkgstats.com.

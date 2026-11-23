@@ -1,6 +1,6 @@
 # ADR 0007 — Styling: CSS Modules + CSS custom properties
 
-- Status: Accepted (2026-11-22)
+- Status: Accepted (2026-11-22), amended at the Phase-1 review (2026-11-23)
 
 ## Context
 The UI is a dense, app-like, dark-by-default shell (toolbars, sidebars, dialogs). Chart canvas colors must come from the
@@ -19,3 +19,7 @@ reads the same tokens via `getComputedStyle` so canvas and DOM stay in sync. No 
 ## Alternatives
 - Tailwind v4: fast to write, but class-heavy markup in a dense app, and canvas colors still need a JS token bridge. Rejected (not wrong, just no clear win).
 - CSS-in-JS (styled-components/emotion): runtime cost, React 19 friction. Rejected.
+
+## Amendment (Phase-1 review, 2026-11-23)
+Decision holds. The shared primitives as built are `IconButton` (with a built-in tooltip and shortcut hint),
+`ModalShell` (dialog frame) and `SearchDialog`; there are no separate `Button` or `Tooltip` components.

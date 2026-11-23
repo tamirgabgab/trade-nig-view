@@ -15,7 +15,7 @@
 | R2 | Chart core | L | ✅ R2a + R2b done (2026-11-22) |
 | R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | ✅ R3a, R3b, R3c (2026-11-23) |
 | L1 | Learn v1 for the MA family (from Phase 2) | M | ✅ (2026-11-23) |
-| U1 | UX pass (U1a polish + motion + half screen; U1b watchlist, palette, theme) | L | ✅ U1a + U1b (2026-11-23) |
+| U1 | UX pass (U1a polish + motion + half screen; U1b watchlist, palette, theme; U1c structural cleanup) | L | ✅ U1a + U1b + U1c (2026-11-23) |
 | R4 | Drawing tools v1 (R4a core + lines/shapes/text; R4b Fib, channel, ranges) | L | ✅ R4a + R4b (2026-11-23) |
 | R5 | Market structure & reference values | M | ✅ (2026-11-23) |
 | R6 | Persistence, layouts & UX polish | L | ✅ (2026-11-23) |
@@ -60,7 +60,7 @@ Risks: PowerShell execution policy (`Set-ExecutionPolicy -Scope CurrentUser Remo
 In scope: `DataProvider` protocol; `YahooProvider` (yfinance, throttling, retry/backoff, circuit breaker, clear errors);
 `TiingoProvider` (key); `FixtureProvider`; SQLite `BarCache` with coverage tracking and incremental fetch; validation;
 dividend adjustment; `1W`/`1M` resampling; `1h` best effort (730-day limit enforced with a clear error);
-`config/universe.yaml` + `/api/symbols`; `/api/bars` with `limit`/`end` paging; fixtures + `OFFLINE=1`.
+`config/universe.toml` + `/api/symbols`; `/api/bars` with `limit`/`before` paging; fixtures + `OFFLINE=1`.
 Out of scope: UI, Twelve Data/Massive/Stooq providers (optional stretch), intraday < 1h.
 
 Tasks
@@ -69,7 +69,7 @@ Tasks
 - [x] `providers/base.py` protocol, `TokenBucket`, `retry_with_backoff` (exp. + full jitter), `CircuitBreaker`
 - [x] `providers/yahoo.py` (only module importing yfinance), `providers/tiingo.py` (httpx2; split-adjusts raw OHLC), `providers/fixtures.py`
 - [x] `cache/bar_cache.py` (SQLite WAL, upsert, coverage, schema version); refresh = tail re-download + full reload when a split/dividend changes adjusted history
-- [x] `validate.py` (OHLC sanity, duplicates, monotonic, negative volume) — calendar-gap warnings moved to R5 (needs an exchange calendar)
+- [x] `validate.py` (OHLC sanity, duplicates, monotonic, negative volume) — calendar-gap warnings were planned for R5 but not implemented there; moved to the Phase 2 backlog (needs an exchange calendar)
 - [x] `resample.py` (W: ISO week, keyed by first trading day; M: calendar month; O=first, H=max, L=min, C=last, V=sum)
 - [x] `adjust.py` (adjusted OHLC = raw × adjClose/close)
 - [x] `bar_service.py` orchestrating the chain + `until` truncation (applied before adjust/resample)
@@ -99,10 +99,11 @@ Risks: Yahoo 429 during fixture generation (mitigate: throttle, retry later, com
 **Goal**: A TradingView-like chart for any universe symbol with smooth interaction.
 
 In scope: `ChartEngine` wrapper; candles + volume (overlay with own scale, direction colored); OHLC legend synced to
-crosshair; symbol search dialog (also opened by typing a letter on the chart); interval switcher (`1h`, `1D`, `1W`, `1M`);
-chart types (candles, bars, hollow candles, line, area, Heikin Ashi via backend transform, baseline stretch); range
+crosshair; symbol search dialog (also opened by typing a letter on the chart); interval switcher (`1h`, `4h`, `1D`, `1W`, `1M`);
+chart types (candles, bars, hollow candles, line, area, Heikin Ashi via backend transform; the baseline stretch was dropped, not built); range
 buttons (1D 5D 1M 3M 6M YTD 1Y 5Y All) + fit content; scale modes (normal/log/percent) + ADJ toggle; watchlist with
-sections, last price, change % (`/api/quotes`); lazy loading of older history on scroll left; dark theme; time-zone
+sections, last price, change % (`/api/quotes`); lazy loading of older history on scroll left; dark theme (light theme
+added in U1b); time-zone
 shift for intraday.
 Out of scope: indicators, drawings, saving layouts.
 
@@ -149,7 +150,7 @@ Tasks
 - [x] `tests/golden/models.py` scalar-loop reference models; TA-Lib comparison tests (converged region); hand vectors; hypothesis properties incl. `check_no_lookahead` (R3a)
 - [x] Scoreboard report writer (CSV in `backend/.reports/`, uploaded by CI) (R3a)
 - [x] API + tests (param validation from `ParamSpec`, unknown id → 404, `until` truncation) (R3a)
-- [x] Frontend: `IndicatorsDialog`, `LegendRow`, `IndicatorSettingsDialog` (generated), pane management in `ChartEngine`, markers via `createSeriesMarkers` (R3a: dialog, legend rows, live settings panel, price-pane lines ✅; R3b: markers ✅; R3c: panes with legends and level lines, band fills, coloured histograms, volume scale ✅; pane drag-resize is lightweight-charts' own)
+- [x] Frontend: `IndicatorsDialog`, `IndicatorLegend`, `IndicatorSettingsPanel` (generated), pane management in `ChartEngine`, markers via `createSeriesMarkers` (R3a: dialog, legend rows, live settings panel, price-pane lines ✅; R3b: markers ✅; R3c: panes with legends and level lines, band fills, coloured histograms, volume scale ✅; pane drag-resize is lightweight-charts' own)
 - [x] `docs/indicators/<slug>.md` stub per indicator (formula, defaults, warm-up, TV differences); full pages for the MA family (L1)
 - [ ] TV manual cross-check list (3 AAPL 1D dates) → `tests/golden/tv_crosscheck.json` filled with the user's numbers (template + test ✅, numbers pending)
 
@@ -167,7 +168,8 @@ Risks: EMA seeding vs TradingView on short histories (documented; cross-check de
 **Goal**: Persistent, data-anchored drawings with TradingView-like interaction.
 
 In scope: `DrawingManager` on series primitives: create (click-click / drag), hover, select, handles, drag
-move/resize, `Del`, `Esc`, double-click properties dialog, `Shift` angle snap. Tools: horizontal line, horizontal ray,
+move/resize, `Del`, `Esc`, double-click opens the live settings side panel (`DrawingSettingsPanel`; a floating
+toolbar sits on the selected drawing), `Shift` angle snap. Tools: horizontal line, horizontal ray,
 vertical line, trend line, ray, extended line, parallel channel, rectangle, text label, price range, date range,
 date & price range, Fib retracement, trend-based Fib extension. Magnet (weak/strong snap to O/H/L/C), stay-in-drawing
 mode, lock all, hide all, remove all. Persistence per symbol (`/api/drawings/{symbol}`, versioned schema, revision).
@@ -217,8 +219,8 @@ Risks: split-day artifacts in unadjusted data (use split-adjusted always); index
 **Goal**: Closing and reopening restores the exact workspace; the app feels finished.
 
 In scope: named layouts (symbol, interval, chart type, scale, indicators with params/style, pane sizes, visible range);
-autosave of the current layout; multiple watchlists (CRUD, add/remove symbols, sections); undo/redo (command pattern)
-for drawings and indicator changes; keyboard shortcuts (table below); settings dialog (theme dark/light, time zone,
+autosave of the current layout; multiple watchlists (CRUD, add/remove symbols, sections); undo/redo (built as one
+history of snapshots, not the planned command pattern) for chart, drawings and indicator changes; keyboard shortcuts (table below); settings dialog (theme dark/light, time zone,
 candle colors); loading/empty/error states everywhere; PNG snapshot; simple object tree.
 Out of scope: multi-chart grids, cloud sync.
 
@@ -246,7 +248,8 @@ Risks: schema drift between layout versions (migration functions + tests).
 **Goal**: Step through history with zero information leakage.
 
 In scope: Replay button → pick start bar (click or date picker) → step (`Shift+→`), play/pause, speeds (0.5/1/2/5/10
-bars/s), jump to end/exit; single `replay.cursor` in the store; all bar/indicator/analysis requests carry `until`;
+bars/s), jump to end/exit; single `replay.cursor` in the store; values computed over the loaded history are cut at the
+cursor (no `until` per request, exact by the no-lookahead test);
 drawings stay visible and editable; replay HUD showing the cursor date.
 Out of scope: paper trading during replay (P4/P5).
 
@@ -259,7 +262,7 @@ Tasks
 
 DoD: no-lookahead test passes for every registered indicator and analysis function.
 
-Risks: per-step recompute latency at 10 bars/s (cache + compute only the tail; measure).
+Risks: per-step recompute latency at 10 bars/s — moot: nothing is recomputed per step (values are cut at the cursor).
 
 ---
 
@@ -272,11 +275,12 @@ Phase-2 plan.
 ## Later phases (epics)
 
 ### Phase 2 — Education
-- Learn page per indicator (`docs/indicators/<slug>.md` → rendered in-app with KaTeX): math, what it measures, why the
-  defaults, pitfalls (e.g. OBV level depends on start date, EMA seed, BB population σ).
-- Interactive sliders on real data (debounced `/indicators/compute`), side-by-side parameter comparison, "frequency
-  response" view for linear filters (SMA/EMA/WMA as FIR/IIR: $|H(e^{j\omega})|$, group delay/lag).
-- Glossary, guided exercises using Replay.
+- Already delivered by L1 (Phase 1): in-app learn pages (`docs/indicators/<slug>.md` rendered with KaTeX in the learn
+  drawer), a "frequency response" view for linear filters ($|H(e^{j\omega})|$, group delay/lag, step and impulse) and
+  an MA-vs-MA compare.
+- Remaining: full pages for every indicator (math, what it measures, why the defaults, pitfalls, e.g. OBV level depends
+  on start date, EMA seed, BB population σ); interactive sliders on real data (debounced `/indicators/compute`);
+  glossary; guided exercises using Replay. Rounds P2a–P2d: see [PLAN.md §0.3](../PLAN.md).
 
 ### Phase 3 — Custom indicators (Python plugin API)
 - `plugins/` folder, `IndicatorSpec` entry point, hot reload (watchfiles), sandboxing level appropriate for a local
