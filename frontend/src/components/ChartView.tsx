@@ -81,9 +81,10 @@ export const ChartView = memo(function ChartView({
       offRange();
       offPanes();
       offAutoScale();
-      engine.dispose();
-      engineRef.current = null;
+      // Users of the engine let go of it first (the drawing manager), then it is disposed.
       onEngine(null);
+      engineRef.current = null;
+      engine.dispose();
       shownKeyRef.current = null;
     };
   }, [onHover, onVisibleRangeChange, onPaneLayout, onAutoScaleChange, onEngine]);

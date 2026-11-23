@@ -37,7 +37,7 @@ function click(el: HTMLElement, x: number, y: number, init: MouseEventInit = {})
 const store = useDrawingStore;
 let chart: ReturnType<typeof surface>;
 let manager: DrawingManager;
-const callbacks = { openSettings: vi.fn(), removed: vi.fn() };
+const callbacks = { blocked: vi.fn(() => false), openSettings: vi.fn(), removed: vi.fn() };
 
 beforeEach(() => {
   store.setState({ ...useDrawingStore.getInitialState(), symbol: 'AAPL' }, true);
@@ -132,5 +132,38 @@ describe('DrawingManager', () => {
     expect(callbacks.openSettings).toHaveBeenCalledWith(id);
     fire(el, 'dblclick', 110, 105);
     expect(callbacks.openSettings).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a release that did not start on the chart, and keys while a dialog is open', () => {
+    const el = chart.element();
+    store.getState().setTool('trend_line', 'lines');
+    // A toolbar click: only the release reaches the window. No draft starts or ends.
+    fire(window, 'pointerup', 100, 100);
+    expect(chart.view?.draft ?? null).toBeNull();
+
+    click(el, 100, 100);
+    callbacks.blocked.mockReturnValue(true);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(chart.view?.draft).not.toBeNull();
+    callbacks.blocked.mockReturnValue(false);
+  });
+
+  it('drops a half-drawn line when the tool changes, and restores pan and zoom', () => {
+    const el = chart.element();
+    store.getState().setTool('trend_line', 'lines');
+    fire(el, 'pointerdown', 100, 100);
+    expect(chart.panZoom).toBe(false);
+    store.getState().setTool(null, 'lines');
+    expect(chart.view?.draft ?? null).toBeNull();
+    expect(chart.panZoom).toBe(true);
+    expect(store.getState().drawings).toEqual([]);
+  });
+
+  it('does nothing before a symbol is loaded', () => {
+    store.setState({ symbol: null });
+    store.getState().setTool('horizontal_line', 'lines');
+    click(chart.element(), 100, 100);
+    expect(store.getState().drawings).toEqual([]);
+    expect(chart.panZoom).toBe(true);
   });
 });

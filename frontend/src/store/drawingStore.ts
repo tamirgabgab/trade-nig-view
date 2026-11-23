@@ -38,9 +38,18 @@ export interface DrawingState {
   hover: (id: string | null) => void;
   add: (drawing: Drawing) => void;
   update: (id: string, change: (drawing: Drawing) => Drawing) => void;
-  /** Remove one drawing; returns it and its position so `restore` can undo the removal. */
-  remove: (id: string) => { drawing: Drawing; index: number } | null;
-  restore: (removed: { drawing: Drawing; index: number }) => void;
+  /** Remove one drawing; returns it, its position and symbol, so `restore` can undo it. */
+  remove: (id: string) => Removed | null;
+  /** Put a removed drawing back (only on the symbol it came from). */
+  restore: (removed: Removed) => void;
+  /** Forget the loaded drawings (a symbol switch, until the new ones arrive). */
+  unload: () => void;
+}
+
+export interface Removed {
+  drawing: Drawing;
+  index: number;
+  symbol: string | null;
 }
 
 type Persisted = Pick<DrawingState, 'lastTool' | 'magnet' | 'stayInDrawing'>;
@@ -84,6 +93,9 @@ export const useDrawingStore = create<DrawingState>()(
       saved: (revision) => {
         set({ revision });
       },
+      unload: () => {
+        set({ symbol: null, revision: 0, drawings: [], edits: 0, selectedId: null, hoverId: null });
+      },
       setTool: (tool, group) => {
         set((s) => ({
           tool,
@@ -96,7 +108,11 @@ export const useDrawingStore = create<DrawingState>()(
         set({ magnet });
       },
       toggle: (flag) => {
-        set((s) => ({ [flag]: !s[flag] }));
+        set((s) => ({
+          [flag]: !s[flag],
+          // Nothing stays selected (toolbar, Del) behind "hide all".
+          ...(flag === 'hideAll' && !s.hideAll ? { selectedId: null, hoverId: null } : {}),
+        }));
       },
       select: (selectedId) => {
         set({ selectedId });
@@ -128,11 +144,11 @@ export const useDrawingStore = create<DrawingState>()(
           selectedId: s.selectedId === id ? null : s.selectedId,
           hoverId: s.hoverId === id ? null : s.hoverId,
         }));
-        return { drawing, index };
+        return { drawing, index, symbol: get().symbol };
       },
-      restore: ({ drawing, index }) => {
+      restore: ({ drawing, index, symbol }) => {
         set((s) => {
-          if (s.drawings.some((d) => d.id === drawing.id)) return s;
+          if (s.symbol !== symbol || s.drawings.some((d) => d.id === drawing.id)) return s;
           const drawings = [...s.drawings];
           drawings.splice(index, 0, drawing);
           return { drawings, edits: s.edits + 1 };

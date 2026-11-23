@@ -55,6 +55,8 @@ describe('hitTest', () => {
     expect(hitTest(drawing('rectangle', { fill: true }), pts, p(50, 40), size, false)).toEqual({
       kind: 'body',
     });
+    // No `fill` prop: filled, as it is drawn.
+    expect(hitTest(drawing('rectangle'), pts, p(50, 40), size, false)).toEqual({ kind: 'body' });
   });
 
   it('a text label is grabbed inside its box', () => {

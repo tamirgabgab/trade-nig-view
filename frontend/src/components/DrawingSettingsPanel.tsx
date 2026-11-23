@@ -1,5 +1,5 @@
 import { Trash2, X } from 'lucide-react';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { TOOL_LABELS } from '../drawings/manager.ts';
 import type { Drawing, LineStyle } from '../drawings/types.ts';
@@ -17,7 +17,7 @@ const LINE_STYLES: { id: LineStyle; label: string }[] = [
 
 /**
  * Side panel of the selected drawing (double-click it, or the floating toolbar's settings):
- * style, text, anchor prices, lock and hide. Every change applies at once.
+ * style, text, anchor prices and lock. Every change applies at once.
  */
 export function DrawingSettingsPanel() {
   const id = useUiStore((s) => s.drawingSettingsFor);
@@ -28,6 +28,13 @@ export function DrawingSettingsPanel() {
   const remove = useDrawingStore((s) => s.remove);
   const restore = useDrawingStore((s) => s.restore);
   const presence = usePresence(drawing ?? null);
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  // Another drawing's settings: start from its own prices.
+  const [draftsFor, setDraftsFor] = useState(id);
+  if (draftsFor !== id) {
+    setDraftsFor(id);
+    setDrafts({});
+  }
   const panelRef = useRef<HTMLElement>(null);
   const titleId = useId();
   const shown = presence.shown;
@@ -38,7 +45,7 @@ export function DrawingSettingsPanel() {
     if (!present) return;
     const previous = document.activeElement;
     const panel = panelRef.current;
-    panel?.querySelector<HTMLElement>('textarea, input, select')?.focus();
+    panel?.querySelector<HTMLElement>('input, select')?.focus();
     return () => {
       restoreFocus(previous, panel);
     };
@@ -92,10 +99,9 @@ export function DrawingSettingsPanel() {
               <label htmlFor={`${titleId}-content`} className={styles.label}>
                 Text
               </label>
-              <textarea
+              <input
                 id={`${titleId}-content`}
                 className={styles.control}
-                rows={3}
                 maxLength={500}
                 value={shown.props.text ?? ''}
                 onChange={(event) => {
@@ -210,14 +216,22 @@ export function DrawingSettingsPanel() {
                 className={styles.control}
                 type="number"
                 step="any"
-                defaultValue={point.price}
+                // The typed text while editing; otherwise the live price (it follows drags).
+                value={drafts[index] ?? String(point.price)}
                 onChange={(event) => {
-                  const price = Number(event.target.value);
-                  if (event.target.value === '' || !Number.isFinite(price)) return;
+                  const text = event.target.value;
+                  setDrafts((d) => ({ ...d, [index]: text }));
+                  const price = Number(text);
+                  if (text === '' || !Number.isFinite(price)) return;
                   change((d) => ({
                     ...d,
                     points: d.points.map((p, i) => (i === index ? { ...p, price } : p)),
                   }));
+                }}
+                onBlur={() => {
+                  setDrafts((d) =>
+                    Object.fromEntries(Object.entries(d).filter(([key]) => key !== String(index))),
+                  );
                 }}
               />
             </div>
@@ -232,7 +246,7 @@ export function DrawingSettingsPanel() {
         </section>
         <section aria-labelledby={`${titleId}-visibility`}>
           <h3 id={`${titleId}-visibility`} className={styles.section}>
-            Visibility
+            Lock
           </h3>
           <label className={styles.check}>
             <input
@@ -244,17 +258,6 @@ export function DrawingSettingsPanel() {
               }}
             />
             Lock (cannot be moved)
-          </label>
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={shown.hidden}
-              onChange={(event) => {
-                const hidden = event.target.checked;
-                change((d) => ({ ...d, hidden }));
-              }}
-            />
-            Hide
           </label>
         </section>
       </div>

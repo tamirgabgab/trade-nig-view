@@ -29,6 +29,8 @@ export interface ChartSurface {
 }
 
 export interface DrawingCallbacks {
+  /** A modal dialog is open: keys and clicks are not for the chart. */
+  blocked: () => boolean;
   /** Double-click on a drawing, or a new text label: open its settings panel. */
   openSettings: (id: string) => void;
   /** A drawing was deleted (Del): offer Undo. */
@@ -97,6 +99,8 @@ export class DrawingManager {
   private creating: Creating | null = null;
   private dragging: Dragging | null = null;
   private shift = false;
+  /** The primary button went down on the price pane (its release is ours). */
+  private down = false;
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -112,13 +116,16 @@ export class DrawingManager {
     window.addEventListener('pointerup', this.onPointerUp, true);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
-    this.unsubscribe = store.subscribe(() => {
+    this.unsubscribe = store.subscribe((s) => {
+      // Another tool or the cursor picked meanwhile (toolbar, Esc): drop the half-drawn one.
+      if (this.creating !== null && s.tool !== this.creating.drawing.type) this.cancelCreating();
       this.render();
     });
     this.render();
   }
 
   dispose(): void {
+    if (this.creating !== null || this.dragging !== null) this.surface.setPanZoom(true);
     const el = this.surface.element();
     el.removeEventListener('pointerdown', this.onPointerDown, true);
     el.removeEventListener('pointermove', this.onPointerMove, true);
@@ -128,7 +135,6 @@ export class DrawingManager {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     this.unsubscribe();
-    this.surface.setPanZoom(true);
   }
 
   /** Show the store's drawings plus the one being drawn. */
@@ -198,14 +204,16 @@ export class DrawingManager {
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button !== 0) return;
     const p = this.local(event);
-    if (p === null) return;
     const s = this.store.getState();
+    // Outside the price pane, or before this symbol's drawings are loaded: not ours.
+    if (p === null || s.symbol === null) return;
+    this.down = true;
 
     if (s.tool !== null) {
-      this.surface.setPanZoom(false);
       if (this.creating === null) {
         const anchor = this.anchorAt(p, null, s.tool);
         if (anchor === null) return;
+        this.surface.setPanZoom(false);
         const id = crypto.randomUUID();
         const points = Array.from({ length: POINT_COUNT[s.tool] }, () => anchor);
         this.creating = {
@@ -252,7 +260,10 @@ export class DrawingManager {
     if (this.creating !== null) {
       if (p === null) return;
       const { drawing, placed, down } = this.creating;
-      if (Math.hypot(p.x - down.x, p.y - down.y) > CLICK_SLOP) this.creating.dragged = true;
+      // Drawing by dragging: only while the button is held (moving between two clicks is not).
+      if (this.down && Math.hypot(p.x - down.x, p.y - down.y) > CLICK_SLOP) {
+        this.creating.dragged = true;
+      }
       const first = this.surface.project(drawing.points[0] ?? { time: 0, price: 0 });
       const anchor = this.anchorAt(p, first, drawing.type);
       if (anchor !== null) {
@@ -314,6 +325,9 @@ export class DrawingManager {
   }
 
   private readonly onPointerUp = (): void => {
+    // A release whose press was not on the pane (a toolbar click) is not ours.
+    if (!this.down) return;
+    this.down = false;
     if (this.creating !== null) {
       const { drawing, placed, dragged } = this.creating;
       // One-point tools finish on release; two-point tools on a drag's release or the 2nd click.
@@ -327,6 +341,11 @@ export class DrawingManager {
       this.surface.setPanZoom(true);
     }
   };
+
+  private cancelCreating(): void {
+    this.creating = null;
+    this.surface.setPanZoom(true);
+  }
 
   private finish(): void {
     const creating = this.creating;
@@ -361,11 +380,11 @@ export class DrawingManager {
     ) {
       return;
     }
+    if (event.defaultPrevented || this.callbacks.blocked()) return;
     const s = this.store.getState();
     if (event.key === 'Escape') {
       if (this.creating !== null) {
-        this.creating = null;
-        this.surface.setPanZoom(true);
+        this.cancelCreating();
         this.render();
       } else if (s.tool !== null) {
         s.setTool(null);

@@ -81,7 +81,9 @@ export function hitTest(
   if (a === undefined) return null;
   if (drawing.type === 'rectangle' && b !== undefined) {
     const onEdge = distanceToRectEdge(p, a, b) <= HIT_PX;
-    return onEdge || (drawing.props.fill === true && insideRect(p, a, b)) ? { kind: 'body' } : null;
+    return onEdge || (drawing.props.fill !== false && insideRect(p, a, b))
+      ? { kind: 'body' }
+      : null;
   }
   if (drawing.type === 'text') {
     const box = textBox(drawing, a);
