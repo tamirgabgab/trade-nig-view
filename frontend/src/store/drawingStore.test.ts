@@ -38,4 +38,15 @@ describe('drawingStore', () => {
     useDrawingStore.getState().unload();
     expect(useDrawingStore.getState()).toMatchObject({ symbol: null, drawings: [] });
   });
+
+  it('removes all drawings and puts them back on the same symbol only', () => {
+    const removed = useDrawingStore.getState().removeAll();
+    expect(useDrawingStore.getState().drawings).toEqual([]);
+    useDrawingStore.getState().load('MSFT', 1, []);
+    useDrawingStore.getState().restoreAll(removed);
+    expect(useDrawingStore.getState().drawings).toEqual([]);
+    useDrawingStore.getState().load('AAPL', 2, []);
+    useDrawingStore.getState().restoreAll(removed);
+    expect(useDrawingStore.getState().drawings).toEqual([line]);
+  });
 });

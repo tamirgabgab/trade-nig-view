@@ -17,10 +17,9 @@ import { IconButton } from './IconButton.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { ChartContextMenu } from './ChartContextMenu.tsx';
-import { ConfirmDialog } from './ConfirmDialog.tsx';
 import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
 import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
-import { removeAllIndicators } from './indicatorActions.ts';
+import { RemoveConfirm } from './RemoveConfirm.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
 import { legendValues } from './legendValues.ts';
@@ -82,8 +81,6 @@ export function ChartArea({ className }: ChartAreaProps) {
   const closeContextMenu = useCallback(() => {
     setMenuAt(null);
   }, []);
-  const confirmClear = useUiStore((s) => s.modal === 'confirmRemoveAll');
-  const closeModal = useUiStore((s) => s.closeModal);
   const [offLatest, setOffLatest] = useState(false);
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
   const firstRun = useIndicatorStore((s) => s.seq === 0);
@@ -288,20 +285,7 @@ export function ChartArea({ className }: ChartAreaProps) {
           }}
         />
       )}
-      {confirmClear && (
-        <ConfirmDialog
-          title="Remove all indicators?"
-          message={`This removes ${indicators.views.map((v) => v.label).join(', ')} from the chart, with their settings.`}
-          confirmLabel={`Remove ${String(indicators.views.length)} indicator${indicators.views.length === 1 ? '' : 's'}`}
-          onCancel={() => {
-            closeModal('confirmRemoveAll');
-          }}
-          onConfirm={() => {
-            closeModal('confirmRemoveAll');
-            removeAllIndicators();
-          }}
-        />
-      )}
+      <RemoveConfirm views={indicators.views} />
       <DrawingFloatToolbar />
       <IndicatorSettingsPanel views={indicators.views} />
       <DrawingSettingsPanel />

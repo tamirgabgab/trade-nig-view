@@ -25,7 +25,7 @@ export function useAppHotkeys(): void {
   useGlobalHotkey(copiesSnapshot, () => {
     ui().requestSnapshot('copy');
   });
-  // Drawing tools (Alt+T trend line, Alt+H horizontal, Alt+V vertical) and hide all.
+  // Drawing tools (Alt+T trend line, Alt+H horizontal, Alt+V vertical, Alt+F Fib) and hide all.
   for (const t of TOOL_SHORTCUTS) {
     // eslint-disable-next-line react-hooks/rules-of-hooks -- a constant list: same order every render
     useGlobalHotkey(altKey(`Key${t.shortcut?.slice(-1) ?? ''}`), () => {

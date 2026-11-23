@@ -1,4 +1,4 @@
-import type { Drawing, DrawingType, LineStyle } from '../drawings/types.ts';
+import type { Drawing, DrawingType, FibLevel, LineStyle } from '../drawings/types.ts';
 import { POINT_COUNT } from '../drawings/types.ts';
 import { apiGet, apiPut, fieldsOf, isRecord, type Schemas } from './client.ts';
 
@@ -10,6 +10,14 @@ export interface DrawingsDoc {
 }
 
 const LINE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted'];
+
+function parseLevels(items: readonly unknown[]): FibLevel[] {
+  return items.flatMap((l) =>
+    isRecord(l) && typeof l['value'] === 'number' && typeof l['color'] === 'string'
+      ? [{ value: l['value'], color: l['color'], visible: l['visible'] !== false }]
+      : [],
+  );
+}
 
 function parseDrawing(item: unknown): Drawing | null {
   if (!isRecord(item)) return null;
@@ -41,6 +49,7 @@ function parseDrawing(item: unknown): Drawing | null {
       ...(typeof pr['text'] === 'string' ? { text: pr['text'] } : {}),
       ...(typeof pr['font_size'] === 'number' ? { font_size: pr['font_size'] } : {}),
       ...(typeof pr['fill'] === 'boolean' ? { fill: pr['fill'] } : {}),
+      ...(Array.isArray(pr['levels']) ? { levels: parseLevels(pr['levels'] as unknown[]) } : {}),
     },
     locked: field('locked') === true,
     hidden: field('hidden') === true,

@@ -87,7 +87,7 @@ export function ChartContextMenu({
       label: 'Remove all indicators…',
       divider: true,
       onSelect: () => {
-        openModal('confirmRemoveAll');
+        openModal('removeIndicators');
       },
     });
   }

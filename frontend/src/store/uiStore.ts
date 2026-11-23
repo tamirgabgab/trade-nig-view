@@ -13,7 +13,14 @@ export interface Toast {
 export type SnapshotMode = 'copy' | 'download';
 
 /** The modal dialogs; at most one is open, so they can never stack. */
-export type Modal = 'symbols' | 'indicators' | 'shortcuts' | 'palette' | 'confirmRemoveAll';
+export type Modal =
+  | 'symbols'
+  | 'indicators'
+  | 'shortcuts'
+  | 'palette'
+  | 'removeIndicators'
+  | 'removeDrawings'
+  | 'removeEverything';
 
 /** Transient UI state (not persisted): which overlay is open. */
 export interface UiState {

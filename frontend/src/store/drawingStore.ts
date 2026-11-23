@@ -42,8 +42,17 @@ export interface DrawingState {
   remove: (id: string) => Removed | null;
   /** Put a removed drawing back (only on the symbol it came from). */
   restore: (removed: Removed) => void;
+  /** Remove every drawing of the symbol; returns them so `restoreAll` can undo it. */
+  removeAll: () => RemovedAll;
+  /** Put the drawings back (only on the symbol they came from, and only if none was drawn). */
+  restoreAll: (removed: RemovedAll) => void;
   /** Forget the loaded drawings (a symbol switch, until the new ones arrive). */
   unload: () => void;
+}
+
+export interface RemovedAll {
+  drawings: Drawing[];
+  symbol: string | null;
 }
 
 export interface Removed {
@@ -153,6 +162,16 @@ export const useDrawingStore = create<DrawingState>()(
           drawings.splice(index, 0, drawing);
           return { drawings, edits: s.edits + 1 };
         });
+      },
+      removeAll: () => {
+        const { drawings, symbol } = get();
+        set((s) => ({ drawings: [], edits: s.edits + 1, selectedId: null, hoverId: null }));
+        return { drawings, symbol };
+      },
+      restoreAll: ({ drawings, symbol }) => {
+        set((s) =>
+          s.symbol !== symbol || s.drawings.length > 0 ? s : { drawings, edits: s.edits + 1 },
+        );
       },
     }),
     {

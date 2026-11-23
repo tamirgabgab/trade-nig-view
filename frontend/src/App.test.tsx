@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
+import { newDrawing } from './drawings/manager.ts';
 import { useChartStore } from './store/chartStore.ts';
 import { useDrawingStore } from './store/drawingStore.ts';
 import { useThemeStore } from './store/themeStore.ts';
@@ -145,5 +146,39 @@ describe('App shell', () => {
   it('shows the selected symbol on the symbol button', async () => {
     renderWithQuery(<App />);
     expect(await screen.findByRole('button', { name: 'Symbol search: AAPL' })).toBeInTheDocument();
+  });
+
+  it('removes all drawings from the trash menu after a confirmation, with undo', async () => {
+    const user = userEvent.setup();
+    const line = newDrawing(
+      'trend_line',
+      [
+        { time: 1, price: 10 },
+        { time: 2, price: 11 },
+      ],
+      'a',
+    );
+    stubApi({
+      '/api/health': { body: HEALTH_OK },
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
+      '/api/drawings/AAPL': { body: { symbol: 'AAPL', revision: 1, drawings: [line] } },
+    });
+    renderWithQuery(<App />);
+    await waitFor(() => {
+      expect(useDrawingStore.getState().drawings).toHaveLength(1);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Remove objects' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Remove 1 drawing…' }));
+    const confirm = screen.getByRole('alertdialog', { name: 'Remove all drawings?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Remove 1 drawing' }));
+    expect(useDrawingStore.getState().drawings).toEqual([]);
+
+    const toast = screen.getByText('Removed 1 drawing').closest('div');
+    if (toast === null) throw new Error('no toast');
+    await user.click(within(toast).getByRole('button', { name: 'Undo' }));
+    expect(useDrawingStore.getState().drawings).toEqual([line]);
   });
 });

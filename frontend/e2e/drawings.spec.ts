@@ -60,3 +60,41 @@ test('draw a trend line, reload, move it, delete it with Del', async ({ page }) 
   await expect(page.getByRole('status').filter({ hasText: 'Removed Trend line' })).toBeVisible();
   await expect.poll(async () => (await saved(page)).drawings).toEqual([]);
 });
+
+test('draw a Fib retracement, reload, switch to 1W, then remove it from the trash menu', async ({
+  page,
+}) => {
+  const box = await page.getByTestId('chart-canvas').boundingBox();
+  if (box === null) throw new Error('no chart');
+  const at = (x: number, y: number) => ({ x: box.x + x, y: box.y + y });
+
+  // From a low to a high: a drag with the Fib retracement tool (Alt+F).
+  await page.keyboard.press('Alt+f');
+  const low = at(250, 320);
+  const high = at(550, 120);
+  await page.mouse.move(low.x, low.y);
+  await page.mouse.down();
+  await page.mouse.move(high.x, high.y, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.getByRole('toolbar', { name: 'Fib retracement toolbar' })).toBeVisible();
+  await expect
+    .poll(async () => (await saved(page)).drawings.map((d) => d.type))
+    .toEqual(['fib_retracement']);
+  const drawn = await saved(page);
+  await page.screenshot({ path: 'test-results/fib-1d.png' });
+
+  // A reload and a switch to weekly bars keep the drawing as saved: same times and prices.
+  await page.reload();
+  await page.getByRole('button', { name: '1 week' }).click();
+  await expect(page.getByLabel('Price legend')).toContainText('1W');
+  await page.screenshot({ path: 'test-results/fib-1w.png' });
+  expect((await saved(page)).drawings).toEqual(drawn.drawings);
+
+  // The trash menu removes it after a confirmation that names it.
+  await page.getByRole('button', { name: 'Remove objects' }).click();
+  await page.getByRole('menuitem', { name: 'Remove 1 drawing…' }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'Remove all drawings?' });
+  await confirm.getByRole('button', { name: 'Remove 1 drawing' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Removed 1 drawing' })).toBeVisible();
+  await expect.poll(async () => (await saved(page)).drawings).toEqual([]);
+});

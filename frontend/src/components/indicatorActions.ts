@@ -33,15 +33,3 @@ export function removeIndicator(uid: string, label: string): void {
     });
   }
 }
-
-/** Remove every indicator (after the confirm dialog); the toast can undo it. */
-export function removeAllIndicators(): void {
-  const { removeAll, restoreAll } = useIndicatorStore.getState();
-  const ui = useUiStore.getState();
-  ui.forgetIndicator();
-  const removed = removeAll();
-  const n = removed.length;
-  ui.showToast(`Removed ${String(n)} indicator${n === 1 ? '' : 's'}`, () => {
-    restoreAll(removed);
-  });
-}

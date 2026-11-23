@@ -1,10 +1,12 @@
 import { Trash2, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { DEFAULT_FIB_LEVELS } from '../drawings/fib.ts';
 import { TOOL_LABELS } from '../drawings/manager.ts';
 import type { Drawing, LineStyle } from '../drawings/types.ts';
 import { useDrawingStore } from '../store/drawingStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
+import { FibLevelsTable } from './FibLevelsTable.tsx';
 import styles from './IndicatorSettingsPanel.module.css';
 import { restoreFocus, usePresence } from './usePresence.ts';
 
@@ -202,6 +204,20 @@ export function DrawingSettingsPanel() {
             </label>
           )}
         </section>
+        {(shown.type === 'fib_retracement' || shown.type === 'fib_extension') && (
+          <section aria-labelledby={`${titleId}-levels`}>
+            <h3 id={`${titleId}-levels`} className={styles.section}>
+              Levels
+            </h3>
+            <FibLevelsTable
+              key={shown.id}
+              levels={shown.props.levels ?? DEFAULT_FIB_LEVELS}
+              onChange={(levels) => {
+                change((d) => ({ ...d, props: { ...d.props, levels } }));
+              }}
+            />
+          </section>
+        )}
         <section aria-labelledby={`${titleId}-points`}>
           <h3 id={`${titleId}-points`} className={styles.section}>
             Coordinates
