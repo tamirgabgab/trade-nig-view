@@ -53,6 +53,11 @@ describe('RightSidebar', () => {
     const toggle = screen.getByRole('button', { name: 'Show watchlist' });
     await user.click(toggle);
     expect(watchlist()).toBeInTheDocument();
+    // An Esc that a dialog already handled leaves it open.
+    const handled = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+    handled.preventDefault();
+    window.dispatchEvent(handled);
+    expect(watchlist()).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(watchlist()).not.toBeInTheDocument();
 

@@ -12,9 +12,9 @@ import { restoreFocus, usePresence } from './usePresence.ts';
 /** Modal indicator picker: type to filter, arrows to move, Enter to add, Esc to close. */
 export function IndicatorsDialog() {
   const open = useUiStore((s) => s.indicatorsDialog);
-  const { shown, closing } = usePresence(open ? true : null);
+  const { shown, closing, key } = usePresence(open ? true : null);
   if (shown === null) return null;
-  return <IndicatorsPanel closing={closing} />;
+  return <IndicatorsPanel key={key} closing={closing} />;
 }
 
 function IndicatorsPanel({ closing }: { closing: boolean }) {

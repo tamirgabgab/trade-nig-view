@@ -41,9 +41,9 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
 /** `?` dialog listing every keyboard shortcut. */
 export function ShortcutsDialog() {
   const open = useUiStore((s) => s.shortcutsOpen);
-  const { shown, closing } = usePresence(open ? true : null);
+  const { shown, closing, key } = usePresence(open ? true : null);
   if (shown === null) return null;
-  return <ShortcutsPanel closing={closing} />;
+  return <ShortcutsPanel key={key} closing={closing} />;
 }
 
 function ShortcutsPanel({ closing }: { closing: boolean }) {

@@ -6,7 +6,7 @@ import { opensIndicators } from './indicatorSearch.ts';
 /** `/` anywhere outside a text field opens the indicators dialog, as on TradingView. */
 export function useIndicatorsHotkey(): void {
   const setOpen = useUiStore((s) => s.setIndicatorsDialog);
-  const blocked = useUiStore((s) => s.indicatorsDialog || s.symbolSearch.open);
+  const blocked = useUiStore((s) => s.indicatorsDialog || s.symbolSearch.open || s.shortcutsOpen);
   useEffect(() => {
     if (blocked) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {

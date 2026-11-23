@@ -9,7 +9,7 @@ import { opensSymbolSearch } from './symbolSearch.ts';
  */
 export function useSymbolSearchHotkey(): void {
   const open = useUiStore((s) => s.openSymbolSearch);
-  const isOpen = useUiStore((s) => s.symbolSearch.open);
+  const isOpen = useUiStore((s) => s.symbolSearch.open || s.shortcutsOpen);
   useEffect(() => {
     if (isOpen) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {

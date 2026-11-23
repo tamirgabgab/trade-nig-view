@@ -32,6 +32,16 @@ describe('presentLines', () => {
     expect(shown[1]?.values).toBe(lines[1]?.values);
   });
 
+  it('dims the histogram, marker and fill colours of the others too', () => {
+    const macd = {
+      ...line('macd-3'),
+      plot: 'histogram' as const,
+      style: { up: '#089981', format: 'x' },
+    };
+    const [, shown] = presentLines([lines[0] ?? line('ema-1'), macd], 'ema-1', null);
+    expect(shown?.style).toEqual({ up: 'rgba(8, 153, 129, 0.2)', format: 'x' });
+  });
+
   it('draws the newly added indicator thicker', () => {
     expect(presentLines(lines, null, 'sma-2').map((l) => l.lineWidth)).toEqual([2, 4]);
   });

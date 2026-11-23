@@ -28,7 +28,8 @@ export function RightSidebar({ className }: RightSidebarProps) {
   useEffect(() => {
     if (!narrow || !floating) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setFloating(false);
+      // An Esc that closed a dialog or panel first (they preventDefault) is not for us.
+      if (event.key === 'Escape' && !event.defaultPrevented) setFloating(false);
     };
     const onPointerDown = (event: PointerEvent) => {
       if (!(event.target instanceof Node) || !asideRef.current?.contains(event.target)) {

@@ -11,9 +11,9 @@ import styles from './SymbolSearchDialog.module.css';
 /** Modal symbol search: type to filter, arrows to move, Enter to pick, Esc to close. */
 export function SymbolSearchDialog() {
   const { open, seed } = useUiStore((s) => s.symbolSearch);
-  const { shown, closing } = usePresence(open ? seed : null);
+  const { shown, closing, key } = usePresence(open ? seed : null);
   if (shown === null) return null;
-  return <SearchPanel seed={shown} closing={closing} />;
+  return <SearchPanel key={key} seed={shown} closing={closing} />;
 }
 
 function SearchPanel({ seed, closing }: { seed: string; closing: boolean }) {

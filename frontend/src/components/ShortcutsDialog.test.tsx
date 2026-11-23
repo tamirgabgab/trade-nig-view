@@ -5,9 +5,11 @@ import { useUiStore } from '../store/uiStore.ts';
 import { renderWithQuery } from '../test/render.tsx';
 import { ShortcutsDialog } from './ShortcutsDialog.tsx';
 import { opensShortcuts, useShortcutsHotkey } from './useShortcutsHotkey.ts';
+import { useSymbolSearchHotkey } from './useSymbolSearchHotkey.ts';
 
 function Harness() {
   useShortcutsHotkey();
+  useSymbolSearchHotkey();
   return (
     <>
       <input aria-label="Field" />
@@ -33,6 +35,9 @@ describe('ShortcutsDialog', () => {
     expect(dialog).toHaveTextContent('Add an indicator');
     expect(dialog).toHaveTextContent('Trend line tools');
     expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+    // While it is open, typing does not stack a symbol search on top.
+    await user.keyboard('a');
+    expect(useUiStore.getState().symbolSearch.open).toBe(false);
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

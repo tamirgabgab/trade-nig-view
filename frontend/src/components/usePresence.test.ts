@@ -25,15 +25,15 @@ describe('usePresence', () => {
     withMotion(false);
     vi.useFakeTimers();
     const { result, rerender } = setup('ema');
-    expect(result.current).toEqual({ shown: 'ema', closing: false });
+    expect(result.current).toMatchObject({ shown: 'ema', closing: false });
 
     rerender({ v: null });
-    expect(result.current).toEqual({ shown: 'ema', closing: true });
+    expect(result.current).toMatchObject({ shown: 'ema', closing: true });
 
     act(() => {
       vi.advanceTimersByTime(EXIT_MS);
     });
-    expect(result.current).toEqual({ shown: null, closing: false });
+    expect(result.current).toMatchObject({ shown: null, closing: false });
   });
 
   it('switches straight to a new value and reopens during an exit', () => {
@@ -41,21 +41,33 @@ describe('usePresence', () => {
     vi.useFakeTimers();
     const { result, rerender } = setup('a');
     rerender({ v: 'b' });
-    expect(result.current).toEqual({ shown: 'b', closing: false });
+    expect(result.current).toMatchObject({ shown: 'b', closing: false });
     rerender({ v: null });
     rerender({ v: 'c' });
-    expect(result.current).toEqual({ shown: 'c', closing: false });
+    expect(result.current).toMatchObject({ shown: 'c', closing: false });
     act(() => {
       vi.advanceTimersByTime(EXIT_MS);
     });
-    expect(result.current).toEqual({ shown: 'c', closing: false });
+    expect(result.current).toMatchObject({ shown: 'c', closing: false });
+  });
+
+  it('gives a reopen during the exit a new key, a switch keeps it', () => {
+    withMotion(false);
+    vi.useFakeTimers();
+    const { result, rerender } = setup('a');
+    const first = result.current.key;
+    rerender({ v: 'b' });
+    expect(result.current.key).toBe(first);
+    rerender({ v: null });
+    rerender({ v: 'b' });
+    expect(result.current).toMatchObject({ shown: 'b', closing: false, key: first + 1 });
   });
 
   it('closes at once when motion is reduced', () => {
     withMotion(true);
     const { result, rerender } = setup('ema');
     rerender({ v: null });
-    expect(result.current).toEqual({ shown: null, closing: false });
+    expect(result.current).toMatchObject({ shown: null, closing: false });
   });
 });
 

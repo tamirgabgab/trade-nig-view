@@ -388,12 +388,12 @@ describe('ChartEngine', () => {
     chart.onAutoScaleChange(listener);
     chart.setScale({ mode: 'normal', autoScale: true });
 
-    container.dispatchEvent(new Event('pointerup'));
+    window.dispatchEvent(new Event('pointerup'));
     expect(listener).not.toHaveBeenCalled();
     // The library turns auto-fit off while the axis is dragged.
     lwc.state.priceScaleOptions.set('right', { mode: 0, autoScale: false });
-    container.dispatchEvent(new Event('pointerup'));
-    container.dispatchEvent(new Event('pointerup'));
+    window.dispatchEvent(new Event('pointerup'));
+    window.dispatchEvent(new Event('pointerup'));
     expect(listener).toHaveBeenCalledExactlyOnceWith(false);
     // ...and back on with a double-click on the axis.
     lwc.state.priceScaleOptions.set('right', { mode: 0, autoScale: true });

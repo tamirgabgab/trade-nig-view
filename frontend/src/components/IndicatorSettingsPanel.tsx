@@ -26,10 +26,17 @@ interface IndicatorSettingsPanelProps {
 
 /** Side panel with the open instance's inputs and style; every change applies live. */
 export function IndicatorSettingsPanel({ views }: IndicatorSettingsPanelProps) {
-  const { shown: uid, closing } = usePresence(useUiStore((s) => s.settingsFor));
+  const { shown: uid, closing, key } = usePresence(useUiStore((s) => s.settingsFor));
   const view = views.find((v) => v.instance.uid === uid);
   if (view?.spec === undefined) return null;
-  return <SettingsForm key={view.instance.uid} view={view} spec={view.spec} closing={closing} />;
+  return (
+    <SettingsForm
+      key={`${view.instance.uid}-${String(key)}`}
+      view={view}
+      spec={view.spec}
+      closing={closing}
+    />
+  );
 }
 
 function isNumeric(param: ParamInfo): boolean {

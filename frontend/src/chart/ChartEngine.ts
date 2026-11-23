@@ -242,7 +242,8 @@ export class ChartEngine {
       typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(this.schedulePaneLayout);
     // Dragging the price axis turns auto-fit off and a double-click on it turns it back on (both
     // inside the library); report it so the "auto" toggle follows.
-    container.addEventListener('pointerup', this.checkAutoScale);
+    // pointerup on the window: the drag may end outside the chart.
+    window.addEventListener('pointerup', this.checkAutoScale);
     container.addEventListener('dblclick', this.checkAutoScale);
   }
 
@@ -577,7 +578,7 @@ export class ChartEngine {
     this.lines.clear();
     this.markers = null;
     this.autoScaleListeners.clear();
-    this.container.removeEventListener('pointerup', this.checkAutoScale);
+    window.removeEventListener('pointerup', this.checkAutoScale);
     this.container.removeEventListener('dblclick', this.checkAutoScale);
     this.chart.unsubscribeCrosshairMove(this.handleCrosshairMove);
     this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.handleRangeChange);

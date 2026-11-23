@@ -29,7 +29,7 @@
 
 /* A just-added indicator: its row glows once while its line is drawn thicker. */
 .row[data-new] {
-  animation: row-new 1.2s ease-out;
+  animation: row-new 700ms ease-out; /* = EMPHASIS_MS: the attribute is removed when it ends */
 }
 
 @keyframes row-new {

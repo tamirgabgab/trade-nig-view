@@ -55,6 +55,9 @@ export function ChartArea({ className }: ChartAreaProps) {
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
   const setAutoScale = useChartStore((s) => s.setAutoScale);
   const learnOpen = useUiStore((s) => s.learnFor !== null);
+  // Loaded on first use, then kept mounted so it can animate out.
+  const [learnLoaded, setLearnLoaded] = useState(false);
+  if (learnOpen && !learnLoaded) setLearnLoaded(true);
   const [scrollToLatest, setScrollToLatest] = useState(0);
   const [offLatest, setOffLatest] = useState(false);
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
@@ -178,7 +181,8 @@ export function ChartArea({ className }: ChartAreaProps) {
         hasVolume={hasVolume}
         status={status}
         flashKey={
-          hoverIndex === null
+          // Not while another data set loads (the old bars are still shown): no false flash.
+          hoverIndex === null && !history.isLoading
             ? `${shownSymbol}|${shownInterval}|${String(adjusted)}|${chartType}`
             : null
         }
@@ -238,7 +242,7 @@ export function ChartArea({ className }: ChartAreaProps) {
       )}
       <IndicatorSettingsPanel views={indicators.views} />
       <Toast />
-      {learnOpen && (
+      {learnLoaded && (
         <Suspense fallback={null}>
           <LearnDrawer views={indicators.views} />
         </Suspense>
