@@ -2,9 +2,8 @@ import { useDrawingStore } from '../store/drawingStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
+import { plural } from './formatNumber.ts';
 import type { IndicatorView } from './useChartIndicators.ts';
-
-const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
 
 /** Remove the chosen objects at once; one toast can put them all back. */
 function removeObjects(drawings: boolean, indicators: boolean): void {

@@ -38,3 +38,8 @@ export function formatSigned(value: number, decimals: number): string {
 export function formatChange(change: number, changePct: number, decimals: number): string {
   return `${formatSigned(change, decimals)} (${changePct > 0 ? '+' : ''}${formatPercent(changePct)})`;
 }
+
+/** A count with its noun, e.g. (1, 'drawing') -> "1 drawing", (3, 'drawing') -> "3 drawings". */
+export function plural(n: number, word: string): string {
+  return `${String(n)} ${word}${n === 1 ? '' : 's'}`;
+}

@@ -15,8 +15,9 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useDrawingStore } from '../store/drawingStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
-import { useUiStore } from '../store/uiStore.ts';
+import { useUiStore, type Modal } from '../store/uiStore.ts';
 import { ActionMenu, type MenuItem } from './ActionMenu.tsx';
+import { plural } from './formatNumber.ts';
 import { TOOL_GROUPS } from './drawingTools.ts';
 import { IconButton } from './IconButton.tsx';
 import groupStyles from './ToolGroupButton.module.css';
@@ -26,7 +27,6 @@ import { usePresence } from './usePresence.ts';
 
 const ICON_SIZE = 20;
 const icon = (Icon: typeof Crosshair) => <Icon size={ICON_SIZE} strokeWidth={1.5} />;
-const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
 
 /** Left vertical toolbar: cursor, drawing tool groups, magnet, drawing mode, lock, hide. */
 export function DrawingToolbar({ className }: { className?: string | undefined }) {
@@ -46,39 +46,32 @@ export function DrawingToolbar({ className }: { className?: string | undefined }
   const drawingCount = s.drawings.length;
   const indicatorCount = useIndicatorStore((st) => st.instances.length);
   const openModal = useUiStore((st) => st.openModal);
-  const trashItems: MenuItem[] = [
-    ...(drawingCount > 0
-      ? [
-          {
-            label: `Remove ${plural(drawingCount, 'drawing')}…`,
-            onSelect: () => {
-              openModal('removeDrawings');
-            },
-          },
-        ]
-      : []),
-    ...(indicatorCount > 0
-      ? [
-          {
-            label: `Remove ${plural(indicatorCount, 'indicator')}…`,
-            onSelect: () => {
-              openModal('removeIndicators');
-            },
-          },
-        ]
-      : []),
-    ...(drawingCount > 0 && indicatorCount > 0
-      ? [
-          {
-            label: 'Remove all…',
-            divider: true,
-            onSelect: () => {
-              openModal('removeEverything');
-            },
-          },
-        ]
-      : []),
+  const removals: { show: boolean; label: string; modal: Modal }[] = [
+    {
+      show: drawingCount > 0,
+      label: `Remove ${plural(drawingCount, 'drawing')}…`,
+      modal: 'removeDrawings',
+    },
+    {
+      show: indicatorCount > 0,
+      label: `Remove ${plural(indicatorCount, 'indicator')}…`,
+      modal: 'removeIndicators',
+    },
+    {
+      show: drawingCount > 0 && indicatorCount > 0,
+      label: 'Remove all…',
+      modal: 'removeEverything',
+    },
   ];
+  const trashItems: MenuItem[] = removals
+    .filter((item) => item.show)
+    .map(({ label, modal }) => ({
+      label,
+      divider: modal === 'removeEverything',
+      onSelect: () => {
+        openModal(modal);
+      },
+    }));
 
   return (
     <nav className={[styles.bar, styles.vertical, className].join(' ')} aria-label="Drawing tools">
