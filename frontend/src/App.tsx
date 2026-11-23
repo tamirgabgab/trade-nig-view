@@ -1,3 +1,5 @@
+import { useLayoutEffect } from 'react';
+
 import styles from './App.module.css';
 import { BottomBar } from './components/BottomBar.tsx';
 import { ChartArea } from './components/ChartArea.tsx';
@@ -10,9 +12,15 @@ import { TopToolbar } from './components/TopToolbar.tsx';
 import { useIndicatorsHotkey } from './components/useIndicatorsHotkey.ts';
 import { useShortcutsHotkey } from './components/useShortcutsHotkey.ts';
 import { useSymbolSearchHotkey } from './components/useSymbolSearchHotkey.ts';
+import { useThemeStore } from './store/themeStore.ts';
 
 /** Application shell: five regions laid out like a desktop charting terminal. */
 export function App() {
+  const theme = useThemeStore((s) => s.theme);
+  // Before paint, so the chart (a child) reads the new tokens when it repaints.
+  useLayoutEffect(() => {
+    document.documentElement.dataset['theme'] = theme;
+  }, [theme]);
   useSymbolSearchHotkey();
   useIndicatorsHotkey();
   useShortcutsHotkey();

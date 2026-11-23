@@ -4,17 +4,20 @@ import {
   ChartSpline,
   Keyboard,
   Maximize2,
+  Moon,
   Plus,
   Redo2,
   Rewind,
   Save,
   Search,
   Settings,
+  Sun,
   Undo2,
 } from 'lucide-react';
 
 import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
+import { useThemeStore } from '../store/themeStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
@@ -34,6 +37,8 @@ export function TopToolbar({ className }: TopToolbarProps) {
   const openSymbolSearch = useUiStore((s) => s.openSymbolSearch);
   const setIndicatorsDialog = useUiStore((s) => s.setIndicatorsDialog);
   const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen);
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggleTheme);
   return (
     <header className={[styles.bar, className].join(' ')} role="toolbar" aria-label="Chart toolbar">
       <button
@@ -86,6 +91,12 @@ export function TopToolbar({ className }: TopToolbarProps) {
       <IconButton label="Redo" shortcut="Ctrl+Y" icon={<Redo2 size={ICON_SIZE} />} comingIn="R6" />
       <span className={styles.spacer} />
       <span className={styles.layoutName}>Unnamed</span>
+      <IconButton
+        label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        tooltipSide="bottom-end"
+        icon={theme === 'dark' ? <Sun size={ICON_SIZE} /> : <Moon size={ICON_SIZE} />}
+        onClick={toggleTheme}
+      />
       <IconButton
         label="Show keyboard shortcuts"
         shortcut="?"

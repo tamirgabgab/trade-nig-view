@@ -4,6 +4,7 @@ import type { Bar } from '../api/bars.ts';
 import { ChartEngine, type IndicatorLine, type PaneLayoutListener } from '../chart/ChartEngine.ts';
 import type { ChartType, ScaleMode } from '../chart/chartTypes.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
+import { readChartTheme } from '../chart/theme.ts';
 import styles from './ChartArea.module.css';
 
 /** A viewport the chart should jump to; `seq` changes on every request (same range re-applies). */
@@ -34,6 +35,8 @@ interface ChartViewProps {
   onAutoScaleChange: (autoScale: boolean) => void;
   /** Bumped to scroll to the latest bar (0 = never asked). */
   scrollToLatest: number;
+  /** UI theme: a change repaints the chart from the CSS tokens. */
+  theme: string;
 }
 
 /** Hosts one ChartEngine in a div. Re-renders only when its props change (memo). */
@@ -52,11 +55,13 @@ export const ChartView = memo(function ChartView({
   onPaneLayout,
   onAutoScaleChange,
   scrollToLatest,
+  theme,
 }: ChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<ChartEngine | null>(null);
   const shownKeyRef = useRef<string | null>(null);
   const focusSeqRef = useRef<number | null>(null);
+  const themeRef = useRef(theme);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -92,10 +97,17 @@ export const ChartView = memo(function ChartView({
     if (bars.length > 0) shownKeyRef.current = viewKey;
   }, [bars, decimals, hasVolume, viewKey]);
 
-  // After the bars: line values are matched to the bars by index.
+  // The engine reads the theme when created; repaint only when it changes.
+  useEffect(() => {
+    if (theme === themeRef.current) return;
+    themeRef.current = theme;
+    engineRef.current?.setTheme(readChartTheme());
+  }, [theme]);
+
+  // After the bars (and a theme repaint): line values are matched to the bars by index.
   useEffect(() => {
     engineRef.current?.setIndicatorLines(lines);
-  }, [lines, bars]);
+  }, [lines, bars, theme]);
 
   useEffect(() => {
     engineRef.current?.setScale({ mode: scaleMode, autoScale });

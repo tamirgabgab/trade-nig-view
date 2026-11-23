@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 
 import { App } from './App.tsx';
 import { useChartStore } from './store/chartStore.ts';
+import { useThemeStore } from './store/themeStore.ts';
 import { useUiStore } from './store/uiStore.ts';
+import { liveEngine } from './test/fakeChartEngine.ts';
 import {
   AAPL_BARS,
   barsBody,
@@ -19,6 +21,7 @@ vi.mock('./chart/ChartEngine.ts', () => import('./test/fakeChartEngine.ts'));
 beforeEach(() => {
   useChartStore.setState(useChartStore.getInitialState());
   useUiStore.setState(useUiStore.getInitialState());
+  useThemeStore.setState({ theme: 'dark' });
   stubApi({
     '/api/health': { body: HEALTH_OK },
     '/api/symbols': { body: SYMBOLS },
@@ -32,6 +35,22 @@ afterEach(() => {
 });
 
 describe('App shell', () => {
+  it('switches between the dark and light theme and repaints the chart', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<App />);
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+
+    await user.click(screen.getByRole('button', { name: 'Switch to light theme' }));
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    expect(liveEngine().themes).toBe(1);
+    expect(JSON.parse(localStorage.getItem('chartlab.theme') ?? '{}')).toMatchObject({
+      state: { theme: 'light' },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+  });
+
   it('renders the five layout regions', () => {
     renderWithQuery(<App />);
 

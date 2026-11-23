@@ -93,6 +93,12 @@ export class FakeChartEngine {
     this.autoScaleListener?.(autoScale);
   }
 
+  themes = 0;
+
+  setTheme(): void {
+    this.themes += 1;
+  }
+
   scrollToLatest(): void {
     this.scrolledToLatest += 1;
   }

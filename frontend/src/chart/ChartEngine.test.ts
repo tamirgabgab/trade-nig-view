@@ -373,6 +373,20 @@ describe('ChartEngine', () => {
     expect(data.map((p) => p.color)).toEqual(['rgba(0, 0, 0, 0)', FALLBACK_THEME.down]);
   });
 
+  it('repaints with another theme, keeping the bars', () => {
+    const { engine: chart, candles } = engine();
+    chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
+    const light = { ...FALLBACK_THEME, background: '#ffffff', up: '#00aa00' };
+    chart.setTheme(light);
+
+    const applied = lwc.state.appliedOptions as { layout?: { background?: { color?: string } } }[];
+    expect(applied.map((o) => o.layout?.background?.color)).toContain('#ffffff');
+    expect(lwc.state.removed).toContain(candles);
+    const main = lwc.state.series.at(-1);
+    expect(main?.options).toMatchObject({ upColor: '#00aa00' });
+    expect(main?.setData).toHaveBeenCalled();
+  });
+
   it('maps scale modes and auto-fit to the right price scale', () => {
     const { engine: chart } = engine();
     chart.setScale({ mode: 'log', autoScale: false });

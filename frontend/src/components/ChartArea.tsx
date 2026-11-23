@@ -9,6 +9,7 @@ import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
+import { useThemeStore } from '../store/themeStore.ts';
 import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
@@ -61,6 +62,7 @@ export function ChartArea({ className }: ChartAreaProps) {
   const [offLatest, setOffLatest] = useState(false);
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
   const firstRun = useIndicatorStore((s) => s.seq === 0);
+  const theme = useThemeStore((s) => s.theme);
   const legendFocus = useUiStore((s) => s.legendFocus);
   const emphasis = useUiStore((s) => s.emphasis);
   const setEmphasis = useUiStore((s) => s.setEmphasis);
@@ -228,6 +230,7 @@ export function ChartArea({ className }: ChartAreaProps) {
         onPaneLayout={setPaneLayout}
         onAutoScaleChange={setAutoScale}
         scrollToLatest={scrollToLatest}
+        theme={theme}
       />
       {offLatest && (
         <IconButton

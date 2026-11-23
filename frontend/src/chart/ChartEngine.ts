@@ -153,6 +153,30 @@ interface LineEntry {
   levelFillKey: string;
 }
 
+/** The chart options that come from the theme (applied again when it changes). */
+function themeOptions(theme: ChartTheme) {
+  return {
+    layout: {
+      background: { type: ColorType.Solid, color: theme.background },
+      textColor: theme.textMuted,
+      fontFamily: theme.fontFamily,
+      // Pane separators: a hairline that lights up on hover, to show the panes can be resized.
+      panes: {
+        enableResize: true,
+        separatorColor: theme.border,
+        separatorHoverColor: withAlpha(theme.line, SEPARATOR_HOVER_ALPHA),
+      },
+    },
+    grid: { vertLines: { color: theme.grid }, horzLines: { color: theme.grid } },
+    crosshair: {
+      vertLine: { color: theme.crosshair, labelBackgroundColor: theme.labelBackground },
+      horzLine: { color: theme.crosshair, labelBackgroundColor: theme.labelBackground },
+    },
+    rightPriceScale: { borderColor: theme.border },
+    timeScale: { borderColor: theme.border },
+  };
+}
+
 function toLineWidth(width: number): LineWidth {
   return Math.min(Math.max(Math.round(width), 1), 4) as LineWidth;
 }
@@ -164,7 +188,7 @@ export class ChartEngine {
   private readonly chart: IChartApi;
   private main: ISeriesApi<SeriesType>;
   private readonly volume: ISeriesApi<'Histogram'>;
-  private readonly theme: ChartTheme;
+  private theme: ChartTheme;
   private readonly listeners = new Set<CrosshairListener>();
   private readonly rangeListeners = new Set<VisibleRangeListener>();
   private readonly hover: RafLatest<number | null>;
@@ -194,33 +218,19 @@ export class ChartEngine {
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
     this.theme = theme;
     this.container = container;
+    const colors = themeOptions(theme);
     this.chart = createChart(container, {
+      ...colors,
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: theme.background },
-        textColor: theme.textMuted,
-        fontFamily: theme.fontFamily,
+        ...colors.layout,
         fontSize: 12,
         attributionLogo: true, // required by the lightweight-charts license; keep it on
-        // Pane separators: a hairline that lights up on hover, to show the panes can be resized.
-        panes: {
-          enableResize: true,
-          separatorColor: theme.border,
-          separatorHoverColor: withAlpha(theme.line, SEPARATOR_HOVER_ALPHA),
-        },
       },
       localization: { locale: 'en-US' },
-      grid: {
-        vertLines: { color: theme.grid },
-        horzLines: { color: theme.grid },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: theme.crosshair, labelBackgroundColor: theme.labelBackground },
-        horzLine: { color: theme.crosshair, labelBackgroundColor: theme.labelBackground },
-      },
-      rightPriceScale: { borderColor: theme.border, scaleMargins: MAIN_MARGINS },
-      timeScale: { borderColor: theme.border, rightOffset: 5, secondsVisible: false },
+      crosshair: { ...colors.crosshair, mode: CrosshairMode.Normal },
+      rightPriceScale: { ...colors.rightPriceScale, scaleMargins: MAIN_MARGINS },
+      timeScale: { ...colors.timeScale, rightOffset: 5, secondsVisible: false },
     });
 
     this.volume = this.chart.addSeries(HistogramSeries, {
@@ -516,11 +526,33 @@ export class ChartEngine {
   /** Switch the main series' type, keeping data, markers and viewport. */
   setChartType(type: ChartType): void {
     if (type === this.chartType) return;
+    this.chartType = type;
+    this.recreateMain();
+  }
+
+  /**
+   * Repaint with another theme (light/dark), keeping data and viewport. Indicator level lines
+   * take the new colours on the next `setIndicatorLines`.
+   */
+  setTheme(theme: ChartTheme): void {
+    this.theme = theme;
+    this.chart.applyOptions(themeOptions(theme));
+    this.recreateMain();
+    if (this.bars.length > 0) {
+      this.setBars(this.bars, {
+        decimals: this.decimals,
+        hasVolume: this.hasVolume,
+        resetView: false,
+      });
+    }
+    for (const entry of this.lines.values()) entry.levels = '';
+  }
+
+  private recreateMain(): void {
     this.markers?.detach();
     this.markers = null;
     this.chart.removeSeries(this.main);
-    this.chartType = type;
-    this.main = this.createMainSeries(type);
+    this.main = this.createMainSeries(this.chartType);
     this.renderMain();
     this.renderMarkers();
   }
