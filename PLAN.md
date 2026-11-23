@@ -54,7 +54,7 @@ study) · Combine with · Differences vs TradingView · Pitfalls · Exercise.
 - [x] Learn index: every page by category, from the palette (`Ctrl+K`) and a sidebar button; search by name
 - [x] Template v2 + a page lint test (backend: sections of the v2 pages in order, every lab block valid with
   registered ids); frontend test that every page's math renders with KaTeX
-- [ ] Refresh the 19 full L1 pages (the MA family, MA Cross, MA Ribbon, Envelope) to template v2
+- [x] Refresh the 19 full L1 pages (the MA family, MA Cross, MA Ribbon, Envelope) to template v2
 
 #### P2b — Oscillators (Opus 5.5 · high)
 - [ ] RSI (Wilder's RMA as an IIR filter, why 70/30, failure swings and divergences), Stochastic (%K/%D, fast vs slow),
