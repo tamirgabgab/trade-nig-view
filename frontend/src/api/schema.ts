@@ -344,7 +344,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text";
+            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text" | "fib_retracement" | "fib_extension" | "parallel_channel" | "price_range" | "date_range" | "date_price_range";
             /** Points */
             points: components["schemas"]["DrawingPoint"][];
             /**
@@ -413,6 +413,11 @@ export interface components {
              * @description rectangle: shade the inside
              */
             fill?: boolean | null;
+            /**
+             * Levels
+             * @description Fib tools: the levels
+             */
+            levels?: components["schemas"]["FibLevel"][] | null;
         };
         /** DrawingStyle */
         DrawingStyle: {
@@ -462,6 +467,21 @@ export interface components {
             revision: number;
             /** Drawings */
             drawings: components["schemas"]["Drawing"][];
+        };
+        /**
+         * FibLevel
+         * @description One Fibonacci level: ratio ``value`` (0 = second anchor for a retracement), shown or not.
+         */
+        FibLevel: {
+            /** Value */
+            value: number;
+            /** Color */
+            color: string;
+            /**
+             * Visible
+             * @default true
+             */
+            visible: boolean;
         };
         /** FrequencyInfo */
         FrequencyInfo: {

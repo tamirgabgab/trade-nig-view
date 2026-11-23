@@ -23,6 +23,12 @@ DrawingType = Literal[
     "vertical_line",
     "rectangle",
     "text",
+    "fib_retracement",
+    "fib_extension",
+    "parallel_channel",
+    "price_range",
+    "date_range",
+    "date_price_range",
 ]
 
 #: Number of anchors each tool needs.
@@ -35,7 +41,15 @@ POINTS: dict[str, int] = {
     "vertical_line": 1,
     "rectangle": 2,
     "text": 1,
+    "fib_retracement": 2,
+    "fib_extension": 3,
+    "parallel_channel": 3,
+    "price_range": 2,
+    "date_range": 2,
+    "date_price_range": 2,
 }
+
+MAX_FIB_LEVELS = 24
 
 HexColor = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
 
@@ -62,6 +76,16 @@ class DrawingStyle(BaseModel):
     line_style: Literal["solid", "dashed", "dotted"] = "solid"
 
 
+class FibLevel(BaseModel):
+    """One Fibonacci level: ratio ``value`` (0 = second anchor for a retracement), shown or not."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    value: float = Field(ge=-10, le=10)
+    color: HexColor
+    visible: bool = True
+
+
 class DrawingProps(BaseModel):
     """Tool-specific properties; each tool uses only its own (checked in ``Drawing``)."""
 
@@ -70,12 +94,17 @@ class DrawingProps(BaseModel):
     text: str | None = Field(default=None, max_length=500, description="text tool")
     font_size: int | None = Field(default=None, ge=8, le=48, description="text tool")
     fill: bool | None = Field(default=None, description="rectangle: shade the inside")
+    levels: list[FibLevel] | None = Field(
+        default=None, max_length=MAX_FIB_LEVELS, description="Fib tools: the levels"
+    )
 
 
 #: Props each tool may set.
 ALLOWED_PROPS: dict[str, frozenset[str]] = {
     "text": frozenset({"text", "font_size"}),
     "rectangle": frozenset({"fill"}),
+    "fib_retracement": frozenset({"levels"}),
+    "fib_extension": frozenset({"levels"}),
 }
 
 

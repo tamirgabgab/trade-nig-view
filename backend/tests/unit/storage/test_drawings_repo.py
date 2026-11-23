@@ -68,6 +68,14 @@ def test_migrate_keeps_v1_and_refuses_a_newer_schema() -> None:
         ("trend_line", 2, {"text": "hi"}, "no props"),
         ("rectangle", 2, {"fill": True}, None),
         ("text", 1, {"text": "Breakout", "font_size": 14}, None),
+        ("fib_retracement", 2, {"levels": [{"value": 0.618, "color": "#089981"}]}, None),
+        ("fib_extension", 2, {}, "needs 3 point"),
+        ("fib_extension", 3, {"levels": [{"value": 1.618, "color": "#2962FF"}]}, None),
+        ("parallel_channel", 3, {}, None),
+        ("price_range", 2, {"levels": []}, "no props"),
+        ("date_price_range", 2, {}, None),
+        ("fib_retracement", 2, {"levels": [{"value": 99, "color": "#089981"}]}, "less than"),
+        ("fib_retracement", 2, {"levels": [{"value": 1, "color": "red"}]}, "pattern"),
     ],
 )
 def test_each_tool_checks_its_points_and_props(
