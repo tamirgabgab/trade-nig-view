@@ -197,6 +197,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/analysis/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Gaps
+         * @description Gaps over the whole available history of ``interval``, never after ``until``.
+         */
+        get: operations["get_gaps_api_analysis_gaps_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -332,6 +352,11 @@ export interface components {
              * @description Extra history bars the indicator asks for before `start` (fewer are loaded when the history is shorter; 1000000000 = the whole history, e.g. OBV)
              */
             lookback: number;
+            /**
+             * Display Shift
+             * @description Bars the chart draws the outputs to the LEFT of their bar (presentation only: values stay causal, e.g. a pivot confirmed R bars later is drawn on its pivot bar)
+             */
+            display_shift: number;
         };
         /** Drawing */
         Drawing: {
@@ -500,6 +525,61 @@ export interface components {
              * @description Bars; null where |H| = 0
              */
             group_delay: (number | null)[];
+        };
+        /** GapInfo */
+        GapInfo: {
+            /**
+             * Time
+             * @description Bar after the gap, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)
+             */
+            time: string | number;
+            /**
+             * Filled Time
+             * @description Bar that filled the gap; null while open
+             */
+            filled_time: string | number | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "up" | "down";
+            /**
+             * Kind
+             * @description full: the ranges do not overlap; partial: only the open
+             * @enum {string}
+             */
+            kind: "full" | "partial";
+            /**
+             * Top
+             * @description Upper edge of the gap zone
+             */
+            top: number;
+            /**
+             * Bottom
+             * @description Lower edge of the gap zone
+             */
+            bottom: number;
+            /**
+             * Size Pct
+             * @description (top - bottom) / previous close * 100
+             */
+            size_pct: number;
+            /**
+             * Fill Price
+             * @description Deepest price reached inside the zone so far (bottom for a filled gap up, top for a filled gap down); null if no bar has entered it
+             */
+            fill_price: number | null;
+        };
+        /** GapsResponse */
+        GapsResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Gaps
+             * @description Sorted by time, oldest first
+             */
+            gaps: components["schemas"]["GapInfo"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1159,6 +1239,45 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_gaps_api_analysis_gaps_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                interval?: components["schemas"]["Interval"];
+                /** @description Minimum gap size in % */
+                min_pct?: number;
+                /** @description Also report open-only (partial) gaps */
+                partial?: boolean;
+                adjusted?: boolean;
+                /** @description Replay cursor: no bar after it */
+                until?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GapsResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

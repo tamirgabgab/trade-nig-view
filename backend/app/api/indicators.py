@@ -170,6 +170,12 @@ class ComputeResponse(BaseModel):
             " history is shorter; 1000000000 = the whole history, e.g. OBV)"
         )
     )
+    display_shift: int = Field(
+        description=(
+            "Bars the chart draws the outputs to the LEFT of their bar (presentation only: values"
+            " stay causal, e.g. a pivot confirmed R bars later is drawn on its pivot bar)"
+        )
+    )
 
 
 def _values(y: FloatArray) -> list[float | None]:
@@ -217,6 +223,7 @@ def compute_indicator(
         outputs={name: _values(y[first - lo :]) for name, y in outputs.items()},
         warmup=spec.warmup(params),
         lookback=lookback,
+        display_shift=spec.display_shift(params),
     )
 
 

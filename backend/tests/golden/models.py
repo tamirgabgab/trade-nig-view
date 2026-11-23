@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 NAN = math.nan
 
@@ -427,3 +429,132 @@ def golden_vwap(
         total += volume[t]
         out.append(weighted / total if total > 0 else NAN)
     return out
+
+
+# --- market structure (R5) ---------------------------------------------------------------------
+
+
+def _period_key(epoch: int, period: str) -> tuple[int, ...]:
+    moment = datetime.fromtimestamp(epoch, UTC)
+    if period == "day":
+        return (moment.year, moment.month, moment.day)
+    if period == "week":
+        iso = moment.isocalendar()
+        return (iso.year, iso.week)
+    return (moment.year, moment.month)
+
+
+def golden_prev_hlc(
+    time: Sequence[int],
+    h: Sequence[float],
+    lo: Sequence[float],
+    c: Sequence[float],
+    period: str,
+) -> tuple[list[float], list[float], list[float]]:
+    """High, low, close of the previous period (UTC day / ISO week / month), bar by bar."""
+    out_h: list[float] = []
+    out_l: list[float] = []
+    out_c: list[float] = []
+    prev = (NAN, NAN, NAN)
+    cur_key: tuple[int, ...] | None = None
+    cur_h = cur_l = cur_c = NAN
+    for t in range(len(time)):
+        key = _period_key(time[t], period)
+        if key != cur_key:
+            if cur_key is not None:
+                prev = (cur_h, cur_l, cur_c)
+            cur_key, cur_h, cur_l = key, h[t], lo[t]
+        else:
+            cur_h, cur_l = max(cur_h, h[t]), min(cur_l, lo[t])
+        cur_c = c[t]
+        out_h.append(prev[0])
+        out_l.append(prev[1])
+        out_c.append(prev[2])
+    return out_h, out_l, out_c
+
+
+def golden_pivots(
+    h: Sequence[float], lo: Sequence[float], left: int, right: int
+) -> tuple[list[float], list[float]]:
+    """Strict fractal pivots, stored at their confirmation bar t = p + right."""
+    highs: list[float] = []
+    lows: list[float] = []
+    for t in range(len(h)):
+        p = t - right
+        if p < left:
+            highs.append(NAN)
+            lows.append(NAN)
+            continue
+        others = [j for j in range(p - left, p + right + 1) if j != p]
+        highs.append(h[p] if all(h[p] > h[j] for j in others) else NAN)
+        lows.append(lo[p] if all(lo[p] < lo[j] for j in others) else NAN)
+    return highs, lows
+
+
+@dataclass(slots=True)
+class GoldenGap:
+    index: int
+    direction: str
+    kind: str
+    top: float
+    bottom: float
+    size_pct: float
+    filled_index: int | None = None
+    fill_price: float | None = None
+
+    def see(self, k: int, high: float, low: float) -> None:
+        """Bar k (after the gap bar) arrives: fill it or deepen the penetration."""
+        if self.filled_index is not None:
+            return
+        if self.direction == "up":
+            if low <= self.bottom:
+                self.filled_index, self.fill_price = k, self.bottom
+            elif low < self.top and (self.fill_price is None or low < self.fill_price):
+                self.fill_price = low
+        elif high >= self.top:
+            self.filled_index, self.fill_price = k, self.top
+        elif high > self.bottom and (self.fill_price is None or high > self.fill_price):
+            self.fill_price = high
+
+
+def _golden_zone(
+    o: Sequence[float],
+    h: Sequence[float],
+    lo: Sequence[float],
+    c: Sequence[float],
+    k: int,
+    partial: bool,
+) -> tuple[str, str, float, float] | None:
+    """(direction, kind, top, bottom) of the gap at bar k >= 1, or None."""
+    if lo[k] > h[k - 1]:
+        return ("up", "full", lo[k], h[k - 1])
+    if h[k] < lo[k - 1]:
+        return ("down", "full", lo[k - 1], h[k])
+    if partial and o[k] > c[k - 1]:
+        return ("up", "partial", o[k], c[k - 1])
+    if partial and o[k] < c[k - 1]:
+        return ("down", "partial", c[k - 1], o[k])
+    return None
+
+
+def golden_gaps(
+    o: Sequence[float],
+    h: Sequence[float],
+    lo: Sequence[float],
+    c: Sequence[float],
+    min_pct: float,
+    partial: bool,
+) -> list[GoldenGap]:
+    """Streaming gap tracker: at each bar, first update the open gaps, then detect a new one."""
+    gaps: list[GoldenGap] = []
+    for k in range(len(c)):
+        for gap in gaps:
+            gap.see(k, h[k], lo[k])
+        zone = None if k == 0 else _golden_zone(o, h, lo, c, k, partial)
+        if zone is None:
+            continue
+        direction, kind, top, bottom = zone
+        size_pct = (top - bottom) / c[k - 1] * 100.0
+        if size_pct >= min_pct:
+            gaps.append(GoldenGap(k, direction, kind, top, bottom, size_pct))
+    return gaps

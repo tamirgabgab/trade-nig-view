@@ -113,6 +113,9 @@ class IndicatorSpec:
     lookback: CountFn = length_lookback
     #: Plot offset in bars (``core.shift``) the outputs are moved right by; 0 if none.
     shift: CountFn = no_shift
+    #: Bars the chart draws the outputs to the LEFT of their bar (presentation only: values stay
+    #: causal, e.g. a pivot confirmed R bars later is drawn on its pivot bar).
+    display_shift: CountFn = no_shift
 
     def total_lookback(self, params: Params) -> int:
         """History needed before the first requested bar: ``lookback`` plus the plot shift.

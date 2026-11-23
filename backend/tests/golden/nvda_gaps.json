@@ -1,0 +1,493 @@
+{
+ "status": "generated from the fixture by the scalar model; pending the user's hand check against TradingView (the fixture is the synthetic e2e series, so the hand check needs the real NVDA fixture from make-fixtures.ps1)",
+ "source": "frontend/e2e/data/daily/NVDA.csv",
+ "symbol": "NVDA",
+ "interval": "1D",
+ "adjusted": false,
+ "min_pct": 1.0,
+ "partial": false,
+ "first_bar": "2015-05-25",
+ "last_bar": "2026-11-20",
+ "gaps": [
+  {
+   "time": "2015-05-28",
+   "filled_time": "2015-05-29",
+   "direction": "up",
+   "kind": "full",
+   "top": 4.1,
+   "bottom": 4.02,
+   "size_pct": 1.9900497512437831,
+   "fill_price": 4.02
+  },
+  {
+   "time": "2015-08-18",
+   "filled_time": "2015-08-20",
+   "direction": "up",
+   "kind": "full",
+   "top": 3.2,
+   "bottom": 3.16,
+   "size_pct": 1.269841269841271,
+   "fill_price": 3.16
+  },
+  {
+   "time": "2015-09-22",
+   "filled_time": null,
+   "direction": "up",
+   "kind": "full",
+   "top": 3.26,
+   "bottom": 3.22,
+   "size_pct": 1.2422360248447077,
+   "fill_price": null
+  },
+  {
+   "time": "2016-03-15",
+   "filled_time": "2016-03-18",
+   "direction": "up",
+   "kind": "full",
+   "top": 4.76,
+   "bottom": 4.64,
+   "size_pct": 2.6030368763557505,
+   "fill_price": 4.64
+  },
+  {
+   "time": "2016-03-25",
+   "filled_time": null,
+   "direction": "up",
+   "kind": "full",
+   "top": 5.36,
+   "bottom": 5.28,
+   "size_pct": 1.5267175572519098,
+   "fill_price": 5.34
+  },
+  {
+   "time": "2016-05-05",
+   "filled_time": null,
+   "direction": "up",
+   "kind": "full",
+   "top": 5.61,
+   "bottom": 5.53,
+   "size_pct": 1.449275362318842,
+   "fill_price": null
+  },
+  {
+   "time": "2016-07-26",
+   "filled_time": "2016-07-28",
+   "direction": "down",
+   "kind": "full",
+   "top": 8.75,
+   "bottom": 8.61,
+   "size_pct": 1.5981735159817416,
+   "fill_price": 8.75
+  },
+  {
+   "time": "2016-12-28",
+   "filled_time": "2017-01-26",
+   "direction": "down",
+   "kind": "full",
+   "top": 11.17,
+   "bottom": 11.02,
+   "size_pct": 1.3404825737265447,
+   "fill_price": 11.17
+  },
+  {
+   "time": "2017-06-05",
+   "filled_time": null,
+   "direction": "up",
+   "kind": "full",
+   "top": 22.24,
+   "bottom": 21.93,
+   "size_pct": 1.4168190127970692,
+   "fill_price": null
+  },
+  {
+   "time": "2017-08-28",
+   "filled_time": "2017-08-29",
+   "direction": "up",
+   "kind": "full",
+   "top": 32.41,
+   "bottom": 32.03,
+   "size_pct": 1.1867582760774371,
+   "fill_price": 32.03
+  },
+  {
+   "time": "2017-09-18",
+   "filled_time": "2017-09-19",
+   "direction": "up",
+   "kind": "full",
+   "top": 30.88,
+   "bottom": 30.32,
+   "size_pct": 1.8475750577367163,
+   "fill_price": 30.32
+  },
+  {
+   "time": "2017-11-16",
+   "filled_time": "2017-11-17",
+   "direction": "up",
+   "kind": "full",
+   "top": 37.72,
+   "bottom": 37.26,
+   "size_pct": 1.2362268207471132,
+   "fill_price": 37.26
+  },
+  {
+   "time": "2017-12-01",
+   "filled_time": "2017-12-07",
+   "direction": "up",
+   "kind": "full",
+   "top": 41.19,
+   "bottom": 40.68,
+   "size_pct": 1.2620638455827717,
+   "fill_price": 40.68
+  },
+  {
+   "time": "2018-03-30",
+   "filled_time": "2018-04-06",
+   "direction": "up",
+   "kind": "full",
+   "top": 63.18,
+   "bottom": 62.22,
+   "size_pct": 1.5441531285185794,
+   "fill_price": 62.22
+  },
+  {
+   "time": "2018-06-12",
+   "filled_time": "2018-06-14",
+   "direction": "up",
+   "kind": "full",
+   "top": 67.19,
+   "bottom": 65.92,
+   "size_pct": 1.929797903054241,
+   "fill_price": 65.92
+  },
+  {
+   "time": "2018-08-13",
+   "filled_time": "2018-08-16",
+   "direction": "down",
+   "kind": "full",
+   "top": 56.06,
+   "bottom": 55.24,
+   "size_pct": 1.452870304748406,
+   "fill_price": 56.06
+  },
+  {
+   "time": "2019-02-22",
+   "filled_time": "2019-04-01",
+   "direction": "up",
+   "kind": "full",
+   "top": 44.81,
+   "bottom": 44.26,
+   "size_pct": 1.2666973744818153,
+   "fill_price": 44.26
+  },
+  {
+   "time": "2019-04-05",
+   "filled_time": "2019-04-10",
+   "direction": "down",
+   "kind": "full",
+   "top": 43.17,
+   "bottom": 41.95,
+   "size_pct": 2.8123559243891165,
+   "fill_price": 43.17
+  },
+  {
+   "time": "2019-04-26",
+   "filled_time": "2019-05-01",
+   "direction": "down",
+   "kind": "full",
+   "top": 36.51,
+   "bottom": 35.58,
+   "size_pct": 2.532679738562091,
+   "fill_price": 36.51
+  },
+  {
+   "time": "2019-07-17",
+   "filled_time": "2019-07-18",
+   "direction": "up",
+   "kind": "full",
+   "top": 36.63,
+   "bottom": 36.23,
+   "size_pct": 1.1052777010223975,
+   "fill_price": 36.23
+  },
+  {
+   "time": "2019-07-23",
+   "filled_time": "2019-08-02",
+   "direction": "down",
+   "kind": "full",
+   "top": 34.77,
+   "bottom": 34.36,
+   "size_pct": 1.161802210257874,
+   "fill_price": 34.77
+  },
+  {
+   "time": "2019-09-10",
+   "filled_time": "2019-10-03",
+   "direction": "up",
+   "kind": "full",
+   "top": 49.25,
+   "bottom": 48.73,
+   "size_pct": 1.0819808572617626,
+   "fill_price": 48.73
+  },
+  {
+   "time": "2019-09-11",
+   "filled_time": "2019-09-12",
+   "direction": "up",
+   "kind": "full",
+   "top": 52.19,
+   "bottom": 51.53,
+   "size_pct": 1.2827988338192353,
+   "fill_price": 51.53
+  },
+  {
+   "time": "2019-10-09",
+   "filled_time": "2019-10-10",
+   "direction": "down",
+   "kind": "full",
+   "top": 46.74,
+   "bottom": 45.82,
+   "size_pct": 1.9649722340880003,
+   "fill_price": 46.74
+  },
+  {
+   "time": "2019-10-14",
+   "filled_time": "2019-10-16",
+   "direction": "down",
+   "kind": "full",
+   "top": 45.47,
+   "bottom": 44.62,
+   "size_pct": 1.8669009444322455,
+   "fill_price": 45.47
+  },
+  {
+   "time": "2020-01-16",
+   "filled_time": "2020-01-20",
+   "direction": "down",
+   "kind": "full",
+   "top": 48.88,
+   "bottom": 47.93,
+   "size_pct": 1.9379844961240364,
+   "fill_price": 48.88
+  },
+  {
+   "time": "2020-01-20",
+   "filled_time": "2020-01-21",
+   "direction": "up",
+   "kind": "full",
+   "top": 49.26,
+   "bottom": 48.67,
+   "size_pct": 1.2132428542052154,
+   "fill_price": 48.67
+  },
+  {
+   "time": "2020-03-03",
+   "filled_time": "2020-03-04",
+   "direction": "down",
+   "kind": "full",
+   "top": 56.47,
+   "bottom": 55.42,
+   "size_pct": 1.857749469214432,
+   "fill_price": 56.47
+  },
+  {
+   "time": "2020-04-23",
+   "filled_time": "2020-04-28",
+   "direction": "up",
+   "kind": "full",
+   "top": 64.8,
+   "bottom": 63.22,
+   "size_pct": 2.5031685678073483,
+   "fill_price": 63.22
+  },
+  {
+   "time": "2020-08-04",
+   "filled_time": "2020-09-23",
+   "direction": "down",
+   "kind": "full",
+   "top": 88.88,
+   "bottom": 87.41,
+   "size_pct": 1.652985494208927,
+   "fill_price": 88.88
+  },
+  {
+   "time": "2020-10-16",
+   "filled_time": "2020-10-27",
+   "direction": "up",
+   "kind": "full",
+   "top": 85.38,
+   "bottom": 84.46,
+   "size_pct": 1.0917289664174699,
+   "fill_price": 84.46
+  },
+  {
+   "time": "2020-12-29",
+   "filled_time": null,
+   "direction": "up",
+   "kind": "full",
+   "top": 72.59,
+   "bottom": 71.66,
+   "size_pct": 1.3010632344711903,
+   "fill_price": null
+  },
+  {
+   "time": "2022-07-18",
+   "filled_time": "2022-09-12",
+   "direction": "up",
+   "kind": "full",
+   "top": 468.41,
+   "bottom": 462.17,
+   "size_pct": 1.3527282186910639,
+   "fill_price": 462.17
+  },
+  {
+   "time": "2022-09-12",
+   "filled_time": "2022-09-14",
+   "direction": "down",
+   "kind": "full",
+   "top": 488.54,
+   "bottom": 483.6,
+   "size_pct": 1.009584925711716,
+   "fill_price": 488.54
+  },
+  {
+   "time": "2022-12-12",
+   "filled_time": "2026-10-15",
+   "direction": "up",
+   "kind": "full",
+   "top": 679.66,
+   "bottom": 668.87,
+   "size_pct": 1.6140130437384017,
+   "fill_price": 668.87
+  },
+  {
+   "time": "2023-01-03",
+   "filled_time": "2023-01-04",
+   "direction": "down",
+   "kind": "full",
+   "top": 826.17,
+   "bottom": 817.24,
+   "size_pct": 1.078932424758654,
+   "fill_price": 826.17
+  },
+  {
+   "time": "2023-03-13",
+   "filled_time": "2023-04-17",
+   "direction": "down",
+   "kind": "full",
+   "top": 845.03,
+   "bottom": 831.72,
+   "size_pct": 1.5689649075241883,
+   "fill_price": 845.03
+  },
+  {
+   "time": "2023-07-31",
+   "filled_time": "2023-08-01",
+   "direction": "up",
+   "kind": "full",
+   "top": 1001.81,
+   "bottom": 986.39,
+   "size_pct": 1.5637676456271252,
+   "fill_price": 986.39
+  },
+  {
+   "time": "2024-03-06",
+   "filled_time": "2024-03-28",
+   "direction": "up",
+   "kind": "full",
+   "top": 1478.7,
+   "bottom": 1461.8,
+   "size_pct": 1.1590982352900894,
+   "fill_price": 1461.8
+  },
+  {
+   "time": "2024-04-11",
+   "filled_time": "2024-04-15",
+   "direction": "up",
+   "kind": "full",
+   "top": 1552.76,
+   "bottom": 1532.83,
+   "size_pct": 1.301007252478968,
+   "fill_price": 1532.83
+  },
+  {
+   "time": "2024-09-02",
+   "filled_time": "2024-09-10",
+   "direction": "down",
+   "kind": "full",
+   "top": 1546.66,
+   "bottom": 1524.04,
+   "size_pct": 1.4565544952285359,
+   "fill_price": 1546.66
+  },
+  {
+   "time": "2024-10-04",
+   "filled_time": "2024-10-14",
+   "direction": "down",
+   "kind": "full",
+   "top": 1742.02,
+   "bottom": 1715.46,
+   "size_pct": 1.51990294595646,
+   "fill_price": 1742.02
+  },
+  {
+   "time": "2025-02-26",
+   "filled_time": "2025-02-27",
+   "direction": "up",
+   "kind": "full",
+   "top": 1046.77,
+   "bottom": 1036.43,
+   "size_pct": 1.009312223024805,
+   "fill_price": 1036.43
+  },
+  {
+   "time": "2025-05-22",
+   "filled_time": "2025-05-26",
+   "direction": "up",
+   "kind": "full",
+   "top": 1091.99,
+   "bottom": 1076.34,
+   "size_pct": 1.46116930890894,
+   "fill_price": 1076.34
+  },
+  {
+   "time": "2025-07-10",
+   "filled_time": "2025-07-11",
+   "direction": "up",
+   "kind": "full",
+   "top": 1040.54,
+   "bottom": 1024.53,
+   "size_pct": 1.5752757470506615,
+   "fill_price": 1024.53
+  },
+  {
+   "time": "2025-08-06",
+   "filled_time": "2025-08-18",
+   "direction": "down",
+   "kind": "full",
+   "top": 1138.55,
+   "bottom": 1120.06,
+   "size_pct": 1.6209913558816833,
+   "fill_price": 1138.55
+  },
+  {
+   "time": "2026-01-28",
+   "filled_time": "2026-01-29",
+   "direction": "up",
+   "kind": "full",
+   "top": 915.86,
+   "bottom": 905.72,
+   "size_pct": 1.1198851399856409,
+   "fill_price": 905.72
+  },
+  {
+   "time": "2026-11-11",
+   "filled_time": "2026-11-12",
+   "direction": "up",
+   "kind": "full",
+   "top": 705.56,
+   "bottom": 698.37,
+   "size_pct": 1.0295844431079333,
+   "fill_price": 698.37
+  }
+ ]
+}

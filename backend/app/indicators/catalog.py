@@ -18,6 +18,8 @@ from app.indicators import (
     mcginley,
     moving_average,
     obv,
+    pivots,
+    prev_hlc,
     rsi,
     sma,
     smma,
@@ -63,6 +65,8 @@ CATALOG: dict[str, IndicatorSpec] = {
         obv.SPEC,
         vwap.SPEC,
         vol_sma.SPEC,
+        prev_hlc.SPEC,
+        pivots.SPEC,
     )
 }
 

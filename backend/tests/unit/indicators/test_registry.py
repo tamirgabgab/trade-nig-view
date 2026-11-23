@@ -39,6 +39,8 @@ def clean_frame(n: int = 600) -> BarFrame:
 
 #: Outputs that are all ``NaN`` while their switch is off (the defaults): RSI smoothing and bands.
 SWITCHED_OFF = {("rsi", "rsi_ma"), ("rsi", "bb_upper"), ("rsi", "bb_lower")}
+#: Warm-up depends on the data (first bar of the second period), declared 0: only "no earlier".
+DATA_DEPENDENT_WARMUP = {"prev_hlc"}
 
 
 @pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
@@ -79,7 +81,8 @@ def with_length(spec: IndicatorSpec, length: int) -> dict[str, ParamValue]:
 def test_warmup_matches_the_nan_prefix(spec: IndicatorSpec, length: int) -> None:
     """``warmup`` is where the output that starts last starts; every line output starts no later
     and has no gaps after its start. Markers are sparse by design and only must not start
-    earlier; optional outputs that are switched off are all ``NaN``."""
+    earlier; optional outputs that are switched off are all ``NaN``. A data-dependent warm-up only
+    must not be later than the first value."""
     params = with_length(spec, length)
     outputs = spec.run(clean_frame(), params)
     warmup = spec.warmup(params)
@@ -88,16 +91,20 @@ def test_warmup_matches_the_nan_prefix(spec: IndicatorSpec, length: int) -> None
         values = outputs[o.name]
         valid = np.flatnonzero(~np.isnan(values))
         if o.plot == "markers":
-            assert valid.size == 0 or valid[0] > warmup
+            assert valid.size == 0 or valid[0] >= warmup
             continue
         if (spec.id, o.name) in SWITCHED_OFF:
             assert valid.size == 0, o.name
             continue
         start = int(valid[0])
-        assert start <= warmup, o.name
         assert not np.isnan(values[start:]).any(), o.name
+        if spec.id in DATA_DEPENDENT_WARMUP:
+            assert start >= warmup, o.name
+            continue
+        assert start <= warmup, o.name
         starts.append(start)
-    assert max(starts) == warmup
+    if starts:  # an all-markers spec (pivots) has no line to start
+        assert max(starts) == warmup
 
 
 @pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)

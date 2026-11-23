@@ -551,6 +551,115 @@
           }
         }
       }
+    },
+    "/api/analysis/gaps": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Get Gaps",
+        "description": "Gaps over the whole available history of ``interval``, never after ``until``.",
+        "operationId": "get_gaps_api_analysis_gaps_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Interval",
+              "default": "1D"
+            }
+          },
+          {
+            "name": "min_pct",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 50,
+              "minimum": 0,
+              "description": "Minimum gap size in %",
+              "default": 1.0,
+              "title": "Min Pct"
+            },
+            "description": "Minimum gap size in %"
+          },
+          {
+            "name": "partial",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Also report open-only (partial) gaps",
+              "default": false,
+              "title": "Partial"
+            },
+            "description": "Also report open-only (partial) gaps"
+          },
+          {
+            "name": "adjusted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjusted"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Replay cursor: no bar after it",
+              "title": "Until"
+            },
+            "description": "Replay cursor: no bar after it"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GapsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -838,6 +947,11 @@
             "type": "integer",
             "title": "Lookback",
             "description": "Extra history bars the indicator asks for before `start` (fewer are loaded when the history is shorter; 1000000000 = the whole history, e.g. OBV)"
+          },
+          "display_shift": {
+            "type": "integer",
+            "title": "Display Shift",
+            "description": "Bars the chart draws the outputs to the LEFT of their bar (presentation only: values stay causal, e.g. a pivot confirmed R bars later is drawn on its pivot bar)"
           }
         },
         "type": "object",
@@ -848,7 +962,8 @@
           "time",
           "outputs",
           "warmup",
-          "lookback"
+          "lookback",
+          "display_shift"
         ],
         "title": "ComputeResponse"
       },
@@ -1176,6 +1291,119 @@
           "group_delay"
         ],
         "title": "FrequencyInfo"
+      },
+      "GapInfo": {
+        "properties": {
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Time",
+            "description": "Bar after the gap, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)"
+          },
+          "filled_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filled Time",
+            "description": "Bar that filled the gap; null while open"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Direction"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "full",
+              "partial"
+            ],
+            "title": "Kind",
+            "description": "full: the ranges do not overlap; partial: only the open"
+          },
+          "top": {
+            "type": "number",
+            "title": "Top",
+            "description": "Upper edge of the gap zone"
+          },
+          "bottom": {
+            "type": "number",
+            "title": "Bottom",
+            "description": "Lower edge of the gap zone"
+          },
+          "size_pct": {
+            "type": "number",
+            "title": "Size Pct",
+            "description": "(top - bottom) / previous close * 100"
+          },
+          "fill_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fill Price",
+            "description": "Deepest price reached inside the zone so far (bottom for a filled gap up, top for a filled gap down); null if no bar has entered it"
+          }
+        },
+        "type": "object",
+        "required": [
+          "time",
+          "filled_time",
+          "direction",
+          "kind",
+          "top",
+          "bottom",
+          "size_pct",
+          "fill_price"
+        ],
+        "title": "GapInfo"
+      },
+      "GapsResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/GapInfo"
+            },
+            "type": "array",
+            "title": "Gaps",
+            "description": "Sorted by time, oldest first"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "gaps"
+        ],
+        "title": "GapsResponse"
       },
       "HTTPValidationError": {
         "properties": {

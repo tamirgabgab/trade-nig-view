@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import bars, drawings, health, indicators, learn, quotes, symbols
+from app.api import analysis, bars, drawings, health, indicators, learn, quotes, symbols
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
 from app.data.cache.bar_cache import BarCache
@@ -86,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         indicators.router,
         learn.router,
         drawings.router,
+        analysis.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

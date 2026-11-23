@@ -70,7 +70,7 @@ def test_lists_the_registry(client: TestClient) -> None:
 
 def test_lists_ma_types_with_display_names(client: TestClient) -> None:
     by_id = {item["id"]: item for item in client.get("/api/indicators").json()}
-    assert len(by_id) == 27
+    assert len(by_id) == 29
     ma_type = by_id["ma"]["params"][0]
     assert ma_type["name"] == "ma_type"
     assert ma_type["type"] == "enum"
@@ -82,6 +82,9 @@ def test_lists_ma_types_with_display_names(client: TestClient) -> None:
     assert crosses["plot"] == "markers"
     assert crosses["style"] == {"up": "#089981", "down": "#F23645"}
     assert by_id["envelope"]["category"] == "bands"
+    assert {by_id[i]["category"] for i in ("prev_hlc", "pivots")} == {"structure"}
+    assert by_id["prev_hlc"]["params"][0]["options"] == ["day", "week", "month"]
+    assert by_id["pivots"]["outputs"][0]["style"] == {"shape": "circle", "position": "above"}
     assert [o["name"] for o in by_id["envelope"]["outputs"]] == ["upper", "basis", "lower"]
 
 
@@ -359,6 +362,39 @@ def test_vwap_is_empty_on_daily_bars(client: TestClient) -> None:
     body = client.post("/api/indicators/compute", json={"symbol": "AAA", "id": "vwap"}).json()
     assert body["time"]
     assert set(body["outputs"]["vwap"]) == {None}
+
+
+def test_pivots_are_drawn_right_bars_to_the_left(long_client: TestClient) -> None:
+    body = long_client.post(
+        "/api/indicators/compute",
+        json={"symbol": "NVDA", "id": "pivots", "params": {"left": 3, "right": 4}},
+    ).json()
+    assert body["display_shift"] == 4
+    assert body["warmup"] == 7
+    bars = long_client.get("/api/bars", params={"symbol": "NVDA", "limit": 50_000}).json()["bars"]
+    highs = body["outputs"]["high"]
+    confirmed = [t for t, v in enumerate(highs) if v is not None]
+    assert confirmed
+    assert all(highs[t] == bars[t - 4]["high"] for t in confirmed)
+
+
+def test_other_indicators_have_no_display_shift(client: TestClient) -> None:
+    body = client.post("/api/indicators/compute", json={"symbol": "AAA", "id": "sma"}).json()
+    assert body["display_shift"] == 0
+
+
+def test_prev_hlc_on_hourly_bars(client: TestClient) -> None:
+    bars = client.get("/api/bars", params={"symbol": "AAA", "interval": "1h"}).json()["bars"]
+    body = client.post(
+        "/api/indicators/compute", json={"symbol": "AAA", "interval": "1h", "id": "prev_hlc"}
+    ).json()
+    assert body["lookback"] == 10**9
+    days = [bar["time"] // 86_400 for bar in bars]
+    first_day = [b for b, d in zip(bars, days, strict=True) if d == days[0]]
+    second = next(i for i, d in enumerate(days) if d != days[0])
+    assert body["outputs"]["high"][:second] == [None] * second
+    assert body["outputs"]["high"][second] == max(b["high"] for b in first_day)
+    assert body["outputs"]["close"][second] == first_day[-1]["close"]
 
 
 def test_obv_loads_the_whole_history(client: TestClient) -> None:
