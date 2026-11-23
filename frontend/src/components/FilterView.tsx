@@ -62,28 +62,22 @@ function compareParams(spec: IndicatorInfo, length: number): Params | null {
   return ok ? { length } : null;
 }
 
-function series(items: readonly Measured[], pick: (out: OutputResponse) => PlotSeries['y'] | null) {
+type Curve = Pick<PlotSeries, 'x' | 'y'>;
+
+function series(items: readonly Measured[], pick: (out: OutputResponse) => Curve | null) {
   return items.flatMap(({ label, out }, i): PlotSeries[] => {
-    const y = pick(out);
-    if (y === null) return [];
-    return [{ key: label, label, color: SERIES[i] ?? SERIES[0], x: y.map((_, k) => k), y }];
+    const curve = pick(out);
+    return curve === null ? [] : [{ key: label, label, color: SERIES[i] ?? SERIES[0], ...curve }];
   });
 }
 
-function frequency(items: readonly Measured[], pick: 'magnitudeDb' | 'groupDelay') {
-  return items.flatMap(({ label, out }, i): PlotSeries[] =>
-    out.frequency === null
-      ? []
-      : [
-          {
-            key: label,
-            label,
-            color: SERIES[i] ?? SERIES[0],
-            x: out.frequency.period,
-            y: out.frequency[pick],
-          },
-        ],
-  );
+/** Bars 0, 1, 2, ... against `y` (null when there is no curve). */
+function byBar(y: readonly number[] | null): Curve | null {
+  return y === null ? null : { x: y.map((_, k) => k), y };
+}
+
+function byPeriod(out: OutputResponse, pick: 'magnitudeDb' | 'groupDelay'): Curve | null {
+  return out.frequency === null ? null : { x: out.frequency.period, y: out.frequency[pick] };
 }
 
 /**
@@ -281,7 +275,7 @@ export function FilterView({ spec, params }: FilterViewProps) {
         <ResponsePlot
           title="Impulse response h(k)"
           xLabel="bars after the impulse"
-          series={series(linear, (o) => o.impulse)}
+          series={series(linear, (o) => byBar(o.impulse))}
           stems={taps <= MAX_STEMS}
           formatY={(v) => v.toFixed(4)}
         />
@@ -289,7 +283,7 @@ export function FilterView({ spec, params }: FilterViewProps) {
       <ResponsePlot
         title="Step response"
         xLabel="bars after the step"
-        series={series(items, (o) => o.step)}
+        series={series(items, (o) => byBar(o.step))}
         reference={selected.dcGain ?? 1}
         formatY={(v) => v.toFixed(3)}
       />
@@ -298,7 +292,7 @@ export function FilterView({ spec, params }: FilterViewProps) {
           <ResponsePlot
             title="Magnitude |H| (dB) by cycle length"
             xLabel="period (bars)"
-            series={frequency(linear, 'magnitudeDb')}
+            series={series(linear, (o) => byPeriod(o, 'magnitudeDb'))}
             periodAxis
             yDomain={DB_RANGE}
             reference={0}
@@ -307,7 +301,7 @@ export function FilterView({ spec, params }: FilterViewProps) {
           <ResponsePlot
             title="Group delay by cycle length"
             xLabel="period (bars)"
-            series={frequency(linear, 'groupDelay')}
+            series={series(linear, (o) => byPeriod(o, 'groupDelay'))}
             periodAxis
             formatY={(v) => `${v.toFixed(2)} bars`}
           />

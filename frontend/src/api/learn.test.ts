@@ -36,7 +36,6 @@ describe('parseFilterResponse', () => {
     expect(out).toEqual({
       name: 'ma',
       label: 'MA',
-      linear: true,
       reason: null,
       step: [0.5, 1],
       rampLag: 0.5,
@@ -51,7 +50,6 @@ describe('parseFilterResponse', () => {
 
   it('keeps the linear-only fields null for an adaptive average', () => {
     const [out] = parseFilterResponse({ id: 'kama', outputs: [ADAPTIVE] }).outputs;
-    expect(out?.linear).toBe(false);
     expect(out?.reason).toBe('adaptive');
     expect(out?.impulse).toBeNull();
     expect(out?.frequency).toBeNull();

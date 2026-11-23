@@ -19,7 +19,7 @@ export interface FrequencyResponse {
 export interface OutputResponse {
   name: string;
   label: string;
-  linear: boolean;
+  /** Why it is not linear (no impulse / frequency response); null when it is. */
   reason: string | null;
   step: number[];
   rampLag: number;
@@ -72,7 +72,6 @@ function parseOutput(item: unknown): OutputResponse {
   return {
     name,
     label,
-    linear: field('linear') === true,
     reason: typeof reason === 'string' ? reason : null,
     step: numbers(field('step'), 'step'),
     rampLag: numOrNull(field('ramp_lag')) ?? Number.NaN,
