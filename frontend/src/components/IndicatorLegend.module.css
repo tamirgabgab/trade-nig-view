@@ -18,6 +18,31 @@
 .label {
   color: var(--color-text);
   white-space: nowrap;
+  /* Hovering the name highlights the indicator's lines (the rest of the legend lets the pointer
+     through to the chart). */
+  pointer-events: auto;
+}
+
+.row {
+  border-radius: var(--radius-sm);
+}
+
+/* A just-added indicator: its row glows once while its line is drawn thicker. */
+.row[data-new] {
+  animation: row-new 1.2s ease-out;
+}
+
+@keyframes row-new {
+  0%,
+  40% {
+    background: var(--color-accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row[data-new] {
+    animation: none;
+  }
 }
 
 .hidden .label {

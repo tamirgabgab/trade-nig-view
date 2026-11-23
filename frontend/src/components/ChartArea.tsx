@@ -14,6 +14,8 @@ import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { legendValues } from './legendValues.ts';
+import { presentLines } from './presentLines.ts';
+import { Toast } from './Toast.tsx';
 import { useChartIndicators } from './useChartIndicators.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
 
@@ -49,6 +51,8 @@ export function ChartArea({ className }: ChartAreaProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
   const learnOpen = useUiStore((s) => s.learnFor !== null);
+  const legendFocus = useUiStore((s) => s.legendFocus);
+  const emphasis = useUiStore((s) => s.emphasis);
 
   const data = history.data;
   const bars = history.bars;
@@ -112,6 +116,10 @@ export function ChartArea({ className }: ChartAreaProps) {
     [history.isLoading, data, transform],
   );
   const indicators = useChartIndicators(series, bars);
+  const shownLines = useMemo(
+    () => presentLines(indicators.lines, legendFocus, emphasis),
+    [indicators.lines, legendFocus, emphasis],
+  );
   // Oscillators get their own pane and a legend at its top; the rest are listed over the price.
   const priceViews = indicators.views.filter((view) => view.spec?.overlay !== false);
   const paneViews = indicators.views.filter((view) => view.spec?.overlay === false);
@@ -186,12 +194,13 @@ export function ChartArea({ className }: ChartAreaProps) {
         scaleMode={scaleMode}
         autoScale={autoScale}
         focus={focus}
-        lines={indicators.lines}
+        lines={shownLines}
         onHover={setHoverIndex}
         onVisibleRangeChange={onVisibleRangeChange}
         onPaneLayout={setPaneLayout}
       />
       <IndicatorSettingsPanel views={indicators.views} />
+      <Toast />
       {learnOpen && (
         <Suspense fallback={null}>
           <LearnDrawer views={indicators.views} />

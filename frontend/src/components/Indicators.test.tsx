@@ -145,7 +145,7 @@ async function addEma(user: ReturnType<typeof userEvent.setup>) {
   await user.keyboard('ema');
   await within(dialog).findByRole('option', { name: /Exponential Moving Average/ });
   await user.keyboard('{Enter}');
-  await screen.findByText('EMA 9 close');
+  await screen.findByText('EMA 9');
 }
 
 describe('indicators on the chart', () => {
@@ -183,7 +183,7 @@ describe('indicators on the chart', () => {
       ]);
     });
     // Legend: latest value, then the value under the crosshair, a dash during warm-up.
-    const row = within(legend()).getByText('EMA 9 close').closest('li');
+    const row = within(legend()).getByText('EMA 9').closest('li');
     if (row === null) throw new Error('no legend row');
     expect(within(row).getByText('351.56')).toBeInTheDocument();
     act(() => {
@@ -197,14 +197,14 @@ describe('indicators on the chart', () => {
     renderWithQuery(<App />);
     await addEma(user);
 
-    await user.click(screen.getByRole('button', { name: 'Edit settings: EMA 9 close' }));
-    const panel = screen.getByRole('dialog', { name: 'EMA 9 close' });
+    await user.click(screen.getByRole('button', { name: 'Edit settings: EMA 9' }));
+    const panel = screen.getByRole('dialog', { name: 'EMA 9' });
     const length = within(panel).getByRole('spinbutton', { name: 'Length' });
     expect(length).toHaveFocus();
 
     await user.clear(length);
     await user.type(length, '20');
-    await within(legend()).findByText('EMA 20 close');
+    await within(legend()).findByText('EMA 20');
     expect(computes.at(-1)?.params['length']).toBe(20);
     // Debounced: typing "2" then "0" did not send a compute for length 2.
     expect(computes.some((c) => c.params['length'] === 2)).toBe(false);
@@ -220,7 +220,7 @@ describe('indicators on the chart', () => {
     await user.clear(length);
     await user.type(length, '50');
     expect(within(panel).queryByText(/needs a whole number/)).not.toBeInTheDocument();
-    await within(legend()).findByText('EMA 50 close');
+    await within(legend()).findByText('EMA 50');
 
     await user.selectOptions(within(panel).getByRole('combobox', { name: 'Source' }), 'hl2');
     await within(legend()).findByText('EMA 50 hl2');
@@ -230,21 +230,30 @@ describe('indicators on the chart', () => {
     });
 
     await user.click(within(panel).getByRole('button', { name: 'Reset to defaults' }));
-    await within(legend()).findByText('EMA 9 close');
+    await within(legend()).findByText('EMA 9');
     expect(length).toHaveValue(9);
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: /EMA/ })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Hide EMA 9 close' }));
+    await user.click(screen.getByRole('button', { name: 'Hide EMA 9' }));
     await waitFor(() => {
       expect(liveEngine().lines[0]?.visible).toBe(false);
     });
-    await user.click(screen.getByRole('button', { name: 'Show EMA 9 close' }));
-    await user.click(screen.getByRole('button', { name: 'Remove EMA 9 close' }));
-    expect(screen.queryByText('EMA 9 close')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show EMA 9' }));
+    await user.click(screen.getByRole('button', { name: 'Remove EMA 9' }));
+    expect(screen.queryByRole('list', { name: 'Indicators on the chart' })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(liveEngine().lines).toEqual([]);
     });
+
+    // The removal can be undone from the toast, settings included.
+    const toast = screen.getByText('Removed EMA 9').closest('div');
+    if (toast === null) throw new Error('no toast');
+    await user.click(within(toast).getByRole('button', { name: 'Undo' }));
+    expect(await screen.findByRole('list', { name: 'Indicators on the chart' })).toHaveTextContent(
+      'EMA 9',
+    );
+    expect(toast).not.toBeInTheDocument();
   });
 
   it('opens from the toolbar, filters, and says when nothing matches', async () => {
@@ -272,7 +281,7 @@ describe('indicators on the chart', () => {
   it('restores saved indicators on the next visit', async () => {
     useIndicatorStore.getState().add('wma', { length: 30, source: 'close', offset: 0 });
     renderWithQuery(<App />);
-    await screen.findByText('WMA 30 close');
+    await screen.findByText('WMA 30');
     await waitFor(() => {
       expect(computes.map((c) => c.id)).toEqual(['wma']);
     });
@@ -288,7 +297,7 @@ describe('indicators on the chart', () => {
     });
     const user = userEvent.setup();
     renderWithQuery(<App />);
-    const label = await within(legend()).findByText('MA Cross HMA 9 SMA 21');
+    const label = await within(legend()).findByText('MA Cross HMA 9 21');
     const row = label.closest('li');
     if (row === null) throw new Error('no legend row');
     await waitFor(() => {
@@ -304,13 +313,13 @@ describe('indicators on the chart', () => {
     });
     expect(liveEngine().lines[2]?.values.slice(0, 3)).toEqual([null, 1, -1]);
 
-    await user.click(screen.getByRole('button', { name: 'Edit settings: MA Cross HMA 9 SMA 21' }));
-    const panel = screen.getByRole('dialog', { name: 'MA Cross HMA 9 SMA 21' });
+    await user.click(screen.getByRole('button', { name: 'Edit settings: MA Cross HMA 9 21' }));
+    const panel = screen.getByRole('dialog', { name: 'MA Cross HMA 9 21' });
     const fastType = within(panel).getByRole('combobox', { name: 'Fast MA type' });
     expect(within(fastType).getByRole('option', { name: 'HMA (Hull)' })).toBeInTheDocument();
     expect(within(panel).queryByRole('combobox', { name: 'Crosses line width' })).toBeNull();
     await user.selectOptions(fastType, 'ema');
-    await within(legend()).findByText('MA Cross EMA 9 SMA 21');
+    await within(legend()).findByText('MA Cross EMA 9 21');
     expect(computes.at(-1)?.params['fast_type']).toBe('ema');
   });
 

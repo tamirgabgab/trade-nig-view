@@ -210,7 +210,9 @@ export function isActive(
 
 /** One input as the legend shows it, or null to leave it out. */
 function shownValue(param: ParamInfo, value: ParamValue): string | null {
-  if (param.name === 'offset' && value === param.default) return null;
+  const numeric = param.type === 'int' || param.type === 'float';
+  // Numbers always show (except a zero offset); a source, type or switch only when changed.
+  if (value === param.default && (!numeric || param.name === 'offset')) return null;
   if (value === 'none') return null;
   if (param.type === 'bool') return value === true ? param.label : null;
   if (param.type === 'enum' && typeof value === 'string') {
@@ -220,7 +222,10 @@ function shownValue(param: ParamInfo, value: ParamValue): string | null {
   return String(value);
 }
 
-/** Short legend label: "EMA 20 close", "MA Cross SMA 9 SMA 21 close" (non-default offset too). */
+/**
+ * Short legend label: "EMA 20", "EMA 20 hl2", "MACD 12 26 9", "MA Cross HMA 9 21": every number
+ * (a non-zero offset too), and other inputs only when they differ from the default.
+ */
 export function instanceLabel(spec: IndicatorInfo, params: Params): string {
   const shown = spec.params
     .filter((p) => isActive(spec, p, params))

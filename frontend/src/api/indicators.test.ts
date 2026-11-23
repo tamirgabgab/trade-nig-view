@@ -101,7 +101,7 @@ describe('indicator registry', () => {
       'MA Cross HMA 9',
     );
     expect(instanceLabel(cross, { fast_type: 'sma', fast_length: 5, floor: true })).toBe(
-      'MA Cross SMA 5 Floor',
+      'MA Cross 5 Floor',
     );
   });
 
@@ -163,7 +163,7 @@ describe('indicator registry', () => {
   });
 
   it('labels an instance like the TradingView legend, offset only when set', () => {
-    expect(instanceLabel(SMA, { source: 'close', length: 20, offset: 0 })).toBe('SMA 20 close');
+    expect(instanceLabel(SMA, { source: 'close', length: 20, offset: 0 })).toBe('SMA 20');
     expect(instanceLabel(SMA, { source: 'hl2', length: 5, offset: 3 })).toBe('SMA 5 hl2 3');
   });
 });

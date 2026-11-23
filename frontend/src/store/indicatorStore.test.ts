@@ -26,6 +26,21 @@ describe('indicator store', () => {
     ]);
   });
 
+  it('restores a removed instance at its place, once', () => {
+    const [a, b, c] = ['sma', 'ema', 'wma'].map((id) => useIndicatorStore.getState().add(id, {}));
+    useIndicatorStore.getState().setParams(b ?? '', { length: 30 });
+    const removed = useIndicatorStore.getState().remove(b ?? '');
+    expect(removed?.index).toBe(1);
+    expect(useIndicatorStore.getState().remove('missing')).toBeNull();
+
+    if (removed === null) throw new Error('nothing removed');
+    useIndicatorStore.getState().restore(removed);
+    useIndicatorStore.getState().restore(removed);
+    const instances = useIndicatorStore.getState().instances;
+    expect(instances.map((i) => i.uid)).toEqual([a, b, c]);
+    expect(instances[1]?.params).toEqual({ length: 30 });
+  });
+
   it('never reuses a uid after a removal', () => {
     const a = useIndicatorStore.getState().add('sma', {});
     useIndicatorStore.getState().remove(a);

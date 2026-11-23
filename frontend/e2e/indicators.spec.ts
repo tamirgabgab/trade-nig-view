@@ -33,18 +33,18 @@ test('add EMA 20, change it to 50, hide and remove it', async ({ page }) => {
   await page.mouse.move(0, 0);
 
   const row = indicators(page).getByRole('listitem').first();
-  await expect(row).toContainText('EMA 9 close');
+  await expect(row).toContainText('EMA 9');
   await expect(row.locator('[data-output="ma"]')).toHaveText(price(ema(closes, 9)));
 
-  await row.getByRole('button', { name: 'Edit settings: EMA 9 close' }).click();
+  await row.getByRole('button', { name: 'Edit settings: EMA 9' }).click();
   const panel = page.getByRole('dialog', { name: /EMA/ });
   const length = panel.getByRole('spinbutton', { name: 'Length' });
   await length.fill('20');
-  await expect(row).toContainText('EMA 20 close');
+  await expect(row).toContainText('EMA 20');
   await expect(row.locator('[data-output="ma"]')).toHaveText(price(ema(closes, 20)));
 
   await length.fill('50');
-  await expect(row).toContainText('EMA 50 close');
+  await expect(row).toContainText('EMA 50');
   await expect(row.locator('[data-output="ma"]')).toHaveText(price(ema(closes, 50)));
   await panel.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(panel).toBeHidden();
@@ -52,13 +52,13 @@ test('add EMA 20, change it to 50, hide and remove it', async ({ page }) => {
   // Survives a reload.
   await page.reload();
   await page.mouse.move(0, 0);
-  await expect(indicators(page)).toContainText('EMA 50 close');
+  await expect(indicators(page)).toContainText('EMA 50');
 
-  await page.getByRole('button', { name: 'Hide EMA 50 close' }).click();
-  await expect(page.getByRole('button', { name: 'Show EMA 50 close' })).toBeVisible();
+  await page.getByRole('button', { name: 'Hide EMA 50' }).click();
+  await expect(page.getByRole('button', { name: 'Show EMA 50' })).toBeVisible();
   await expect(indicators(page).locator('[data-output="ma"]')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Remove EMA 50 close' }).click();
+  await page.getByRole('button', { name: 'Remove EMA 50' }).click();
   await expect(indicators(page)).toBeHidden();
 });
 
@@ -82,7 +82,7 @@ test('composites: Envelope with an EMA basis and MA Cross', async ({ page }) => 
 
   await addIndicator(page, 'envelope', 'Envelope');
   const envelope = indicators(page).getByRole('listitem').first();
-  await expect(envelope).toContainText('Env 20 10 close SMA');
+  await expect(envelope).toContainText('Env 20 10');
   const basis = sma(closes, 20);
   await expect(envelope.locator('[data-output="basis"]')).toHaveText(price(basis));
   await expect(envelope.locator('[data-output="upper"]')).toHaveText(price(basis * 1.1));
@@ -91,13 +91,13 @@ test('composites: Envelope with an EMA basis and MA Cross', async ({ page }) => 
   await envelope.getByRole('button', { name: /^Edit settings: Env/ }).click();
   const panel = page.getByRole('dialog', { name: /^Env/ });
   await panel.getByRole('combobox', { name: 'Basis MA type' }).selectOption({ label: 'EMA' });
-  await expect(envelope).toContainText('Env 20 10 close EMA');
+  await expect(envelope).toContainText('Env 20 10 EMA');
   await expect(envelope.locator('[data-output="basis"]')).toHaveText(price(ema(closes, 20)));
   await panel.getByRole('button', { name: 'Close', exact: true }).click();
 
   await addIndicator(page, 'cross', 'Moving Average Cross');
   const cross = indicators(page).getByRole('listitem').nth(1);
-  await expect(cross).toContainText('MA Cross SMA 9 SMA 21 close');
+  await expect(cross).toContainText('MA Cross 9 21');
   await expect(cross.locator('[data-output]')).toHaveCount(2);
   await expect(cross.locator('[data-output="fast"]')).toHaveText(price(sma(closes, 9)));
   await expect(cross.locator('[data-output="slow"]')).toHaveText(price(sma(closes, 21)));
@@ -149,20 +149,20 @@ test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI
   const closes = dailyRows('AAPL.csv').map((row) => adjusted(row).close);
 
   await addIndicator(page, 'rsi', 'Relative Strength Index');
-  const pane = page.getByRole('list', { name: 'RSI 14 close pane' });
+  const pane = page.getByRole('list', { name: 'RSI 14 pane' });
   await expect(pane).toBeVisible();
   await expect(pane.locator('[data-output="rsi"]')).toHaveText(price(rsi(closes, 14)));
   // The price legend does not list an indicator that has its own pane.
   await expect(indicators(page)).toBeHidden();
 
   // Smoothing inputs stay greyed out until a smoothing is picked.
-  await pane.getByRole('button', { name: 'Edit settings: RSI 14 close' }).click();
+  await pane.getByRole('button', { name: 'Edit settings: RSI 14' }).click();
   const rsiPanel = page.getByRole('dialog', { name: /^RSI/ });
   await expect(rsiPanel.getByRole('spinbutton', { name: 'Smoothing length' })).toBeDisabled();
   await rsiPanel.getByRole('combobox', { name: 'Smoothing' }).selectOption({ label: 'SMA' });
   await expect(rsiPanel.getByRole('spinbutton', { name: 'Smoothing length' })).toBeEnabled();
   // The pane's legend is named after the instance label.
-  await expect(page.getByRole('list', { name: 'RSI 14 close SMA 14 pane' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'RSI 14 SMA 14 pane' })).toBeVisible();
   await rsiPanel.getByRole('combobox', { name: 'Smoothing' }).selectOption({ label: 'None' });
   await rsiPanel.getByRole('button', { name: 'Close', exact: true }).click();
 
@@ -185,7 +185,7 @@ test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI
   await check(30);
   await bbPanel.getByRole('button', { name: 'Close', exact: true }).click();
 
-  await pane.getByRole('button', { name: 'Remove RSI 14 close' }).click();
+  await pane.getByRole('button', { name: 'Remove RSI 14' }).click();
   await expect(pane).toBeHidden();
   await expect(bands).toContainText('BB 30 SMA close 2');
 });

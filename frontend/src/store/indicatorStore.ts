@@ -30,7 +30,14 @@ export interface IndicatorState {
   setStyle: (uid: string, output: string, style: OutputStyle) => void;
   resetStyles: (uid: string) => void;
   toggleVisible: (uid: string) => void;
-  remove: (uid: string) => void;
+  /** Remove an instance; returns it and its position so `restore` can undo the removal. */
+  remove: (uid: string) => Removed | null;
+  restore: (removed: Removed) => void;
+}
+
+export interface Removed {
+  instance: IndicatorInstance;
+  index: number;
 }
 
 type Persisted = Pick<IndicatorState, 'instances' | 'seq'>;
@@ -136,7 +143,24 @@ export const useIndicatorStore = create<IndicatorState>()(
         }));
       },
       remove: (uid) => {
-        set((s) => ({ instances: s.instances.filter((i) => i.uid !== uid) }));
+        const instances = get().instances;
+        const index = instances.findIndex((i) => i.uid === uid);
+        const instance = instances[index];
+        if (instance === undefined) return null;
+        set({ instances: instances.filter((i) => i.uid !== uid) });
+        return { instance, index };
+      },
+      restore: ({ instance, index }) => {
+        set((s) => {
+          if (
+            s.instances.length >= MAX_INSTANCES ||
+            s.instances.some((i) => i.uid === instance.uid)
+          )
+            return s;
+          const instances = [...s.instances];
+          instances.splice(index, 0, instance);
+          return { instances };
+        });
       },
     }),
     {

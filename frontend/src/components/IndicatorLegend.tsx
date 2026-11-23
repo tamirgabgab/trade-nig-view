@@ -29,6 +29,10 @@ export function IndicatorLegend({
 }: IndicatorLegendProps) {
   const toggleVisible = useIndicatorStore((s) => s.toggleVisible);
   const remove = useIndicatorStore((s) => s.remove);
+  const restore = useIndicatorStore((s) => s.restore);
+  const showToast = useUiStore((s) => s.showToast);
+  const setLegendFocus = useUiStore((s) => s.setLegendFocus);
+  const emphasis = useUiStore((s) => s.emphasis);
   const openSettings = useUiStore((s) => s.openSettings);
   const settingsFor = useUiStore((s) => s.settingsFor);
   const openLearn = useUiStore((s) => s.openLearn);
@@ -45,6 +49,19 @@ export function IndicatorLegend({
             key={uid}
             className={[styles.row, visible ? '' : styles.hidden].join(' ')}
             data-indicator={uid}
+            data-new={emphasis === uid || undefined}
+            onMouseEnter={() => {
+              setLegendFocus(uid);
+            }}
+            onMouseLeave={() => {
+              setLegendFocus(null);
+            }}
+            onFocus={() => {
+              setLegendFocus(uid);
+            }}
+            onBlur={() => {
+              setLegendFocus(null);
+            }}
           >
             <span className={styles.label}>{view.label}</span>
             {visible &&
@@ -112,7 +129,13 @@ export function IndicatorLegend({
                 onClick={() => {
                   if (settingsFor === uid) openSettings(null);
                   if (learnFor === uid) openLearn(null);
-                  remove(uid);
+                  setLegendFocus(null);
+                  const removed = remove(uid);
+                  if (removed !== null) {
+                    showToast(`Removed ${view.label}`, () => {
+                      restore(removed);
+                    });
+                  }
                 }}
               />
             </span>
