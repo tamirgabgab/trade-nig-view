@@ -95,8 +95,22 @@ ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.
 - Small focused commits, Conventional Commits in English (`feat(indicators): add RSI`).
 - Ask before adding a heavy dependency or refactoring outside the round's scope. Verify library APIs/versions against
   current docs before relying on them; record changes in an ADR.
-- End: run the full suite, update `HANDOFF.md` (Hebrew), README features, ROADMAP checkboxes; commit; give the demo
-  checklist in Hebrew; STOP and wait for approval.
+- **Post-implementation cleanup pipeline (HARD RULE, user's standing instruction 2026-11-23).** After every round or
+  task that **implements** something (new features, indicators, UI, fixes that add code), once the round's work is
+  committed and before the demo checklist, run these skills in this order, unless the user says otherwise:
+  1. `ponytail` (default level `full`) over the round's changes: cut over-engineering, dead code, needless
+     abstraction and bloat; keep the smallest code that fully solves the round.
+  2. `code-review` at `high` on the round's commits, as an explicit range (e.g. `<commit before the round>..HEAD`;
+     the working-tree diff is empty once committed). Explain every finding to the user in Hebrew and fix them all,
+     unless the user decides otherwise.
+  3. `simplify` **only if needed** (duplication or complexity worth removing). Say in Hebrew whether it ran and why.
+
+  Constraints for all three: never change indicator ids, param names, defaults or numeric results, and never touch
+  the golden models to make a test pass. After the pipeline: run the full suite (+ E2E), commit, push to `main`.
+  Do **not** run this pipeline for reviews, analyses, plans or proposals (features, UX, look, anything else) where
+  nothing is implemented.
+- End: run the full suite, update `HANDOFF.md` (Hebrew), README features, ROADMAP checkboxes; commit; run the
+  cleanup pipeline above; give the demo checklist in Hebrew; STOP and wait for approval.
 - Git: **all work goes to `main`** (user's standing instruction, 2026-11-22). Commit on `main` and push to
   `origin main` directly; if the session also assigns a `claude/...` branch, keep it in sync with `main`, but `main` is
   the source of truth (the desktop shortcut's `update.ps1` pulls `main`). No PRs unless asked. Never force-push.

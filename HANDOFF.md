@@ -239,6 +239,7 @@
 | 2026-11-23 | R3a: תשובת compute בעמודות (`time[]`, `outputs{}`); offset ≥ 0 בלבד; פאנל הגדרות צד חי (לא חלון OK/Cancel); סדר פרמטרים Length/Source/Offset כמו ב-TV; `ta-lib` כתלות dev בלבד | יעילות, no-lookahead, D6 | ARCHITECTURE §4, §5.1 |
 | 2026-11-23 | R3b: markers מצוירים על ה-series הראשי, ולא על series נסתר, כדי שהחיצים יישבו מתחת לנר ומעליו; McGinley לפי Pine (חלוקה באפס = `na`, ואז seed חדש מה-EMA); KAMA ו-T3 לפי TA-Lib; ב-"Moving Average" הכללי, לסוגים עם inputs נוספים (ALMA, KAMA, T3, LSMA offset) יש defaults, ואת ה-inputs האלה חושפים האינדיקטורים הייעודיים | נאמנות ל-TV ול-TA-Lib, ממשק פשוט | PLAN §5 |
 | 2026-11-23 | אחרי code review: offset נכלל ב-lookback (`total_lookback`); ב-KAMA ה-lookback לפי `max(fast, slow)` ו-`fast > slow` נדחה; ב-McGinley רמה ≤ 0 מוחלפת ב-EMA (סטייה מכוונת מ-Pine, שמתנודד ל-±1e200) | נכונות חוזה ה-lookback וגרף שמיש | ARCHITECTURE §3.2 |
+| 2026-11-23 | **כלל קבוע:** אחרי כל סבב מימוש, מריצים לפי הסדר `ponytail` ← `code-review` ברמת high על ה-commits של הסבב ← `simplify` (רק אם צריך), אלא אם המשתמש אומר אחרת. לא מריצים אותם בסבבי סקירה או הצעות | קוד נקי לאורך כל הפרויקט | CLAUDE.md §9 |
 | 2026-11-22 | `PLAN.md` כתוכנית העבודה ל-sessions הבאים: R3 מתפצל ל-R3a/R3b/R3c, ו-L1 (דפי לימוד לממוצעים) ו-U1 (UX) נכנסים לפני R4 | בקשת המשתמש להתמקד בממוצעים נעים ובמתמטיקה שלהם וב-UX | [PLAN.md](PLAN.md) |
 
 ## שאלות פתוחות אליך

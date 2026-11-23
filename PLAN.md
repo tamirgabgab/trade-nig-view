@@ -256,8 +256,7 @@ Two results worth a learn-page paragraph each:
 | `frontend-design` | Indicators dialog, legend rows, settings panel, learn drawer (S2, S4) |
 | `dataviz` | impulse / step / frequency-response plots and the comparison table (S4) |
 | `run` | launching the app for screenshots and Playwright checks |
-| `code-review` (high) | before the final commit of S2, S3, S7 and S10 |
-| `simplify` | after S3 (many similar indicator files) |
+| `ponytail` → `code-review` (high, on the round's commits) → `simplify` (only if needed) | after **every** implementation round, in this order (CLAUDE.md §9, user's standing instruction 2026-11-23); not for review/planning sessions |
 
 ---
 
