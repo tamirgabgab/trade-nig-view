@@ -1,3 +1,4 @@
+import { ChevronsRight } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useBarHistory } from '../api/bars.ts';
@@ -10,6 +11,7 @@ import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
+import { IconButton } from './IconButton.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
@@ -50,7 +52,10 @@ export function ChartArea({ className }: ChartAreaProps) {
   const history = useBarHistory({ symbol, interval, adjusted, transform });
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
+  const setAutoScale = useChartStore((s) => s.setAutoScale);
   const learnOpen = useUiStore((s) => s.learnFor !== null);
+  const [scrollToLatest, setScrollToLatest] = useState(0);
+  const [offLatest, setOffLatest] = useState(false);
   const legendFocus = useUiStore((s) => s.legendFocus);
   const emphasis = useUiStore((s) => s.emphasis);
 
@@ -82,6 +87,7 @@ export function ChartArea({ className }: ChartAreaProps) {
     if (range !== null && range.from < LOAD_OLDER_THRESHOLD && h.hasOlder && !h.isLoadingOlder) {
       h.loadOlder();
     }
+    setOffLatest(range !== null && range.to < h.bars.length - 1);
   }, []);
 
   // Range buttons: once bars of the range's interval are in, load older pages until the range's
@@ -198,7 +204,20 @@ export function ChartArea({ className }: ChartAreaProps) {
         onHover={setHoverIndex}
         onVisibleRangeChange={onVisibleRangeChange}
         onPaneLayout={setPaneLayout}
+        onAutoScaleChange={setAutoScale}
+        scrollToLatest={scrollToLatest}
       />
+      {offLatest && (
+        <IconButton
+          className={styles.latest}
+          label="Scroll to the latest bar"
+          icon={<ChevronsRight size={18} />}
+          tooltipSide="left"
+          onClick={() => {
+            setScrollToLatest((n) => n + 1);
+          }}
+        />
+      )}
       <IndicatorSettingsPanel views={indicators.views} />
       <Toast />
       {learnOpen && (

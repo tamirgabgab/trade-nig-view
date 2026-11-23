@@ -57,7 +57,10 @@ import { DISPLAY_TIME_ZONE } from './timeZone.ts';
 const MAIN_MARGINS = { top: 0.08, bottom: 0.22 };
 /** Volume uses the bottom 20% of the price pane, on its own hidden scale. */
 const VOLUME_MARGINS = { top: 0.8, bottom: 0 };
-const VOLUME_ALPHA = 0.5;
+const VOLUME_ALPHA = 0.35;
+/** Opacity of the shaded band between two levels (RSI 30–70). */
+const LEVEL_FILL_ALPHA = 0.08;
+const SEPARATOR_HOVER_ALPHA = 0.35;
 const AREA_TOP_ALPHA = 0.28;
 const AREA_BOTTOM_ALPHA = 0.02;
 const VOLUME_SCALE_ID = 'volume';
@@ -127,6 +130,8 @@ export interface IndicatorLine {
   style: Readonly<Record<string, string>>;
   /** Dashed horizontal levels of the indicator's pane (on its first line). */
   levels: readonly number[];
+  /** Band between two levels shaded in the line's colour (on its first line), or null. */
+  levelFill: readonly [number, number] | null;
 }
 
 /** Top of each own-pane indicator's pane (by group), in px from the top of the chart. */
@@ -144,6 +149,8 @@ interface LineEntry {
   levels: string;
   priceLines: IPriceLine[];
   fill: BandFill | null;
+  levelFill: BandFill | null;
+  levelFillKey: string;
 }
 
 function toLineWidth(width: number): LineWidth {
@@ -174,6 +181,15 @@ export class ChartEngine {
   private readonly paneObserver: ResizeObserver | null;
   private layoutFrame = 0;
   private hasVolume = true;
+  private autoScale = true;
+  private readonly autoScaleListeners = new Set<(autoScale: boolean) => void>();
+
+  private readonly checkAutoScale = (): void => {
+    const autoScale = this.chart.priceScale('right').options().autoScale;
+    if (autoScale === this.autoScale) return;
+    this.autoScale = autoScale;
+    for (const listener of this.autoScaleListeners) listener(autoScale);
+  };
 
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
     this.theme = theme;
@@ -186,6 +202,12 @@ export class ChartEngine {
         fontFamily: theme.fontFamily,
         fontSize: 12,
         attributionLogo: true, // required by the lightweight-charts license; keep it on
+        // Pane separators: a hairline that lights up on hover, to show the panes can be resized.
+        panes: {
+          enableResize: true,
+          separatorColor: theme.border,
+          separatorHoverColor: withAlpha(theme.line, SEPARATOR_HOVER_ALPHA),
+        },
       },
       localization: { locale: 'en-US' },
       grid: {
@@ -218,6 +240,10 @@ export class ChartEngine {
     // Pane resizes (window, separator drags, panes added or removed) move the pane legends.
     this.paneObserver =
       typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(this.schedulePaneLayout);
+    // Dragging the price axis turns auto-fit off and a double-click on it turns it back on (both
+    // inside the library); report it so the "auto" toggle follows.
+    container.addEventListener('pointerup', this.checkAutoScale);
+    container.addEventListener('dblclick', this.checkAutoScale);
   }
 
   /** Replace the displayed bars (oldest first, as the API returns them). */
@@ -328,6 +354,7 @@ export class ChartEngine {
         entry.style = line.style;
       }
       this.setLevels(entry, line.levels);
+      this.setLevelFill(entry, line);
     }
 
     for (const line of lines) {
@@ -388,6 +415,8 @@ export class ChartEngine {
       levels: '',
       priceLines: [],
       fill: null,
+      levelFill: null,
+      levelFillKey: '',
     };
     this.lines.set(line.key, entry);
     return entry;
@@ -407,6 +436,33 @@ export class ChartEngine {
       }),
     );
     entry.levels = key;
+  }
+
+  /** Shade the band between two levels (RSI 30–70) behind the line, across the loaded bars. */
+  private setLevelFill(entry: LineEntry, line: IndicatorLine): void {
+    const band = line.levelFill;
+    const key =
+      band === null
+        ? ''
+        : `${band.join(',')}|${String(this.times.length)}|${line.color}|${String(line.visible)}`;
+    if (key === entry.levelFillKey) return;
+    entry.levelFillKey = key;
+    if (band === null) {
+      if (entry.levelFill !== null) entry.series.detachPrimitive(entry.levelFill);
+      entry.levelFill = null;
+      return;
+    }
+    if (entry.levelFill === null) {
+      entry.levelFill = new BandFill();
+      entry.series.attachPrimitive(entry.levelFill);
+    }
+    const [low, high] = band;
+    entry.levelFill.set(
+      this.times.map(() => high),
+      this.times.map(() => low),
+      withAlpha(line.color, LEVEL_FILL_ALPHA),
+      line.visible,
+    );
   }
 
   /** Indicator panes left without series (their indicator was removed) are closed. */
@@ -471,6 +527,20 @@ export class ChartEngine {
   /** Price-axis mode (normal, logarithmic, percent) and auto-fit. */
   setScale({ mode, autoScale }: ScaleOptions): void {
     this.chart.priceScale('right').applyOptions({ mode: SCALE_MODES[mode], autoScale });
+    this.autoScale = this.chart.priceScale('right').options().autoScale;
+  }
+
+  /** Call `listener` when the user changes auto-fit on the price axis itself. */
+  onAutoScaleChange(listener: (autoScale: boolean) => void): () => void {
+    this.autoScaleListeners.add(listener);
+    return () => {
+      this.autoScaleListeners.delete(listener);
+    };
+  }
+
+  /** Scroll to the latest bar, keeping the zoom. */
+  scrollToLatest(): void {
+    this.chart.timeScale().scrollToRealTime();
   }
 
   /** Show the bars between two logical indices (fractions allowed). */
@@ -506,6 +576,9 @@ export class ChartEngine {
     this.rangeListeners.clear();
     this.lines.clear();
     this.markers = null;
+    this.autoScaleListeners.clear();
+    this.container.removeEventListener('pointerup', this.checkAutoScale);
+    this.container.removeEventListener('dblclick', this.checkAutoScale);
     this.chart.unsubscribeCrosshairMove(this.handleCrosshairMove);
     this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.handleRangeChange);
     this.chart.remove();

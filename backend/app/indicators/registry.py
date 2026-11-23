@@ -108,6 +108,8 @@ class IndicatorSpec:
     learn_slug: str
     description: str = ""
     levels: tuple[float, ...] = ()
+    #: Shade the band between these two levels (low, high) in the indicator's pane, e.g. RSI 30-70.
+    level_fill: tuple[float, float] | None = None
     lookback: CountFn = length_lookback
     #: Plot offset in bars (``core.shift``) the outputs are moved right by; 0 if none.
     shift: CountFn = no_shift

@@ -65,6 +65,7 @@ def test_options_and_lookback() -> None:
     assert ma_type.option_labels[:3] == ("None", "SMA", "EMA")
     assert len(ma_type.options) == 16
     assert RSI.levels == (70.0, 50.0, 30.0)
+    assert RSI.level_fill == (30.0, 70.0)
     assert RSI.lookback(RSI.defaults()) == 350
     assert RSI.lookback({**RSI.defaults(), "ma_type": "ema"}) == 350 + 350
     with pytest.raises(InvalidParamsError, match="at least 2"):

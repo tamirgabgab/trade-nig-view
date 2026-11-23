@@ -137,6 +137,7 @@ export function useChartIndicators(
           visible: view.instance.visible,
           style: output.style,
           levels: i === 0 ? (view.spec?.levels ?? NO_LEVELS) : NO_LEVELS,
+          levelFill: i === 0 ? (view.spec?.levelFill ?? null) : null,
         })),
       ),
     [views],

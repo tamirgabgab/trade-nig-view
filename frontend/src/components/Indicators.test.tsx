@@ -179,6 +179,7 @@ describe('indicators on the chart', () => {
           visible: true,
           style: {},
           levels: [],
+          levelFill: null,
         },
       ]);
     });

@@ -51,6 +51,8 @@ export interface IndicatorInfo {
   params: ParamInfo[];
   outputs: OutputInfo[];
   levels: number[];
+  /** Shade the band between these two levels in the indicator's pane (RSI 30–70), or null. */
+  levelFill: readonly [number, number] | null;
   learnSlug: string;
   description: string;
 }
@@ -143,6 +145,7 @@ export function parseIndicator(item: unknown): IndicatorInfo {
   const params = field('params');
   const outputs = field('outputs');
   const levels = field('levels');
+  const fill = field('level_fill');
   if (!Array.isArray(params) || !Array.isArray(outputs)) throw new Error('Unexpected indicator');
   const category = str(field('category'), 'category');
   if (!(category in CATEGORY_LABELS)) throw new Error('Unexpected indicator category');
@@ -158,6 +161,10 @@ export function parseIndicator(item: unknown): IndicatorInfo {
     levels: Array.isArray(levels)
       ? (levels as unknown[]).filter((v): v is number => typeof v === 'number')
       : [],
+    levelFill:
+      Array.isArray(fill) && typeof fill[0] === 'number' && typeof fill[1] === 'number'
+        ? [fill[0], fill[1]]
+        : null,
     learnSlug: str(field('learn_slug'), 'learn_slug'),
     description: typeof field('description') === 'string' ? (field('description') as string) : '',
   };

@@ -72,6 +72,9 @@ class IndicatorInfo(BaseModel):
     params: list[ParamInfo]
     outputs: list[OutputInfo]
     levels: list[float]
+    level_fill: list[float] | None = Field(
+        default=None, description="[low, high]: shade the band between two levels, or null"
+    )
     learn_slug: str = Field(description="docs/indicators/<learn_slug>.md")
     description: str
 
@@ -113,6 +116,7 @@ def _info(spec: IndicatorSpec) -> IndicatorInfo:
             for o in spec.outputs
         ],
         levels=list(spec.levels),
+        level_fill=None if spec.level_fill is None else list(spec.level_fill),
         learn_slug=spec.learn_slug,
         description=spec.description,
     )

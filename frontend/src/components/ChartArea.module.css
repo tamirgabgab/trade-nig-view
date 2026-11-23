@@ -147,3 +147,28 @@
     animation: none;
   }
 }
+
+/* "Scroll to the latest bar": bottom-right of the price pane, left of the price axis. */
+.latest {
+  position: absolute;
+  right: 72px;
+  bottom: 40px;
+  z-index: 3;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-overlay);
+  animation: latest-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes latest-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .latest {
+    animation: none;
+  }
+}

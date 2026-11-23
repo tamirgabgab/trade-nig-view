@@ -41,6 +41,7 @@ def test_flat_range_is_nan_and_poisons_the_averages_over_it() -> None:
 def test_warmup_and_spec() -> None:
     assert STOCH.warmup(STOCH.defaults()) == 15
     assert STOCH.levels == (80.0, 50.0, 20.0)
+    assert STOCH.level_fill == (20.0, 80.0)
     assert [o.label for o in STOCH.outputs] == ["%K", "%D"]
 
 

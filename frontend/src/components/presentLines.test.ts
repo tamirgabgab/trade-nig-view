@@ -14,6 +14,7 @@ function line(group: string, color = '#ff9800', lineWidth = 2): IndicatorLine {
     visible: true,
     style: {},
     levels: [],
+    levelFill: null,
   };
 }
 

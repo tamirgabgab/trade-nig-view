@@ -67,4 +67,5 @@ SPEC = IndicatorSpec(
     learn_slug="stochastic",
     description="Where the close sits in the recent high-low range, from 0 to 100.",
     levels=(80.0, 50.0, 20.0),
+    level_fill=(20.0, 80.0),
 )

@@ -915,6 +915,21 @@
             "type": "array",
             "title": "Levels"
           },
+          "level_fill": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Fill",
+            "description": "[low, high]: shade the band between two levels, or null"
+          },
           "learn_slug": {
             "type": "string",
             "title": "Learn Slug",

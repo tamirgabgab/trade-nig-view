@@ -30,6 +30,10 @@ interface ChartViewProps {
   onVisibleRangeChange: (range: LogicalRange | null) => void;
   /** Tops of the indicator panes whenever they move. Must be a stable function. */
   onPaneLayout: PaneLayoutListener;
+  /** Auto-fit turned off or on from the price axis (drag, double-click). Must be stable. */
+  onAutoScaleChange: (autoScale: boolean) => void;
+  /** Bumped to scroll to the latest bar (0 = never asked). */
+  scrollToLatest: number;
 }
 
 /** Hosts one ChartEngine in a div. Re-renders only when its props change (memo). */
@@ -46,6 +50,8 @@ export const ChartView = memo(function ChartView({
   onHover,
   onVisibleRangeChange,
   onPaneLayout,
+  onAutoScaleChange,
+  scrollToLatest,
 }: ChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<ChartEngine | null>(null);
@@ -59,16 +65,18 @@ export const ChartView = memo(function ChartView({
     const offHover = engine.onCrosshairMove(onHover);
     const offRange = engine.onVisibleRangeChange(onVisibleRangeChange);
     const offPanes = engine.onPaneLayout(onPaneLayout);
+    const offAutoScale = engine.onAutoScaleChange(onAutoScaleChange);
     engineRef.current = engine;
     return () => {
       offHover();
       offRange();
       offPanes();
+      offAutoScale();
       engine.dispose();
       engineRef.current = null;
       shownKeyRef.current = null;
     };
-  }, [onHover, onVisibleRangeChange, onPaneLayout]);
+  }, [onHover, onVisibleRangeChange, onPaneLayout, onAutoScaleChange]);
 
   // Chart type first, so the bars below are drawn once with the right series.
   useEffect(() => {
@@ -92,6 +100,10 @@ export const ChartView = memo(function ChartView({
   useEffect(() => {
     engineRef.current?.setScale({ mode: scaleMode, autoScale });
   }, [scaleMode, autoScale]);
+
+  useEffect(() => {
+    if (scrollToLatest > 0) engineRef.current?.scrollToLatest();
+  }, [scrollToLatest]);
 
   // Each focus request is applied once (a new object with the same `seq` is ignored).
   useEffect(() => {

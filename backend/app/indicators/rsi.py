@@ -147,5 +147,6 @@ SPEC = IndicatorSpec(
     learn_slug="rsi",
     description="Momentum oscillator from 0 to 100: average gains vs average losses.",
     levels=(70.0, 50.0, 30.0),
+    level_fill=(30.0, 70.0),
     lookback=lookback,
 )

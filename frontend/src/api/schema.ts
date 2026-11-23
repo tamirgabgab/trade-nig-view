@@ -384,6 +384,11 @@ export interface components {
             /** Levels */
             levels: number[];
             /**
+             * Level Fill
+             * @description [low, high]: shade the band between two levels, or null
+             */
+            level_fill?: number[] | null;
+            /**
              * Learn Slug
              * @description docs/indicators/<learn_slug>.md
              */

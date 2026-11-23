@@ -64,6 +64,8 @@ def test_lists_the_registry(client: TestClient) -> None:
     }
     assert ema["params"][1]["options"][:3] == ["close", "open", "high"]
     assert ema["outputs"][0]["plot"] == "line"
+    assert ema["level_fill"] is None
+    assert by_id["rsi"]["level_fill"] == [30.0, 70.0]
 
 
 def test_lists_ma_types_with_display_names(client: TestClient) -> None:

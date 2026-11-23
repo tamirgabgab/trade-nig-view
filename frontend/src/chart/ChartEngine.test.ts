@@ -14,6 +14,7 @@ interface FakeSeries {
   createPriceLine: (options: { price: number }) => { price: number };
   removePriceLine: (line: { price: number }) => void;
   attachPrimitive: (primitive: unknown) => void;
+  detachPrimitive: (primitive: unknown) => void;
 }
 
 interface FakePane {
@@ -32,6 +33,7 @@ const lwc = vi.hoisted(() => {
     panes: [] as FakePane[],
     crosshair: undefined as ((param: { time?: unknown; logical?: number }) => void) | undefined,
     priceScaleOptions: new Map<string, unknown>(),
+    scrollToRealTime: vi.fn(),
     removed: [] as FakeSeries[],
     visible: null as { from: number; to: number } | null,
     rangeHandler: undefined as ((range: { from: number; to: number } | null) => void) | undefined,
@@ -82,6 +84,9 @@ const lwc = vi.hoisted(() => {
         attachPrimitive: (primitive) => {
           series.primitives.push(primitive);
         },
+        detachPrimitive: (primitive) => {
+          series.primitives = series.primitives.filter((p) => p !== primitive);
+        },
       };
       state.series.push(series);
       return series;
@@ -96,9 +101,11 @@ const lwc = vi.hoisted(() => {
     },
     priceScale: (id: string) => ({
       applyOptions: (options: unknown) => state.priceScaleOptions.set(id, options),
+      options: () => ({ autoScale: true, ...(state.priceScaleOptions.get(id) as object) }),
     }),
     timeScale: () => ({
       setVisibleLogicalRange: state.setVisibleLogicalRange,
+      scrollToRealTime: state.scrollToRealTime,
       getVisibleLogicalRange: () => state.visible,
       subscribeVisibleLogicalRangeChange: (handler: typeof state.rangeHandler) => {
         state.rangeHandler = handler;
@@ -171,6 +178,7 @@ const EMA_LINE: IndicatorLine = {
   visible: true,
   style: {},
   levels: [],
+  levelFill: null,
 };
 
 let frames: FrameRequestCallback[] = [];
@@ -203,8 +211,12 @@ function flushFrames(): void {
   for (const cb of pending) cb(0);
 }
 
-function engine(): { engine: ChartEngine; candles: FakeSeries; volume: FakeSeries } {
-  const instance = new ChartEngine(document.createElement('div'), FALLBACK_THEME);
+function engine(container = document.createElement('div')): {
+  engine: ChartEngine;
+  candles: FakeSeries;
+  volume: FakeSeries;
+} {
+  const instance = new ChartEngine(container, FALLBACK_THEME);
   // Volume is added first so the main series draws on top of it.
   const [volume, candles] = lwc.state.series;
   if (candles === undefined || volume === undefined) throw new Error('series not created');
@@ -212,6 +224,19 @@ function engine(): { engine: ChartEngine; candles: FakeSeries; volume: FakeSerie
 }
 
 describe('ChartEngine', () => {
+  it('shows resizable pane separators that light up on hover', () => {
+    engine();
+    expect(lwc.state.chartOptions).toMatchObject({
+      layout: {
+        panes: {
+          enableResize: true,
+          separatorColor: FALLBACK_THEME.border,
+          separatorHoverColor: 'rgba(41, 98, 255, 0.35)',
+        },
+      },
+    });
+  });
+
   it('keeps the attribution logo and auto-sizes to its container', () => {
     engine();
     expect(lwc.state.chartOptions).toMatchObject({
@@ -246,8 +271,8 @@ describe('ChartEngine', () => {
     });
     const volumeData = volume.setData.mock.calls[0]?.[0] as { color: string }[];
     expect(volumeData).toHaveLength(200);
-    expect(volumeData[0]?.color).toBe('rgba(8, 153, 129, 0.5)');
-    expect(volumeData[1]?.color).toBe('rgba(242, 54, 69, 0.5)');
+    expect(volumeData[0]?.color).toBe('rgba(8, 153, 129, 0.35)');
+    expect(volumeData[1]?.color).toBe('rgba(242, 54, 69, 0.35)');
     expect(lwc.state.setVisibleLogicalRange).toHaveBeenCalledWith({ from: 50, to: 204 });
   });
 
@@ -356,6 +381,29 @@ describe('ChartEngine', () => {
     expect(lwc.state.priceScaleOptions.get('right')).toEqual({ mode: 2, autoScale: true });
   });
 
+  it('reports auto-fit changed on the price axis itself, once per change', () => {
+    const container = document.createElement('div');
+    const { engine: chart } = engine(container);
+    const listener = vi.fn();
+    chart.onAutoScaleChange(listener);
+    chart.setScale({ mode: 'normal', autoScale: true });
+
+    container.dispatchEvent(new Event('pointerup'));
+    expect(listener).not.toHaveBeenCalled();
+    // The library turns auto-fit off while the axis is dragged.
+    lwc.state.priceScaleOptions.set('right', { mode: 0, autoScale: false });
+    container.dispatchEvent(new Event('pointerup'));
+    container.dispatchEvent(new Event('pointerup'));
+    expect(listener).toHaveBeenCalledExactlyOnceWith(false);
+    // ...and back on with a double-click on the axis.
+    lwc.state.priceScaleOptions.set('right', { mode: 0, autoScale: true });
+    container.dispatchEvent(new Event('dblclick'));
+    expect(listener).toHaveBeenLastCalledWith(true);
+
+    chart.scrollToLatest();
+    expect(lwc.state.scrollToRealTime).toHaveBeenCalledOnce();
+  });
+
   it('keeps the same bars in view when older history is prepended', () => {
     const { engine: chart } = engine();
     const latest = BARS.slice(100);
@@ -432,6 +480,7 @@ describe('ChartEngine', () => {
       visible: true,
       style: { up: '#00ff00', down: '#ff0000' },
       levels: [],
+      levelFill: null,
     };
     const before = lwc.state.series.length;
     chart.setIndicatorLines([markers]);
@@ -480,6 +529,7 @@ describe('ChartEngine', () => {
       ownPane: true,
       values: [null, 40, 60],
       levels: [70, 50, 30],
+      levelFill: [30, 70],
     };
     const macd = (output: string, plot: IndicatorLine['plot']): IndicatorLine => ({
       ...EMA_LINE,
@@ -497,6 +547,14 @@ describe('ChartEngine', () => {
     expect(rsiSeries?.pane.paneIndex()).toBe(1);
     expect(rsiSeries?.pane.stretch).toBe(0.3);
     expect(rsiSeries?.priceLines.map((l) => l.price)).toEqual([70, 50, 30]);
+    expect(rsiSeries?.primitives).toHaveLength(1);
+    chart.setIndicatorLines([
+      { ...rsi, levelFill: null },
+      macd('hist', 'histogram'),
+      macd('macd', 'line'),
+    ]);
+    expect(rsiSeries?.primitives).toHaveLength(0);
+    chart.setIndicatorLines([rsi, macd('hist', 'histogram'), macd('macd', 'line')]);
     expect(hist?.kind).toBe('Histogram');
     expect(hist?.pane.paneIndex()).toBe(2);
     expect(macdLine?.pane).toBe(hist?.pane);

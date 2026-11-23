@@ -348,6 +348,33 @@ describe('ChartArea', () => {
         useChartStore.getState().setAutoScale(false);
       });
       expect(liveEngine().scales.at(-1)).toEqual({ mode: 'log', autoScale: false });
+
+      // A double-click on the price axis turns auto-fit back on: the toggle follows.
+      act(() => {
+        liveEngine().emitAutoScale(true);
+      });
+      expect(useChartStore.getState().autoScale).toBe(true);
+    });
+
+    it('offers a jump back to the latest bar after scrolling into the past', async () => {
+      stubPaged(days(10), 20);
+      const user = userEvent.setup();
+      renderWithQuery(<ChartArea />);
+      await waitFor(() => {
+        expect(liveEngine().calls.at(-1)?.bars).toHaveLength(10);
+      });
+      expect(screen.queryByRole('button', { name: 'Scroll to the latest bar' })).toBeNull();
+
+      act(() => {
+        liveEngine().scrollTo({ from: 0, to: 5 });
+      });
+      await user.click(screen.getByRole('button', { name: 'Scroll to the latest bar' }));
+      expect(liveEngine().scrolledToLatest).toBe(1);
+
+      act(() => {
+        liveEngine().scrollTo({ from: 3, to: 14 });
+      });
+      expect(screen.queryByRole('button', { name: 'Scroll to the latest bar' })).toBeNull();
     });
   });
 });

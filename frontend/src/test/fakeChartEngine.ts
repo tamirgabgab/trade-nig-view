@@ -71,11 +71,30 @@ export class FakeChartEngine {
     };
   }
 
+  autoScaleListener: ((autoScale: boolean) => void) | null = null;
+  scrolledToLatest = 0;
+
   onPaneLayout(listener: PaneLayoutListener): () => void {
     this.paneListener = listener;
     return () => {
       this.paneListener = null;
     };
+  }
+
+  onAutoScaleChange(listener: (autoScale: boolean) => void): () => void {
+    this.autoScaleListener = listener;
+    return () => {
+      this.autoScaleListener = null;
+    };
+  }
+
+  /** Simulate the user dragging (false) or double-clicking (true) the price axis. */
+  emitAutoScale(autoScale: boolean): void {
+    this.autoScaleListener?.(autoScale);
+  }
+
+  scrollToLatest(): void {
+    this.scrolledToLatest += 1;
   }
 
   dispose(): void {
