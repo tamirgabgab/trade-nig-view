@@ -232,6 +232,7 @@ class IndicatorSpec:
     params: tuple[ParamSpec, ...]
     outputs: tuple[OutputSpec, ...]
     levels: tuple[float, ...] = ()        # e.g. (70, 50, 30)
+    level_fill: tuple[float, float] | None = None  # U1a: shade between two levels, e.g. (30, 70)
     warmup: Callable[[Mapping[str, Any]], int]  # NaN bars at the start of the output that starts last
     lookback: Callable[[Mapping[str, Any]], int] = length_lookback  # R3a/R3b, see section 3.2
     compute: Callable[..., Mapping[str, np.ndarray]]  # pure: (BarFrame, **params) -> {output: ndarray}
@@ -247,6 +248,8 @@ a `BandFill` series primitive: BB, RSI bands); histogram colours `up` / `up_weak
 falling, above or below zero); `price_scale: "volume"` (drawn on the volume histogram's scale: Volume SMA) and
 `format: "volume"` (legend in K/M/B: OBV). `overlay: false` gives each instance its own pane below the price (stretch
 0.3, removed with its last series), with `levels` as dashed price lines and a legend at the top of the pane.
+U1a: `level_fill` (RSI 30–70, Stochastic 20–80) is shaded in the line's colour at 8% by the same `BandFill` primitive.
+Pane separators are resizable (`layout.panes`); auto-fit changed on the price axis is reported back to the UI.
 `ParamSpec.requires` / `OutputSpec.requires` name the bool or enum param that switches them on (true, or not `"none"`):
 the settings panel greys such inputs out, and the legend and chart leave such inputs and lines out (RSI smoothing and
 its Bollinger Bands). VWAP needs the bar's `session` (`BarFrame.session`, intraday only) and is NaN on daily bars.

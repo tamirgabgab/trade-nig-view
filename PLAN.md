@@ -156,12 +156,31 @@ BB, RSI, MACD, Stochastic, ATR, OBV, VWAP (intraday), Volume SMA, as specified i
 panes (create/dispose/resize), level lines, histogram colouring, fills; learn stubs; Playwright: add RSI + BB,
 change BB length, remove RSI.
 
-### S6 — U1: UX pass (Sonnet 5.5 · medium)
-- [ ] Breakpoints: < 1100 px the right sidebar becomes a slide-over from the widget bar; < 720 px the left toolbar collapses behind one button and range buttons move into a menu (X2)
-- [ ] Disabled-control style clearly weaker than live controls (X4); `—` everywhere for missing values (X7); Chg% clipping (T4)
-- [ ] Keyboard map dialog (`?`), focus rings audit, shortcut hints in tooltips (`kbd`)
-- [ ] README screenshot with real data (T3); optional Vitest single-environment speed-up (T6)
-- [ ] Full ux-audit report in HANDOFF
+### S6 — U1: UX pass, split after the UX/UI review (2026-11-23)
+The review (ux-audit + frontend-design, live-demo proposals page) and the user's answers: keep TradingView's colours and
+the system font, quiet motion, support from 960 px (phones out of scope), write `.ux-profile.md`, do every proposal in
+two rounds.
+
+#### S6a — U1a: polish, motion, half screen (done 2026-11-23)
+- [x] `.ux-profile.md`; 12 px minimum font; motion tokens; soft overlay shadows with a top highlight
+- [x] Coming-soon buttons dimmed with a dot (X4); key caps in tooltips; verb-first tooltips; ChartTypeMenu focus ring
+- [x] Sliding pill (interval, range); exit animations (`usePresence`); price flash in the watchlist and the legend close
+- [x] Legend hover dims the other indicators; new indicator drawn thicker; undo toast for removals; short legend labels
+- [x] `level_fill` in the registry (RSI, Stochastic); lighter volume; resizable pane separators; jump to the latest bar;
+      `auto` follows the price axis (drag / double-click)
+- [x] Below 1100 px the watchlist floats (X2 for the supported widths); `?` shortcuts dialog; first-run hint;
+      `—` for missing values (X7); Chg% clipping (T4)
+- [ ] README screenshot with real data (T3): needs the user's fixtures
+
+#### S6b — U1b: watchlist, palette, theme (Sonnet 5.5 · high)
+- [ ] `/api/quotes` gains the last 20 closes, the day range and the 52-week range; watchlist sparkline column
+- [ ] Symbol card under the watchlist: big price, change, day and 52-week range bars, market status (trading hours by
+      exchange and time zone, no holiday calendar; the tooltip says so)
+- [ ] `Ctrl+K` command palette (symbols, indicators, actions) next to the existing `type` and `/` shortcuts
+- [ ] Chart context menu: Reset view, Add indicator, Copy price
+- [ ] Light/dark toggle (dark default, remembered); the chart re-reads the tokens
+- [ ] Camera button: menu with Copy image (default, `Alt+S`) and Download PNG (`takeScreenshot`)
+- [ ] ux-audit at 1280 and 960
 
 S7–S11 follow ROADMAP R4–R7 and the review unchanged.
 
