@@ -3,8 +3,8 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0, R1a, R1b, R2a, R2b (S1), R3a (S2), R3b (S3) ו-**L1 (S4) הושלמו** (2026-11-23). R3b: 19 אינדיקטורים של ממוצעים. הם כוללים 15 סוגי MA, "Moving Average" כללי עם בחירת סוג, MA Cross עם חיצים על הנרות, Ribbon ו-Envelope. כל אחד נבדק כמו DUT מול golden model, TA-Lib ו-properties. **ממתין לדמו אצל המשתמש (S1–S3).**
-- **הסבב הבא:** **R3c** (S5 ב-[PLAN.md](PLAN.md)): BB, RSI, MACD, Stochastic, ATR, OBV, VWAP, Volume SMA ו-panes לאוסילטורים. אחריו U1.
+- **שלב:** Phase 1. R0, R1a, R1b, R2a, R2b (S1), R3a (S2), R3b (S3), L1 (S4) ו-**R3c (S5) הושלמו** (2026-11-23). יש 27 אינדיקטורים: משפחת הממוצעים, ונוסף עליה BB, ‏RSI, ‏MACD, ‏Stochastic, ‏ATR, ‏OBV, ‏VWAP ו-Volume SMA. לכל אוסילטור יש pane משלו. כל אינדיקטור נבדק כמו DUT מול golden model, ‏TA-Lib ו-properties. **ממתין לדמו אצל המשתמש (S4 + S5).**
+- **הסבב הבא:** **U1** (S6 ב-[PLAN.md](PLAN.md)): מעבר UX. מומלץ Sonnet 5.5 · medium. אחריו R4 (כלי ציור). מומלץ Opus 5.5 · high.
 - **החלטות D1–D6** (PLAN §7): המשתמש ביקש לממש S1–S3 בלי לבחור; אומצו ההמלצות: D2 = TA-Lib כתלות בדיקות אופציונלית (מדולג מקומית אם חסום), D4 = כולל KAMA, T3, ZLEMA, D6 = פאנל הגדרות חי.
 - **Branch:** עובדים ישירות על `main` (הוראה קבועה של המשתמש מ-2026-11-22). האייקון מעביר checkout ישן ל-`main` לבד.
 
@@ -272,6 +272,23 @@
 - **simplify:** לא הורץ. אחרי ponytail וה-review אין כפילות או מורכבות ששווה להוריד.
 - 9/9 gates ירוקים, ‏backend 1,202, ‏frontend 183, ‏e2e 7/7.
 
+## R3c — מה נבנה (2026-11-23, S5)
+- **Backend:**
+  - 8 אינדיקטורים חדשים: `bb`, ‏`rsi`, ‏`macd`, ‏`stoch`, ‏`atr`, ‏`obv`, ‏`vwap` ו-`vol_sma`, כל אחד בקובץ משלו ב-`app/indicators/`.
+  - primitives חדשים ב-`core.py`: `stdev` (σ של אוכלוסייה, שני מעברים בבלוקים), `highest`, `lowest` ו-`true_range`.
+  - `apply_ma_valid`: מריץ MA על הקלט החל מהערך התקף הראשון. משמש ל-smoothing של RSI, ל-signal של MACD ול-basis של BB, עם כל 15 הסוגים.
+  - `BarFrame.session`: עמודה אופציונלית ל-VWAP, נבנית ב-intraday בלבד. ב-daily התוצאה NaN.
+  - `ParamSpec.requires` ו-`OutputSpec.requires`: פרמטר או קו שפעילים רק כשה-bool או ה-enum שהם תלויים בו דולק (True או לא `"none"`). ב-RSI זה חל על אורך ה-smoothing, על ה-BB ועל הקווים שלהם.
+  - `filter_response` מודד רק outputs שעל ברים שטוחים הם כפולה קבועה של המחיר. לאוסילטורים מוחזר `outputs: []`.
+- **בדיקות:** golden על כל הברים (`rtol=1e-9`), ‏TA-Lib על האזור המתכנס (הסטיות המתועדות מפורטות ב-docstrings), ‏properties כולל `check_no_lookahead` לכל אינדיקטור ולכל 15 סוגי ה-MA כ-smoothing, ועוד 12 שורות TV cross-check. ‏backend: 1,829 בדיקות.
+- **Frontend:**
+  - `overlay: false` פותח pane לכל instance. ה-pane נמחק אחרי שהקו האחרון שלו מוסר, ויש בו legend משלו בראשו וקווי levels מקווקווים.
+  - מילוי בין קווים (`BandFill`, primitive), ‏histogram של MACD בארבעה צבעים, ‏Volume SMA על סקאלת ה-volume, ו-OBV בפורמט K/M/B.
+  - פאנל ההגדרות מאפיר inputs לא פעילים, וה-legend משמיט אותם יחד עם הקווים הכבויים.
+  - החיפוש בחלון ה-Indicators מציג קודם את הקבוצה עם ההתאמה הטובה ביותר. לפני כן "rsi" הציג EMA ראשון, כי ב-description שלו מופיעה המילה "Recursive".
+- **E2E:** הוספת RSI ו-BB, בדיקה שה-smoothing מאפיר את השדות, שינוי האורך של BB ל-30 והסרת RSI. הערכים נבדקים מול מימוש ייחוס ב-TS.
+- **פתוח:** ה-legend ב-pane מציג ערכים לפי מספר הספרות העשרוניות של הסימבול (ל-U1). בנוסף, ‏ARCHITECTURE §5.1 עודכן: `fills` ו-`intraday_only` לא קיימים, ובמקומם יש `style` ו-`session`.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -428,3 +445,8 @@
   - ‏RSI עם smoothing כבוי כברירת מחדל.
   - ‏Volume SMA על ה-histogram.
 - נבנו: endpoint המדידה, ה-drawer, ה-Filter view ו-19 דפים (נכתבו במקביל ע"י 3 agents ונבדקו).
+
+### 2026-11-23 — S5 / R3c: bands ואוסילטורים
+- ה-backend נכתב ע"י agent ברקע (8 אינדיקטורים ו-harness מלא), נבדק ושולב. ה-frontend (panes, ‏fills, ‏histogram ו-legends) נכתב ישירות.
+- נוסף `requires`, כדי שה-legend של RSI לא יציג "None 14 2" ואת הקווים הכבויים.
+- נמצא ותוקן: החיפוש "rsi" הציג EMA ראשון.

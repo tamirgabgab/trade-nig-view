@@ -148,7 +148,9 @@ longest `*length*` parameter. Filters whose seed fades more slowly define their 
 |---|---|---|
 | T3 | `max(50·n, 250)` | six cascaded EMAs |
 | KAMA | `max(25·n, 25·((S+1)/2)² + n, 250)`, S = `slow` (`fast > slow` is rejected) | the slowest smoothing is $s^2$, seed fades like $(1-s^2)^k$ (≈ 6,000 bars for S = 30) |
-| Composites (MA Cross, Ribbon, Envelope, generic MA) | max over their averages' lookbacks | |
+| Composites (MA Cross, Ribbon, Envelope, generic MA, Bollinger basis, ATR) | max over their averages' lookbacks | |
+| MACD, RSI with smoothing (R3c) | lookback of the first stage + lookback of the average applied to it | the second average is seeded on the first stage's not-yet-converged values |
+| OBV (R3c) | `10**9` (whole history) | a running sum from the first bar: any later start shifts every value |
 
 On top of that, `IndicatorSpec.total_lookback` adds the spec's plot shift (`IndicatorSpec.shift`, the `offset`
 param of MAs that call `core.shift`; LSMA's regression `offset` is not a shift): a shift of k bars shows the value of bar
@@ -181,7 +183,7 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 | `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error}]` from the two latest unadjusted daily bars; per-symbol `error` instead of failing the request | R1a |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
 | `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted, transform}` (`start`/`end` = epoch seconds of bar starts, inclusive) | `{id, version, params (resolved), time:[t], outputs:{<name>:[value\|null]}, warmup, lookback}` — column arrays aligned with `time`; `null` = warm-up/NaN. A `markers` output holds `+1` (up) / `-1` (down) / `null`. `warmup` = first valid bar of the output that starts **last** (a composite's faster outputs start earlier); `lookback` = `total_lookback` (incl. offset). Cross-parameter errors (e.g. KAMA `fast > slow`, HMA length 1) are 422 `invalid_params` | R3 |
-| `POST /indicators/response` | `{id, params}` | Filter view: `{id, outputs:[{name, label, linear, reason, step, ramp_lag, impulse, dc_gain, lag, nrf, frequency:{period, magnitude_db, group_delay}, truncated}]}` measured by running the indicator on synthetic bars (`app/analysis/response.py`). Linearity is tested (superposition + volume independence); a non-linear output gets `step`/`ramp_lag` and a `reason`, its other fields `null`. POST (not the PLAN's GET) because `params` is a free-form object, as in `/indicators/compute` | L1 |
+| `POST /indicators/response` | `{id, params}` | Filter view: `{id, outputs:[{name, label, linear, reason, step, ramp_lag, impulse, dc_gain, lag, nrf, frequency:{period, magnitude_db, group_delay}, truncated}]}` measured by running the indicator on synthetic bars (`app/analysis/response.py`). Linearity is tested (superposition + volume independence); a non-linear output gets `step`/`ramp_lag` and a `reason`, its other fields `null`. Only outputs that follow the price (a fixed non-zero multiple of it on flat bars) are listed, so oscillators and volume lines (RSI, MACD, OBV, ...) return an empty list (R3c). POST (not the PLAN's GET) because `params` is a free-form object, as in `/indicators/compute` | L1 |
 | `GET /learn/{slug}` | — | `{slug, markdown}` from `docs/indicators/<slug>.md`; only slugs a registered indicator names are served (404 `learn_page_not_found` otherwise) | L1 |
 | `GET /analysis/gaps` | `symbol`, `interval`, `min_pct=0`, `include_partial=false`, `until?` | `[{start_time, direction, top, bottom, size_pct, filled, fill_time?, max_fill_pct}]` | R5 |
 | `GET /analysis/pivots` | `symbol`, `interval`, `left=5`, `right=5`, `until?` | `[{time, kind:"high"\|"low", price, confirmed_time}]` | R5 |
@@ -230,17 +232,24 @@ class IndicatorSpec:
     params: tuple[ParamSpec, ...]
     outputs: tuple[OutputSpec, ...]
     levels: tuple[float, ...] = ()        # e.g. (70, 50, 30)
-    fills: tuple[tuple[str, str], ...] = ()  # e.g. (("upper","lower"),)
     warmup: Callable[[Mapping[str, Any]], int]  # NaN bars at the start of the output that starts last
     lookback: Callable[[Mapping[str, Any]], int] = length_lookback  # R3a/R3b, see section 3.2
     compute: Callable[..., Mapping[str, np.ndarray]]  # pure: (BarFrame, **params) -> {output: ndarray}
     learn_slug: str              # "bollinger-bands" -> docs/indicators/bollinger-bands.md
-    intraday_only: bool = False  # VWAP
 ```
 
 `GET /indicators` serialises everything except `warmup`/`compute`/`lookback` (R3a: `ParamSpec` also has `label`, `step`,
 `options`; `OutputSpec` has `label`; `offset` is limited to `>= 0` so a plotted value never reads a later bar; R3b: `ParamSpec.option_labels`). Moving-average types live in one dispatcher, `app/indicators/ma.py` `MA_TYPES` (15 types with warm-up, lookback and minimum length), used by every MA indicator and composite. A `markers` output is drawn by `ChartEngine` as arrows on the main price series (`createSeriesMarkers`: +1 = `arrowUp` below the bar, −1 = `arrowDown` above it); legends skip it. The frontend builds the settings dialog purely from
 `params` + `outputs` → adding an indicator needs no frontend change.
+
+R3c adds the output `style` keys the frontend reads: `fill_to` + `fill` (shade between this output and the named one,
+a `BandFill` series primitive: BB, RSI bands); histogram colours `up` / `up_weak` / `down` / `down_weak` (MACD: rising or
+falling, above or below zero); `price_scale: "volume"` (drawn on the volume histogram's scale: Volume SMA) and
+`format: "volume"` (legend in K/M/B: OBV). `overlay: false` gives each instance its own pane below the price (stretch
+0.3, removed with its last series), with `levels` as dashed price lines and a legend at the top of the pane.
+`ParamSpec.requires` / `OutputSpec.requires` name the bool or enum param that switches them on (true, or not `"none"`):
+the settings panel greys such inputs out, and the legend and chart leave such inputs and lines out (RSI smoothing and
+its Bollinger Bands). VWAP needs the bar's `session` (`BarFrame.session`, intraday only) and is NaN on daily bars.
 
 ### 5.2 Drawings document (schema version 1)
 
@@ -290,6 +299,9 @@ params, style, pane, visible}], pane_stretch:[...], visible_range?, drawings_ref
   `18:00`, ICE DXY `20:00`, forex `17:00`, all New York time), else the exchange-local calendar date
   (`app/data/sessions.py`). 4h bars are anchored to the session's first bar (US stocks 09:30/13:30; futures
   18/22/02/06/10/14). Intraday dividend adjustment uses the factor of the session's daily bar.
+  `BarService` puts these session day numbers on intraday frames as the optional `BarFrame.session` column (R3c; kept
+  by `take`/slicing, `None` for daily+ and synthetic frames); session-anchored indicators (VWAP) read it and return
+  all-`NaN` without it.
 - **Display**: Lightweight Charts has no time-zone support. `ChartEngine` converts intraday UTC timestamps to
   "wall-clock seconds" in the display TZ (`utc + offset(tz, utc)`, `chart/timeZone.ts`) before `setData`. The display
   TZ is `Asia/Jerusalem` (a setting arrives in R6); offsets come from `Intl.DateTimeFormat`, cached per UTC day and

@@ -4,9 +4,10 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** R3b complete — 19 moving-average indicators (15 MA types, a generic "Moving Average", MA Cross with
-> crossover arrows, MA Ribbon, Envelope), each verified like a DUT against scalar golden models, TA-Lib and
-> property tests. Next: L1 (learn pages for the MA family).
+> **Status:** R3c complete — 27 indicators: the moving-average family plus Bollinger Bands, RSI, MACD, Stochastic,
+> ATR, OBV, VWAP and Volume SMA, oscillators in their own panes, each verified like a DUT against scalar golden
+> models, TA-Lib and property tests. Learn drawer with derived formulas and measured filter responses (L1).
+> Next: U1 (UX pass).
 > See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
@@ -26,7 +27,7 @@ trading agent can plug in later.
 | Indicator engine + SMA, EMA, WMA, SMMA: `/` dialog, legend values under the crosshair, live settings, saved between visits (R3a) | ✅ Done |
 | Generalised MAs (DEMA, TEMA, HMA, ALMA, LSMA, VWMA, SWMA, McGinley, KAMA, T3, ZLEMA), generic MA, MA Cross with arrows, Ribbon, Envelope (R3b) | ✅ Done |
 | Learn drawer for the MA family: derived formulas (KaTeX), lag, noise reduction, and a Filter view with the measured impulse, step and frequency response plus an MA-vs-MA compare (L1) | ✅ Done |
-| Indicators: BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3c) | ⏳ Planned |
+| Indicators: BB, VWAP, RSI (+ smoothing and BB), MACD, Stochastic, ATR, OBV, Volume SMA, oscillator panes with level lines, band fills, coloured MACD histogram — golden-tested (R3c) | ✅ Done |
 | UX pass: narrow windows, disabled states, loaders, keyboard map (U1) | ⏳ Planned |
 | Drawing tools: lines, rays, channel, rectangle, text, measure, Fibonacci (R4) | ⏳ Planned |
 | Gaps, pivots, previous-period levels, 52-week high/low, data window (R5) | ⏳ Planned |
