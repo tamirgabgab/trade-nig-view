@@ -1,7 +1,6 @@
 import 'katex/dist/katex.min.css';
 
-import type { Element } from 'hast';
-import Markdown, { type Components } from 'react-markdown';
+import Markdown, { type Components, type ExtraProps } from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -13,7 +12,7 @@ import styles from './LearnPage.module.css';
 const REMARK = [remarkGfm, remarkMath];
 const REHYPE = [rehypeKatex];
 /** The text of a ```lab fenced block (its JSON), or null for any other block. */
-function labSource(node: Element | undefined): string | null {
+function labSource(node: ExtraProps['node']): string | null {
   const code = node?.children[0];
   if (code?.type !== 'element' || code.tagName !== 'code') return null;
   const classes = code.properties['className'];

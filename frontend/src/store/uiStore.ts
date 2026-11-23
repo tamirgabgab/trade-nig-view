@@ -12,10 +12,10 @@ export interface Toast {
 
 export type SnapshotMode = 'copy' | 'download';
 
-/** What the right side panel shows. */
 /** `openLearn(\`${PAGE_PREFIX}${slug}\`)` opens a learn page without its indicator on the chart. */
 export const PAGE_PREFIX = 'page:';
 
+/** What the right side panel shows. */
 export type SidebarTab = 'watchlist' | 'objects' | 'data' | 'gaps';
 
 /** The modal dialogs; at most one is open, so they can never stack. */
@@ -128,8 +128,9 @@ export const useUiStore = create<UiState>()((set) => ({
     set({ emphasis: uid });
   },
   forgetIndicator: (uid) => {
+    // Forgetting every indicator keeps a learn page opened from the index (it needs none).
     const gone = (current: string | null) =>
-      uid === undefined || current === uid ? null : current;
+      current === uid || (uid === undefined && !current?.startsWith(PAGE_PREFIX)) ? null : current;
     set((s) => ({
       settingsFor: gone(s.settingsFor),
       learnFor: gone(s.learnFor),

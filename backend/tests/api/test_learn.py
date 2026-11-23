@@ -84,10 +84,10 @@ def test_concept_pages_are_listed_and_served_when_present(
             "indicator_id": None,
         }
         assert [p["kind"] for p in pages].count("concept") == len(CONCEPT_PAGES)
-        # an indicator page without a heading (or file) falls back to the spec name
+        # a page without a heading falls back to the spec name; one without a file is not listed
         titles = {p["slug"]: p["title"] for p in pages}
         assert titles["rsi"] == CATALOG["rsi"].name
-        assert titles["sma"] == CATALOG["sma"].name
+        assert "sma" not in titles
         page = c.get("/api/learn/combinations")
         assert page.status_code == 200
         assert page.json()["markdown"] == "# Combining indicators\n"

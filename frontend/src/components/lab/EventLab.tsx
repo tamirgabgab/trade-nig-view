@@ -4,7 +4,7 @@ import { useIndicatorList, type Params } from '../../api/indicators.ts';
 import { useLab, type LabSource, type Op, type Scenario } from '../../api/lab.ts';
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
-import { buildRules, chartLines, OP_LABEL, withDefaults } from './labModel.ts';
+import { buildRules, chartLines, missingIndicator, OP_LABEL, withDefaults } from './labModel.ts';
 import { LabOutcome } from './LabOutcome.tsx';
 import { MiniChart } from './MiniChart.tsx';
 import { SourcePicker } from './SourcePicker.tsx';
@@ -30,7 +30,8 @@ export interface EventBlock {
  * threshold, the comparison and the horizon adjustable, on a random or a real series.
  */
 export function EventLab({ block }: { block: EventBlock }) {
-  const spec = useIndicatorList().data?.find((s) => s.id === block.indicator);
+  const registry = useIndicatorList();
+  const spec = registry.data?.find((s) => s.id === block.indicator);
   const params = withDefaults(spec, block.params);
   const [threshold, setThreshold] = useState(block.value);
   const [op, setOp] = useState<Op>(block.op);
@@ -106,7 +107,7 @@ export function EventLab({ block }: { block: EventBlock }) {
           <output className={styles.value}>{horizon} bars</output>
         </label>
       </div>
-      <LabOutcome lab={lab}>
+      <LabOutcome lab={lab} missing={missingIndicator(registry, spec, block.indicator)}>
         {(data) => (
           <>
             <MiniChart

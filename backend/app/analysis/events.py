@@ -7,8 +7,10 @@ Forward log return, for every bar :math:`t` with :math:`t + h < n`:
 * **Baseline**: :math:`r_t` for every such :math:`t` (the unconditional distribution).
 * **Events**: :math:`r_t` for the signal bars with :math:`t + h < n`. With ``episodes=True`` a
   signal at most :math:`h` bars after the last counted event (:math:`t - t_{last} \le h`) is
-  skipped, so a condition that stays true for a run of bars counts once per episode and the
-  counted samples overlap less.
+  skipped: at most one event per :math:`h + 1` bars, so the counted forward windows never
+  overlap. A condition that stays true for a long run is counted again every :math:`h + 1` bars
+  (a state, e.g. "close above the SMA", is sampled; a one-bar trigger, e.g. a cross, is counted
+  once).
 
 For each sample: :math:`n`, mean, median, :math:`s` (std, ``ddof=1``; NaN for :math:`n < 2`) and
 hit rate (share with :math:`r > 0`). Then

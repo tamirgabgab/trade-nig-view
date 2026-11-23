@@ -59,7 +59,8 @@ export function StudyCard({ study }: { study: Study }) {
       </p>
       <StudyHistogram study={study} />
       <p className={styles.note}>
-        Each episode counts once; one sample, one rule. Not a backtest and not investment advice.
+        At most one signal counts per look-ahead window; one sample, one rule. Not a backtest and
+        not investment advice.
       </p>
     </div>
   );

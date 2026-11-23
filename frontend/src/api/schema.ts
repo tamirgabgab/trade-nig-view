@@ -161,7 +161,7 @@ export interface paths {
         };
         /**
          * Learn Index
-         * @description Every learn page: one per indicator learn slug, plus the concept pages that exist.
+         * @description Every learn page that exists: one per indicator learn slug, then the concept pages.
          */
         get: operations["learn_index_api_learn_get"];
         put?: never;

@@ -50,7 +50,15 @@ V2_SECTIONS = (
     "Pitfalls",
     "Exercise",
 )
-LAB_KINDS = {"param", "event", "combo", "replay"}
+#: The fields each lab kind cannot do without (LabBlock.tsx shows an error line without them).
+LAB_REQUIRED: dict[str, set[str]] = {
+    "param": {"indicator", "vary"},
+    "event": {"indicator", "output", "op", "value"},
+    "combo": {"rules"},
+    "replay": {"symbol", "date"},
+}
+RULE_REQUIRED = {"label", "left", "op", "right"}
+OPS = {"lt", "gt", "crosses_above", "crosses_below"}
 _LAB_BLOCK = re.compile(r"^```lab[ \t]*\n(.*?)^```[ \t]*$", re.MULTILINE | re.DOTALL)
 
 ALL_PAGES = sorted(p.stem for p in LEARN_DIR.glob("*.md") if p.stem != "README")
@@ -142,7 +150,16 @@ def test_lab_blocks_are_valid(slug: str) -> None:
         except json.JSONDecodeError as exc:
             pytest.fail(f"{where}: invalid JSON ({exc})")
         assert isinstance(block, dict), f"{where}: not a JSON object"
-        kind = cast("dict[str, Any]", block).get("kind")
-        assert kind in LAB_KINDS, f"{where}: kind {kind!r} not in {sorted(LAB_KINDS)}"
+        fields = cast("dict[str, Any]", block)
+        kind = fields.get("kind")
+        assert kind in LAB_REQUIRED, f"{where}: kind {kind!r} not in {sorted(LAB_REQUIRED)}"
+        assert LAB_REQUIRED[kind] <= fields.keys(), f"{where}: needs {sorted(LAB_REQUIRED[kind])}"
+        rules = cast("list[dict[str, Any]]", fields.get("rules", []))
+        for rule in [fields] if kind == "event" else rules:
+            assert rule.get("op") in OPS, f"{where}: op {rule.get('op')!r} not in {sorted(OPS)}"
+        for j, rule in enumerate(rules):
+            assert rule.keys() >= RULE_REQUIRED, f"{where} rule {j}: needs {sorted(RULE_REQUIRED)}"
+        if kind == "combo":
+            assert len(rules) > 0, f"{where}: no rules"
         unknown = sorted(set(indicator_ids(block)) - CATALOG.keys())
         assert not unknown, f"{where}: unknown indicator(s) {unknown}"

@@ -31,8 +31,6 @@ router = APIRouter(tags=["learn"])
 
 #: Concept pages (``docs/indicators/<slug>.md``) that are not about one indicator: slug -> title.
 CONCEPT_PAGES: dict[str, str] = {"combinations": "Combining indicators"}
-#: Slugs shared by several indicators, served under this indicator's metadata.
-_SLUG_OWNER = {"moving-average": "ma"}
 _HEADING_ID = re.compile(r"\s*\(`[^`]*`\)\s*$")
 _CATEGORY_ORDER: dict[str | None, int] = {c: i for i, c in enumerate(get_args(Category))}
 
@@ -67,26 +65,24 @@ class LearnIndex(BaseModel):
 
 
 def _indicator_pages() -> dict[str, IndicatorSpec]:
-    """learn_slug -> the spec whose metadata the page is listed under."""
+    """learn_slug -> the (first registered) spec whose metadata the page is listed under."""
     pages: dict[str, IndicatorSpec] = {}
     for spec in CATALOG.values():
         pages.setdefault(spec.learn_slug, spec)
-    pages.update({slug: CATALOG[spec_id] for slug, spec_id in _SLUG_OWNER.items()})
     return pages
 
 
 def _page_title(path: Path, fallback: str) -> str:
     """The page's first ``# `` heading without its trailing ``(`id`)``, else ``fallback``."""
-    if path.is_file():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.startswith("# "):
-                return _HEADING_ID.sub("", line[2:]).strip() or fallback
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("# "):
+            return _HEADING_ID.sub("", line[2:]).strip() or fallback
     return fallback
 
 
 @router.get("/learn", response_model=LearnIndex)
 def learn_index(settings: Annotated[Settings, Depends(get_settings)]) -> LearnIndex:
-    """Every learn page: one per indicator learn slug, plus the concept pages that exist."""
+    """Every learn page that exists: one per indicator learn slug, then the concept pages."""
     indicators = sorted(
         (
             LearnIndexEntry(
@@ -97,6 +93,7 @@ def learn_index(settings: Annotated[Settings, Depends(get_settings)]) -> LearnIn
                 indicator_id=spec.id,
             )
             for slug, spec in _indicator_pages().items()
+            if (settings.learn_dir / f"{slug}.md").is_file()
         ),
         key=lambda e: (_CATEGORY_ORDER[e.category], e.title.lower()),
     )

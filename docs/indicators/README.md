@@ -112,6 +112,7 @@ The backend test also checks every lab block of every page: valid JSON, a known 
 
 ### Event studies: what they show and what they do not
 Mean $h$-bar log return after the signal minus the mean after any bar ("edge"), its standard error and 95 % interval,
-the hit rates, the two distributions. Each episode is counted once (a signal within $h$ bars of a counted one is
-skipped). It is one rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing,
+the hit rates, the two distributions. At most one signal counts per $h + 1$ bars (a signal within $h$ bars of a
+counted one is skipped), so the counted forward windows do not overlap: a one-bar trigger (a cross) counts once, a state
+that stays true (close above the line) is sampled every $h + 1$ bars. It is one rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing,
 and not investment advice. Pages must say so where they draw conclusions.

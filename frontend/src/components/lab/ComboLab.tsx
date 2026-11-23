@@ -33,7 +33,9 @@ const edgeText = (s: Study | null | undefined) => {
  * of their AND and compare the edge of the combination with each rule alone.
  */
 export function ComboLab({ block }: { block: ComboBlock }) {
-  const specs = useIndicatorList().data ?? [];
+  const registry = useIndicatorList();
+  const specs = registry.data ?? [];
+  const ready = registry.data !== undefined; // params are filled in from the registry first
   const [on, setOn] = useState<number[]>(block.on ?? [0]);
   const [source, setSource] = useState<LabSource>({
     kind: 'synthetic',
@@ -43,10 +45,12 @@ export function ComboLab({ block }: { block: ComboBlock }) {
   });
   const horizon = block.horizon ?? 10;
   const chosen = block.rules.filter((_, i) => on.includes(i));
-  const request = buildRules(chosen);
-  const combined = useLab(chosen.length === 0 ? null : { source, ...request, horizon });
+  const request = buildRules(chosen, specs);
+  const combined = useLab(chosen.length === 0 || !ready ? null : { source, ...request, horizon });
   // Each rule alone, for the comparison column.
-  const alone = useLabs(block.rules.map((rule) => ({ source, ...buildRules([rule]), horizon })));
+  const alone = useLabs(
+    ready ? block.rules.map((rule) => ({ source, ...buildRules([rule], specs), horizon })) : [],
+  );
   const first = request.indicators[0];
   const { overlays, pane } = chartLines(
     specs.find((s) => s.id === first?.id),

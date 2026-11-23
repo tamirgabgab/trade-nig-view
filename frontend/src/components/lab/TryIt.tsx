@@ -4,13 +4,11 @@ import type { IndicatorInfo, Params, ParamValue } from '../../api/indicators.ts'
 import { useLab, type LabSource } from '../../api/lab.ts';
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
-import { chartLines, withDefaults } from './labModel.ts';
+import { chartLines, sliderRange, withDefaults } from './labModel.ts';
 import { LabOutcome } from './LabOutcome.tsx';
 import { MiniChart } from './MiniChart.tsx';
 import { SourcePicker } from './SourcePicker.tsx';
 import { useDebounced } from './useDebounced.ts';
-
-const SLIDER_CAP = 200;
 
 /**
  * The learn drawer's "Try it" tab: every parameter of the indicator as a live control, on a
@@ -76,8 +74,7 @@ export function TryIt({ spec, initial }: { spec: IndicatorInfo; initial: Params 
               </label>
             );
           }
-          const min = p.min ?? 0;
-          const max = Math.min(p.max ?? SLIDER_CAP, Math.max(SLIDER_CAP, min + 1));
+          const { min, max, step } = sliderRange(p, typeof value === 'number' ? value : 0);
           return (
             <label key={p.name} className={styles.slider}>
               <span>{p.label}</span>
@@ -85,7 +82,7 @@ export function TryIt({ spec, initial }: { spec: IndicatorInfo; initial: Params 
                 type="range"
                 min={min}
                 max={max}
-                step={p.step ?? (p.type === 'int' ? 1 : 0.1)}
+                step={step}
                 value={typeof value === 'number' ? value : min}
                 onChange={(event) => {
                   set(p.name, Number(event.target.value));

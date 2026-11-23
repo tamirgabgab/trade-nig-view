@@ -25,4 +25,13 @@ describe('forgetIndicator', () => {
     useUiStore.getState().forgetIndicator();
     expect(useUiStore.getState()).toMatchObject({ learnFor: null, legendFocus: null });
   });
+
+  it('keeps a learn page opened from the index when every indicator goes', () => {
+    useUiStore.setState({ learnFor: 'page:combinations', legendFocus: 'ema-2' });
+    useUiStore.getState().forgetIndicator();
+    expect(useUiStore.getState()).toMatchObject({
+      learnFor: 'page:combinations',
+      legendFocus: null,
+    });
+  });
 });
