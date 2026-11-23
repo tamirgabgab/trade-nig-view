@@ -1,21 +1,11 @@
-import { useEffect, useState } from 'react';
-
 import { DISPLAY_TIME_ZONE } from '../chart/timeZone.ts';
 import styles from './BottomBar.module.css';
 import { formatClock } from './formatClock.ts';
+import { useNow } from './useNow.ts';
 
 /** Live clock in the bottom bar, in the chart's display time zone (a setting arrives in R6). */
 export function Clock() {
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => {
-      window.clearInterval(id);
-    };
-  }, []);
+  const now = useNow(1000);
 
   return (
     <time

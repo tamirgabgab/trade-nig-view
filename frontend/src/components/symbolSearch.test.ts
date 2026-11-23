@@ -8,6 +8,9 @@ const info = (symbol: string, display: string, name: string, group: string): Sym
   group,
   type: 'stock',
   exchange: 'NASDAQ',
+  currency: 'USD',
+  timezone: 'America/New_York',
+  sessionStart: null,
   hasVolume: true,
   decimals: 2,
 });

@@ -1,9 +1,16 @@
 import { Fragment, useMemo } from 'react';
 
-import { groupSymbols, useQuotes, useSymbols, type Quote, type SymbolInfo } from '../api/market.ts';
+import {
+  groupSymbols,
+  useSymbols,
+  useUniverseQuotes,
+  type Quote,
+  type SymbolInfo,
+} from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { direction, formatPercent, formatPrice } from './formatNumber.ts';
 import styles from './RightSidebar.module.css';
+import { Sparkline } from './Sparkline.tsx';
 import { usePriceFlash } from './usePriceFlash.ts';
 
 const DASH = '—';
@@ -13,6 +20,7 @@ function QuoteCells({ info, quote }: { info: SymbolInfo; quote: Quote | undefine
   if (quote === undefined) {
     return (
       <>
+        <td />
         <td className={styles.dash}>{DASH}</td>
         <td className={styles.dash}>{DASH}</td>
         <td className={styles.dash}>{DASH}</td>
@@ -22,6 +30,7 @@ function QuoteCells({ info, quote }: { info: SymbolInfo; quote: Quote | undefine
   if (quote.error !== null || quote.last === null) {
     return (
       <>
+        <td />
         <td className={styles.dash} title={quote.error ?? 'No data'}>
           {DASH}
         </td>
@@ -33,6 +42,9 @@ function QuoteCells({ info, quote }: { info: SymbolInfo; quote: Quote | undefine
   const tone = styles[direction(quote.change)];
   return (
     <>
+      <td className={styles.sparkCell}>
+        <Sparkline values={quote.spark} />
+      </td>
       <td title={quote.stale ? 'Cached value (refresh failed)' : `Close ${quote.time ?? ''}`}>
         <span key={flash.tick} className={styles.last} data-flash={flash.direction ?? undefined}>
           {formatPrice(quote.last, info.decimals)}
@@ -52,7 +64,7 @@ export function Watchlist() {
   const setSymbol = useChartStore((s) => s.setSymbol);
   const symbolsQuery = useSymbols();
   const symbols = useMemo(() => symbolsQuery.data ?? [], [symbolsQuery.data]);
-  const quotesQuery = useQuotes(useMemo(() => symbols.map((s) => s.symbol), [symbols]));
+  const quotesQuery = useUniverseQuotes();
   const quotes = useMemo(
     () => new Map((quotesQuery.data ?? []).map((q) => [q.symbol, q])),
     [quotesQuery.data],
@@ -89,6 +101,9 @@ export function Watchlist() {
         <thead>
           <tr>
             <th scope="col">Symbol</th>
+            <th scope="col">
+              <span className="visually-hidden">Last 20 days</span>
+            </th>
             <th scope="col">Last</th>
             <th scope="col">Chg</th>
             <th scope="col">Chg%</th>
@@ -98,7 +113,7 @@ export function Watchlist() {
           {groupSymbols(symbols).map(([group, members]) => (
             <Fragment key={group}>
               <tr className={styles.section}>
-                <td colSpan={4}>{group}</td>
+                <td colSpan={5}>{group}</td>
               </tr>
               {members.map((info) => (
                 <tr

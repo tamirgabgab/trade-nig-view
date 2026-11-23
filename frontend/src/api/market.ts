@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 
@@ -12,6 +13,11 @@ export interface SymbolInfo {
   exchange: string;
   hasVolume: boolean;
   decimals: number;
+  currency: string;
+  /** Exchange time zone (IANA), e.g. 'America/New_York'. */
+  timezone: string;
+  /** Local 'HH:MM' start of a session spanning midnight (futures, forex), else null. */
+  sessionStart: string | null;
 }
 
 /** Last close vs previous close (GET /api/quotes). */
@@ -23,6 +29,12 @@ export interface Quote {
   changePct: number | null;
   stale: boolean;
   error: string | null;
+  /** The last 20 daily closes, oldest first. */
+  spark: number[];
+  dayLow: number | null;
+  dayHigh: number | null;
+  low52w: number | null;
+  high52w: number | null;
 }
 
 function str(value: unknown, field: string): string {
@@ -38,6 +50,11 @@ function numOrNull(value: unknown, field: string): number | null {
 
 function strOrNull(value: unknown, field: string): string | null {
   return value === null ? null : str(value, field);
+}
+
+/** A number, or null when missing or null (fields added later than the first API version). */
+function optionalNum(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
 }
 
 function list(body: unknown, what: string): unknown[] {
@@ -59,6 +76,15 @@ export function parseSymbols(body: unknown): SymbolInfo[] {
       exchange: str(field('exchange'), 'exchange'),
       hasVolume: field('has_volume') === true,
       decimals: typeof decimals === 'number' ? decimals : 2,
+      currency: typeof field('currency') === 'string' ? str(field('currency'), 'currency') : 'USD',
+      timezone:
+        typeof field('timezone') === 'string'
+          ? str(field('timezone'), 'timezone')
+          : 'America/New_York',
+      sessionStart:
+        typeof field('session_start') === 'string'
+          ? str(field('session_start'), 'session_start')
+          : null,
     };
   });
 }
@@ -75,6 +101,13 @@ export function parseQuotes(body: unknown): Quote[] {
       changePct: numOrNull(field('change_pct'), 'change_pct'),
       stale: field('stale') === true,
       error: strOrNull(field('error'), 'error'),
+      spark: Array.isArray(field('spark'))
+        ? (field('spark') as unknown[]).filter((v): v is number => typeof v === 'number')
+        : [],
+      dayLow: optionalNum(field('day_low')),
+      dayHigh: optionalNum(field('day_high')),
+      low52w: optionalNum(field('low_52w')),
+      high52w: optionalNum(field('high_52w')),
     };
   });
 }
@@ -99,6 +132,12 @@ export function useQuotes(symbols: readonly string[]) {
     refetchInterval: QUOTES_POLL_MS,
     staleTime: 30_000,
   });
+}
+
+/** Quotes of every symbol in the universe (one shared query for the watchlist and the card). */
+export function useUniverseQuotes() {
+  const symbols = useSymbols().data;
+  return useQuotes(useMemo(() => (symbols ?? []).map((s) => s.symbol), [symbols]));
 }
 
 /** Group symbols into watchlist sections, keeping universe order. */

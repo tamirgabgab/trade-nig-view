@@ -127,6 +127,11 @@ export const QUOTES = [
     change_pct: -1.904,
     stale: false,
     error: null,
+    spark: [330, 335, 349.21, 342.56],
+    day_low: 340.1,
+    day_high: 350.2,
+    low_52w: 250,
+    high_52w: 360,
   },
   {
     symbol: 'TSLA',

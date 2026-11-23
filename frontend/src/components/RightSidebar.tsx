@@ -5,6 +5,7 @@ import { IconButton } from './IconButton.tsx';
 import styles from './RightSidebar.module.css';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery.ts';
 import { usePresence } from './usePresence.ts';
+import { SymbolCard } from './SymbolCard.tsx';
 import { Watchlist } from './Watchlist.tsx';
 
 interface RightSidebarProps {
@@ -62,6 +63,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
           <div className={styles.scroll}>
             <Watchlist />
           </div>
+          <SymbolCard />
         </section>
       )}
       <div

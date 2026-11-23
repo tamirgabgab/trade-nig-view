@@ -23,6 +23,8 @@ interface LegendOHLCProps {
   status?: string | undefined;
   /** Rows below the price (indicator legend). */
   children?: ReactNode;
+  /** Shown after the title, e.g. the market status dot. */
+  badge?: ReactNode;
   /**
    * What the latest close belongs to (symbol, interval, adjustment, chart type) while the legend
    * shows the latest bar; null while the crosshair is on an older bar. A change of the close under
@@ -68,6 +70,7 @@ export function LegendOHLC({
   status,
   children,
   flashKey = null,
+  badge,
 }: LegendOHLCProps) {
   const flash = usePriceFlash(values?.close ?? null, flashKey);
   const tone = styles[direction(values?.change ?? null)] ?? '';
@@ -77,6 +80,7 @@ export function LegendOHLC({
         <span className={styles.title}>
           {[title, interval, exchange].filter(Boolean).join(' · ')}
         </span>
+        {badge}
         {values && (
           <>
             <Field name="O" value={formatPrice(values.open, decimals)} tone={tone} />

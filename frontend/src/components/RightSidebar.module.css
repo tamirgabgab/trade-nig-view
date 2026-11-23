@@ -69,6 +69,7 @@
 
 .scroll {
   overflow-y: auto;
+  flex: 1;
   min-height: 0;
 }
 
@@ -180,4 +181,9 @@
 
 .last {
   padding: 0 2px;
+}
+
+.sparkCell {
+  width: 36px;
+  padding-right: 0;
 }

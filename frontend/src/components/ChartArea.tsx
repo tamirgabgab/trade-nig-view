@@ -16,6 +16,7 @@ import { IconButton } from './IconButton.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
+import { MarketStatus } from './MarketStatus.tsx';
 import { legendValues } from './legendValues.ts';
 import { presentLines } from './presentLines.ts';
 import { Toast } from './Toast.tsx';
@@ -178,6 +179,7 @@ export function ChartArea({ className }: ChartAreaProps) {
         decimals={decimals}
         hasVolume={hasVolume}
         status={status}
+        badge={info && <MarketStatus info={info} compact />}
         flashKey={
           // Not while another data set loads (the old bars are still shown): no false flash.
           hoverIndex === null && !history.isLoading
