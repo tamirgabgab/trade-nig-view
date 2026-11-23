@@ -1,5 +1,7 @@
 import { Bell, CalendarRange, Layers, List } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+
+import { useUiStore } from '../store/uiStore.ts';
 
 import { IconButton } from './IconButton.tsx';
 import styles from './RightSidebar.module.css';
@@ -19,8 +21,9 @@ interface RightSidebarProps {
  */
 export function RightSidebar({ className }: RightSidebarProps) {
   const narrow = useMediaQuery(NARROW_QUERY);
-  const [docked, setDocked] = useState(true);
-  const [floating, setFloating] = useState(false);
+  const { docked, floating } = useUiStore((s) => s.watchlist);
+  const toggleWatchlist = useUiStore((s) => s.toggleWatchlist);
+  const closeFloating = useUiStore((s) => s.closeFloatingWatchlist);
   const open = narrow ? floating : docked;
   const panel = usePresence(open ? true : null);
   const asideRef = useRef<HTMLElement>(null);
@@ -30,11 +33,11 @@ export function RightSidebar({ className }: RightSidebarProps) {
     if (!narrow || !floating) return;
     const onKeyDown = (event: KeyboardEvent) => {
       // An Esc that closed a dialog or panel first (they preventDefault) is not for us.
-      if (event.key === 'Escape' && !event.defaultPrevented) setFloating(false);
+      if (event.key === 'Escape' && !event.defaultPrevented) closeFloating();
     };
     const onPointerDown = (event: PointerEvent) => {
       if (!(event.target instanceof Node) || !asideRef.current?.contains(event.target)) {
-        setFloating(false);
+        closeFloating();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -43,7 +46,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [narrow, floating]);
+  }, [narrow, floating, closeFloating]);
 
   return (
     <aside
@@ -78,8 +81,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
           pressed={open}
           tooltipSide="left"
           onClick={() => {
-            if (narrow) setFloating(!floating);
-            else setDocked(!docked);
+            toggleWatchlist(narrow);
           }}
         />
         <IconButton

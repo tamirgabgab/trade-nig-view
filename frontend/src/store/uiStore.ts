@@ -34,6 +34,12 @@ export interface UiState {
   setEmphasis: (uid: string | null) => void;
   shortcutsOpen: boolean;
   setShortcutsOpen: (open: boolean) => void;
+  paletteOpen: boolean;
+  setPaletteOpen: (open: boolean) => void;
+  /** Watchlist column on a wide window; floating panel below 1100 px (closed by default). */
+  watchlist: { docked: boolean; floating: boolean };
+  toggleWatchlist: (narrow: boolean) => void;
+  closeFloatingWatchlist: () => void;
   toast: Toast | null;
   showToast: (message: string, undo?: () => void) => void;
   /** Chart image asked for (toolbar, palette, context menu, Alt+S); `seq` makes each one new. */
@@ -44,7 +50,7 @@ export interface UiState {
 
 /** Any modal dialog open: the global hotkeys stay quiet so modals never stack. */
 export function selectModalOpen(s: UiState): boolean {
-  return s.symbolSearch.open || s.indicatorsDialog || s.shortcutsOpen;
+  return s.symbolSearch.open || s.indicatorsDialog || s.shortcutsOpen || s.paletteOpen;
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -78,6 +84,19 @@ export const useUiStore = create<UiState>()((set) => ({
   shortcutsOpen: false,
   setShortcutsOpen: (open) => {
     set({ shortcutsOpen: open });
+  },
+  paletteOpen: false,
+  setPaletteOpen: (open) => {
+    set({ paletteOpen: open });
+  },
+  watchlist: { docked: true, floating: false },
+  toggleWatchlist: (narrow) => {
+    set(({ watchlist: w }) => ({
+      watchlist: narrow ? { ...w, floating: !w.floating } : { ...w, docked: !w.docked },
+    }));
+  },
+  closeFloatingWatchlist: () => {
+    set(({ watchlist: w }) => ({ watchlist: { ...w, floating: false } }));
   },
   toast: null,
   showToast: (message, undo) => {

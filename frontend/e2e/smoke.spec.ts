@@ -156,3 +156,29 @@ test('the camera menu saves the chart as a PNG with a title band', async ({ page
   expect(file.suggestedFilename()).toMatch(/^AAPL_1D_\d{4}-\d{2}-\d{2}\.png$/);
   await expect(page.getByRole('status').filter({ hasText: 'Chart saved as' })).toBeVisible();
 });
+
+test('Ctrl+K finds a symbol and an action', async ({ page }) => {
+  await expect(legend(page)).toContainText('Apple Inc.');
+  await page.getByTestId('chart-canvas').click();
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('nvda');
+  await page.keyboard.press('Enter');
+  await expect(legend(page)).toContainText('NVIDIA');
+
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('light');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
+test('right-click opens the chart menu', async ({ page }) => {
+  await expect(legend(page)).toContainText('Apple Inc.');
+  await page.getByTestId('chart-canvas').click({ button: 'right', position: { x: 300, y: 200 } });
+  const menu = page.getByRole('menu', { name: 'Chart' });
+  await expect(menu.getByRole('menuitem', { name: /^Copy price \d/ })).toBeVisible();
+  await menu.getByRole('menuitemcheckbox', { name: 'Logarithmic scale' }).click();
+  await expect(page.getByRole('button', { name: 'Logarithmic scale' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});

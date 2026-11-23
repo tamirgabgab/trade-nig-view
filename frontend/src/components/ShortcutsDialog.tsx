@@ -16,9 +16,11 @@ const SECTIONS: { title: string; shortcuts: Shortcut[] }[] = [
   {
     title: 'Chart',
     shortcuts: [
+      { keys: ['Ctrl+K'], action: 'Open the command palette (symbols, indicators, actions)' },
       { keys: ['A–Z'], action: 'Search a symbol (start typing a ticker)' },
       { keys: ['/'], action: 'Add an indicator' },
       { keys: ['?'], action: 'Show keyboard shortcuts' },
+      { keys: ['Alt+S'], action: 'Copy the chart image' },
       { keys: ['Esc'], action: 'Close a dialog, panel or menu' },
     ],
   },
