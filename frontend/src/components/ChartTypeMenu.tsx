@@ -12,6 +12,7 @@ import { CHART_TYPES, chartTypeLabel, type ChartType } from '../chart/chartTypes
 import { useChartStore } from '../store/chartStore.ts';
 import { IconButton } from './IconButton.tsx';
 import styles from './ChartTypeMenu.module.css';
+import { usePresence } from './usePresence.ts';
 
 const ICONS: Record<ChartType, LucideIcon> = {
   candles: ChartCandlestick,
@@ -29,6 +30,7 @@ export function ChartTypeMenu() {
   const chartType = useChartStore((s) => s.chartType);
   const setChartType = useChartStore((s) => s.setChartType);
   const [open, setOpen] = useState(false);
+  const menu = usePresence(open ? true : null);
   const [active, setActive] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -120,9 +122,11 @@ export function ChartTypeMenu() {
           }
         }}
       />
-      {open && (
+      {menu.shown && (
         <div
           id={menuId}
+          data-closing={menu.closing || undefined}
+          inert={menu.closing}
           role="menu"
           aria-label="Chart type"
           className={styles.menu}

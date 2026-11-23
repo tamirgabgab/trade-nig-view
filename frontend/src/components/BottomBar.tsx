@@ -6,6 +6,7 @@ import styles from './BottomBar.module.css';
 import { Clock } from './Clock.tsx';
 import { HealthBadge } from './HealthBadge.tsx';
 import { IconButton } from './IconButton.tsx';
+import { SlidingPill } from './SlidingPill.tsx';
 
 interface BottomBarProps {
   className?: string | undefined;
@@ -25,6 +26,7 @@ export function BottomBar({ className }: BottomBarProps) {
   return (
     <footer className={[styles.bar, className].join(' ')} aria-label="Chart range and scale">
       <div role="group" aria-label="Visible range" className={styles.ranges}>
+        <SlidingPill />
         {RANGES.map((id) => (
           <button
             key={id}

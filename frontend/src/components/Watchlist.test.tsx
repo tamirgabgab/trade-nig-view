@@ -30,12 +30,13 @@ describe('Watchlist', () => {
     expect(within(gbp).getByText('0.00061')).toHaveClass('up');
   });
 
-  it('marks a failed symbol as n/a without breaking the others', async () => {
+  it('shows a dash with the reason for a failed symbol without breaking the others', async () => {
     stubApi({ '/api/symbols': { body: SYMBOLS }, '/api/quotes': { body: QUOTES } });
     renderWithQuery(<Watchlist />);
 
     const tsla = await rowFor('TSLA');
-    const na = await within(tsla).findByText('n/a');
+    const na = await within(tsla).findByTitle(/^No data for TSLA/);
+    expect(na).toHaveTextContent('—');
     expect(na).toHaveAttribute('title', 'No data for TSLA: yahoo: rate limited');
     expect(await within(await rowFor('AAPL')).findByText('342.56')).toBeInTheDocument();
   });

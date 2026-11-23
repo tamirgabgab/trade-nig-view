@@ -22,6 +22,8 @@
   --color-accent-soft: rgb(41 98 255 / 18%);
   --color-up: #089981;
   --color-down: #f23645;
+  --color-up-flash: rgb(8 153 129 / 32%);
+  --color-down-flash: rgb(242 54 69 / 30%);
   --color-warning: #f7a600;
   --color-focus: #2962ff;
 
@@ -60,6 +62,8 @@
   --duration-fast: 120ms;
   --duration-base: 200ms;
   --duration-slow: 300ms;
+  /* Exit animations; keep in sync with EXIT_MS in components/usePresence.ts. */
+  --duration-exit: 150ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
 
@@ -101,5 +105,6 @@
     --duration-fast: 0ms;
     --duration-base: 0ms;
     --duration-slow: 0ms;
+    --duration-exit: 0ms;
   }
 }

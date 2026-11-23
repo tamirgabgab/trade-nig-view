@@ -1,6 +1,7 @@
 import type { Interval } from '../api/bars.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { IconButton } from './IconButton.tsx';
+import { SlidingPill } from './SlidingPill.tsx';
 import styles from './Toolbar.module.css';
 
 const OPTIONS: { interval: Interval; text: string; label: string }[] = [
@@ -17,6 +18,7 @@ export function IntervalSwitcher() {
   const setInterval = useChartStore((s) => s.setInterval);
   return (
     <div role="group" aria-label="Interval" className={styles.group}>
+      <SlidingPill />
       {OPTIONS.map((option) => (
         <IconButton
           key={option.interval}

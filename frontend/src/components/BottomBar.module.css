@@ -19,6 +19,8 @@
   color: var(--color-text);
   font-size: var(--font-size-sm);
   cursor: pointer;
+  position: relative;
+  transition: color var(--duration-base) ease-out;
 }
 
 .range:hover {
@@ -79,6 +81,7 @@
 }
 
 .ranges {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   gap: 2px;

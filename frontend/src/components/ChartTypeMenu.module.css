@@ -16,7 +16,7 @@
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-overlay);
-  animation: menu-in var(--duration-fast) ease-out;
+  animation: menu-in var(--duration-base) var(--ease-out);
 }
 
 @keyframes menu-in {
@@ -64,5 +64,15 @@
 @media (prefers-reduced-motion: reduce) {
   .menu {
     animation: none;
+  }
+}
+
+.menu[data-closing] {
+  animation: menu-out var(--duration-exit) var(--ease-in) forwards;
+}
+
+@keyframes menu-out {
+  to {
+    opacity: 0;
   }
 }

@@ -129,3 +129,7 @@
 .table td:not(:first-child) {
   white-space: nowrap;
 }
+
+.last {
+  padding: 0 2px;
+}

@@ -5,16 +5,18 @@ import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { searchSymbols } from './symbolSearch.ts';
+import { usePresence } from './usePresence.ts';
 import styles from './SymbolSearchDialog.module.css';
 
 /** Modal symbol search: type to filter, arrows to move, Enter to pick, Esc to close. */
 export function SymbolSearchDialog() {
   const { open, seed } = useUiStore((s) => s.symbolSearch);
-  if (!open) return null;
-  return <SearchPanel seed={seed} />;
+  const { shown, closing } = usePresence(open ? seed : null);
+  if (shown === null) return null;
+  return <SearchPanel seed={shown} closing={closing} />;
 }
 
-function SearchPanel({ seed }: { seed: string }) {
+function SearchPanel({ seed, closing }: { seed: string; closing: boolean }) {
   const close = useUiStore((s) => s.closeSymbolSearch);
   const setSymbol = useChartStore((s) => s.setSymbol);
   const current = useChartStore((s) => s.symbol);
@@ -80,6 +82,8 @@ function SearchPanel({ seed }: { seed: string }) {
   return (
     <div
       className={styles.backdrop}
+      data-closing={closing || undefined}
+      inert={closing}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

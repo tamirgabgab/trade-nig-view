@@ -6,6 +6,7 @@ import { FilterView } from './FilterView.tsx';
 import { IconButton } from './IconButton.tsx';
 import styles from './LearnDrawer.module.css';
 import { LearnPage } from './LearnPage.tsx';
+import { usePresence } from './usePresence.ts';
 import type { IndicatorView } from './useChartIndicators.ts';
 
 type Tab = 'page' | 'filter';
@@ -19,7 +20,7 @@ const TABS: { id: Tab; label: string }[] = [
  * indicator whose book icon was pressed and, for averages, its measured filter response.
  */
 export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
-  const learnFor = useUiStore((s) => s.learnFor);
+  const { shown: learnFor, closing } = usePresence(useUiStore((s) => s.learnFor));
   const openLearn = useUiStore((s) => s.openLearn);
   const [tab, setTab] = useState<Tab>('page');
   const titleId = useId();
@@ -62,6 +63,8 @@ export function LearnDrawer({ views }: { views: readonly IndicatorView[] }) {
   return (
     <aside
       className={styles.drawer}
+      data-closing={closing || undefined}
+      inert={closing}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
         if (event.key === 'Escape') openLearn(null);

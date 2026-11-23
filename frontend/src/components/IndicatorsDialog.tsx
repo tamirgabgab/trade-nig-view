@@ -7,15 +7,17 @@ import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorsDialog.module.css';
 import { searchIndicators } from './indicatorSearch.ts';
 import dialog from './SymbolSearchDialog.module.css';
+import { usePresence } from './usePresence.ts';
 
 /** Modal indicator picker: type to filter, arrows to move, Enter to add, Esc to close. */
 export function IndicatorsDialog() {
   const open = useUiStore((s) => s.indicatorsDialog);
-  if (!open) return null;
-  return <IndicatorsPanel />;
+  const { shown, closing } = usePresence(open ? true : null);
+  if (shown === null) return null;
+  return <IndicatorsPanel closing={closing} />;
 }
 
-function IndicatorsPanel() {
+function IndicatorsPanel({ closing }: { closing: boolean }) {
   const setOpen = useUiStore((s) => s.setIndicatorsDialog);
   const add = useIndicatorStore((s) => s.add);
   const count = useIndicatorStore((s) => s.instances.length);
@@ -94,6 +96,8 @@ function IndicatorsPanel() {
   return (
     <div
       className={dialog.backdrop}
+      data-closing={closing || undefined}
+      inert={closing}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

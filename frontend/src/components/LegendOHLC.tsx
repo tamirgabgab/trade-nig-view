@@ -10,6 +10,7 @@ import {
 } from './formatNumber.ts';
 import styles from './LegendOHLC.module.css';
 import type { LegendValues } from './legendValues.ts';
+import { usePriceFlash, type PriceFlash } from './usePriceFlash.ts';
 
 interface LegendOHLCProps {
   title: string;
@@ -22,6 +23,12 @@ interface LegendOHLCProps {
   status?: string | undefined;
   /** Rows below the price (indicator legend). */
   children?: ReactNode;
+  /**
+   * What the latest close belongs to (symbol, interval, adjustment, chart type) while the legend
+   * shows the latest bar; null while the crosshair is on an older bar. A change of the close under
+   * the same key flashes it green or red.
+   */
+  flashKey?: string | null;
 }
 
 function Field({ name, value, tone }: { name: string; value: string; tone: string }) {
@@ -29,6 +36,22 @@ function Field({ name, value, tone }: { name: string; value: string; tone: strin
     <span className={styles.field}>
       <span className={styles.name}>{name}</span>
       <span className={tone} data-field={name}>
+        {value}
+      </span>
+    </span>
+  );
+}
+
+function CloseField({ value, tone, flash }: { value: string; tone: string; flash: PriceFlash }) {
+  return (
+    <span className={styles.field}>
+      <span className={styles.name}>C</span>
+      <span
+        key={flash.tick}
+        className={tone}
+        data-field="C"
+        data-flash={flash.direction ?? undefined}
+      >
         {value}
       </span>
     </span>
@@ -45,7 +68,9 @@ export function LegendOHLC({
   hasVolume,
   status,
   children,
+  flashKey = null,
 }: LegendOHLCProps) {
+  const flash = usePriceFlash(values?.close ?? null, flashKey);
   const tone = styles[direction(values?.change ?? null)] ?? '';
   return (
     <div className={styles.legend} aria-label="Price legend">
@@ -58,7 +83,7 @@ export function LegendOHLC({
             <Field name="O" value={formatPrice(values.open, decimals)} tone={tone} />
             <Field name="H" value={formatPrice(values.high, decimals)} tone={tone} />
             <Field name="L" value={formatPrice(values.low, decimals)} tone={tone} />
-            <Field name="C" value={formatPrice(values.close, decimals)} tone={tone} />
+            <CloseField value={formatPrice(values.close, decimals)} tone={tone} flash={flash} />
             {values.change !== null && values.changePct !== null && (
               <span className={tone} data-field="change">
                 {formatSigned(values.change, decimals)} ({values.changePct > 0 ? '+' : ''}

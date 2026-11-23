@@ -1,0 +1,21 @@
+.pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.pill[data-animate='true'] {
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    width var(--duration-base) var(--ease-out),
+    opacity var(--duration-fast) ease-out;
+}
+
+/* The pill draws the pressed background; buttons keep only their text colour. */
+.pill ~ button[aria-pressed='true'] {
+  background: transparent;
+}

@@ -44,3 +44,34 @@ button {
   white-space: nowrap;
   border: 0;
 }
+
+/* Price flash (usePriceFlash): a short green/red background behind a price that just changed. */
+[data-flash] {
+  border-radius: 2px;
+}
+
+[data-flash='up'] {
+  animation: price-flash-up 900ms ease-out;
+}
+
+[data-flash='down'] {
+  animation: price-flash-down 900ms ease-out;
+}
+
+@keyframes price-flash-up {
+  from {
+    background: var(--color-up-flash);
+  }
+}
+
+@keyframes price-flash-down {
+  from {
+    background: var(--color-down-flash);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-flash] {
+    animation: none;
+  }
+}

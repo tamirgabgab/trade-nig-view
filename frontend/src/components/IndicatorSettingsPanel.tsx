@@ -14,6 +14,7 @@ import { LINE_WIDTHS, useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorSettingsPanel.module.css';
 import { parseParamInput } from './paramInput.ts';
+import { usePresence } from './usePresence.ts';
 import { valueOutputs, type IndicatorView } from './useChartIndicators.ts';
 
 /** Changes to number fields reach the chart this long after the last keystroke. */
@@ -25,10 +26,10 @@ interface IndicatorSettingsPanelProps {
 
 /** Side panel with the open instance's inputs and style; every change applies live. */
 export function IndicatorSettingsPanel({ views }: IndicatorSettingsPanelProps) {
-  const uid = useUiStore((s) => s.settingsFor);
+  const { shown: uid, closing } = usePresence(useUiStore((s) => s.settingsFor));
   const view = views.find((v) => v.instance.uid === uid);
   if (view?.spec === undefined) return null;
-  return <SettingsForm key={view.instance.uid} view={view} spec={view.spec} />;
+  return <SettingsForm key={view.instance.uid} view={view} spec={view.spec} closing={closing} />;
 }
 
 function isNumeric(param: ParamInfo): boolean {
@@ -41,7 +42,15 @@ function draftOf(spec: IndicatorInfo, params: Params): Record<string, string> {
   );
 }
 
-function SettingsForm({ view, spec }: { view: IndicatorView; spec: IndicatorInfo }) {
+function SettingsForm({
+  view,
+  spec,
+  closing,
+}: {
+  view: IndicatorView;
+  spec: IndicatorInfo;
+  closing: boolean;
+}) {
   const uid = view.instance.uid;
   const close = useUiStore((s) => s.openSettings);
   const setParams = useIndicatorStore((s) => s.setParams);
@@ -117,6 +126,8 @@ function SettingsForm({ view, spec }: { view: IndicatorView; spec: IndicatorInfo
     <aside
       ref={panelRef}
       className={styles.panel}
+      data-closing={closing || undefined}
+      inert={closing}
       role="dialog"
       aria-modal="false"
       aria-labelledby={titleId}

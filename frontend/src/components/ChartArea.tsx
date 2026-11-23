@@ -150,6 +150,11 @@ export function ChartArea({ className }: ChartAreaProps) {
         decimals={decimals}
         hasVolume={hasVolume}
         status={status}
+        flashKey={
+          hoverIndex === null
+            ? `${shownSymbol}|${shownInterval}|${String(adjusted)}|${chartType}`
+            : null
+        }
       >
         <IndicatorLegend
           views={priceViews}

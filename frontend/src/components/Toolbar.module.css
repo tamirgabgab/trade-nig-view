@@ -58,6 +58,7 @@
 }
 
 .group {
+  position: relative;
   display: flex;
   gap: 2px;
 }

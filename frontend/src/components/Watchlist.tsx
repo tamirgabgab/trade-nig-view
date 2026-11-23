@@ -4,10 +4,12 @@ import { groupSymbols, useQuotes, useSymbols, type Quote, type SymbolInfo } from
 import { useChartStore } from '../store/chartStore.ts';
 import { direction, formatPercent, formatPrice } from './formatNumber.ts';
 import styles from './RightSidebar.module.css';
+import { usePriceFlash } from './usePriceFlash.ts';
 
 const DASH = '—';
 
 function QuoteCells({ info, quote }: { info: SymbolInfo; quote: Quote | undefined }) {
+  const flash = usePriceFlash(quote?.last ?? null, info.symbol);
   if (quote === undefined) {
     return (
       <>
@@ -21,7 +23,7 @@ function QuoteCells({ info, quote }: { info: SymbolInfo; quote: Quote | undefine
     return (
       <>
         <td className={styles.dash} title={quote.error ?? 'No data'}>
-          n/a
+          {DASH}
         </td>
         <td className={styles.dash}>{DASH}</td>
         <td className={styles.dash}>{DASH}</td>
@@ -32,7 +34,9 @@ function QuoteCells({ info, quote }: { info: SymbolInfo; quote: Quote | undefine
   return (
     <>
       <td title={quote.stale ? 'Cached value (refresh failed)' : `Close ${quote.time ?? ''}`}>
-        {formatPrice(quote.last, info.decimals)}
+        <span key={flash.tick} className={styles.last} data-flash={flash.direction ?? undefined}>
+          {formatPrice(quote.last, info.decimals)}
+        </span>
       </td>
       <td className={tone}>
         {quote.change === null ? DASH : formatPrice(quote.change, info.decimals)}
