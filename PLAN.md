@@ -188,7 +188,7 @@ two rounds.
 
 R4 is split into **R4a** (drawing infrastructure, persistence, anchor mapping; lines, rays, horizontal/vertical,
 rectangle, text; floating toolbar + live side panel; toolbar flyouts) and **R4b** (Fib retracement and extension,
-parallel channel, price/date ranges, remove all).
+parallel channel, price/date ranges, remove all). Both done (2026-11-23).
 
 S7–S11 follow ROADMAP R4–R7 and the review unchanged.
 

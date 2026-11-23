@@ -10,8 +10,9 @@ trading agent can plug in later.
 > U1a done: quiet motion (sliding pills, exit animations, price flashes), undo for removals, legend focus,
 > RSI/Stochastic band shading, half-screen layout and a `?` shortcuts map. U1b done: watchlist sparklines and
 > symbol card with market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot.
-> U1c (structural cleanup) and R4a done: drawing tools (trend line, ray, extended line, horizontal and vertical
-> lines, rectangle, text) with magnet, floating toolbar, settings panel and per-symbol persistence. Next: R4b.
+> U1c (structural cleanup), R4a and R4b done: drawing tools (lines, rectangle, text, Fib retracement and extension,
+> parallel channel, price/date ranges) with magnet, floating toolbar, settings panel, per-symbol persistence and a
+> trash menu. Next: R5 (market structure).
 > See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
@@ -35,7 +36,7 @@ trading agent can plug in later.
 | UX pass 1: UX profile, dimmed coming-soon buttons, key caps in tooltips, sliding pills, exit animations, price flashes, legend hover focus, undo toast, RSI/Stoch band shading, resizable panes, jump to latest, floating watchlist below 1100 px, `?` shortcuts (U1a) | ✅ Done |
 | UX pass 2: watchlist sparklines and symbol card, market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot (U1b) | ✅ Done |
 | Drawing tools 1: trend line, ray, extended line, horizontal line/ray, vertical line, rectangle, text; select, move, resize, Shift 45°, weak/strong magnet, lock/hide all, Del with undo, floating toolbar, live settings panel, saved per symbol and shown on every interval (R4a) | ✅ Done |
-| Drawing tools 2: Fibonacci retracement and extension, parallel channel, price/date ranges, remove all (R4b) | ⏳ Planned |
+| Drawing tools 2: Fib retracement and trend-based extension (editable level table, bands, ratio+price labels), parallel channel, price / date / date-and-price ranges (change, bars, time span, volume), trash menu to remove drawings, indicators or both with confirmation and undo, `Alt+F` (R4b) | ✅ Done |
 | Gaps, pivots, previous-period levels, 52-week high/low, data window (R5) | ⏳ Planned |
 | Layouts, watchlists, undo/redo, shortcuts, settings (R6) | ⏳ Planned |
 | Bar Replay with no-lookahead guarantee (R7) | ⏳ Planned |

@@ -57,7 +57,7 @@ export function IconButton({
       className={classes}
       aria-label={label}
       aria-pressed={pressed}
-      aria-disabled={comingIn ? true : undefined}
+      aria-disabled={comingIn ? true : rest['aria-disabled']}
       aria-keyshortcuts={shortcut}
       onClick={comingIn ? undefined : onClick}
     >

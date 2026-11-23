@@ -1,5 +1,5 @@
 import { DEFAULT_FIB_LEVELS, fibLevels, fibPrice } from './fib.ts';
-import { formatDuration, rangeLabel } from './measure.ts';
+import { formatDuration, rangeLabel, spanBetween } from './measure.ts';
 import { DEFAULT_STYLE, type Drawing, type DrawingType } from './types.ts';
 
 function drawing(type: DrawingType, prices: number[], times: number[] = []): Drawing {
@@ -69,5 +69,16 @@ describe('range labels', () => {
       '-10.00 (-5.00%)',
       '23 bars, 23d, vol 1.25M',
     ]);
+  });
+});
+
+describe('spanBetween', () => {
+  it('floors each anchor to its bar and sums the volume after the first, up to the last', () => {
+    const volume = (i: number) => i * 10;
+    // A daily Friday on weekly bars sits at i + 0.57: it still belongs to bar i.
+    expect(spanBetween(2.57, 5.57, volume)).toEqual({ bars: 3, volume: 30 + 40 + 50 });
+    expect(spanBetween(5.57, 2.57, volume)).toEqual({ bars: -3, volume: 120 });
+    expect(spanBetween(4, 4, volume)).toEqual({ bars: 0, volume: 0 });
+    expect(spanBetween(1, 3, null)).toEqual({ bars: 2, volume: null });
   });
 });

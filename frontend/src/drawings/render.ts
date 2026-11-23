@@ -123,7 +123,6 @@ function drawRange(
   ctx.fillStyle = withAlpha(color, FILL_ALPHA);
   ctx.fillRect(left, top, right - left, bottom - top);
 
-  ctx.lineWidth = 1;
   if (drawing.type !== 'date_range') {
     arrow(ctx, { x: mid.x, y: a.y }, { x: mid.x, y: b.y });
     if (drawing.type === 'price_range') {

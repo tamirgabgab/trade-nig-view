@@ -52,7 +52,7 @@ import {
   type MarkerSource,
 } from './seriesData.ts';
 import { logicalToTime, logicalToX, timeToLogical } from '../drawings/anchors.ts';
-import type { Span } from '../drawings/measure.ts';
+import { spanBetween, type Span } from '../drawings/measure.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 import { DrawingLayer } from './drawingLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
@@ -643,11 +643,8 @@ export class ChartEngine {
     const from = timeToLogical(this.barTimes, a.time);
     const to = timeToLogical(this.barTimes, b.time);
     if (Number.isNaN(from) || Number.isNaN(to)) return null;
-    const first = Math.max(0, Math.round(Math.min(from, to)));
-    const last = Math.min(this.bars.length - 1, Math.round(Math.max(from, to)));
-    let volume = 0;
-    for (let i = first; i <= last; i += 1) volume += this.bars[i]?.volume ?? 0;
-    return { bars: Math.round(to - from), volume: this.hasVolume ? volume : null };
+    const volume = this.hasVolume ? (i: number) => this.bars[i]?.volume ?? 0 : null;
+    return spanBetween(from, to, volume);
   }
 
   /** Pixel y of a price on the price pane. */

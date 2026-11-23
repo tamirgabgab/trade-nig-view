@@ -339,7 +339,8 @@ export class DrawingManager {
     if (pts === null) return;
     let points: Anchor[] | null;
     if (hit.kind === 'handle') {
-      const other = pts[hit.index === 0 ? 1 : 0] ?? null;
+      // Shift's 45 degrees: from the other end of the line (a channel's width handle has none).
+      const other = hit.index >= 2 ? null : (pts[hit.index === 0 ? 1 : 0] ?? null);
       const anchor = this.anchorAt(p, other, original.type);
       points =
         anchor === null ? null : original.points.map((a, i) => (i === hit.index ? anchor : a));

@@ -173,6 +173,14 @@ export function hitTest(
     const dy = channelOffset(pts);
     if (t >= 0 && t <= 1 && (p.y - base) * (p.y - base - dy) <= 0) return { kind: 'body' };
   }
+  if (drawing.type === 'fib_retracement' || drawing.type === 'fib_extension') {
+    // The trend between the anchors grabs it too, so it stays reachable with every level hidden.
+    const onTrend = pts.some((q, i) => {
+      const prev = pts[i - 1];
+      return prev !== undefined && distanceToLine(p, prev, q, 'segment') <= HIT_PX;
+    });
+    if (onTrend) return { kind: 'body' };
+  }
   const near = strokes(drawing, pts, size, priceToY).some(
     ([s, e]) => distanceToLine(p, s, e, 'segment') <= HIT_PX,
   );

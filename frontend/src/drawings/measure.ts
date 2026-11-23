@@ -3,10 +3,27 @@ import type { Anchor, Drawing } from './types.ts';
 
 /** What a range tool measures between its anchors, from the chart's bars. */
 export interface Span {
-  /** Bars from the first anchor to the second (negative when the second is earlier). */
+  /** Bars from the first anchor's bar to the second's (negative when the second is earlier). */
   bars: number;
-  /** Volume traded over the range's bars; null without volume. */
+  /** Volume of those bars: the ones after the earlier anchor's bar, up to the later one's.
+   *  Null without volume. */
   volume: number | null;
+}
+
+/**
+ * The span between two fractional bar indexes. An instant belongs to the bar that contains it,
+ * so each index is floored; `volume(i)` is bar i's volume (null: the symbol has none).
+ */
+export function spanBetween(
+  from: number,
+  to: number,
+  volume: ((index: number) => number) | null,
+): Span {
+  const a = Math.floor(from);
+  const b = Math.floor(to);
+  let total = 0;
+  for (let i = Math.min(a, b) + 1; i <= Math.max(a, b); i += 1) total += volume?.(i) ?? 0;
+  return { bars: b - a, volume: volume === null ? null : total };
 }
 
 /** "32d 4h", "3h 15m", "45m": a time span in its two largest units. */

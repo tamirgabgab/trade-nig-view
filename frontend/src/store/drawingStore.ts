@@ -44,7 +44,7 @@ export interface DrawingState {
   restore: (removed: Removed) => void;
   /** Remove every drawing of the symbol; returns them so `restoreAll` can undo it. */
   removeAll: () => RemovedAll;
-  /** Put the drawings back (only on the symbol they came from, and only if none was drawn). */
+  /** Put the drawings back (only on the symbol they came from), before any drawn since. */
   restoreAll: (removed: RemovedAll) => void;
   /** Forget the loaded drawings (a symbol switch, until the new ones arrive). */
   unload: () => void;
@@ -169,9 +169,12 @@ export const useDrawingStore = create<DrawingState>()(
         return { drawings, symbol };
       },
       restoreAll: ({ drawings, symbol }) => {
-        set((s) =>
-          s.symbol !== symbol || s.drawings.length > 0 ? s : { drawings, edits: s.edits + 1 },
-        );
+        set((s) => {
+          if (s.symbol !== symbol) return s;
+          const ids = new Set(s.drawings.map((d) => d.id));
+          const back = drawings.filter((d) => !ids.has(d.id));
+          return { drawings: [...back, ...s.drawings], edits: s.edits + 1 };
+        });
       },
     }),
     {

@@ -191,4 +191,17 @@ describe('DrawingManager', () => {
     expect(ext?.points.map((a) => a.price)).toEqual([50, 150, 100]);
     expect(ext?.props.levels?.length).toBeGreaterThan(0);
   });
+
+  it("moves a channel's width handle freely, even with Shift", () => {
+    const el = chart.element();
+    store.getState().setTool('parallel_channel', 'lines');
+    click(el, 100, 100);
+    click(el, 300, 100);
+    click(el, 200, 60);
+    // Selected after drawing; its third handle is at (200, 60).
+    fire(el, 'pointerdown', 200, 60, { shiftKey: true });
+    fire(el, 'pointermove', 260, 40, { shiftKey: true });
+    fire(window, 'pointerup', 260, 40, { shiftKey: true });
+    expect(store.getState().drawings[0]?.points[2]).toEqual({ time: 26, price: 160 });
+  });
 });

@@ -45,8 +45,10 @@ describe('drawingStore', () => {
     useDrawingStore.getState().load('MSFT', 1, []);
     useDrawingStore.getState().restoreAll(removed);
     expect(useDrawingStore.getState().drawings).toEqual([]);
-    useDrawingStore.getState().load('AAPL', 2, []);
+    // A drawing made meanwhile stays; the removed ones come back before it.
+    const other = { ...line, id: 'b' };
+    useDrawingStore.getState().load('AAPL', 2, [other]);
     useDrawingStore.getState().restoreAll(removed);
-    expect(useDrawingStore.getState().drawings).toEqual([line]);
+    expect(useDrawingStore.getState().drawings).toEqual([line, other]);
   });
 });

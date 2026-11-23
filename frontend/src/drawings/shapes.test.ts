@@ -99,6 +99,22 @@ describe('Fib and channel geometry', () => {
     });
   });
 
+  it('a Fib with every level hidden is still grabbed on its trend', () => {
+    const fib = {
+      ...drawing('fib_retracement', {
+        levels: [{ value: 0.5, color: '#000000', visible: false }],
+      }),
+      points: [
+        { time: 0, price: 10 },
+        { time: 0, price: 90 },
+      ],
+    };
+    expect(hitTest(fib, [p(20, 90), p(120, 10)], p(70, 50), size, false, Y)).toEqual({
+      kind: 'body',
+    });
+    expect(hitTest(fib, [p(20, 90), p(120, 10)], p(70, 20), size, false, Y)).toBeNull();
+  });
+
   it('an extension starts at C, as wide as A to B', () => {
     const ext = {
       ...drawing('fib_extension'),

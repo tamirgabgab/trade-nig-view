@@ -180,8 +180,9 @@ export function DrawingToolbar({ className }: { className?: string | undefined }
           label={trashItems.length === 0 ? 'Nothing to remove' : 'Remove objects'}
           icon={icon(Trash2)}
           tooltipSide="right"
-          aria-haspopup="menu"
-          aria-expanded={trashMenu}
+          aria-haspopup={trashItems.length === 0 ? undefined : 'menu'}
+          aria-expanded={trashItems.length === 0 ? undefined : trashMenu}
+          aria-disabled={trashItems.length === 0 || undefined}
           onClick={() => {
             if (trashItems.length > 0) setTrashMenu(!trashMenu);
           }}

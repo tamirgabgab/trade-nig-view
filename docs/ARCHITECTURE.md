@@ -288,7 +288,11 @@ Migrations: `schema_version` bump + a pure migration function `v1 → v2`, teste
 
 R4a implementation: `GET/PUT /api/drawings/{symbol}` (PUT body `{revision, drawings}`; a stale revision is 409
 `revision_conflict`), SQLite `app.db` (`storage/drawings.py`), `props` per tool: `text` {text, font_size}, `rectangle`
-{fill}. Frontend: `drawings/` holds the pure parts (geometry, anchor mapping, magnet, `shapes.ts` shared by the hit test and
+{fill}; R4b adds `fib_retracement` / `fib_extension` {levels: [{value, color, visible}], at most 24} and the
+`parallel_channel` (3 anchors: base line A–B, C on the parallel line), `price_range`, `date_range` and
+`date_price_range` tools (no props). Fib levels are prices placed through the price scale (correct on log scale);
+retracement $p(r) = p_1 - r(p_1 - p_0)$, extension $p(r) = C + r(B - A)$. Lightweight Charts maps only whole logical
+indexes to x (a fraction returns 0), so `anchors.logicalToX` interpolates between the two neighbouring bars. Frontend: `drawings/` holds the pure parts (geometry, anchor mapping, magnet, `shapes.ts` shared by the hit test and
 the canvas renderer, `DrawingManager` for pointer/keyboard interaction); `chart/drawingLayer.ts` is one series
 primitive that projects every anchor at paint time; `store/drawingStore.ts` + `useDrawingsSync` load and save (debounced
 600 ms, flushed on a symbol switch).
