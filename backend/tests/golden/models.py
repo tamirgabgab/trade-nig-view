@@ -88,9 +88,191 @@ def golden_shift(y: Sequence[float], offset: int) -> list[float]:
     return [NAN] * min(offset, len(y)) + list(y[: max(len(y) - offset, 0)])
 
 
-GOLDEN_MA = {
-    "sma": golden_sma,
-    "ema": golden_ema,
-    "wma": golden_wma,
-    "smma": golden_rma,
+def _first_finite(x: Sequence[float]) -> int:
+    for i, value in enumerate(x):
+        if not math.isnan(value):
+            return i
+    return len(x)
+
+
+def golden_ema_of(x: Sequence[float], n: int) -> list[float]:
+    """EMA of a series that may start with ``NaN`` (a cascaded EMA): the SMA seed is taken over
+    the first ``n`` finite values."""
+    f = _first_finite(x)
+    head = [NAN] * min(f, len(x))
+    return head + golden_ema(list(x[f:]), n)
+
+
+def _combine(weights: Sequence[float], series: Sequence[Sequence[float]]) -> list[float]:
+    out: list[float] = []
+    for t in range(len(series[0])):
+        values = [s[t] for s in series]
+        if any(math.isnan(v) for v in values):
+            out.append(NAN)
+        else:
+            out.append(sum(w * v for w, v in zip(weights, values, strict=True)))
+    return out
+
+
+def golden_dema(x: Sequence[float], n: int) -> list[float]:
+    e1 = golden_ema(x, n)
+    return _combine((2.0, -1.0), (e1, golden_ema_of(e1, n)))
+
+
+def golden_tema(x: Sequence[float], n: int) -> list[float]:
+    e1 = golden_ema(x, n)
+    e2 = golden_ema_of(e1, n)
+    return _combine((3.0, -3.0, 1.0), (e1, e2, golden_ema_of(e2, n)))
+
+
+def golden_hma(x: Sequence[float], n: int) -> list[float]:
+    half = n // 2
+    root = math.floor(math.sqrt(n))
+    raw = _combine((2.0, -1.0), (golden_wma(x, half), golden_wma(x, n)))
+    return golden_wma(raw, root)
+
+
+def golden_lsma(x: Sequence[float], n: int, offset: int = 0) -> list[float]:
+    """Ordinary least squares on (j, x) for j = 0..n-1 in each window, evaluated at
+    ``n - 1 - offset``."""
+    out: list[float] = []
+    for t in range(len(x)):
+        if t < n - 1:
+            out.append(NAN)
+            continue
+        window = x[t - n + 1 : t + 1]
+        if n == 1:
+            out.append(window[0])
+            continue
+        mean_j = (n - 1) / 2
+        mean_y = sum(window) / n
+        sxy = sum((j - mean_j) * (y - mean_y) for j, y in enumerate(window))
+        sxx = sum((j - mean_j) ** 2 for j in range(n))
+        slope = sxy / sxx
+        intercept = mean_y - slope * mean_j
+        out.append(intercept + slope * (n - 1 - offset))
+    return out
+
+
+def golden_alma(
+    x: Sequence[float], n: int, offset: float = 0.85, sigma: float = 6.0, floor: bool = False
+) -> list[float]:
+    """Pine's ``ta.alma`` loop: weight of ``x[t - (n-1-j)]`` is ``exp(-(j-m)^2 / (2 s^2))``."""
+    m = offset * (n - 1)
+    if floor:
+        m = math.floor(m)
+    s = n / sigma
+    out: list[float] = []
+    for t in range(len(x)):
+        if t < n - 1:
+            out.append(NAN)
+            continue
+        norm = 0.0
+        total = 0.0
+        for j in range(n):
+            weight = math.exp(-((j - m) ** 2) / (2 * s * s))
+            norm += weight
+            total += x[t - (n - 1 - j)] * weight
+        out.append(total / norm)
+    return out
+
+
+def golden_swma(x: Sequence[float]) -> list[float]:
+    return [
+        NAN if t < 3 else (x[t - 3] + 2 * x[t - 2] + 2 * x[t - 1] + x[t]) / 6 for t in range(len(x))
+    ]
+
+
+def golden_vwma(x: Sequence[float], volume: Sequence[float], n: int) -> list[float]:
+    out: list[float] = []
+    for t in range(len(x)):
+        if t < n - 1:
+            out.append(NAN)
+            continue
+        weighted = sum(x[t - k] * volume[t - k] for k in range(n))
+        total = sum(volume[t - k] for k in range(n))
+        out.append(weighted / total if total > 0 else NAN)
+    return out
+
+
+def golden_mcginley(x: Sequence[float], n: int) -> list[float]:
+    """Pine: ``mg := na(mg[1]) ? ta.ema(src, n) : mg[1] + (src - mg[1]) / (n * pow(src/mg[1], 4))``
+    with division by zero = ``na``."""
+    seed = golden_ema(x, n)
+    out: list[float] = []
+    previous = NAN
+    for t in range(len(x)):
+        if math.isnan(previous):
+            current = seed[t]
+        else:
+            try:
+                current = previous + (x[t] - previous) / (n * (x[t] / previous) ** 4)
+            except ZeroDivisionError:
+                current = NAN
+        out.append(current)
+        previous = current
+    return out
+
+
+def golden_kama(x: Sequence[float], n: int, fast: int = 2, slow: int = 30) -> list[float]:
+    """TA-Lib ``KAMA``: seed ``x[n-1]``, first value at bar ``n``."""
+    f = 2 / (fast + 1)
+    s = 2 / (slow + 1)
+    out: list[float] = [NAN] * min(n, len(x))
+    level = x[n - 1] if n - 1 < len(x) else NAN
+    for t in range(n, len(x)):
+        change = abs(x[t] - x[t - n])
+        noise = sum(abs(x[t - i] - x[t - i - 1]) for i in range(n))
+        ratio = 1.0 if noise == 0 or noise <= change else change / noise
+        rate = (ratio * (f - s) + s) ** 2
+        level = level + rate * (x[t] - level)
+        out.append(level)
+    return out
+
+
+def golden_t3(x: Sequence[float], n: int, v: float = 0.7) -> list[float]:
+    """TA-Lib ``T3``: six cascaded EMAs combined with Tillson's coefficients (each EMA seeded
+    with the SMA of its input's first ``n`` finite values)."""
+    e: list[list[float]] = []
+    level: Sequence[float] = x
+    for _ in range(6):
+        level = golden_ema_of(level, n)
+        e.append(level)
+    c1 = -(v**3)
+    c2 = 3 * v**2 + 3 * v**3
+    c3 = -6 * v**2 - 3 * v - 3 * v**3
+    c4 = 1 + 3 * v + v**3 + 3 * v**2
+    return _combine((c1, c2, c3, c4), (e[5], e[4], e[3], e[2]))
+
+
+def golden_zlema(x: Sequence[float], n: int) -> list[float]:
+    d = (n - 1) // 2
+    momentum = [NAN if t < d else 2 * x[t] - x[t - d] for t in range(len(x))]
+    return golden_ema_of(momentum, n)
+
+
+def golden_vwma_type(x: Sequence[float], n: int, volume: Sequence[float]) -> list[float]:
+    return golden_vwma(x, volume, n)
+
+
+GoldenMa = Callable[[Sequence[float], int, Sequence[float]], list[float]]
+
+#: Golden model of every ``MA_TYPES`` entry as ``(x, n, volume) -> y`` (extra inputs at their
+#: defaults, as in ``apply_ma``).
+GOLDEN_MA: dict[str, GoldenMa] = {
+    "sma": lambda x, n, _v: golden_sma(x, n),
+    "ema": lambda x, n, _v: golden_ema(x, n),
+    "wma": lambda x, n, _v: golden_wma(x, n),
+    "smma": lambda x, n, _v: golden_rma(x, n),
+    "dema": lambda x, n, _v: golden_dema(x, n),
+    "tema": lambda x, n, _v: golden_tema(x, n),
+    "hma": lambda x, n, _v: golden_hma(x, n),
+    "lsma": lambda x, n, _v: golden_lsma(x, n),
+    "alma": lambda x, n, _v: golden_alma(x, n),
+    "swma": lambda x, _n, _v: golden_swma(x),
+    "vwma": golden_vwma_type,
+    "mcginley": lambda x, n, _v: golden_mcginley(x, n),
+    "kama": lambda x, n, _v: golden_kama(x, n),
+    "t3": lambda x, n, _v: golden_t3(x, n),
+    "zlema": lambda x, n, _v: golden_zlema(x, n),
 }

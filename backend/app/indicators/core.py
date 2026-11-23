@@ -17,6 +17,7 @@ Two kinds of filter cover the whole moving-average family:
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from enum import StrEnum
 
@@ -149,6 +150,208 @@ def rma(x: FloatArray, length: int) -> FloatArray:
     An EMA with :math:`\alpha = \frac1n` and an SMA seed.
     """
     return ema_recursive(x, 1.0 / length, length)
+
+
+def lagged(x: FloatArray, d: int) -> FloatArray:
+    """:math:`x_{t-d}` (``NaN`` for the first ``d`` bars); ``d >= 0``."""
+    if d < 0:
+        raise ValueError("lag must be >= 0")
+    out = nan_like(x)
+    if d < len(x):
+        out[d:] = x[: len(x) - d]
+    return out
+
+
+def adaptive_recursion(
+    x: FloatArray, coefficient: FloatArray, start: int, seed: float
+) -> FloatArray:
+    r""":math:`y_t = y_{t-1} + c_t\,(x_t - y_{t-1})` from ``start`` on, with :math:`y_{start-1} =`
+    ``seed`` (not output). Earlier outputs are ``NaN``."""
+    out = nan_like(x)
+    level = seed
+    values = x[start:].tolist()
+    rates = coefficient[start:].tolist()
+    tail: list[float] = []
+    for value, rate in zip(values, rates, strict=True):
+        level += rate * (value - level)
+        tail.append(level)
+    out[start:] = tail
+    return out
+
+
+def dema(x: FloatArray, length: int) -> FloatArray:
+    r"""Double EMA :math:`2E - E(E)` (Mulloy): first moment cancelled, lag 0, warm-up
+    :math:`2(n-1)`."""
+    e1 = ema(x, length)
+    return 2.0 * e1 - ema(e1, length)
+
+
+def tema(x: FloatArray, length: int) -> FloatArray:
+    r"""Triple EMA :math:`3E - 3E(E) + E(E(E))` (Mulloy): lag 0, warm-up :math:`3(n-1)`."""
+    e1 = ema(x, length)
+    e2 = ema(e1, length)
+    return 3.0 * e1 - 3.0 * e2 + ema(e2, length)
+
+
+def hma_lengths(length: int) -> tuple[int, int]:
+    r""":math:`m = \lfloor n/2 \rfloor` and :math:`s = \lfloor\sqrt n\rfloor` (Pine casts the float
+    ``length/2`` and ``sqrt(length)`` to int; assumption E2)."""
+    return length // 2, math.isqrt(length)
+
+
+HMA_MIN_LENGTH = 2
+
+
+def hma(x: FloatArray, length: int) -> FloatArray:
+    r"""Hull MA :math:`\mathrm{WMA}_s\left(2\,\mathrm{WMA}_m(x) - \mathrm{WMA}_n(x)\right)`;
+    needs :math:`n \ge 2`. Warm-up :math:`n + s - 2`."""
+    if length < HMA_MIN_LENGTH:
+        raise ValueError(f"HMA needs length >= {HMA_MIN_LENGTH}")
+    m, s = hma_lengths(length)
+    return wma(2.0 * wma(x, m) - wma(x, length), s)
+
+
+def linreg_weights(length: int, offset: int = 0) -> FloatArray:
+    r"""FIR kernel of the least-squares line through the window, evaluated at position
+    :math:`p = n-1-\text{offset}` (oldest bar = 0): with :math:`\bar j = \frac{n-1}{2}` and
+    :math:`S = \sum_j (j-\bar j)^2 = \frac{n(n^2-1)}{12}`,
+    :math:`w_j = \frac1n + \frac{(p-\bar j)(j-\bar j)}{S}` (Pine ``ta.linreg``)."""
+    if length == 1:
+        return np.ones(1)
+    j = np.arange(length, dtype=np.float64)
+    centre = (length - 1) / 2.0
+    spread = float(np.sum((j - centre) ** 2))
+    position = length - 1 - offset
+    return 1.0 / length + (position - centre) * (j - centre) / spread
+
+
+def lsma(x: FloatArray, length: int, offset: int = 0) -> FloatArray:
+    r"""Least-squares MA (Pine ``ta.linreg``); ``offset = 0`` equals
+    :math:`3\,\mathrm{WMA}_n - 2\,\mathrm{SMA}_n` (lag 0)."""
+    return fir(x, linreg_weights(length, offset))
+
+
+def alma_weights(
+    length: int, offset: float = 0.85, sigma: float = 6.0, floor: bool = False
+) -> FloatArray:
+    r"""Gaussian window :math:`w_j = e^{-(j-m)^2 / (2 s^2)}`, :math:`m = \text{offset}\,(n-1)`
+    (floored if ``floor``), :math:`s = n/\sigma`, normalised; oldest to newest (Pine
+    ``ta.alma``)."""
+    centre = offset * (length - 1)
+    if floor:
+        centre = math.floor(centre)
+    width = length / sigma
+    j = np.arange(length, dtype=np.float64)
+    w = np.exp(-((j - centre) ** 2) / (2.0 * width * width))
+    return w / w.sum()
+
+
+def alma(
+    x: FloatArray, length: int, offset: float = 0.85, sigma: float = 6.0, floor: bool = False
+) -> FloatArray:
+    """Arnaud Legoux MA: a Gaussian-weighted window shifted towards recent bars."""
+    return fir(x, alma_weights(length, offset, sigma, floor))
+
+
+SWMA_WEIGHTS = np.array([1.0, 2.0, 2.0, 1.0]) / 6.0
+
+
+def swma(x: FloatArray) -> FloatArray:
+    r"""Symmetrically weighted MA :math:`\frac{x_t + 2x_{t-1} + 2x_{t-2} + x_{t-3}}{6}` (Pine
+    ``ta.swma``; fixed 4 taps, lag 1.5)."""
+    return fir(x, SWMA_WEIGHTS)
+
+
+def vwma(x: FloatArray, volume: FloatArray, length: int) -> FloatArray:
+    r"""Volume-weighted MA :math:`\frac{\sum_{k<n} x_{t-k}V_{t-k}}{\sum_{k<n} V_{t-k}}`;
+    ``NaN`` where the window's volume is 0 (indices and forex)."""
+    ones = np.ones(length)
+    weighted = fir(as_float(x) * as_float(volume), ones)
+    total = fir(as_float(volume), ones)
+    out = nan_like(weighted)
+    ok = total > 0
+    out[ok] = weighted[ok] / total[ok]
+    return out
+
+
+def mcginley(x: FloatArray, length: int) -> FloatArray:
+    r"""McGinley Dynamic :math:`M_t = M_{t-1} + \frac{x_t - M_{t-1}}{n\,(x_t/M_{t-1})^4}`.
+
+    Pine semantics (TradingView's built-in script): wherever :math:`M_{t-1}` is ``na`` the value
+    is :math:`\mathrm{EMA}_n(x)_t`, so the first value is the EMA seed; a zero divisor (a zero
+    level, or :math:`(x_t/M_{t-1})^4` underflowing) gives ``na`` and the next bar re-seeds from the
+    EMA.
+    """
+    x = as_float(x)
+    seed = ema(x, length).tolist()
+    values = x.tolist()
+    out: list[float] = []
+    level = math.nan
+    for t, value in enumerate(values):
+        if math.isnan(level):
+            level = seed[t]
+        else:
+            divisor = 0.0 if level == 0.0 else length * (value / level) ** 4
+            level = level + (value - level) / divisor if divisor != 0.0 else math.nan
+        out.append(level)
+    return np.asarray(out, dtype=np.float64)
+
+
+def kama(x: FloatArray, length: int, fast: int = 2, slow: int = 30) -> FloatArray:
+    r"""Kaufman adaptive MA (TA-Lib semantics).
+
+    Efficiency ratio :math:`ER_t = \frac{|x_t - x_{t-n}|}{\sum_{i=0}^{n-1}|x_{t-i} - x_{t-i-1}|}`
+    (1 when the denominator is 0 or not larger than the numerator), smoothing
+    :math:`c_t = \left(ER_t(f - s) + s\right)^2` with :math:`f=\frac{2}{F+1}`,
+    :math:`s=\frac{2}{S+1}`, and :math:`K_t = K_{t-1} + c_t(x_t - K_{t-1})` seeded with
+    :math:`K_{n-1} = x_{n-1}`. First value at bar :math:`n`.
+    """
+    x = as_float(x)
+    out = nan_like(x)
+    start = first_valid(x) + length
+    if start >= len(x):
+        return out
+    change = np.abs(x - lagged(x, length))
+    steps = np.abs(x - lagged(x, 1))
+    noise = fir(steps, np.ones(length))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ratio = np.where((noise <= change) | (noise == 0.0), 1.0, change / noise)
+    f, s = 2.0 / (fast + 1.0), 2.0 / (slow + 1.0)
+    rate = (ratio * (f - s) + s) ** 2
+    return adaptive_recursion(x, rate, start, float(x[start - 1]))
+
+
+T3_DEFAULT_FACTOR = 0.7
+
+
+def t3(x: FloatArray, length: int, factor: float = T3_DEFAULT_FACTOR) -> FloatArray:
+    r"""Tillson T3 :math:`GD(GD(GD(x)))` with :math:`GD = (1+v)E - vE(E)`, expanded over six
+    cascaded EMAs: :math:`c_1 e_6 + c_2 e_5 + c_3 e_4 + c_4 e_3` with :math:`c_1 = -v^3`,
+    :math:`c_2 = 3v^2 + 3v^3`, :math:`c_3 = -6v^2 - 3v - 3v^3`, :math:`c_4 = 1 + 3v + v^3 + 3v^2`
+    (TA-Lib). Warm-up :math:`6(n-1)`."""
+    v = factor
+    e: list[FloatArray] = []
+    level = as_float(x)
+    for _ in range(6):
+        level = ema(level, length)
+        e.append(level)
+    c1 = -(v**3)
+    c2 = 3 * v**2 + 3 * v**3
+    c3 = -6 * v**2 - 3 * v - 3 * v**3
+    c4 = 1 + 3 * v + v**3 + 3 * v**2
+    return c1 * e[5] + c2 * e[4] + c3 * e[3] + c4 * e[2]
+
+
+def zlema_lag(length: int) -> int:
+    r""":math:`d = \lfloor (n-1)/2 \rfloor`."""
+    return (length - 1) // 2
+
+
+def zlema(x: FloatArray, length: int) -> FloatArray:
+    r"""Zero-lag EMA (Ehlers & Way) :math:`\mathrm{EMA}_n(x_t + (x_t - x_{t-d}))`; warm-up
+    :math:`n - 1 + d`."""
+    x = as_float(x)
+    return ema(2.0 * x - lagged(x, zlema_lag(length)), length)
 
 
 def shift(y: FloatArray, offset: int) -> FloatArray:

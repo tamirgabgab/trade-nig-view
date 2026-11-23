@@ -53,6 +53,7 @@ class ParamSpec:
     max: float | None = None
     step: float | None = None
     options: tuple[str, ...] = ()
+    option_labels: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

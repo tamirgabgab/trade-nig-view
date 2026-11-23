@@ -149,3 +149,132 @@ def test_impulse_response_equals_kernel(n: int) -> None:
         # Unit DC gain and lag = centre of mass for the finite kernels.
         if fn in (core.sma, core.wma):
             assert h.sum() == pytest.approx(1.0)
+
+
+# --- R3b: generalized moving averages -----------------------------------------------------------
+
+
+def test_swma_hand_vector() -> None:
+    # (1 + 2*2 + 2*3 + 4) / 6 = 2.5; (2 + 2*3 + 2*4 + 5) / 6 = 3.5
+    np.testing.assert_allclose(
+        core.swma(arr(1, 2, 3, 4, 5)), arr(NAN, NAN, NAN, 2.5, 3.5), equal_nan=True
+    )
+
+
+def test_vwma_hand_vector() -> None:
+    # (1*1 + 2*1) / 2 = 1.5; (2*1 + 3*2) / 3 = 8/3
+    np.testing.assert_allclose(
+        core.vwma(arr(1, 2, 3), arr(1, 1, 2), 2), arr(NAN, 1.5, 8 / 3), equal_nan=True
+    )
+
+
+def test_vwma_without_volume_is_nan() -> None:
+    y = core.vwma(arr(1, 2, 3, 4), arr(0, 0, 0, 5), 2)
+    np.testing.assert_allclose(y, arr(NAN, NAN, NAN, 4), equal_nan=True)
+
+
+def test_mcginley_hand_vector() -> None:
+    # n = 2: seed EMA_2 = mean(2, 4) = 3; M_2 = 3 + (4 - 3) / (2 * (4/3)^4) = 3 + 81/512
+    np.testing.assert_allclose(
+        core.mcginley(arr(2, 4, 4), 2), arr(NAN, 3, 3 + 81 / 512), equal_nan=True
+    )
+
+
+def test_kama_hand_vector() -> None:
+    # n = 2, f = 2/3: seed K_1 = x_1 = 2; noise = change at t = 2, 3, so ER = 1, c = f^2 = 4/9
+    k2 = 2 + 4 / 9
+    k3 = k2 + 4 / 9 * (3 - k2)
+    np.testing.assert_allclose(core.kama(arr(1, 2, 3, 3), 2), arr(NAN, NAN, k2, k3), equal_nan=True)
+
+
+def test_kama_efficiency_ratio_slows_it_down_in_chop() -> None:
+    # change |5 - 5| = 0 over a noisy window: ER = 0, c = s^2 with s = 2/31
+    s = 2 / 31
+    y = core.kama(arr(5, 6, 5, 6, 5), 4)
+    np.testing.assert_allclose(y[4], 6 + s * s * (5 - 6))
+
+
+def test_lsma_on_a_line_returns_the_line() -> None:
+    x = np.asarray(3.0 + 2.0 * np.arange(40), dtype=np.float64)
+    np.testing.assert_allclose(core.lsma(x, 7)[6:], x[6:])
+    # offset o evaluates the fitted line o bars back
+    np.testing.assert_allclose(core.lsma(x, 7, offset=2)[6:], x[4:-2])
+
+
+def test_lsma_equals_3wma_minus_2sma() -> None:
+    x = np.random.default_rng(5).normal(100, 5, 80)
+    np.testing.assert_allclose(core.lsma(x, 10), 3 * core.wma(x, 10) - 2 * core.sma(x, 10))
+
+
+def test_alma_weights_are_a_normalised_gaussian() -> None:
+    w = core.alma_weights(9)
+    assert w.sum() == pytest.approx(1.0)
+    assert int(np.argmax(w)) == round(0.85 * 8)
+    assert np.all(w > 0)
+
+
+def test_hma_rejects_length_one() -> None:
+    with pytest.raises(ValueError, match=">= 2"):
+        core.hma(arr(1, 2, 3), 1)
+
+
+def _ramp_lags(n: int, v: float = 0.7) -> dict[str, tuple[float, int]]:
+    """Analytic ramp lag and warm-up per lag-compensated MA (PLAN section 5.4)."""
+    m, s = core.hma_lengths(n)
+    d = core.zlema_lag(n)
+    return {
+        "dema": (0.0, 2 * (n - 1)),
+        "tema": (0.0, 3 * (n - 1)),
+        "lsma": (0.0, n - 1),
+        "hma": ((s + 2 * m - n - 2) / 3, n + s - 2),
+        "zlema": ((n - 1) / 2 - d, n - 1 + d),
+        "t3": (3 * (1 - v) * (n - 1) / 2, 6 * (n - 1)),
+    }
+
+
+FUNCTIONS = {
+    "dema": core.dema,
+    "tema": core.tema,
+    "lsma": core.lsma,
+    "hma": core.hma,
+    "zlema": core.zlema,
+    "t3": core.t3,
+}
+
+
+@pytest.mark.parametrize("n", [2, 3, 9, 16, 21])
+@pytest.mark.parametrize("name", sorted(FUNCTIONS))
+def test_ramp_lag_of_lag_compensated_mas(name: str, n: int) -> None:
+    """On x_t = a + b t every output from the warm-up on is x_{t - lag} exactly."""
+    x = np.asarray(50.0 + 0.5 * np.arange(400), dtype=np.float64)
+    lag, warmup = _ramp_lags(n)[name]
+    y = FUNCTIONS[name](x, n)
+    assert np.isnan(y[:warmup]).all()
+    np.testing.assert_allclose(y[warmup:], x[warmup:] - 0.5 * lag, rtol=0, atol=1e-9)
+
+
+@pytest.mark.parametrize("name", sorted(FUNCTIONS))
+def test_lag_compensated_mas_overshoot_a_step(name: str) -> None:
+    """The price of less lag: a negative kernel lobe overshoots a unit step."""
+    x = np.r_[np.zeros(200), np.ones(200)]
+    y = FUNCTIONS[name](x, 10)
+    assert np.nanmax(y) > 1.0 + 1e-3
+
+
+def test_t3_with_factor_zero_is_a_triple_ema() -> None:
+    """v = 0 leaves only c4 e3, but the warm-up stays 6(n-1) as in TA-Lib."""
+    x = np.random.default_rng(8).normal(100, 5, 120)
+    triple = core.ema(core.ema(core.ema(x, 4), 4), 4)
+    y = core.t3(x, 4, 0.0)
+    assert np.isnan(y[:18]).all()
+    np.testing.assert_allclose(y[18:], triple[18:])
+
+
+def test_mcginley_reseeds_from_the_ema_after_a_zero_divisor() -> None:
+    """Length 1 and a halving drive M negative and then huge until (x/M)^4 underflows to 0:
+    Pine gives na there and takes the EMA (= x for n = 1) on the next bar."""
+    x = arr(2, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+    y = core.mcginley(x, 1)
+    gap = np.flatnonzero(np.isnan(y))
+    assert gap.size == 1
+    assert y[gap[0] + 1] == x[gap[0] + 1]

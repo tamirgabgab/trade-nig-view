@@ -951,6 +951,14 @@
             },
             "type": "array",
             "title": "Options"
+          },
+          "option_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Option Labels",
+            "description": "Display names of `options` (same order); empty = the ids"
           }
         },
         "type": "object",

@@ -57,9 +57,72 @@ def test_lists_the_registry(client: TestClient) -> None:
         "max": 5000.0,
         "step": 1.0,
         "options": [],
+        "option_labels": [],
     }
     assert ema["params"][1]["options"][:3] == ["close", "open", "high"]
     assert ema["outputs"][0]["plot"] == "line"
+
+
+def test_lists_ma_types_with_display_names(client: TestClient) -> None:
+    by_id = {item["id"]: item for item in client.get("/api/indicators").json()}
+    assert len(by_id) == 19
+    ma_type = by_id["ma"]["params"][0]
+    assert ma_type["name"] == "ma_type"
+    assert ma_type["type"] == "enum"
+    assert ma_type["default"] == "sma"
+    assert ma_type["options"][:4] == ["sma", "ema", "wma", "smma"]
+    assert ma_type["option_labels"][:4] == ["SMA", "EMA", "WMA", "SMMA (RMA)"]
+    assert len(ma_type["options"]) == len(ma_type["option_labels"]) == 15
+    crosses = by_id["ma_cross"]["outputs"][2]
+    assert crosses["plot"] == "markers"
+    assert crosses["style"] == {"up": "#089981", "down": "#F23645"}
+    assert by_id["envelope"]["category"] == "bands"
+    assert [o["name"] for o in by_id["envelope"]["outputs"]] == ["upper", "basis", "lower"]
+
+
+def test_ma_cross_marks_crossings(long_client: TestClient) -> None:
+    body = long_client.post(
+        "/api/indicators/compute",
+        json={"symbol": "AAPL", "id": "ma_cross", "start": epoch("2024-01-02")},
+    ).json()
+    fast = np.array([np.nan if v is None else v for v in body["outputs"]["fast"]])
+    slow = np.array([np.nan if v is None else v for v in body["outputs"]["slow"]])
+    marks = body["outputs"]["crosses"]
+    assert set(marks) <= {None, 1.0, -1.0}
+    assert {1.0, -1.0} <= set(marks)
+    for t, mark in enumerate(marks):
+        if mark is not None and t > 0:
+            assert np.sign(fast[t] - slow[t]) == mark
+            assert np.sign(fast[t - 1] - slow[t - 1]) != mark
+    assert body["lookback"] == 25 * 21
+
+
+def test_envelope_with_an_ema_basis(long_client: TestClient) -> None:
+    params = {"length": 10, "percent": 5.0, "ma_type": "ema"}
+    body = long_client.post(
+        "/api/indicators/compute", json={"symbol": "MSFT", "id": "envelope", "params": params}
+    ).json()
+    bars = long_client.get("/api/bars", params={"symbol": "MSFT"}).json()["bars"]
+    expected = golden_ema([bar["close"] for bar in bars], 10)
+    np.testing.assert_allclose(body["outputs"]["basis"][9:], expected[9:], rtol=1e-12)
+    np.testing.assert_allclose(
+        body["outputs"]["upper"][9:], np.array(expected[9:]) * 1.05, rtol=1e-12
+    )
+    assert body["warmup"] == 9
+
+
+def test_hma_length_one_is_a_422(client: TestClient) -> None:
+    response = client.post(
+        "/api/indicators/compute",
+        json={"symbol": "AAA", "id": "ma", "params": {"ma_type": "hma", "length": 1}},
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_params"
+
+
+def test_kama_lookback_covers_its_slow_seed(client: TestClient) -> None:
+    body = client.post("/api/indicators/compute", json={"symbol": "AAA", "id": "kama"}).json()
+    assert body["lookback"] == int(25 * (31 / 2) ** 2) + 10
 
 
 def test_computes_on_all_bars_with_defaults(client: TestClient) -> None:

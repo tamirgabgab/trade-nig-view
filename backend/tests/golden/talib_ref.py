@@ -12,6 +12,11 @@ class TaLib(Protocol):
     def SMA(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
     def EMA(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
     def WMA(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
+    def DEMA(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
+    def TEMA(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
+    def KAMA(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
+    def LINEARREG(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
+    def T3(self, real: FloatArray, timeperiod: int, vfactor: float) -> FloatArray: ...  # noqa: N802
 
 
 def load_talib() -> tuple[TaLib | None, str]:

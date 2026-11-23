@@ -383,6 +383,11 @@ export interface components {
             step?: number | null;
             /** Options */
             options?: string[];
+            /**
+             * Option Labels
+             * @description Display names of `options` (same order); empty = the ids
+             */
+            option_labels?: string[];
         };
         /**
          * ProviderStatus

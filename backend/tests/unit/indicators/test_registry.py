@@ -11,6 +11,7 @@ from app.indicators.catalog import CATALOG, get_spec
 from app.indicators.registry import (
     IndicatorSpec,
     InvalidParamsError,
+    ParamValue,
     UnknownIndicatorError,
     length_lookback,
     resolve_params,
@@ -49,20 +50,48 @@ def test_spec_is_complete(spec: IndicatorSpec) -> None:
             assert p.min <= p.default <= p.max
         if p.type in ("enum", "source"):
             assert p.default in p.options
+        if p.type == "bool":
+            assert isinstance(p.default, bool)
     for o in spec.outputs:
         assert o.color.startswith("#")
         assert len(o.color) == 7
 
 
+def with_length(spec: IndicatorSpec, length: int) -> dict[str, ParamValue]:
+    """Defaults with every ``*length*`` input set to ``length`` (clamped to its minimum) and an
+    integer ``offset`` of 2, where the spec has those inputs."""
+    params = spec.defaults()
+    for p in spec.params:
+        if p.type == "int" and "length" in p.name:
+            params[p.name] = max(length, int(p.min or 1))
+        elif p.name == "offset" and p.type == "int":
+            params[p.name] = 2
+    return params
+
+
 @pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
 @pytest.mark.parametrize("length", [1, 5, 30])
 def test_warmup_matches_the_nan_prefix(spec: IndicatorSpec, length: int) -> None:
-    params = {**spec.defaults(), "length": length, "offset": 2}
+    """Every line output starts exactly at ``warmup`` and has no gaps after it (markers are
+    sparse by design and only must not start earlier)."""
+    params = with_length(spec, length)
     outputs = spec.run(clean_frame(), params)
-    for values in outputs.values():
-        first = int(np.flatnonzero(~np.isnan(values))[0])
-        assert first == spec.warmup(params)
-        assert not np.isnan(values[first:]).any()
+    warmup = spec.warmup(params)
+    for o in spec.outputs:
+        values = outputs[o.name]
+        valid = np.flatnonzero(~np.isnan(values))
+        if o.plot == "markers":
+            assert valid.size == 0 or valid[0] > warmup
+            continue
+        assert int(valid[0]) == warmup, o.name
+        assert not np.isnan(values[warmup:]).any(), o.name
+
+
+@pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
+def test_enum_option_labels_match_options(spec: IndicatorSpec) -> None:
+    for p in spec.params:
+        if p.option_labels:
+            assert len(p.option_labels) == len(p.options)
 
 
 def test_defaults_are_filled_in_and_values_coerced() -> None:

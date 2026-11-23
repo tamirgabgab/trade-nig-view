@@ -37,6 +37,10 @@ class ParamInfo(BaseModel):
     max: float | None = None
     step: float | None = None
     options: list[str] = Field(default_factory=list[str])
+    option_labels: list[str] = Field(
+        default_factory=list[str],
+        description="Display names of `options` (same order); empty = the ids",
+    )
 
 
 class OutputInfo(BaseModel):
@@ -82,6 +86,7 @@ def _info(spec: IndicatorSpec) -> IndicatorInfo:
                 max=p.max,
                 step=p.step,
                 options=list(p.options),
+                option_labels=list(p.option_labels),
             )
             for p in spec.params
         ],
