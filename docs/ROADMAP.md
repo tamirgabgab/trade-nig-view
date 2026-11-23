@@ -13,7 +13,7 @@
 | R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
 | R1 | Market data layer | L | ✅ R1a + R1b done (2026-11-22); real fixtures pending on the user's machine |
 | R2 | Chart core | L | ✅ R2a + R2b done (2026-11-22) |
-| R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | 🔨 R3a ✅, R3b next |
+| R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | 🔨 R3a ✅, R3b ✅ (2026-11-23), R3c after L1 |
 | L1 | Learn v1 for the MA family (from Phase 2) | M | |
 | U1 | UX pass (responsive, disabled states, loaders, keyboard) | M | |
 | R4 | Drawing tools v1 | L | |
@@ -145,11 +145,11 @@ style), oscillator panes (resizable) with level lines, multiple instances; golde
 Out of scope: learn-page content (P2), user plugins (P3).
 
 Tasks
-- [ ] `indicators/core.py` primitives with docstring formulas; `registry.py`; one file per indicator (R3a: sma/ema/wma/rma + registry ✅; stdev/highest/lowest/true_range in R3c)
+- [ ] `indicators/core.py` primitives with docstring formulas; `registry.py`; one file per indicator (R3a: sma/ema/wma/rma + registry ✅; R3b: 11 more MAs, generic MA, MA Cross/Ribbon/Envelope ✅; stdev/highest/lowest/true_range in R3c)
 - [x] `tests/golden/models.py` scalar-loop reference models; TA-Lib comparison tests (converged region); hand vectors; hypothesis properties incl. `check_no_lookahead` (R3a)
 - [x] Scoreboard report writer (CSV in `backend/.reports/`, uploaded by CI) (R3a)
 - [x] API + tests (param validation from `ParamSpec`, unknown id → 404, `until` truncation) (R3a)
-- [ ] Frontend: `IndicatorsDialog`, `LegendRow`, `IndicatorSettingsDialog` (generated), pane management in `ChartEngine`, markers via `createSeriesMarkers` (R3a: dialog, legend rows, live settings panel, price-pane lines ✅; panes in R3c, markers in R3b)
+- [ ] Frontend: `IndicatorsDialog`, `LegendRow`, `IndicatorSettingsDialog` (generated), pane management in `ChartEngine`, markers via `createSeriesMarkers` (R3a: dialog, legend rows, live settings panel, price-pane lines ✅; R3b: markers ✅; panes in R3c)
 - [ ] `docs/indicators/<slug>.md` stub per indicator (formula, defaults, warm-up, TV differences)
 - [ ] TV manual cross-check list (3 AAPL 1D dates) → `tests/golden/tv_crosscheck.json` filled with the user's numbers (template + test ✅, numbers pending)
 

@@ -3,8 +3,8 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0, R1a, R1b, R2a, R2b (S1) ו-**R3a (S2) הושלמו** (2026-11-23). R3a: מנוע indicators ב-Python (registry, API, ולידציה), SMA/EMA/WMA/SMMA על הגרף, דיאלוג `/`, שורות legend, ופאנל הגדרות חי. כל אחד מהם נבדק כמו DUT מול golden model, TA-Lib ו-properties. **ממתין לדמו אצל המשתמש.**
-- **הסבב הבא:** **R3b** (S3 ב-[PLAN.md](PLAN.md)): משפחת הממוצעים המוכללת. אחריו L1, R3c, U1.
+- **שלב:** Phase 1. R0, R1a, R1b, R2a, R2b (S1), R3a (S2) ו-**R3b (S3) הושלמו** (2026-11-23). R3b: 19 אינדיקטורים של ממוצעים. הם כוללים 15 סוגי MA, "Moving Average" כללי עם בחירת סוג, MA Cross עם חיצים על הנרות, Ribbon ו-Envelope. כל אחד נבדק כמו DUT מול golden model, TA-Lib ו-properties. **ממתין לדמו אצל המשתמש (S1–S3).**
+- **הסבב הבא:** **L1** (S4 ב-[PLAN.md](PLAN.md)): דפי לימוד לממוצעים (impulse/step response, lag, NRF, תגובת תדר). אחריו R3c, U1.
 - **החלטות D1–D6** (PLAN §7): המשתמש ביקש לממש S1–S3 בלי לבחור; אומצו ההמלצות: D2 = TA-Lib כתלות בדיקות אופציונלית (מדולג מקומית אם חסום), D4 = כולל KAMA, T3, ZLEMA, D6 = פאנל הגדרות חי.
 - **Branch:** עובדים ישירות על `main` (הוראה קבועה של המשתמש מ-2026-11-22). האייקון מעביר checkout ישן ל-`main` לבד.
 
@@ -138,6 +138,57 @@
 - **באג שנמצא ב-E2E ותוקן:** ה-canvas של lightweight-charts קיבל את הלחיצות על כפתורי ה-legend (ה-z-index הפנימי שלו התחרה ב-legend). תוקן ב-`isolation: isolate` על מיכל הגרף.
 - **בדיקות:** backend 421 (+ skipped של fixtures אמיתיים ושל TV cross-check), frontend 161, E2E 5 (חדשה: EMA 9 → 20 → 50 → נשמר אחרי רענון → הסתרה → הסרה, והערך ב-legend מול EMA שחושב ב-TypeScript מה-CSV).
 
+## R3b — מה נבנה (2026-11-23)
+- **Backend (`backend/app/indicators/`):**
+  - `core.py` מכיל 11 ממוצעים חדשים, וכל אחד מתועד עם הנוסחה שלו:
+    - **לפי Pine:**
+      - `dema`: $2E-E(E)$
+      - `tema`
+      - `hma`: $\mathrm{WMA}_{\lfloor\sqrt n\rfloor}(2\mathrm{WMA}_{n/2}-\mathrm{WMA}_n)$, ‏$n\ge2$
+      - `lsma`: ה-FIR של קו הריבועים הפחותים, עם ה-offset של `ta.linreg`
+      - `alma`: חלון גאוסי, כולל `floor`
+      - `swma`: $[1,2,2,1]/6$
+      - `vwma`: NaN כשה-volume בחלון הוא 0
+      - `mcginley`
+    - **לפי TA-Lib:**
+      - `kama`: seed $x_{n-1}$, ER = 1 כשה-noise ≤ change
+      - `t3`: שישה EMA מדורגים עם המקדמים של Tillson
+    - **לפי Ehlers:**
+      - `zlema`: $\mathrm{EMA}(2x_t - x_{t-d})$
+  - `ma.py`: ‏`MA_TYPES` מכיל עכשיו 15 סוגים, כל אחד עם warmup, lookback ו-`min_length` (ל-HMA ‏2). ל-KAMA ‏lookback מיוחד, $25/s^2$ (בערך 6,000 נרות), כי ה-seed שלו דועך לאט בשוק צדדי. ל-T3 ‏lookback של $50n$.
+  - **Composites:**
+    - `moving_average` (id `ma`): enum `ma_type` לכל 15 הסוגים.
+    - `ma_cross`: שני ממוצעים מכל סוג, ופלט `crosses` מסוג `markers` שערכיו +1/‑1/NaN. החצייה ידועה רק בסגירת הנר, ולכן אין lookahead.
+    - `ma_ribbon`: ארבעה ממוצעים, ברירת מחדל EMA 20/50/100/200.
+    - `envelope`: קטגוריה `bands`, $B(1\pm p/100)$, וה-basis מכל סוג.
+  - `ParamSpec.option_labels`, ובהתאם `ParamInfo.option_labels` ב-API: שמות תצוגה ל-enum (למשל "HMA (Hull)"). ה-API types נוצרו מחדש.
+- **אימות (DUT):**
+  - **golden models:** מודל בלולאה סקלרית לכל אחד מ-15 הסוגים, בלי קוד משותף עם `core`. מכסה 474 צירופים של סוג × length × dataset על כל הנרות (`rtol=1e-9`) ועל כל ה-inputs (ALMA offset/sigma/floor, KAMA fast/slow, T3 factor, LSMA offset).
+  - **TA-Lib:** זהה ב-DEMA, TEMA, KAMA, T3 (כולל factor) ו-LINEARREG, כולל מיקומי ה-NaN (204 בדיקות).
+  - **Directed tests:**
+    - hand vectors
+    - ramp lag אנליטי בדיוק: 0 ל-DEMA/TEMA/LSMA, $(s+2m-n-2)/3$ ל-HMA, $(n-1)/2-d$ ל-ZLEMA, $3(1-v)(n-1)/2$ ל-T3
+    - overshoot על מדרגה לכל הממוצעים שמפצים על lag
+  - **Hypothesis:**
+    - קבוע נכנס = קבוע יוצא
+    - equivariance (ל-McGinley רק scale)
+    - חסם חלון ל-FIR אי-שליליים
+    - KAMA בין $K_{t-1}$ ל-$x_t$
+    - no-lookahead לכל סוג ולכל composite
+    - החיצים של MA Cross = בדיוק החלפות הסימן
+    - Envelope = יחס קבוע
+- **באג שנמצא ב-property test ותוקן:** ב-McGinley, כש-length = 1 ויש קפיצה של 50%, הרמה הופכת לשלילית ואחר כך ענקית. אז $(x/M)^4$ עושה underflow ל-0, והייתה חלוקה באפס (exception). עברנו לסמנטיקה של Pine: חלוקה באפס נותנת `na`, ובנר הבא ה-seed מחושב מחדש מה-EMA (`na(mg[1]) ? ta.ema : ...`).
+- **Frontend:**
+  - `ChartEngine`: פלט `markers` מצויר כחיצים על ה-series הראשי דרך `createSeriesMarkers`: ‏`belowBar`/`arrowUp` לחצייה למעלה ו-`aboveBar`/`arrowDown` לחצייה למטה. כל ה-markers מאוחדים ל-plugin אחד, שנבנה מחדש כשמחליפים סוג גרף.
+  - ה-legend מדלג על ה-markers ומציג רק את ערכי הקווים.
+  - בפאנל ההגדרות ה-select מציג את `optionLabels`, ואין שורת style ל-markers.
+  - ה-label ב-legend: enum בשם הקצר ("MA Cross HMA 9 SMA 21 close"), bool רק כשהוא דלוק.
+- **Learn stubs:** 15 קבצים חדשים ב-`docs/indicators/`. TV cross-check: נוספו 18 שורות, תאריכיים לכל אחד מ-DEMA/TEMA/HMA/LSMA/ALMA/VWMA/McGinley ול-Envelope upper/lower.
+- **בדיקות:**
+  - backend: 1,000+ בדיקות. מתוכן 474 golden, 204 TA-Lib, ו-hypothesis לכל מחלקה.
+  - frontend: 165 בדיקות, כולל markers ב-`ChartEngine` ו-composite בבדיקת component.
+  - E2E: 6. החדשה מוסיפה Envelope, משנה את ה-basis ל-EMA, ומוסיפה MA Cross. הערכים ב-legend נבדקים מול SMA/EMA שחושבו ב-TypeScript.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -172,6 +223,7 @@
 | 2026-11-22 | R2b: כפתורי טווח מחליפים interval (כמו TradingView); Heikin Ashi מחושב ב-backend; דפדוף לאחור עם `before`; `@playwright/test` 1.63.0 (dev) | ROADMAP R2b, PLAN S1 | ARCHITECTURE §3.1 |
 | 2026-11-22 | D2/D4/D6 לפי ההמלצה: TA-Lib אופציונלי לבדיקות, KAMA/T3/ZLEMA נכללים, פאנל הגדרות חי | המשתמש ביקש לממש S1–S3 בלי לבחור | PLAN §7 |
 | 2026-11-23 | R3a: תשובת compute בעמודות (`time[]`, `outputs{}`); offset ≥ 0 בלבד; פאנל הגדרות צד חי (לא חלון OK/Cancel); סדר פרמטרים Length/Source/Offset כמו ב-TV; `ta-lib` כתלות dev בלבד | יעילות, no-lookahead, D6 | ARCHITECTURE §4, §5.1 |
+| 2026-11-23 | R3b: markers מצוירים על ה-series הראשי, ולא על series נסתר, כדי שהחיצים יישבו מתחת לנר ומעליו; McGinley לפי Pine (חלוקה באפס = `na`, ואז seed חדש מה-EMA); KAMA ו-T3 לפי TA-Lib; ב-"Moving Average" הכללי, לסוגים עם inputs נוספים (ALMA, KAMA, T3, LSMA offset) יש defaults, ואת ה-inputs האלה חושפים האינדיקטורים הייעודיים | נאמנות ל-TV ול-TA-Lib, ממשק פשוט | PLAN §5 |
 | 2026-11-22 | `PLAN.md` כתוכנית העבודה ל-sessions הבאים: R3 מתפצל ל-R3a/R3b/R3c, ו-L1 (דפי לימוד לממוצעים) ו-U1 (UX) נכנסים לפני R4 | בקשת המשתמש להתמקד בממוצעים נעים ובמתמטיקה שלהם וב-UX | [PLAN.md](PLAN.md) |
 
 ## שאלות פתוחות אליך
@@ -198,6 +250,9 @@
 - **מצב `%` עם indicators:** lightweight-charts מחשב אחוזים לכל series מול הערך הראשון הנראה **שלו**, ולא מול המחיר (ב-TradingView הכול יחסי למחיר). לכן במצב `%` קו ה-MA מוזז קצת מהמחיר. במצבים normal ו-log הכול תקין. פתרון אפשרי: לממש את מצב האחוזים ב-`ChartEngine` בעצמנו. ל-U1 או R6.
 - בגרף מסוג Line, צבע ברירת המחדל של SMA (`#2962FF`) זהה לצבע הקו של המחיר (כמו ב-TV). אפשר לשנות בפאנל ההגדרות.
 - גלישה אופקית מתחת ל-960px (סרגל הכלים העליון). קיים מ-R2 ומתוכנן ל-U1.
+- **R3b:** החיצים של MA Cross קטנים (גודל ברירת המחדל של lightweight-charts), ואי אפשר לשנות את הצבעים שלהם בפאנל. ל-U1.
+- **R3b:** כמה צבעי ברירת מחדל חוזרים על עצמם (ה-basis של Envelope, הקו המהיר של MA Cross וקו 2 של ה-Ribbon הם כתומים, כמו ב-TV). אפשר לשנות בפאנל.
+- **R3b:** הצעדים `code-review` ו-`simplify` מ-PLAN §8 לא הורצו כ-subagents בסבב הלילה. נעשתה סקירה עצמית של ה-diff. אפשר להריץ אותם בתחילת S4.
 - Vitest מדווח שה-jsdom environment נוצר 5 פעמים (אופטימיזציה אופציונלית, לא דחוף).
 
 ## הערות סביבה
@@ -270,3 +325,8 @@
 - המשך ריצה אוטונומית (S1 → S2 → S3) לבקשת המשתמש.
 - נבנו: core/registry/API, 4 ממוצעים, golden + TA-Lib + properties + scoreboard, תבנית TV cross-check, ובצד ה-frontend הדיאלוג, ה-legend, פאנל ההגדרות והקווים על הגרף. נוספו E2E ו-artifact של ה-scoreboard ב-CI.
 - נמצא ותוקן: לחיצות על כפתורי ה-legend נבלעו ב-canvas (stacking context). התגלה (ולא תוקן): הבסיס של מצב `%` הוא per-series.
+
+### 2026-11-23 — S3 / R3b: משפחת הממוצעים המוכללת
+- המשך הריצה האוטונומית (S1 → S2 → S3) לבקשת המשתמש.
+- נבנו: 11 ממוצעים חדשים ב-`core`, ‏`MA_TYPES` עם 15 סוגים, 4 composites, ‏`option_labels`, golden models לכל הסוגים, TA-Lib ל-5 נוספים, property tests לפי מחלקה, 15 learn stubs, 18 שורות TV cross-check, ובצד ה-frontend חיצי crossover ו-select עם שמות תצוגה. נוסף גם E2E.
+- נמצא ותוקן: חלוקה באפס ב-McGinley (נמצאה ב-hypothesis). הכול ירוק.

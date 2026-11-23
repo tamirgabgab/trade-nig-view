@@ -135,12 +135,12 @@ Frontend
 
 ### S3 — R3b: the generalised moving-average family (Opus 5.5 · high)
 Goal: TradingView's MA set plus three classic adaptive/low-lag filters, all behind the same harness.
-- [ ] `dema`, `tema`, `hma`, `alma`, `lsma`, `vwma`, `swma`, `mcginley`
-- [ ] Educational extras (not TV built-ins; decision D4): `kama`, `t3`, `zlema`
-- [ ] Composite: `ma_cross` (two MA types, crossover **markers** via `createSeriesMarkers`), `ma_ribbon` (k MAs), `envelope` (MA ± p %)
-- [ ] Generic "Moving Average" indicator with a `type` enum = every MA above (one entry, used by the composites)
-- [ ] Property tests split by class (§5.4); TV cross-check rows for each
-- [ ] Learn-page stubs for each MA
+- [x] `dema`, `tema`, `hma`, `alma`, `lsma`, `vwma`, `swma`, `mcginley`
+- [x] Educational extras (not TV built-ins; decision D4): `kama`, `t3`, `zlema`
+- [x] Composite: `ma_cross` (two MA types, crossover **markers** via `createSeriesMarkers`), `ma_ribbon` (k MAs), `envelope` (MA ± p %)
+- [x] Generic "Moving Average" indicator with a `type` enum = every MA above (one entry, used by the composites)
+- [x] Property tests split by class (§5.4); TV cross-check rows for each
+- [x] Learn-page stubs for each MA
 
 ### S4 — L1: Learn v1 for the MA family (Opus 5.5 · high)
 Goal: every MA has an in-app page with its mathematics and plots generated **by the same Python implementation**.
