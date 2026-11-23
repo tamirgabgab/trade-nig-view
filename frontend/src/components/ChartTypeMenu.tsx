@@ -11,7 +11,7 @@ import { CHART_TYPES, chartTypeLabel, type ChartType } from '../chart/chartTypes
 import { useChartStore } from '../store/chartStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import { IconButton } from './IconButton.tsx';
-import styles from './ChartTypeMenu.module.css';
+import styles from './ActionMenu.module.css';
 import { usePresence } from './usePresence.ts';
 
 const ICONS: Record<ChartType, LucideIcon> = {

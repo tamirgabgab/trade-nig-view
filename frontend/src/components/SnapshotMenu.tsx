@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useUiStore } from '../store/uiStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
-import styles from './ChartTypeMenu.module.css';
+import styles from './ActionMenu.module.css';
 import { IconButton } from './IconButton.tsx';
 import { usePresence } from './usePresence.ts';
 

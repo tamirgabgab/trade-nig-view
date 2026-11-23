@@ -9,7 +9,7 @@ import {
   type RefObject,
 } from 'react';
 
-import styles from './ChartTypeMenu.module.css';
+import styles from './ActionMenu.module.css';
 import type { OverlayAttrs } from './usePresence.ts';
 
 export interface MenuItem {

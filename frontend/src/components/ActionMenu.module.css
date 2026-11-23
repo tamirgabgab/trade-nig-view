@@ -77,7 +77,7 @@
   }
 }
 
-/* ActionMenu extras. */
+/* Dividers and shortcut hints. */
 .divider {
   border-top: 1px solid var(--color-border);
 }
