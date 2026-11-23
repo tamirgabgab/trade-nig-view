@@ -1,6 +1,6 @@
 # ADR 0004 — Own drawing framework on Lightweight Charts v5 primitives
 
-- Status: Accepted (2026-11-22)
+- Status: Accepted (2026-11-22); re-confirmed at the Phase-1 review (2026-11-23)
 
 ## Context
 Lightweight Charts has no drawing tools. Community v5 options found (2026-11-22):
@@ -23,3 +23,11 @@ pure TS modules with unit tests. Study `lightweight-charts-drawing` for interact
 ## Alternatives
 - Adopt `lightweight-charts-drawing` now: fastest path to many tools, but couples our persistence to a v0 API and a single maintainer. Rejected for now.
 - HTML/SVG overlay on top of the canvas: easy to prototype but breaks the "no DOM hacks on the canvas" rule and drifts on pan/zoom. Rejected.
+
+## Phase-1 review (2026-11-23)
+Re-evaluated as planned. `lightweight-charts-drawing` (now under `deepentropy/`) is still pre-1.0 (v0.1.x on npm,
+~68 tools, low download count); `lightweight-charts-line-tools-core` is still GitHub-only. Meanwhile our own framework
+covers 14 tools with unit-tested geometry, our persistence schema, undo/redo and replay, and found and fixed one
+real Lightweight Charts limitation (whole-index `logicalToCoordinate`, see ARCHITECTURE §5.2). **Decision unchanged.**
+Revisit when a library reaches 1.0 with a stable serialization API, and only for the long tail (patterns, Gann),
+behind `DrawingManager`. Sources: github.com/deepentropy/lightweight-charts-drawing/releases, pkgstats.com.

@@ -47,3 +47,14 @@ dense, interactive single-page app.
 - `uvicorn` without the `[standard]` extras (httptools, watchfiles, websockets are unsigned native modules).
 - Rule for new dependencies: prefer pure-Python packages or widely used wheels; verify on the user's Windows
   machine (`test.ps1`) before relying on a new native extension. numpy/pandas (R1) must be verified first thing.
+
+## Phase-1 review (2026-11-23): versions
+Policy kept: patch/minor upgrades only, and nothing published less than two weeks ago.
+- Upgraded: `zustand` 5.0.16 → **5.1.0** (published 2026-11-06; all tests green).
+- Backend: every direct dependency is already on its latest release (FastAPI 0.165, pandas 3.1.1, numpy 2.5.5,
+  pydantic 2.14.4, yfinance 1.8.0, ruff 0.17.6, pyright 1.1.414, pytest 9.2).
+- Deferred, too fresh (published 2026-11-23): `lucide-react` 1.78, `typescript-eslint` 8.74, `@tanstack/react-query`
+  5.108.4. Take them at the next round after 2026-12-07.
+- Deferred on purpose: `@playwright/test` 1.65 (the cloud sandbox ships the browser of 1.63; upgrade together with
+  `npx playwright install` on the user's machine), `typescript` 7 (typescript-eslint 8.74 still requires `<6.1`),
+  `@types/node` 26 (major; follows Node 26, we run Node 22 LTS as in CI and `engines`).
