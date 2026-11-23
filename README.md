@@ -13,7 +13,7 @@ trading agent can plug in later.
 > U1c (structural cleanup), R4a and R4b done: drawing tools (lines, rectangle, text, Fib retracement and extension,
 > parallel channel, price/date ranges) with magnet, floating toolbar, settings panel, per-symbol persistence and a
 > trash menu. R5 done: market structure (gaps, previous-period levels, pivots, Data window). R6 done: layouts with autosave, watchlist editing, one undo/redo history, chart settings,
-> object tree. Next: R7 (bar replay).
+> object tree. R7 done: bar replay. Phase 1 is complete; next: the Phase-1 review.
 > See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
@@ -40,7 +40,7 @@ trading agent can plug in later.
 | Drawing tools 2: Fib retracement and trend-based extension (editable level table, bands, ratio+price labels), parallel channel, price / date / date-and-price ranges (change, bars, time span, volume), trash menu to remove drawings, indicators or both with confirmation and undo, `Alt+F` (R4b) | ✅ Done |
 | Market structure (R5): Structure menu; gap zones (open in colour, filled faded) with a Gaps panel (min size, partial gaps, click to scroll); previous day/week/month high, low, close as step lines; pivot points (5/5 fractals, drawn on the pivot bar); Data window with every value under the crosshair | ✅ Done |
 | Workspace (R6): named layouts that autosave (chart, indicators, pane sizes, visible bars) with rename / copy / open / delete and `Ctrl+S`; several watchlists (create, rename, delete, sections, add through search, drag to reorder, right-click menu); one undo/redo history for the chart (`Ctrl+Z` / `Ctrl+Y`: symbol and interval, indicators, drawings); chart settings (time zone, candle colours, last-price line, volume); object tree; fullscreen; `Alt+R` reset view | ✅ Done |
-| Bar Replay with no-lookahead guarantee (R7) | ⏳ Planned |
+| Bar replay (R7): start by a click, a date or at random; play/pause, `Shift+→` step, 0.5–10 bars/s; chart, legend, Data window, indicators and gaps end at the cursor; interval locked; no lookahead, tested for every registered indicator | ✅ Done |
 | Learn pages, custom indicators, backtesting, paper agent (Phases 2–5) | 🗺️ Roadmap |
 
 ## Quick start

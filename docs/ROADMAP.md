@@ -19,7 +19,7 @@
 | R4 | Drawing tools v1 (R4a core + lines/shapes/text; R4b Fib, channel, ranges) | L | ✅ R4a + R4b (2026-11-23) |
 | R5 | Market structure & reference values | M | ✅ (2026-11-23) |
 | R6 | Persistence, layouts & UX polish | L | ✅ (2026-11-23) |
-| R7 | Bar Replay | M | |
+| R7 | Bar Replay | M | ✅ (2026-11-23) |
 | Review | Phase-1 review, Phase-2 plan | S | |
 
 ---
@@ -251,10 +251,11 @@ drawings stay visible and editable; replay HUD showing the cursor date.
 Out of scope: paper trading during replay (P4/P5).
 
 Tasks
-- [ ] Backend: `until` honored everywhere (bars, indicators, analysis, quotes); `replay/` helpers
-- [ ] Parametrised test over **every registered indicator and analysis function**: value at bar k in replay == value computed on `bars[:k+1]`
-- [ ] Frontend replay store/controller, controls bar, efficient incremental append (`series.update`) for stepping
-- [ ] Playwright: start replay on AAPL 2024-01-02, step 5 bars, legend shows bar 5 values, no bar after cursor rendered
+- [x] Backend: `until` on bars, indicators and gaps (done earlier). Quotes stay live by the user's choice (only the chart replays). No `replay/` helpers needed: see below
+- [x] Parametrised test over **every registered indicator and the gap analysis**, 1D and 1h: value at bar k == value on `bars[:k+1]` (`tests/golden/test_replay_no_lookahead.py`)
+- [x] Frontend `replayStore`, controls bar, start by click / date / random; instead of recomputing per step, the full-history values are cut at the cursor, which the test above makes exact (a gap filled after the cursor shows open). Stepping re-sends the series data (fast enough at 10 bars/s); `series.update` not needed
+- [x] Playwright: start replay on AAPL 2024-01-02, step 5 bars, legend shows bar 5 values (`e2e/replay.spec.ts`)
+- User choices: interval locked during replay; drawings made in replay are saved as usual
 
 DoD: no-lookahead test passes for every registered indicator and analysis function.
 

@@ -309,6 +309,14 @@ Undo/redo (R6) is one history of **snapshots** (`store/historyStore.ts`), not co
 indicator instances, or the drawings of one symbol, each with its state before and after. The stores' own changes are
 recorded by subscription; changes of one kind closer than 600 ms merge into one step; opening a layout clears it.
 
+### 5.4 Bar replay (R7)
+
+The chart shows `bars[0..cursor]`; indicators, pivots and previous-period levels are **not** recomputed per step: the
+values computed over all loaded bars are cut at the cursor. That is exact because every registered indicator satisfies
+`compute(bars)[k] == compute(bars[:k+1])[k]` (tested for all of them, daily and intraday); a pivot is stored at its
+confirming bar, so one confirmed after the cursor is cut too. Gaps: those after the cursor are dropped, and a fill after
+the cursor is shown as still open. The cursor is a bar time (stable when older pages load); the interval is locked.
+
 ## 6. Time conventions
 
 - **Storage**: bars stored with `ts` = UTC epoch seconds of the bar open; daily bars use the session date at 00:00 UTC
