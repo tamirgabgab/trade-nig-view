@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import { useCallback } from 'react';
 
 import { useIndicatorList } from '../api/indicators.ts';
 import { MAX_INSTANCES, useIndicatorStore } from '../store/indicatorStore.ts';
@@ -15,6 +16,14 @@ export function IndicatorsDialog() {
   const closeModal = useUiStore((s) => s.closeModal);
   const full = useIndicatorStore((s) => s.instances.length >= MAX_INSTANCES);
   const registry = useIndicatorList();
+  const search = useCallback(
+    (query: string) =>
+      searchIndicators(registry.data ?? [], query).map((g) => ({
+        label: g.label,
+        items: g.indicators,
+      })),
+    [registry.data],
+  );
   const { shown, attrs, key } = usePresence(open ? true : null);
   if (shown === null) return null;
   const close = () => {
@@ -31,12 +40,7 @@ export function IndicatorsDialog() {
       placeholder="e.g. EMA or moving average"
       attrs={attrs}
       classNames={{ option: styles.option }}
-      search={(query) =>
-        searchIndicators(registry.data ?? [], query).map((g) => ({
-          label: g.label,
-          items: g.indicators,
-        }))
-      }
+      search={search}
       itemKey={(spec) => spec.id}
       itemAttrs={() => ({ 'aria-disabled': full || undefined })}
       renderItem={(spec) => (

@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 
 import { ModalShell } from './ModalShell.tsx';
 import styles from './ModalShell.module.css';
@@ -18,7 +26,8 @@ interface SearchDialogProps<T> {
   initialQuery?: string;
   /** Applied to what is typed (symbol search upper-cases tickers). */
   normalize?: (query: string) => string;
-  /** Results for a query, grouped; arrows move through them in display order. */
+  /** Results for a query, grouped; arrows move through them in display order. Keep it stable
+   *  (useCallback over its data): the dialog re-runs it only when it or the query changes. */
   search: (query: string) => readonly SearchGroup<T>[];
   /** Stable, unique key of an item (also its option id). */
   itemKey: (item: T) => string;
@@ -63,10 +72,10 @@ export function SearchDialog<T>({
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
-  const optionId = (item: T) => `${listId}-${itemKey(item).replace(/[^A-Za-z0-9_-]/g, '_')}`;
-
-  const groups = search(query);
+  const groups = useMemo(() => search(query), [search, query]);
   const flat = groups.flatMap((g) => g.items);
+  // Option ids by position: unique whatever the item keys contain.
+  const optionId = (item: T) => `${listId}-${String(flat.indexOf(item))}`;
   const activeIndex = Math.min(active, Math.max(flat.length - 1, 0));
   const activeItem = flat[activeIndex];
   const activeId = activeItem === undefined ? undefined : optionId(activeItem);
@@ -80,7 +89,7 @@ export function SearchDialog<T>({
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       const next = activeIndex + (event.key === 'ArrowDown' ? 1 : -1);
-      setActive(Math.min(Math.max(next, 0), flat.length - 1));
+      setActive(Math.max(Math.min(next, flat.length - 1), 0));
     } else if (event.key === 'Enter') {
       event.preventDefault();
       if (activeItem !== undefined) onPick(activeItem);

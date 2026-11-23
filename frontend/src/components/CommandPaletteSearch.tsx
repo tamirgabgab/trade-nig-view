@@ -21,6 +21,8 @@ export function CommandPaletteSearch({
   onClose: () => void;
 }) {
   const commands = usePaletteCommands();
+  // Commands are rebuilt per render (cheap), so this is new per render too: fine at ~100 items.
+  const search = (query: string) => grouped(filterCommands(commands, query));
   return (
     <SearchDialog
       title="Command palette"
@@ -29,7 +31,7 @@ export function CommandPaletteSearch({
       listLabel="Commands"
       placeholder="Symbol, indicator or action, e.g. NVDA, rsi, light"
       attrs={attrs}
-      search={(query) => grouped(filterCommands(commands, query))}
+      search={search}
       itemKey={(command) => command.id}
       renderItem={(command) => (
         <>

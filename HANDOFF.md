@@ -383,7 +383,7 @@
     - `Alt+S` לא עבד ב-Mac.
     - ה-toast כתב "1 indicators".
     - צבע הטקסט של כפתור המחיקה לא היה token.
-    לא שונה: `PalettePanel` בתבנית Dialog/Panel, כמו בשאר הדיאלוגים.
+    לא שונה בזמנו: `PalettePanel` בתבנית Dialog/Panel. ב-U1c כל הדיאלוגים עברו ל-`ModalShell` ול-`SearchDialog`, וכל רכיב בקובץ משלו.
   - **simplify** (4 סוקרים):
     - `setTheme` שולח מחדש רק את הנרות ואת ה-volume.
     - `MarketStatus` עם memo, ושעות המסחר משתמשות ב-`zoneOffsetSeconds` הקיים.
@@ -399,6 +399,22 @@
       - העברת ה-engine ל-ChartArea במקום props של "בקשה".
   - **E2E:** בדיקת הקליק הימני נכשלה לפעמים, כי היא לחצה לפני שהנרות נטענו. נוספה המתנה לנרות.
 - **שמות קבצים:** `marketStatus.ts` שונה ל-`marketHours.ts`, כי לצד `MarketStatus.tsx` הוא היה שובר את Windows (כלל ב-CLAUDE.md).
+
+## U1c — ניקוי מבני (2026-11-23)
+- **`uiStore.modal`:** שדה אחד לדיאלוג הפתוח (`symbols`, ‏`indicators`, ‏`shortcuts`, ‏`palette`, ‏`confirmRemoveAll`) עם `openModal` ו-`closeModal`. דיאלוגים לא יכולים להיערם, ו-`selectModalOpen` הוא השוואה אחת.
+- **`ModalShell`:** מטפל ב-backdrop, בכותרת, ב-Esc, בלכידת Tab ובהחזרת ה-focus.
+- **`SearchDialog`:** שדה combobox מעל רשימה מקובצת. חיפוש הסימבולים, האינדיקטורים, הפלטה, הקיצורים וחלון האישור בנויים עליהם, כל רכיב בקובץ משלו (החלטת המשתמש: לשמור על הכלל, בלי חריגה).
+- **`ActionMenu`:** תומך ב-radio, באייקונים ובפריט פעיל התחלתי. `ChartTypeMenu` בנוי עליו, ו-CSS התפריט עבר ל-`ActionMenu.module.css`.
+- **גישה ישירה ל-engine:** `ChartView.onEngine` מוסר את ה-engine ל-ChartArea, שקורא לו ישירות ("חזרה להווה", Reset view, צילום). ה-props `command` ו-`snapshot` נמחקו.
+- **code review (high):** 5 ממצאים, וכולם תוקנו:
+  - תפריט שנפתח מחדש בזמן אנימציית הסגירה איבד את המקלדת (נוסף `key`).
+  - חץ ברשימה ריקה השאיר את הבחירה במינוס 1. הבאג היה קיים עוד לפני הסבב.
+  - מזהי האפשרויות מחושבים לפי מיקום, כדי שיהיו ייחודיים.
+  - ה-memo של החיפוש חזר.
+  - HANDOFF עודכן.
+- **ponytail:** ‏CSS התפריט קיבל את שם הרכיב שמשתמש בו.
+- **simplify:** לא הורץ, כי הסבב עצמו הוא פישוט: 23 קבצים, ‏225 שורות פחות.
+- **בדיקות:** frontend: 231; ‏E2E: 13.
 
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |

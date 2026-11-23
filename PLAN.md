@@ -182,6 +182,14 @@ two rounds.
 - [x] Camera button: menu with Copy image (default, `Alt+S`) and Download PNG (`takeScreenshot`)
 - [x] ux-audit at 1280 and 960
 
+#### U1c — structural cleanup (done 2026-11-23)
+- [x] One `modal` field in uiStore; `ModalShell` + `SearchDialog` for every dialog, one component per file
+- [x] `ChartTypeMenu` on `ActionMenu`; ChartArea calls the chart engine directly (`onEngine`)
+
+R4 is split into **R4a** (drawing infrastructure, persistence, anchor mapping; lines, rays, horizontal/vertical,
+rectangle, text; floating toolbar + live side panel; toolbar flyouts) and **R4b** (Fib retracement and extension,
+parallel channel, price/date ranges, remove all).
+
 S7–S11 follow ROADMAP R4–R7 and the review unchanged.
 
 ---

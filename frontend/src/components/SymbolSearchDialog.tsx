@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import { useCallback } from 'react';
 
 import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
@@ -16,6 +17,11 @@ export function SymbolSearchDialog() {
   const setSymbol = useChartStore((s) => s.setSymbol);
   const current = useChartStore((s) => s.symbol);
   const symbols = useSymbols().data;
+  const search = useCallback(
+    (query: string) =>
+      searchSymbols(symbols ?? [], query).map((g) => ({ label: g.group, items: g.symbols })),
+    [symbols],
+  );
   const { shown, attrs, key } = usePresence(open ? seed : null);
   if (shown === null) return null;
   const close = () => {
@@ -34,9 +40,7 @@ export function SymbolSearchDialog() {
       normalize={(query) => query.toUpperCase()}
       attrs={attrs}
       classNames={{ input: styles.input, option: styles.option }}
-      search={(query) =>
-        searchSymbols(symbols ?? [], query).map((g) => ({ label: g.group, items: g.symbols }))
-      }
+      search={search}
       itemKey={(info) => info.symbol}
       itemAttrs={(info) => ({ 'aria-current': info.symbol === current ? 'true' : undefined })}
       renderItem={(info) => (

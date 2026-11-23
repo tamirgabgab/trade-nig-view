@@ -60,6 +60,7 @@ export function ChartTypeMenu() {
       />
       {menu.shown && (
         <ActionMenu
+          key={menu.key}
           id={menuId}
           label="Chart type"
           attrs={menu.attrs}

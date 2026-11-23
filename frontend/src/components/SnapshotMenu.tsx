@@ -34,6 +34,7 @@ export function SnapshotMenu() {
       />
       {menu.shown && (
         <ActionMenu
+          key={menu.key}
           label="Snapshot"
           attrs={menu.attrs}
           anchor={wrapperRef}
