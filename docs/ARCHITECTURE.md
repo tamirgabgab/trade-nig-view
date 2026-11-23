@@ -76,7 +76,7 @@ flowchart LR
 | `data/cache/` | `BarCache` (SQLite), range bookkeeping, incremental fetch planning |
 | `data/` (`bar_service.py`, `resample.py`, `validate.py`, `adjust.py`, `ratelimit.py`, `universe.py`) | Orchestration: cache → provider → validate; per request: truncate(`until`) → adjust → resample → window/limit |
 | `indicators/` | One file per indicator (pure function) + `registry.py` + `core.py` (sma/ema/rma/stdev primitives) |
-| `analysis/` | Gaps, pivots, prev-period levels, 52w high/low, Heikin Ashi transform |
+| `analysis/` | Filter response of an indicator (`response.py`, L1); later gaps, pivots, prev-period levels, 52w high/low, Heikin Ashi transform |
 | `replay/` | Cursor semantics helpers (`truncate_until`), later the event clock shared with the backtester |
 | `storage/` | SQLite repositories for watchlists, layouts, drawings (`app.db`), schema migrations |
 
@@ -88,7 +88,7 @@ flowchart LR
 | `chart/` | `ChartEngine` (create/destroy chart, panes, series, scale modes, crosshair events, time conversion), `theme.ts` |
 | `indicators/` | Indicators dialog, legend rows, settings dialog generated from the registry `params` schema |
 | `drawings/` | `DrawingManager`, tool definitions, geometry & hit-testing (pure TS, unit-tested), properties dialog |
-| `components/` | Shell: `TopToolbar`, `DrawingToolbar`, `RightSidebar`, `Watchlist`, `BottomBar`, `SymbolSearch`, dialogs |
+| `components/` | Shell: `TopToolbar`, `DrawingToolbar`, `RightSidebar`, `Watchlist`, `BottomBar`, `SymbolSearch`, dialogs; `LearnDrawer` (lazy-loaded: `LearnPage` renders Markdown + KaTeX, `FilterView` + `ResponsePlot` draw the measured response as SVG) |
 | `store/` | Zustand stores: `chartStore` (symbol, interval; chart type and scale in R2b; persisted to localStorage), later `indicators`, `drawings`, `replay`, `settings` |
 | `styles/` | CSS custom properties (design tokens), global reset; component styles are CSS Modules |
 
@@ -181,6 +181,8 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 | `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error}]` from the two latest unadjusted daily bars; per-symbol `error` instead of failing the request | R1a |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
 | `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted, transform}` (`start`/`end` = epoch seconds of bar starts, inclusive) | `{id, version, params (resolved), time:[t], outputs:{<name>:[value\|null]}, warmup, lookback}` — column arrays aligned with `time`; `null` = warm-up/NaN. A `markers` output holds `+1` (up) / `-1` (down) / `null`. `warmup` = first valid bar of the output that starts **last** (a composite's faster outputs start earlier); `lookback` = `total_lookback` (incl. offset). Cross-parameter errors (e.g. KAMA `fast > slow`, HMA length 1) are 422 `invalid_params` | R3 |
+| `POST /indicators/response` | `{id, params}` | Filter view: `{id, outputs:[{name, label, linear, reason, step, ramp_lag, impulse, dc_gain, lag, nrf, frequency:{period, magnitude_db, group_delay}, truncated}]}` measured by running the indicator on synthetic bars (`app/analysis/response.py`). Linearity is tested (superposition + volume independence); a non-linear output gets `step`/`ramp_lag` and a `reason`, its other fields `null`. POST (not the PLAN's GET) because `params` is a free-form object, as in `/indicators/compute` | L1 |
+| `GET /learn/{slug}` | — | `{slug, markdown}` from `docs/indicators/<slug>.md`; only slugs a registered indicator names are served (404 `learn_page_not_found` otherwise) | L1 |
 | `GET /analysis/gaps` | `symbol`, `interval`, `min_pct=0`, `include_partial=false`, `until?` | `[{start_time, direction, top, bottom, size_pct, filled, fill_time?, max_fill_pct}]` | R5 |
 | `GET /analysis/pivots` | `symbol`, `interval`, `left=5`, `right=5`, `until?` | `[{time, kind:"high"\|"low", price, confirmed_time}]` | R5 |
 | `GET /analysis/levels` | `symbol`, `interval`, `until?` | `{prev_day, prev_week, prev_month:{high, low, close}, high_52w, low_52w}` | R5 |
@@ -351,7 +353,7 @@ used by R3 property tests and the R7 replay DoD.
 
 | Phase | Hook already present in Phase 1 |
 |---|---|
-| P2 Learn pages | `IndicatorSpec.learn_slug`, `docs/indicators/<slug>.md` stubs, compute endpoint with arbitrary params |
+| P2 Learn pages | `IndicatorSpec.learn_slug`, `docs/indicators/<slug>.md` pages served by `GET /learn/{slug}`, the learn drawer and `POST /indicators/response` (L1), compute endpoint with arbitrary params |
 | P3 Custom indicators | Registry accepts entries from a plugin loader; same `IndicatorSpec` + same golden harness |
 | P4 Backtester | `BarService.get_bars(until=...)`, pure indicator functions over numpy arrays, `markers` output type, prefix-invariance tests |
 | P5 Paper agent | Replay cursor semantics shared with the backtester clock; no broker interface by design |

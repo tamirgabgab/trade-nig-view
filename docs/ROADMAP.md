@@ -14,7 +14,7 @@
 | R1 | Market data layer | L | ✅ R1a + R1b done (2026-11-22); real fixtures pending on the user's machine |
 | R2 | Chart core | L | ✅ R2a + R2b done (2026-11-22) |
 | R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | 🔨 R3a ✅, R3b ✅ (2026-11-23), R3c after L1 |
-| L1 | Learn v1 for the MA family (from Phase 2) | M | |
+| L1 | Learn v1 for the MA family (from Phase 2) | M | ✅ (2026-11-23) |
 | U1 | UX pass (responsive, disabled states, loaders, keyboard) | M | |
 | R4 | Drawing tools v1 | L | |
 | R5 | Market structure & reference values | M | |

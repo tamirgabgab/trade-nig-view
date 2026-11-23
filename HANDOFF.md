@@ -3,8 +3,8 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0, R1a, R1b, R2a, R2b (S1), R3a (S2) ו-**R3b (S3) הושלמו** (2026-11-23). R3b: 19 אינדיקטורים של ממוצעים. הם כוללים 15 סוגי MA, "Moving Average" כללי עם בחירת סוג, MA Cross עם חיצים על הנרות, Ribbon ו-Envelope. כל אחד נבדק כמו DUT מול golden model, TA-Lib ו-properties. **ממתין לדמו אצל המשתמש (S1–S3).**
-- **הסבב הבא:** **L1** (S4 ב-[PLAN.md](PLAN.md)): דפי לימוד לממוצעים (impulse/step response, lag, NRF, תגובת תדר). אחריו R3c, U1.
+- **שלב:** Phase 1. R0, R1a, R1b, R2a, R2b (S1), R3a (S2), R3b (S3) ו-**L1 (S4) הושלמו** (2026-11-23). R3b: 19 אינדיקטורים של ממוצעים. הם כוללים 15 סוגי MA, "Moving Average" כללי עם בחירת סוג, MA Cross עם חיצים על הנרות, Ribbon ו-Envelope. כל אחד נבדק כמו DUT מול golden model, TA-Lib ו-properties. **ממתין לדמו אצל המשתמש (S1–S3).**
+- **הסבב הבא:** **R3c** (S5 ב-[PLAN.md](PLAN.md)): BB, RSI, MACD, Stochastic, ATR, OBV, VWAP, Volume SMA ו-panes לאוסילטורים. אחריו U1.
 - **החלטות D1–D6** (PLAN §7): המשתמש ביקש לממש S1–S3 בלי לבחור; אומצו ההמלצות: D2 = TA-Lib כתלות בדיקות אופציונלית (מדולג מקומית אם חסום), D4 = כולל KAMA, T3, ZLEMA, D6 = פאנל הגדרות חי.
 - **Branch:** עובדים ישירות על `main` (הוראה קבועה של המשתמש מ-2026-11-22). האייקון מעביר checkout ישן ל-`main` לבד.
 
@@ -225,6 +225,37 @@
   - prefix sums ל-VWMA: משנה נומריקה.
   - איחוד `ma_indicator` עם ה-specs המותאמים: refactor גדול מדי.
 
+## L1 — מה נבנה (2026-11-23, S4)
+- **Backend:**
+  - `app/analysis/response.py`: ה-filter response של כל אינדיקטור נמדד ע"י הרצת הקוד האמיתי על נתונים סינתטיים: impulse אחרי ה-warm-up, ‏step ו-ramp.
+    - מה מחושב: DC gain, lag $\bar k$, ‏NRF, תגובת תדר (DTFT ישיר ב-121 periods לוגריתמיים 2–200), group delay ו-ramp lag.
+    - לינאריות **נמדדת** (superposition על random walks ובדיקה שה-volume לא משנה את הפלט). VWMA, ‏KAMA ו-McGinley מקבלים רק step/ramp ו-`reason`.
+    - מספר ה-taps הוא פי 2 מה-lookback, כדי שה-lag (moment ראשון) יהיה מדויק ל-1e-9.
+  - `POST /api/indicators/response` (POST ולא GET כמו ב-PLAN, כי `params` הוא אובייקט חופשי) ו-`GET /api/learn/{slug}` (רק slugs של אינדיקטורים רשומים).
+  - בדיקות directed: הערכים הנמדדים שווים לנוסחאות הסגורות של PLAN §5.3 לכל הממוצעים הלינאריים, ב-n=9/20/50.
+- **Frontend:**
+  - כפתור הספר ב-legend פותח drawer מימין. ה-drawer נטען lazy, והגרף נשאר גלוי.
+  - טאב **Page**: Markdown עם KaTeX (react-markdown + remark-math + rehype-katex). ‏katex מוצמד ל-0.19 דרך `overrides` בגלל advisory בגרסה 0.16.
+  - טאב **Filter view**: גרפי SVG של impulse (stems כשיש ≤64 taps), ‏step, ‏|H| ב-dB לפי period ו-group delay.
+    - כל גרף כולל crosshair, ‏tooltip וקריאת ערכים עם החצים.
+    - יש טבלת Lag / NRF / Lag on a trend / DC gain / Overshoot.
+    - "Compare with" מציג ממוצע שני באורך שבוחרים, עם כפתור "Add … to chart".
+  - צבעי סדרות: `--color-series-1/2` (פלטה מאומתת ב-validator של dataviz, dark ו-light).
+- **תוכן:** 19 דפי learn מלאים ברמת MSc EE, עם גזירות של lag, ‏NRF ו-H(ω).
+  - כל המספרים נמדדו ב-`filter_response` או נגזרו בצורה סגורה ונבדקו מולו.
+  - הכול מתקמפל ב-KaTeX במצב strict.
+  - נוספו נוסחאות סגורות ל-NRF של DEMA, ‏TEMA ו-ZLEMA, שב-PLAN היו "numeric".
+- **תיקוני תיאור שעלו בכתיבה (בלי שינוי ערכים):**
+  - ‏docstring של KAMA: ה-c בריבוע, ולכן אורכי ה-EMA הם 3.5 ו-479.5, לא F ו-S.
+  - ה-seed residual של RMA הוא e^-24 ולא e^-25.
+  - SWMA הוא טרפז (SMA2∘SMA3) ולא משולש.
+  - SMA מסוכם במדויק לכל חלון.
+- **ממצאים מעניינים בדפים:**
+  - ה-lag של KAMA על נתונים "רועשים" ארוך פי ~190 מה-lag על step (ה-Filter view מראה רק את המקרה המהיר).
+  - McGinley 14 מתנהג כמו RMA14 = EMA27.
+  - האיתות של MA Cross מגיע מאוחר מממוצע שני ה-lags (SMA 9/21: ‏10 ברים לעומת הערכה של 7).
+- **בדיקות:** ‏vitest ל-`plotScale`, לפרסור ול-drawer (כולל compare, אורך לא חוקי ו-"-0.00"), ו-E2E שפותח את ה-drawer של SMA 9 ובודק KaTeX, ‏Lag 4.00, ‏NRF 0.111 ו-DC gain 1.000.
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -370,3 +401,14 @@
 - נמצא ותוקן: חלוקה באפס ב-McGinley (נמצאה ב-hypothesis). הכול ירוק.
 - המשך באותו יום: `/code-review high` מצא 6 ממצאים, וכולם תוקנו. בדרך נמצא גם `OverflowError` ב-McGinley ותוקן. 9/9 gates ירוקים, ‏backend 1,118 בדיקות.
 - `simplify` על R3b: ניקוי reuse ו-altitude בלי שינוי ערכים (אומת ביט-לביט). 9/9 gates ירוקים, ‏backend 1,119, ‏frontend 167, ‏e2e 6/6.
+
+### 2026-11-23 — S4 / L1: דפי לימוד ו-Filter view
+- המשתמש ביקש לממש S4 ו-S5 ברצף, כל אחד עם ponytail ו-code-review. התשובות לשאלות הפתיחה:
+  - KaTeX.
+  - דפים מלאים עם גזירות.
+  - drawer מימין.
+  - pane נפרד לכל אוסילטור.
+  - כל 15 סוגי ה-MA ל-BB ול-MACD.
+  - ‏RSI עם smoothing כבוי כברירת מחדל.
+  - ‏Volume SMA על ה-histogram.
+- נבנו: endpoint המדידה, ה-drawer, ה-Filter view ו-19 דפים (נכתבו במקביל ע"י 3 agents ונבדקו).

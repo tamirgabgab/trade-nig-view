@@ -25,7 +25,7 @@ trading agent can plug in later.
 | Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ✅ Done |
 | Indicator engine + SMA, EMA, WMA, SMMA: `/` dialog, legend values under the crosshair, live settings, saved between visits (R3a) | ✅ Done |
 | Generalised MAs (DEMA, TEMA, HMA, ALMA, LSMA, VWMA, SWMA, McGinley, KAMA, T3, ZLEMA), generic MA, MA Cross with arrows, Ribbon, Envelope (R3b) | ✅ Done |
-| Learn pages for the MA family: formulas, lag, noise reduction, frequency response (L1) | ⏳ Planned |
+| Learn drawer for the MA family: derived formulas (KaTeX), lag, noise reduction, and a Filter view with the measured impulse, step and frequency response plus an MA-vs-MA compare (L1) | ✅ Done |
 | Indicators: BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3c) | ⏳ Planned |
 | UX pass: narrow windows, disabled states, loaders, keyboard map (U1) | ⏳ Planned |
 | Drawing tools: lines, rays, channel, rectangle, text, measure, Fibonacci (R4) | ⏳ Planned |

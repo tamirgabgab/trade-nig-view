@@ -144,12 +144,12 @@ Goal: TradingView's MA set plus three classic adaptive/low-lag filters, all behi
 
 ### S4 — L1: Learn v1 for the MA family (Opus 5.5 · high)
 Goal: every MA has an in-app page with its mathematics and plots generated **by the same Python implementation**.
-- [ ] `GET /api/indicators/{id}/response?params` — runs the real indicator on synthetic inputs and returns impulse response, step response, ramp lag, magnitude $|H(e^{j\omega})|$ and group delay (FFT of the impulse response), measured $\bar k$ and NRF. For non-linear MAs (VWMA, KAMA, McGinley) it returns step/ramp only and says why.
-- [ ] Directed test: measured lag/NRF equal the closed forms in §5.3 (this doubles as a verification layer)
-- [ ] Learn drawer opened from the legend's book icon; Markdown + math rendering (decision D3)
-- [ ] SVG plots (dataviz skill): impulse stems, step response, $|H|$ in dB vs period (log axis, periods 2–200 bars)
-- [ ] "Compare" mode: pick two MAs, overlay on the chart, side-by-side lag/NRF table
-- [ ] Full learn pages for every MA in §5 (template in `docs/indicators/README.md` + a "Filter view" section)
+- [x] `POST /api/indicators/response` (POST: `params` is a free-form object, as in compute; direct DTFT at 121 log-spaced periods instead of an FFT) — runs the real indicator on synthetic inputs and returns impulse response, step response, ramp lag, magnitude $|H(e^{j\omega})|$ and group delay (FFT of the impulse response), measured $\bar k$ and NRF. For non-linear MAs (VWMA, KAMA, McGinley) it returns step/ramp only and says why.
+- [x] Directed test: measured lag/NRF equal the closed forms in §5.3 (this doubles as a verification layer)
+- [x] Learn drawer opened from the legend's book icon; Markdown + math rendering (decision D3)
+- [x] SVG plots (dataviz skill; + group delay): impulse stems, step response, $|H|$ in dB vs period (log axis, periods 2–200 bars)
+- [x] "Compare" mode: pick two MAs, overlay on the chart ("Add … to chart"), side-by-side lag/NRF table
+- [x] Full learn pages for every MA in §5 (template in `docs/indicators/README.md` + a "Filter view" section)
 
 ### S5 — R3c: bands & oscillators (Sonnet 5.5 · high)
 BB, RSI, MACD, Stochastic, ATR, OBV, VWAP (intraday), Volume SMA, as specified in TRADINGVIEW_RESEARCH §5; oscillator
