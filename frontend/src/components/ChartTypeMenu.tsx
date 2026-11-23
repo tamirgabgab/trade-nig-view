@@ -5,14 +5,13 @@ import {
   ChartNoAxesGantt,
   type LucideIcon,
 } from 'lucide-react';
-import { useCallback, useId, useRef, useState } from 'react';
 
 import { CHART_TYPES, chartTypeLabel, type ChartType } from '../chart/chartTypes.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import { IconButton } from './IconButton.tsx';
 import styles from './ActionMenu.module.css';
-import { usePresence } from './usePresence.ts';
+import { useMenuButton } from './useMenuButton.ts';
 
 const ICONS: Record<ChartType, LucideIcon> = {
   candles: ChartCandlestick,
@@ -29,16 +28,8 @@ const ICON_SIZE = 18;
 export function ChartTypeMenu() {
   const chartType = useChartStore((s) => s.chartType);
   const setChartType = useChartStore((s) => s.setChartType);
-  const [open, setOpen] = useState(false);
-  const menu = usePresence(open ? true : null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
+  const { open, setOpen, menu, wrapperRef, menuId, close } = useMenuButton();
   const Icon = ICONS[chartType];
-
-  const close = useCallback((restoreFocus: boolean) => {
-    setOpen(false);
-    if (restoreFocus) wrapperRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-  }, []);
 
   return (
     <div ref={wrapperRef} className={styles.wrapper}>

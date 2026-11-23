@@ -1,5 +1,4 @@
 import { ChevronDown } from 'lucide-react';
-import { useCallback, useId, useRef, useState } from 'react';
 
 import { useLayoutStore } from '../store/layoutStore.ts';
 import { saveLayoutNow } from '../store/layoutSync.ts';
@@ -7,7 +6,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import menuStyles from './ActionMenu.module.css';
 import styles from './LayoutMenu.module.css';
-import { usePresence } from './usePresence.ts';
+import { useMenuButton } from './useMenuButton.ts';
 
 const STATUS: Record<string, string> = {
   loading: 'Loading…',
@@ -21,14 +20,7 @@ export function LayoutMenu() {
   const name = useLayoutStore((s) => s.name);
   const status = useLayoutStore((s) => s.status);
   const openModal = useUiStore((s) => s.openModal);
-  const [open, setOpen] = useState(false);
-  const menu = usePresence(open ? true : null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
-  const close = useCallback((restoreFocus: boolean) => {
-    setOpen(false);
-    if (restoreFocus) wrapperRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-  }, []);
+  const { open, setOpen, menu, wrapperRef, menuId, close } = useMenuButton();
 
   return (
     <div ref={wrapperRef} className={menuStyles.wrapper}>

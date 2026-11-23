@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { apiGet, apiPut, isRecord } from './client.ts';
+import { apiDelete, apiGet, apiPut, isRecord } from './client.ts';
 
 export interface WatchlistSection {
   title: string;
@@ -65,11 +65,6 @@ export function saveWatchlist(
   return apiPut(path(name), { revision, sections }, parseWatchlist);
 }
 
-export async function deleteWatchlist(name: string, revision: number): Promise<void> {
-  const response = await fetch(`/api${path(name)}?revision=${String(revision)}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok && response.status !== 404) {
-    throw new Error(`Could not delete the watchlist (${String(response.status)})`);
-  }
+export function deleteWatchlist(name: string, revision: number): Promise<void> {
+  return apiDelete(path(name), revision);
 }

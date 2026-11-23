@@ -1,12 +1,11 @@
 import { ChevronRight } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
 
 import { useDrawingStore } from '../store/drawingStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import type { ToolGroup } from './drawingTools.ts';
 import { IconButton } from './IconButton.tsx';
 import styles from './ToolGroupButton.module.css';
-import { usePresence } from './usePresence.ts';
+import { useMenuButton } from './useMenuButton.ts';
 
 const ICON_SIZE = 20;
 
@@ -18,13 +17,7 @@ export function ToolGroupButton({ group }: { group: ToolGroup }) {
   const activeTool = useDrawingStore((s) => s.tool);
   const last = useDrawingStore((s) => s.lastTool[group.id]);
   const setTool = useDrawingStore((s) => s.setTool);
-  const [open, setOpen] = useState(false);
-  const menu = usePresence(open ? true : null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const close = useCallback((restoreFocus: boolean) => {
-    setOpen(false);
-    if (restoreFocus) wrapperRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-  }, []);
+  const { open, setOpen, menu, wrapperRef, close } = useMenuButton();
 
   if (group.comingIn !== undefined) {
     return (

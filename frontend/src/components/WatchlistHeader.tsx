@@ -1,5 +1,4 @@
 import { ChevronDown, Plus } from 'lucide-react';
-import { useCallback, useId, useRef, useState } from 'react';
 
 import { useUiStore } from '../store/uiStore.ts';
 import { useWatchlistStore } from '../store/watchlistStore.ts';
@@ -12,6 +11,7 @@ import { usePresence } from './usePresence.ts';
 import type { useWatchlistEditor } from './useWatchlistEditor.ts';
 import { addSection, renameSection } from './watchlistEdit.ts';
 import styles from './WatchlistHeader.module.css';
+import { useMenuButton } from './useMenuButton.ts';
 
 type Editor = ReturnType<typeof useWatchlistEditor>;
 
@@ -21,14 +21,7 @@ export function WatchlistHeader({ editor }: { editor: Editor }) {
   const openModal = useUiStore((s) => s.openModal);
   const closeModal = useUiStore((s) => s.closeModal);
   const section = useWatchlistStore((s) => s.editingSection);
-  const [open, setOpen] = useState(false);
-  const menu = usePresence(open ? true : null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
-  const close = useCallback((restoreFocus: boolean) => {
-    setOpen(false);
-    if (restoreFocus) wrapperRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-  }, []);
+  const { open, setOpen, menu, wrapperRef, menuId, close } = useMenuButton();
   const naming = usePresence(
     modal === 'watchlistNew' ||
       modal === 'watchlistRename' ||

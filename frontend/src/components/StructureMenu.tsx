@@ -1,5 +1,4 @@
 import { ChartColumnBig } from 'lucide-react';
-import { useCallback, useId, useRef, useState } from 'react';
 
 import { useIndicatorList, type Params } from '../api/indicators.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
@@ -8,7 +7,7 @@ import { ActionMenu, type MenuItem } from './ActionMenu.tsx';
 import styles from './ActionMenu.module.css';
 import { IconButton } from './IconButton.tsx';
 import { addIndicator, removeIndicator } from './indicatorActions.ts';
-import { usePresence } from './usePresence.ts';
+import { useMenuButton } from './useMenuButton.ts';
 
 /** The structure overlays that are registry indicators: id, the params that tell them apart. */
 const LEVELS: { label: string; id: string; params: Params }[] = [
@@ -20,19 +19,11 @@ const LEVELS: { label: string; id: string; params: Params }[] = [
 
 /** Top-toolbar "Structure" menu: gap zones, previous-period levels and pivot points, on or off. */
 export function StructureMenu() {
-  const [open, setOpen] = useState(false);
-  const menu = usePresence(open ? true : null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
+  const { open, setOpen, menu, wrapperRef, menuId, close } = useMenuButton();
   const gaps = useStructureStore((s) => s.gaps);
   const toggleGaps = useStructureStore((s) => s.toggleGaps);
   const instances = useIndicatorStore((s) => s.instances);
   const specs = useIndicatorList().data;
-
-  const close = useCallback((restoreFocus: boolean) => {
-    setOpen(false);
-    if (restoreFocus) wrapperRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-  }, []);
 
   const items: MenuItem[] = [
     { label: 'Gaps', checked: gaps, onSelect: toggleGaps },

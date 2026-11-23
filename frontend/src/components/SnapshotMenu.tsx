@@ -1,23 +1,15 @@
 import { Camera } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
 
 import { useUiStore } from '../store/uiStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import styles from './ActionMenu.module.css';
 import { IconButton } from './IconButton.tsx';
-import { usePresence } from './usePresence.ts';
+import { useMenuButton } from './useMenuButton.ts';
 
 /** Camera button: a menu to copy the chart image (also Alt+S, in useAppHotkeys) or save a PNG. */
 export function SnapshotMenu() {
   const requestSnapshot = useUiStore((s) => s.requestSnapshot);
-  const [open, setOpen] = useState(false);
-  const menu = usePresence(open ? true : null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  const close = useCallback((restoreFocus: boolean) => {
-    setOpen(false);
-    if (restoreFocus) wrapperRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-  }, []);
+  const { open, setOpen, menu, wrapperRef, close } = useMenuButton();
 
   return (
     <div ref={wrapperRef} className={styles.wrapper}>

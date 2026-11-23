@@ -4,7 +4,7 @@ import {
   type IndicatorInstance,
 } from '../store/indicatorStore.ts';
 import { isInterval, type Interval } from './bars.ts';
-import { apiGet, apiPut, ApiError, isRecord } from './client.ts';
+import { apiDelete, apiGet, apiPut, ApiError, isRecord } from './client.ts';
 
 /** A layout: everything that makes the chart look the way it does (ARCHITECTURE §5.3). */
 export interface LayoutState {
@@ -156,11 +156,6 @@ export function saveLayout(
   );
 }
 
-export async function deleteLayout(name: string, revision: number): Promise<void> {
-  const response = await fetch(`/api${path(name)}?revision=${String(revision)}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok && response.status !== 404) {
-    throw new Error(`Could not delete the layout (${String(response.status)})`);
-  }
+export function deleteLayout(name: string, revision: number): Promise<void> {
+  return apiDelete(path(name), revision);
 }

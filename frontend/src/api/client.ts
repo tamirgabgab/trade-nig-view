@@ -100,3 +100,12 @@ export function fieldsOf<T>(record: Record<string, unknown>): (key: keyof T & st
 }
 
 export { isRecord };
+
+/** DELETE `path` on top of `revision`; a missing document counts as deleted. */
+export async function apiDelete(path: string, revision: number): Promise<void> {
+  const response = await fetch(`/api${path}?revision=${String(revision)}`, { method: 'DELETE' });
+  if (!response.ok && response.status !== 404) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new ApiError(toProblem(response.status, response.statusText, body));
+  }
+}
