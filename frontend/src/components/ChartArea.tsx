@@ -8,6 +8,7 @@ import type { PaneLayout } from '../chart/ChartEngine.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
+import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
@@ -56,6 +57,8 @@ export function ChartArea({ className }: ChartAreaProps) {
   const learnOpen = useUiStore((s) => s.learnFor !== null);
   const [scrollToLatest, setScrollToLatest] = useState(0);
   const [offLatest, setOffLatest] = useState(false);
+  // Until the first indicator is ever added (uids are never reused, so seq counts additions).
+  const firstRun = useIndicatorStore((s) => s.seq === 0);
   const legendFocus = useUiStore((s) => s.legendFocus);
   const emphasis = useUiStore((s) => s.emphasis);
 
@@ -176,6 +179,11 @@ export function ChartArea({ className }: ChartAreaProps) {
           barCount={bars.length}
           decimals={decimals}
         />
+        {firstRun && bars.length > 0 && (
+          <p className={styles.hint}>
+            Press <kbd className={styles.hintKey}>/</kbd> to add an indicator
+          </p>
+        )}
       </LegendOHLC>
       {paneViews.map((view) => {
         const top = paneLayout[view.instance.uid];

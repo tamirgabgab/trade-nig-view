@@ -172,3 +172,18 @@
     animation: none;
   }
 }
+
+/* First visit: how to add the first indicator (gone once one was ever added). */
+.hint {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.hintKey {
+  padding: 0 5px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}

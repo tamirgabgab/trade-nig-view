@@ -30,6 +30,8 @@ export interface UiState {
   /** Indicator just added: drawn thicker for EMPHASIS_MS. */
   emphasis: string | null;
   emphasize: (uid: string) => void;
+  shortcutsOpen: boolean;
+  setShortcutsOpen: (open: boolean) => void;
   toast: Toast | null;
   showToast: (message: string, undo?: () => void) => void;
   dismissToast: () => void;
@@ -68,6 +70,10 @@ export const useUiStore = create<UiState>()((set) => ({
     emphasisTimer = window.setTimeout(() => {
       set({ emphasis: null });
     }, EMPHASIS_MS);
+  },
+  shortcutsOpen: false,
+  setShortcutsOpen: (open) => {
+    set({ shortcutsOpen: open });
   },
   toast: null,
   showToast: (message, undo) => {

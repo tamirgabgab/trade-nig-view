@@ -152,8 +152,11 @@ describe('indicators on the chart', () => {
   it('adds an EMA from the "/" dialog and draws it over the loaded bars', async () => {
     const user = userEvent.setup();
     renderWithQuery(<App />);
+    // First visit: a hint says how to add an indicator; it is gone once one was added.
+    expect(await screen.findByText(/to add an indicator/)).toBeInTheDocument();
     await addEma(user);
 
+    expect(screen.queryByText(/to add an indicator/)).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Indicators' })).not.toBeInTheDocument();
     expect(computes[0]).toEqual({
       symbol: 'AAPL',

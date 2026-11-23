@@ -2,6 +2,7 @@ import {
   BellPlus,
   Camera,
   ChartSpline,
+  Keyboard,
   Maximize2,
   Plus,
   Redo2,
@@ -32,6 +33,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
   const display = useSymbols().data?.find((s) => s.symbol === symbol)?.display ?? symbol;
   const openSymbolSearch = useUiStore((s) => s.openSymbolSearch);
   const setIndicatorsDialog = useUiStore((s) => s.setIndicatorsDialog);
+  const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen);
   return (
     <header className={[styles.bar, className].join(' ')} role="toolbar" aria-label="Chart toolbar">
       <button
@@ -84,6 +86,16 @@ export function TopToolbar({ className }: TopToolbarProps) {
       <IconButton label="Redo" shortcut="Ctrl+Y" icon={<Redo2 size={ICON_SIZE} />} comingIn="R6" />
       <span className={styles.spacer} />
       <span className={styles.layoutName}>Unnamed</span>
+      <IconButton
+        label="Show keyboard shortcuts"
+        shortcut="?"
+        tooltipSide="bottom-end"
+        icon={<Keyboard size={ICON_SIZE} />}
+        aria-haspopup="dialog"
+        onClick={() => {
+          setShortcutsOpen(true);
+        }}
+      />
       <IconButton
         label="Save layout"
         tooltipSide="bottom-end"
