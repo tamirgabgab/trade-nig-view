@@ -47,6 +47,7 @@ const lwc = vi.hoisted(() => {
     unsubscribe: vi.fn(),
   };
   const pane = (): FakePane => {
+    const element = document.createElement('div');
     const self: FakePane = {
       stretch: 1,
       paneIndex: () => state.panes.indexOf(self),
@@ -54,7 +55,7 @@ const lwc = vi.hoisted(() => {
       setStretchFactor: (factor) => {
         self.stretch = factor;
       },
-      getHTMLElement: () => null,
+      getHTMLElement: () => element,
     };
     return self;
   };
@@ -454,6 +455,21 @@ describe('ChartEngine', () => {
   });
 
   it('puts each own-pane indicator in its own pane with levels, and closes the pane on removal', () => {
+    const observed = new Set<Element | null>();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(element: Element) {
+          observed.add(element);
+        }
+        unobserve(element: Element) {
+          observed.delete(element);
+        }
+        disconnect() {
+          observed.clear();
+        }
+      },
+    );
     const { engine: chart } = engine();
     chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
     const rsi: IndicatorLine = {
@@ -486,15 +502,19 @@ describe('ChartEngine', () => {
     expect(macdLine?.pane).toBe(hist?.pane);
     expect(hist?.setData).toHaveBeenCalledWith([
       { time: '2026-01-01' },
-      { time: '2026-01-02', value: 1, color: 'U' },
+      { time: '2026-01-02', value: 1, color: 'u' },
       { time: '2026-01-03', value: -2, color: 'D' },
     ]);
+    const rsiPane = rsiSeries?.pane.getHTMLElement();
+    expect(observed.has(rsiPane ?? null)).toBe(true);
 
-    // Removing the RSI closes its pane; the MACD pane moves up.
+    // Removing the RSI closes its pane (no longer observed); the MACD pane moves up.
     chart.setIndicatorLines([macd('hist', 'histogram'), macd('macd', 'line')]);
     expect(lwc.state.removed).toContain(rsiSeries);
     expect(lwc.state.panes).toHaveLength(2);
     expect(hist?.pane.paneIndex()).toBe(1);
+    expect(observed.has(rsiPane ?? null)).toBe(false);
+    expect(observed.has(hist?.pane.getHTMLElement() ?? null)).toBe(true);
   });
 
   it('shades between two lines and draws volume-scale lines on the volume histogram', () => {
@@ -519,7 +539,21 @@ describe('ChartEngine', () => {
     expect(lower?.primitives).toHaveLength(0);
     expect(volumeMa?.options).toMatchObject({ priceScaleId: 'volume' });
     expect(volumeMa?.applyOptions).toHaveBeenLastCalledWith(
-      expect.objectContaining({ priceFormat: { type: 'volume' } }),
+      expect.objectContaining({ priceFormat: { type: 'volume' }, visible: true }),
+    );
+
+    // A symbol without volume hides lines on the volume scale, not the others.
+    chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: false, resetView: false });
+    chart.setIndicatorLines([
+      band('upper', { fill_to: 'lower', fill: 'rgba(0, 0, 255, 0.1)' }),
+      band('lower', {}),
+      { ...EMA_LINE, key: 'v-1:ma', group: 'v-1', style: { price_scale: 'volume' } },
+    ]);
+    expect(volumeMa?.applyOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visible: false }),
+    );
+    expect(upper?.applyOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visible: true }),
     );
   });
 });

@@ -179,7 +179,8 @@ export interface HistogramColors {
 
 /**
  * Histogram bars (MACD style): the colour says whether the value is above or below zero and
- * whether it grew since the previous bar (a missing previous bar counts as growing).
+ * whether it grew since the previous bar, as TradingView's `hist[1] < hist`: a missing or equal
+ * previous bar counts as not growing.
  */
 export function toHistogram(
   values: readonly (number | null)[],
@@ -190,7 +191,7 @@ export function toHistogram(
     const value = values[i];
     if (value === null || value === undefined) return { time };
     const previous = values[i - 1];
-    const rising = previous === null || previous === undefined || value >= previous;
+    const rising = previous !== null && previous !== undefined && value > previous;
     const color =
       value >= 0 ? (rising ? colors.up : colors.upWeak) : rising ? colors.downWeak : colors.down;
     return { time, value, color };

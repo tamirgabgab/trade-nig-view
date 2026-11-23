@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from app.indicators import core
 from app.indicators.ma import length_param
-from app.indicators.registry import IndicatorSpec, OutputSpec, Params
+from app.indicators.registry import IndicatorSpec, OutputSpec, Params, length_lookback
 from app.models.bars import BarFrame, FloatArray
 
 
@@ -38,6 +38,12 @@ def warmup(params: Params) -> int:
     return int(params["k_length"]) + int(params["k_smoothing"]) + int(params["d_smoothing"]) - 3
 
 
+def lookback(params: Params) -> int:
+    """Every bar of the warm-up: the window and both smoothings (``length_lookback`` reads only
+    ``k_length``)."""
+    return max(length_lookback({"length": params["k_length"]}), warmup(params))
+
+
 SPEC = IndicatorSpec(
     id="stoch",
     version=1,
@@ -56,6 +62,7 @@ SPEC = IndicatorSpec(
         OutputSpec("d", "%D", "line", "#FF6D00"),
     ),
     warmup=warmup,
+    lookback=lookback,
     compute=compute,
     learn_slug="stochastic",
     description="Where the close sits in the recent high-low range, from 0 to 100.",

@@ -173,6 +173,7 @@ export class ChartEngine {
   private paneLayout: PaneLayout = {};
   private readonly paneObserver: ResizeObserver | null;
   private layoutFrame = 0;
+  private hasVolume = true;
 
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
     this.theme = theme;
@@ -229,6 +230,7 @@ export class ChartEngine {
 
     this.bars = bars;
     this.decimals = decimals;
+    this.hasVolume = hasVolume;
     this.times = chartTimes(bars, timeZone);
     // Intraday bars need the time of day on the axis; daily and longer bars show dates only.
     this.chart.applyOptions({ timeScale: { timeVisible: hasIntradayTimes(bars) } });
@@ -276,14 +278,19 @@ export class ChartEngine {
         })),
     );
     const keep = new Map(lines.map((line) => [line.key, line]));
+    const left: HTMLElement[] = [];
     for (const [key, entry] of this.lines) {
       const line = keep.get(key);
       if (line !== undefined && line.plot === entry.plot && line.ownPane === entry.ownPane)
         continue;
+      const element = entry.ownPane ? entry.series.getPane().getHTMLElement() : null;
+      if (element !== null) left.push(element);
       this.chart.removeSeries(entry.series);
       this.lines.delete(key);
     }
     this.removeEmptyPanes();
+    const panes = new Set(this.chart.panes().map((pane) => pane.getHTMLElement()));
+    for (const element of left) if (!panes.has(element)) this.paneObserver?.unobserve(element);
 
     for (const line of lines) {
       const entry = this.lines.get(line.key) ?? this.addLine(line);
@@ -294,7 +301,8 @@ export class ChartEngine {
           : { type: 'price' as const, ...priceFormat(this.decimals) };
       entry.series.applyOptions({
         color: line.color,
-        visible: line.visible,
+        // A volume-scale line has nothing to follow on a symbol without volume (forex, indices).
+        visible: line.visible && (this.hasVolume || !volumeScale),
         priceFormat: format,
         ...(line.plot === 'histogram' ? {} : { lineWidth: toLineWidth(line.lineWidth) }),
       });

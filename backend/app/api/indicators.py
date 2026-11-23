@@ -160,7 +160,12 @@ class ComputeResponse(BaseModel):
             "last (a composite's faster outputs can start earlier)"
         )
     )
-    lookback: int = Field(description="Extra history bars loaded before `start`")
+    lookback: int = Field(
+        description=(
+            "Extra history bars the indicator asks for before `start` (fewer are loaded when the"
+            " history is shorter; 1000000000 = the whole history, e.g. OBV)"
+        )
+    )
 
 
 def _values(y: FloatArray) -> list[float | None]:

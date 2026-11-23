@@ -42,3 +42,17 @@ def test_warmup_and_spec() -> None:
     assert STOCH.warmup(STOCH.defaults()) == 15
     assert STOCH.levels == (80.0, 50.0, 20.0)
     assert [o.label for o in STOCH.outputs] == ["%K", "%D"]
+
+
+def test_lookback_covers_long_smoothings() -> None:
+    """A window that starts ``lookback`` bars early gives the full-history values."""
+    rng = np.random.default_rng(7)
+    close = 100 + np.cumsum(rng.normal(size=1500))
+    frame = bars(close + 1, close - 1, close)
+    params = {"k_length": 14, "k_smoothing": 300, "d_smoothing": 300}
+    first = 1200
+    lo = first - STOCH.total_lookback(params)
+    full = STOCH.run(frame, params)
+    window = STOCH.run(frame.take(slice(lo, None)), params)
+    for name in ("k", "d"):
+        np.testing.assert_allclose(window[name][first - lo :], full[name][first:], rtol=1e-12)

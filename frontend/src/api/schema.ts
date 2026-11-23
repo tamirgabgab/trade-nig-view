@@ -305,7 +305,7 @@ export interface components {
             warmup: number;
             /**
              * Lookback
-             * @description Extra history bars loaded before `start`
+             * @description Extra history bars the indicator asks for before `start` (fewer are loaded when the history is shorter; 1000000000 = the whole history, e.g. OBV)
              */
             lookback: number;
         };

@@ -276,7 +276,7 @@
 - **Backend:**
   - 8 אינדיקטורים חדשים: `bb`, ‏`rsi`, ‏`macd`, ‏`stoch`, ‏`atr`, ‏`obv`, ‏`vwap` ו-`vol_sma`, כל אחד בקובץ משלו ב-`app/indicators/`.
   - primitives חדשים ב-`core.py`: `stdev` (σ של אוכלוסייה, שני מעברים בבלוקים), `highest`, `lowest` ו-`true_range`.
-  - `apply_ma_valid`: מריץ MA על הקלט החל מהערך התקף הראשון. משמש ל-smoothing של RSI, ל-signal של MACD ול-basis של BB, עם כל 15 הסוגים.
+  - `apply_ma_valid`: מריץ MA על הקלט החל מהערך התקף הראשון. משמש ל-smoothing של RSI ול-signal של MACD, עם כל 15 הסוגים. ה-basis של BB משתמש ב-`apply_ma` הרגיל.
   - `BarFrame.session`: עמודה אופציונלית ל-VWAP, נבנית ב-intraday בלבד. ב-daily התוצאה NaN.
   - `ParamSpec.requires` ו-`OutputSpec.requires`: פרמטר או קו שפעילים רק כשה-bool או ה-enum שהם תלויים בו דולק (True או לא `"none"`). ב-RSI זה חל על אורך ה-smoothing, על ה-BB ועל הקווים שלהם.
   - `filter_response` מודד רק outputs שעל ברים שטוחים הם כפולה קבועה של המחיר. לאוסילטורים מוחזר `outputs: []`.
@@ -287,6 +287,13 @@
   - פאנל ההגדרות מאפיר inputs לא פעילים, וה-legend משמיט אותם יחד עם הקווים הכבויים.
   - החיפוש בחלון ה-Indicators מציג קודם את הקבוצה עם ההתאמה הטובה ביותר. לפני כן "rsi" הציג EMA ראשון, כי ב-description שלו מופיעה המילה "Recursive".
 - **E2E:** הוספת RSI ו-BB, בדיקה שה-smoothing מאפיר את השדות, שינוי האורך של BB ל-30 והסרת RSI. הערכים נבדקים מול מימוש ייחוס ב-TS.
+- **ponytail ו-code review (high):** ‏ponytail מצא רק map מיותר אחד בחיפוש. ה-review מצא 6 ממצאים, וכולם טופלו:
+  1. **(חשוב) lookback של Stochastic:** הוא קרא רק את `k_length`. עם smoothing ארוך, החלון הראשון של כל עמוד יצא ריק. עכשיו ה-lookback הוא $\max(25k, \text{warmup})$, ונוסף טסט שמוודא שחלון עם lookback נותן את ערכי ההיסטוריה המלאה.
+  2. צבעי ה-histogram של MACD עכשיו כמו ב-TradingView (`hist[1] < hist`): בר ראשון או בר ששווה לקודם נחשב "לא עולה".
+  3. ה-`ResizeObserver` מפסיק לעקוב אחרי pane שנסגר (קודם הייתה דליפה).
+  4. ‏`lookback` ב-API: תועד הערך 1000000000, שמשמעו "כל ההיסטוריה" (OBV). שינוי המשמעות לבארים שנטענו בפועל היה שובר את החוזה הקיים.
+  5. תוקן ב-HANDOFF מי משתמש ב-`apply_ma_valid`.
+  6. קו על סקאלת ה-volume (Volume SMA) מוסתר בסימבול בלי volume (forex, מדדים).
 - **פתוח:** ה-legend ב-pane מציג ערכים לפי מספר הספרות העשרוניות של הסימבול (ל-U1). בנוסף, ‏ARCHITECTURE §5.1 עודכן: `fills` ו-`intraday_only` לא קיימים, ובמקומם יש `style` ו-`session`.
 
 ## יומן החלטות

@@ -181,15 +181,18 @@ describe('toMarkers', () => {
 
 describe('toHistogram', () => {
   it('colours by sign and by direction against the previous bar', () => {
-    const times = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'];
+    const times = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8'];
     const colors = { up: 'U', upWeak: 'u', down: 'D', downWeak: 'd' };
-    expect(toHistogram([null, 1, 2, 1, -1, -0.5], times, colors)).toEqual([
+    expect(toHistogram([null, 1, 2, 1, -1, -0.5, -0.5, 2], times, colors)).toEqual([
       { time: 'd1' },
-      { time: 'd2', value: 1, color: 'U' },
+      // No previous bar and an equal one count as not growing (TradingView's hist[1] < hist).
+      { time: 'd2', value: 1, color: 'u' },
       { time: 'd3', value: 2, color: 'U' },
       { time: 'd4', value: 1, color: 'u' },
       { time: 'd5', value: -1, color: 'D' },
       { time: 'd6', value: -0.5, color: 'd' },
+      { time: 'd7', value: -0.5, color: 'D' },
+      { time: 'd8', value: 2, color: 'U' },
     ]);
   });
 });
