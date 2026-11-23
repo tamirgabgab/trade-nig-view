@@ -166,4 +166,29 @@ describe('DrawingManager', () => {
     expect(store.getState().drawings).toEqual([]);
     expect(chart.panZoom).toBe(true);
   });
+
+  it('draws a three-point channel by clicks, and by a drag then a click', () => {
+    const el = chart.element();
+    store.getState().setTool('parallel_channel', 'lines');
+    click(el, 100, 100);
+    click(el, 300, 100);
+    expect(store.getState().drawings).toEqual([]);
+    click(el, 200, 60);
+    expect(store.getState().drawings[0]?.points).toEqual([
+      { time: 10, price: 100 },
+      { time: 30, price: 100 },
+      { time: 20, price: 140 },
+    ]);
+
+    store.getState().setTool('fib_extension', 'fib');
+    fire(el, 'pointerdown', 100, 150);
+    fire(el, 'pointermove', 200, 50);
+    fire(window, 'pointerup', 200, 50);
+    expect(store.getState().drawings).toHaveLength(1); // waits for the third anchor
+    fire(el, 'pointermove', 250, 100);
+    click(el, 250, 100);
+    const ext = store.getState().drawings[1];
+    expect(ext?.points.map((a) => a.price)).toEqual([50, 150, 100]);
+    expect(ext?.props.levels?.length).toBeGreaterThan(0);
+  });
 });

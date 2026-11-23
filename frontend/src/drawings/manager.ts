@@ -2,6 +2,7 @@ import type { StoreApi } from 'zustand';
 
 import { isBareKeyOutsideField } from '../components/keyTarget.ts';
 import type { DrawingState } from '../store/drawingStore.ts';
+import { DEFAULT_FIB_LEVELS } from './fib.ts';
 import { snapAngle } from './geometry.ts';
 import { hitTest, type Hit, type Size } from './shapes.ts';
 import { magnetPrice } from './snap.ts';
@@ -41,7 +42,12 @@ export interface DrawingCallbacks {
 /** A click that moves less than this (CSS px) is a click, not a drag. */
 const CLICK_SLOP = 4;
 /** Line tools that Shift snaps to 45 degrees. */
-const ANGLE_TOOLS: ReadonlySet<DrawingType> = new Set(['trend_line', 'ray', 'extended_line']);
+const ANGLE_TOOLS: ReadonlySet<DrawingType> = new Set([
+  'trend_line',
+  'ray',
+  'extended_line',
+  'parallel_channel',
+]);
 
 export const TOOL_LABELS: Record<DrawingType, string> = {
   trend_line: 'Trend line',
@@ -52,7 +58,37 @@ export const TOOL_LABELS: Record<DrawingType, string> = {
   vertical_line: 'Vertical line',
   rectangle: 'Rectangle',
   text: 'Text',
+  fib_retracement: 'Fib retracement',
+  fib_extension: 'Trend-based Fib extension',
+  parallel_channel: 'Parallel channel',
+  price_range: 'Price range',
+  date_range: 'Date range',
+  date_price_range: 'Date and price range',
 };
+
+/** Thin lines for the tools whose look comes from fills and labels. */
+const THIN: ReadonlySet<DrawingType> = new Set([
+  'rectangle',
+  'fib_retracement',
+  'fib_extension',
+  'price_range',
+  'date_range',
+  'date_price_range',
+]);
+
+function defaultProps(type: DrawingType): Drawing['props'] {
+  switch (type) {
+    case 'text':
+      return { text: 'Text', font_size: 14 };
+    case 'rectangle':
+      return { fill: true };
+    case 'fib_retracement':
+    case 'fib_extension':
+      return { levels: DEFAULT_FIB_LEVELS.map((level) => ({ ...level })) };
+    default:
+      return {};
+  }
+}
 
 /** A new drawing of `type` at `points`, with the tool's default style and props. */
 export function newDrawing(type: DrawingType, points: Anchor[], id: string): Drawing {
@@ -60,13 +96,8 @@ export function newDrawing(type: DrawingType, points: Anchor[], id: string): Dra
     id,
     type,
     points,
-    style: { ...DEFAULT_STYLE, ...(type === 'rectangle' ? { line_width: 1 } : {}) },
-    props:
-      type === 'text'
-        ? { text: 'Text', font_size: 14 }
-        : type === 'rectangle'
-          ? { fill: true }
-          : {},
+    style: { ...DEFAULT_STYLE, ...(THIN.has(type) ? { line_width: 1 } : {}) },
+    props: defaultProps(type),
     locked: false,
     hidden: false,
     z: 0,
@@ -194,7 +225,9 @@ export class DrawingManager {
       if (drawing.hidden) continue;
       const pts = this.pixels(drawing);
       if (pts === null) continue;
-      const hit = hitTest(drawing, pts, p, size, drawing.id === selectedId);
+      const hit = hitTest(drawing, pts, p, size, drawing.id === selectedId, (price) =>
+        this.surface.priceToY(price),
+      );
       if (hit !== null) return { drawing, hit };
     }
     return null;
@@ -287,7 +320,9 @@ export class DrawingManager {
   /** Move the anchors not placed yet to `p`. */
   private follow(creating: Creating, p: Point): void {
     const { drawing, placed } = creating;
-    const first = this.surface.project(drawing.points[0] ?? { time: 0, price: 0 });
+    // Shift's 45 degrees apply to the line from the first anchor (not a channel's width).
+    const first =
+      placed < 2 ? this.surface.project(drawing.points[0] ?? { time: 0, price: 0 }) : null;
     const anchor = this.anchorAt(p, first, drawing.type);
     if (anchor === null) return;
     creating.drawing = {
@@ -327,11 +362,13 @@ export class DrawingManager {
     if (!this.down) return;
     this.down = false;
     if (this.creating !== null) {
-      const { drawing, placed, dragged } = this.creating;
-      // One-point tools finish on release; two-point tools on a drag's release or the 2nd click.
-      if (POINT_COUNT[drawing.type] === 1 || dragged || placed >= POINT_COUNT[drawing.type]) {
-        this.finish();
+      // A drag places the second anchor on release; a three-point tool then waits for a click.
+      if (this.creating.dragged) {
+        this.creating.dragged = false;
+        this.creating.placed = Math.max(this.creating.placed, 2);
       }
+      const { drawing, placed } = this.creating;
+      if (POINT_COUNT[drawing.type] === 1 || placed >= POINT_COUNT[drawing.type]) this.finish();
       return;
     }
     if (this.dragging !== null) {

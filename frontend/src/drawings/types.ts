@@ -10,7 +10,13 @@ export type DrawingType =
   | 'horizontal_ray'
   | 'vertical_line'
   | 'rectangle'
-  | 'text';
+  | 'text'
+  | 'fib_retracement'
+  | 'fib_extension'
+  | 'parallel_channel'
+  | 'price_range'
+  | 'date_range'
+  | 'date_price_range';
 
 export type LineStyle = 'solid' | 'dashed' | 'dotted';
 
@@ -25,10 +31,19 @@ export interface DrawingStyle {
   line_style: LineStyle;
 }
 
+/** One Fibonacci level: its ratio, colour and whether it shows. */
+export interface FibLevel {
+  value: number;
+  color: string;
+  visible: boolean;
+}
+
 export interface DrawingProps {
   text?: string;
   font_size?: number;
   fill?: boolean;
+  /** Fib tools. */
+  levels?: FibLevel[];
 }
 
 export interface Drawing {
@@ -54,6 +69,12 @@ export const POINT_COUNT: Record<DrawingType, number> = {
   vertical_line: 1,
   rectangle: 2,
   text: 1,
+  fib_retracement: 2,
+  fib_extension: 3,
+  parallel_channel: 3,
+  price_range: 2,
+  date_range: 2,
+  date_price_range: 2,
 };
 
 export const DEFAULT_STYLE: DrawingStyle = {

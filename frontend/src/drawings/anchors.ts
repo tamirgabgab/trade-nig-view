@@ -56,3 +56,18 @@ export function logicalToTime(times: readonly number[], logical: number): number
   const next = times[i + 1] ?? open;
   return Math.round(open + (logical - i) * (next - open));
 }
+
+/**
+ * Pixel x of a fractional logical index, from the chart's x of whole indices (Lightweight Charts
+ * maps only whole indices: it returns 0 for a fraction). Interpolates between the two neighbours.
+ */
+export function logicalToX(
+  logical: number,
+  wholeToX: (index: number) => number | null,
+): number | null {
+  const i = Math.floor(logical);
+  const x0 = wholeToX(i);
+  if (x0 === null || i === logical) return x0;
+  const x1 = wholeToX(i + 1);
+  return x1 === null ? null : x0 + (logical - i) * (x1 - x0);
+}

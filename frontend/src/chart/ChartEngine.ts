@@ -51,7 +51,8 @@ import {
   type MarkerPoint,
   type MarkerSource,
 } from './seriesData.ts';
-import { logicalToTime, timeToLogical } from '../drawings/anchors.ts';
+import { logicalToTime, logicalToX, timeToLogical } from '../drawings/anchors.ts';
+import type { Span } from '../drawings/measure.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 import { DrawingLayer } from './drawingLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
@@ -203,7 +204,12 @@ export class ChartEngine {
   private barTimes: number[] = [];
   private readonly drawingLayer = new DrawingLayer(
     (anchor) => this.project(anchor),
-    () => this.theme.background,
+    () => ({
+      background: this.theme.background,
+      priceToY: (price) => this.priceToY(price),
+      decimals: this.decimals,
+      span: (a, b) => this.span(a, b),
+    }),
   );
   private lastLines: readonly IndicatorLine[] = [];
   private times: ChartTime[] = [];
@@ -614,7 +620,7 @@ export class ChartEngine {
   project(anchor: Anchor): Point | null {
     const logical = timeToLogical(this.barTimes, anchor.time);
     if (Number.isNaN(logical)) return null;
-    const x = this.chart.timeScale().logicalToCoordinate(logical as Logical);
+    const x = logicalToX(logical, (i) => this.chart.timeScale().logicalToCoordinate(i as Logical));
     const y = this.main.priceToCoordinate(anchor.price);
     return x === null || y === null ? null : { x, y };
   }
@@ -630,6 +636,18 @@ export class ChartEngine {
   /** The bar at a logical index (for the magnet), if loaded. */
   barAt(logical: number): Bar | undefined {
     return this.bars[Math.round(logical)];
+  }
+
+  /** Bars from anchor `a` to anchor `b`, and the volume of the bars they cover. */
+  span(a: Anchor, b: Anchor): Span | null {
+    const from = timeToLogical(this.barTimes, a.time);
+    const to = timeToLogical(this.barTimes, b.time);
+    if (Number.isNaN(from) || Number.isNaN(to)) return null;
+    const first = Math.max(0, Math.round(Math.min(from, to)));
+    const last = Math.min(this.bars.length - 1, Math.round(Math.max(from, to)));
+    let volume = 0;
+    for (let i = first; i <= last; i += 1) volume += this.bars[i]?.volume ?? 0;
+    return { bars: Math.round(to - from), volume: this.hasVolume ? volume : null };
   }
 
   /** Pixel y of a price on the price pane. */

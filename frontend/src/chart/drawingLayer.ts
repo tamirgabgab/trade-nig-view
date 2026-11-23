@@ -9,7 +9,7 @@ import type {
   SeriesAttachedParameter,
 } from 'lightweight-charts';
 
-import { drawDrawing } from '../drawings/render.ts';
+import { drawDrawing, type DrawState } from '../drawings/render.ts';
 import { NO_DRAWINGS, type Anchor, type DrawingView, type Point } from '../drawings/types.ts';
 
 export class DrawingLayer implements ISeriesPrimitive {
@@ -25,9 +25,9 @@ export class DrawingLayer implements ISeriesPrimitive {
           const pts = drawing.points.map(this.project);
           if (pts.some((p) => p === null)) continue;
           drawDrawing(context, drawing, pts as Point[], mediaSize, {
+            ...this.chart(),
             selected: drawing.id === selectedId || drawing === draft,
             hovered: drawing.id === hoverId,
-            background: this.background(),
           });
         }
       });
@@ -41,7 +41,8 @@ export class DrawingLayer implements ISeriesPrimitive {
 
   constructor(
     private readonly project: (anchor: Anchor) => Point | null,
-    private readonly background: () => string,
+    /** Everything else the renderer needs from the chart, read at paint time. */
+    private readonly chart: () => Omit<DrawState, 'selected' | 'hovered'>,
   ) {}
 
   attached({ requestUpdate }: SeriesAttachedParameter): void {

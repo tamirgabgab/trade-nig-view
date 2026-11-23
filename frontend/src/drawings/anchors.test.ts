@@ -1,4 +1,4 @@
-import { logicalToTime, timeToLogical } from './anchors.ts';
+import { logicalToTime, logicalToX, timeToLogical } from './anchors.ts';
 
 const DAY = 86_400;
 // Mon..Fri, then the next Monday (a weekend gap).
@@ -36,5 +36,16 @@ describe('anchor mapping', () => {
   it('has no position without bars', () => {
     expect(timeToLogical([], 1)).toBeNaN();
     expect(logicalToTime([], 1)).toBeNaN();
+  });
+});
+
+describe('logicalToX', () => {
+  it('interpolates a fraction between whole bars (the chart maps only whole ones)', () => {
+    // Like Lightweight Charts: 10 px per bar, and 0 for a fractional index.
+    const wholeToX = (i: number) => (Number.isInteger(i) ? 5 + i * 10 : 0);
+    expect(logicalToX(3, wholeToX)).toBe(35);
+    expect(logicalToX(3.25, wholeToX)).toBe(37.5);
+    expect(logicalToX(-0.5, wholeToX)).toBe(0);
+    expect(logicalToX(2.5, () => null)).toBeNull();
   });
 });
