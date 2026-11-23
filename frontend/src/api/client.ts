@@ -63,6 +63,18 @@ export async function apiGet<T>(
   return parse(body);
 }
 
+/** POST `body` as JSON to `/api${path}` and validate the response with `parse`. */
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+  parse: (body: unknown) => T,
+  init?: RequestInit,
+): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set('Content-Type', 'application/json');
+  return apiGet(path, parse, { ...init, method: 'POST', headers, body: JSON.stringify(body) });
+}
+
 /**
  * Field reader that only accepts keys of the schema type `T`, so a renamed or removed API field
  * breaks the build instead of silently reading `undefined`. Values stay `unknown` and are checked.

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { Interval } from '../api/bars.ts';
 import {
   direction,
@@ -18,6 +20,8 @@ interface LegendOHLCProps {
   hasVolume: boolean;
   /** Short status next to the title, e.g. "Loading NVDA…" or "Cached data". */
   status?: string | undefined;
+  /** Rows below the price (indicator legend). */
+  children?: ReactNode;
 }
 
 function Field({ name, value, tone }: { name: string; value: string; tone: string }) {
@@ -40,6 +44,7 @@ export function LegendOHLC({
   decimals,
   hasVolume,
   status,
+  children,
 }: LegendOHLCProps) {
   const tone = styles[direction(values?.change ?? null)] ?? '';
   return (
@@ -73,6 +78,7 @@ export function LegendOHLC({
           <Field name="Vol" value={formatVolume(values.volume)} tone={tone} />
         </div>
       )}
+      {children}
     </div>
   );
 }

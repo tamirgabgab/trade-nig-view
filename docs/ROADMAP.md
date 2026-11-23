@@ -13,7 +13,7 @@
 | R0 | Scaffolding & quality gates | M | ✅ Done (2026-11-22) |
 | R1 | Market data layer | L | ✅ R1a + R1b done (2026-11-22); real fixtures pending on the user's machine |
 | R2 | Chart core | L | ✅ R2a + R2b done (2026-11-22) |
-| R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | 🔨 R3a next |
+| R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | 🔨 R3a ✅, R3b next |
 | L1 | Learn v1 for the MA family (from Phase 2) | M | |
 | U1 | UX pass (responsive, disabled states, loaders, keyboard) | M | |
 | R4 | Drawing tools v1 | L | |
@@ -145,13 +145,13 @@ style), oscillator panes (resizable) with level lines, multiple instances; golde
 Out of scope: learn-page content (P2), user plugins (P3).
 
 Tasks
-- [ ] `indicators/core.py` primitives with docstring formulas; `registry.py`; one file per indicator
-- [ ] `tests/golden/models.py` scalar-loop reference models; TA-Lib comparison tests (converged region); hand vectors; hypothesis properties incl. `check_no_lookahead`
-- [ ] Scoreboard report writer (CSV in `backend/.reports/`, uploaded by CI)
-- [ ] API + tests (param validation from `ParamSpec`, unknown id → 404, `until` truncation)
-- [ ] Frontend: `IndicatorsDialog`, `LegendRow`, `IndicatorSettingsDialog` (generated), pane management in `ChartEngine`, markers via `createSeriesMarkers`
+- [ ] `indicators/core.py` primitives with docstring formulas; `registry.py`; one file per indicator (R3a: sma/ema/wma/rma + registry ✅; stdev/highest/lowest/true_range in R3c)
+- [x] `tests/golden/models.py` scalar-loop reference models; TA-Lib comparison tests (converged region); hand vectors; hypothesis properties incl. `check_no_lookahead` (R3a)
+- [x] Scoreboard report writer (CSV in `backend/.reports/`, uploaded by CI) (R3a)
+- [x] API + tests (param validation from `ParamSpec`, unknown id → 404, `until` truncation) (R3a)
+- [ ] Frontend: `IndicatorsDialog`, `LegendRow`, `IndicatorSettingsDialog` (generated), pane management in `ChartEngine`, markers via `createSeriesMarkers` (R3a: dialog, legend rows, live settings panel, price-pane lines ✅; panes in R3c, markers in R3b)
 - [ ] `docs/indicators/<slug>.md` stub per indicator (formula, defaults, warm-up, TV differences)
-- [ ] TV manual cross-check list (3 AAPL 1D dates) → `tests/golden/tv_crosscheck.json` filled with the user's numbers
+- [ ] TV manual cross-check list (3 AAPL 1D dates) → `tests/golden/tv_crosscheck.json` filled with the user's numbers (template + test ✅, numbers pending)
 
 DoD: all indicators pass golden + property tests at `rtol=1e-9` (deviations documented); adding a new indicator = 1
 Python file + 1 registry entry + tests; Playwright: add RSI + BB, change BB length, remove RSI.

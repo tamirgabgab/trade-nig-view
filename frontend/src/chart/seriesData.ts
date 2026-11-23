@@ -154,6 +154,17 @@ export function toLine(bars: readonly Bar[], times: readonly ChartTime[]): LineP
   return bars.map((bar, i) => ({ time: times[i] ?? '', value: bar.close }));
 }
 
+/** An indicator output aligned with the bars: null (warm-up) becomes a whitespace point. */
+export function toValueLine(
+  values: readonly (number | null)[],
+  times: readonly ChartTime[],
+): (LinePoint | { time: ChartTime })[] {
+  return times.map((time, i) => {
+    const value = values[i];
+    return value === null || value === undefined ? { time } : { time, value };
+  });
+}
+
 /**
  * How many bars were prepended when `next` replaced `previous` (older history loaded), or 0 if
  * `next` is not `previous` with older bars in front (a different data set or a refresh).

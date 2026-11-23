@@ -1,0 +1,31 @@
+/* Element + class: wins over the shared dialog styles whatever the CSS load order. */
+input.input {
+  text-transform: none;
+}
+
+li.option {
+  grid-template-columns: 1fr auto;
+}
+
+li.option[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.short {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notice {
+  margin: 0 var(--space-4) var(--space-2);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+}

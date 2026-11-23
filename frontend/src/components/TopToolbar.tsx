@@ -31,6 +31,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
   const symbol = useChartStore((s) => s.symbol);
   const display = useSymbols().data?.find((s) => s.symbol === symbol)?.display ?? symbol;
   const openSymbolSearch = useUiStore((s) => s.openSymbolSearch);
+  const setIndicatorsDialog = useUiStore((s) => s.setIndicatorsDialog);
   return (
     <header className={[styles.bar, className].join(' ')} role="toolbar" aria-label="Chart toolbar">
       <button
@@ -60,7 +61,10 @@ export function TopToolbar({ className }: TopToolbarProps) {
         text="Indicators"
         shortcut="/"
         icon={<ChartSpline size={ICON_SIZE} />}
-        comingIn="R3"
+        aria-haspopup="dialog"
+        onClick={() => {
+          setIndicatorsDialog(true);
+        }}
       />
       <span className={styles.separator} aria-hidden="true" />
       <IconButton

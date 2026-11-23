@@ -8,8 +8,11 @@ import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../cha
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
+import { IndicatorLegend } from './IndicatorLegend.tsx';
+import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { legendValues } from './legendValues.ts';
+import { useChartIndicators } from './useChartIndicators.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
 
 interface ChartAreaProps {
@@ -90,6 +93,17 @@ export function ChartArea({ className }: ChartAreaProps) {
     [rangeRequest, rangeTarget, times],
   );
 
+  // Indicators are computed over exactly the loaded bars. While another data set loads, the
+  // previous values stay on the previous bars (series = null pauses the queries).
+  const series = useMemo(
+    () =>
+      history.isLoading || data === undefined
+        ? null
+        : { symbol: data.symbol, interval: data.interval, adjusted: data.adjusted, transform },
+    [history.isLoading, data, transform],
+  );
+  const indicators = useChartIndicators(series, bars);
+
   const showProgress = useDelayedFlag(
     history.isLoading || history.isLoadingOlder,
     PROGRESS_DELAY_MS,
@@ -124,7 +138,14 @@ export function ChartArea({ className }: ChartAreaProps) {
         decimals={decimals}
         hasVolume={hasVolume}
         status={status}
-      />
+      >
+        <IndicatorLegend
+          views={indicators.views}
+          hoverIndex={hoverIndex}
+          barCount={bars.length}
+          decimals={decimals}
+        />
+      </LegendOHLC>
       <ChartView
         bars={bars}
         decimals={decimals}
@@ -134,9 +155,11 @@ export function ChartArea({ className }: ChartAreaProps) {
         scaleMode={scaleMode}
         autoScale={autoScale}
         focus={focus}
+        lines={indicators.lines}
         onHover={setHoverIndex}
         onVisibleRangeChange={onVisibleRangeChange}
       />
+      <IndicatorSettingsPanel views={indicators.views} />
       {history.isLoadingOlder && (
         <p className={styles.olderPill} role="status">
           Loading older bars…

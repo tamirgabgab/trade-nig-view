@@ -87,7 +87,7 @@ def ma_indicator(
         category="moving_averages",
         overlay=True,
         inputs=("open", "high", "low", "close"),
-        params=(source_param(), length_param(default_length), offset_param()),
+        params=(length_param(default_length), source_param(), offset_param()),
         outputs=(OutputSpec("ma", MA_LABELS[ma_type].split(" ")[0], "line", color),),
         warmup=warmup,
         compute=compute,

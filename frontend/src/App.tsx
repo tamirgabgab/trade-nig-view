@@ -2,14 +2,17 @@ import styles from './App.module.css';
 import { BottomBar } from './components/BottomBar.tsx';
 import { ChartArea } from './components/ChartArea.tsx';
 import { DrawingToolbar } from './components/DrawingToolbar.tsx';
+import { IndicatorsDialog } from './components/IndicatorsDialog.tsx';
 import { RightSidebar } from './components/RightSidebar.tsx';
 import { SymbolSearchDialog } from './components/SymbolSearchDialog.tsx';
 import { TopToolbar } from './components/TopToolbar.tsx';
+import { useIndicatorsHotkey } from './components/useIndicatorsHotkey.ts';
 import { useSymbolSearchHotkey } from './components/useSymbolSearchHotkey.ts';
 
 /** Application shell: five regions laid out like a desktop charting terminal. */
 export function App() {
   useSymbolSearchHotkey();
+  useIndicatorsHotkey();
   return (
     <div className={styles.shell}>
       <TopToolbar className={styles.top} />
@@ -18,6 +21,7 @@ export function App() {
       <RightSidebar className={styles.right} />
       <BottomBar className={styles.bottom} />
       <SymbolSearchDialog />
+      <IndicatorsDialog />
     </div>
   );
 }

@@ -18,5 +18,5 @@ def load_talib() -> tuple[TaLib | None, str]:
     """The ``talib`` module, or ``None`` with the reason it could not be imported."""
     try:
         return cast("TaLib", importlib.import_module("talib")), ""
-    except ImportError as exc:  # also "DLL load failed" when Smart App Control blocks it
+    except (ImportError, OSError) as exc:  # also "DLL load failed" when Smart App Control blocks it
         return None, f"TA-Lib not available ({exc}); the golden model still covers every bar"

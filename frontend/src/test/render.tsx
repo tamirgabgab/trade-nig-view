@@ -25,7 +25,9 @@ export function stubFetchJson(status: number, body: unknown): void {
   );
 }
 
-type Route = { status?: number; body: unknown } | ((url: URL) => Promise<Response>);
+type Route =
+  | { status?: number; body: unknown }
+  | ((url: URL, init: RequestInit | undefined) => Promise<Response>);
 
 /**
  * Stub global fetch with responses chosen by URL path prefix, e.g. `{ '/api/health': {...} }`.
@@ -34,14 +36,14 @@ type Route = { status?: number; body: unknown } | ((url: URL) => Promise<Respons
 export function stubApi(routes: Record<string, Route>): void {
   vi.stubGlobal(
     'fetch',
-    vi.fn((input: RequestInfo | URL) => {
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const parsed = new URL(url, 'http://localhost');
       const route = routes[parsed.pathname];
       if (route === undefined) {
         return Promise.resolve(new Response('{"detail":"no stub"}', { status: 404 }));
       }
-      if (typeof route === 'function') return route(parsed);
+      if (typeof route === 'function') return route(parsed, init);
       return Promise.resolve(
         new Response(JSON.stringify(route.body), {
           status: route.status ?? 200,
@@ -167,3 +169,61 @@ export function barsBody(symbol: string, interval: string, bars: unknown[]) {
     bars,
   };
 }
+
+/** GET /api/indicators body: the four core moving averages (snake_case, as the backend sends). */
+function maSpec(id: string, name: string, length: number, color: string) {
+  return {
+    id,
+    version: 1,
+    name,
+    short_name: id.toUpperCase(),
+    category: 'moving_averages',
+    overlay: true,
+    inputs: ['open', 'high', 'low', 'close'],
+    params: [
+      {
+        name: 'length',
+        type: 'int',
+        default: length,
+        label: 'Length',
+        min: 1,
+        max: 5000,
+        step: 1,
+        options: [],
+      },
+      {
+        name: 'source',
+        type: 'source',
+        default: 'close',
+        label: 'Source',
+        min: null,
+        max: null,
+        step: null,
+        options: ['close', 'open', 'high', 'low', 'hl2', 'hlc3', 'ohlc4', 'hlcc4'],
+      },
+      {
+        name: 'offset',
+        type: 'int',
+        default: 0,
+        label: 'Offset',
+        min: 0,
+        max: 500,
+        step: 1,
+        options: [],
+      },
+    ],
+    outputs: [
+      { name: 'ma', label: id.toUpperCase(), plot: 'line', color, line_width: 2, style: {} },
+    ],
+    levels: [],
+    learn_slug: id,
+    description: `${name} of the source.`,
+  };
+}
+
+export const INDICATORS = [
+  maSpec('sma', 'Simple Moving Average', 9, '#2962FF'),
+  maSpec('ema', 'Exponential Moving Average', 9, '#FF6D00'),
+  maSpec('wma', 'Weighted Moving Average', 9, '#00BCD4'),
+  maSpec('smma', 'Smoothed Moving Average', 7, '#AB47BC'),
+];

@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react';
 
 import type { Bar } from '../api/bars.ts';
-import { ChartEngine } from '../chart/ChartEngine.ts';
+import { ChartEngine, type IndicatorLine } from '../chart/ChartEngine.ts';
 import type { ChartType, ScaleMode } from '../chart/chartTypes.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import styles from './ChartArea.module.css';
@@ -22,6 +22,8 @@ interface ChartViewProps {
   scaleMode: ScaleMode;
   autoScale: boolean;
   focus: FocusRequest | null;
+  /** Indicator lines, values aligned with `bars`. */
+  lines: readonly IndicatorLine[];
   /** Bar index under the crosshair, or null when it is off the data. Must be a stable function. */
   onHover: (index: number | null) => void;
   /** Visible logical range after every scroll or zoom. Must be a stable function. */
@@ -38,6 +40,7 @@ export const ChartView = memo(function ChartView({
   scaleMode,
   autoScale,
   focus,
+  lines,
   onHover,
   onVisibleRangeChange,
 }: ChartViewProps) {
@@ -75,6 +78,11 @@ export const ChartView = memo(function ChartView({
     // response must not consume the reset, or the chart would open on the oldest bars.
     if (bars.length > 0) shownKeyRef.current = viewKey;
   }, [bars, decimals, hasVolume, viewKey]);
+
+  // After the bars: line values are matched to the bars by index.
+  useEffect(() => {
+    engineRef.current?.setIndicatorLines(lines);
+  }, [lines, bars]);
 
   useEffect(() => {
     engineRef.current?.setScale({ mode: scaleMode, autoScale });

@@ -3,8 +3,8 @@
 > קובץ זה נכתב בעברית (מונחים טכניים, נתיבים ופקודות באנגלית). מתעדכן בסוף כל session.
 
 ## מצב נוכחי
-- **שלב:** Phase 1. R0, R1a, R1b, R2a ו-**R2b (S1) הושלמו** (2026-11-22). R2b: סוגי גרף (כולל Heikin Ashi), log/%, auto, ADJ, כפתורי טווח, חיפוש סימבולים, היסטוריה עצלה בגלילה שמאלה, Playwright. **ממתין לדמו אצל המשתמש** (ראה רשימת הדמו בסוף ה-session האחרון).
-- **הסבב הבא:** **R3a** (S2 ב-[PLAN.md](PLAN.md)): מנוע indicators ו-SMA/EMA/WMA/SMMA. אחריו R3b (ממוצעים מוכללים), L1, R3c, U1. סדר ה-sessions, המלצות מודל ו-effort, ממצאי ה-UX והמתמטיקה של הממוצעים: [PLAN.md](PLAN.md).
+- **שלב:** Phase 1. R0, R1a, R1b, R2a, R2b (S1) ו-**R3a (S2) הושלמו** (2026-11-23). R3a: מנוע indicators ב-Python (registry, API, ולידציה), SMA/EMA/WMA/SMMA על הגרף, דיאלוג `/`, שורות legend, ופאנל הגדרות חי. כל אחד מהם נבדק כמו DUT מול golden model, TA-Lib ו-properties. **ממתין לדמו אצל המשתמש.**
+- **הסבב הבא:** **R3b** (S3 ב-[PLAN.md](PLAN.md)): משפחת הממוצעים המוכללת. אחריו L1, R3c, U1.
 - **החלטות D1–D6** (PLAN §7): המשתמש ביקש לממש S1–S3 בלי לבחור; אומצו ההמלצות: D2 = TA-Lib כתלות בדיקות אופציונלית (מדולג מקומית אם חסום), D4 = כולל KAMA, T3, ZLEMA, D6 = פאנל הגדרות חי.
 - **Branch:** עובדים ישירות על `main` (הוראה קבועה של המשתמש מ-2026-11-22). האייקון מעביר checkout ישן ל-`main` לבד.
 
@@ -120,6 +120,24 @@
 - **בדיקות:** backend 148 (175 skipped = fixtures אמיתיים שעוד לא בריפו), frontend 133 (היו 89), E2E 4. 9/9 gates ירוקים.
 - **חוזה lookback ל-indicators (E5):** הוגדר ב-[ARCHITECTURE §3.2](docs/ARCHITECTURE.md). הגרף מבקש indicator בדיוק על טווח הנרות הטעונים; ה-backend מוסיף `max(25·n, 250)` נרות warm-up. כשנטען עמוד ישן, ה-indicator מחושב מחדש לכל הטווח (בלי תפירה בצד הלקוח).
 
+## R3a — מה נבנה (2026-11-23)
+- **Backend (`backend/app/indicators/`):**
+  - `core.py`: `fir(x, w)` (חלון מדויק עם `sliding_window_view @ w`, בלי drift של סכום רץ) ו-`ema_recursive(x, α, n)` (seed = SMA של n הערכים התקינים הראשונים). מעליהם `sma`, `wma`, `ema` ($\alpha=\frac{2}{n+1}$), `rma` ($\alpha=\frac1n$), `source` (close/open/high/low/hl2/hlc3/ohlc4/hlcc4) ו-`shift` (offset ≥ 0 בלבד, כדי שערך בנר t לא יקרא נר עתידי).
+  - `registry.py`: `IndicatorSpec`/`ParamSpec`/`OutputSpec`, ולידציה של פרמטרים (טיפוס, min/max, options, שמות לא מוכרים → 422 `invalid_params`), ו-`lookback = max(25·n, 250)`.
+  - `ma.py`: `MA_TYPES` (dispatcher שישמש גם את MA Cross, Ribbon, Envelope, BB, MACD) ו-factory לממוצע עם קו אחד. סדר הפרמטרים כמו ב-TradingView: Length, Source, Offset.
+  - API: `GET /api/indicators` ו-`POST /api/indicators/compute`. התשובה בעמודות (`time[]` ו-`outputs{name: [value|null]}`), לא רשימת אובייקטים. החוזה עודכן ב-[ARCHITECTURE §4](docs/ARCHITECTURE.md).
+- **אימות (כמו DUT):** golden model בלולאה סקלרית לכל ממוצע, על **כל** הנרות (`rtol=1e-9, atol=1e-12`, ומיקומי NaN זהים); TA-Lib (תלות בדיקות בלבד, מדולג אם החבילה חסומה) על כל האזור התקף. EMA של TA-Lib שווה ל-EMA שלנו עד 1e-9 גם בנר הראשון, וזה מאשר את קונבנציית ה-seed. Directed tests: ramp lag = $\bar k$ בדיוק, impulse response = $h_k$, קבוע נכנס = קבוע יוצא. Hypothesis: equivariance להזזה ולסקאלה, חסם convex hull, ו-`check_no_lookahead`. Scoreboard: `backend/.reports/indicator_scoreboard.csv` (גם כ-artifact ב-CI). בדיקת API: חישוב עם `start` שווה לחישוב על כל ההיסטוריה (חוזה ה-lookback).
+- **TradingView cross-check:** תבנית ב-`backend/tests/golden/tv_crosscheck.json` (3 תאריכים של AAPL 1D × כל ממוצע). ממלאים את `tv_value` מה-legend של TradingView, מריצים `make-fixtures.ps1` פעם אחת, ואז `test.ps1`. שורה ריקה מדולגת; טולרנס 0.01.
+- **Frontend:**
+  - `api/indicators.ts`: parsing של ה-registry, `effectiveParams` (פרמטרים ישנים שנשמרו מתמזגים עם ה-defaults), `alignToBars` (ערכים לפי זמן הנר), ו-`useIndicatorComputes` עם `keepPreviousData` (שינוי length לא מהבהב).
+  - `store/indicatorStore.ts`: מופעים (uid, id, params, styles, visible) נשמרים ב-localStorage, עם sanitize ועד 20 מופעים.
+  - `IndicatorsDialog`: `/` בכל מקום (לא בתוך שדה טקסט) או כפתור Indicators; חיפוש, קטגוריות, חצים, Enter, Esc.
+  - `IndicatorLegend`: שורה לכל מופע: "EMA 20 close" + הערך בנר שמתחת לעכבר (או בנר האחרון), ⚠ אם החישוב נכשל, וכפתורים: עין, גלגל שיניים, ספר ("coming in L1"), הסרה.
+  - `IndicatorSettingsPanel`: פאנל צד שנבנה מה-`ParamSpec`/`OutputSpec`. מספרים מוחלים 250ms אחרי ההקלדה האחרונה, select ו-checkbox מיד. שגיאה מוצגת ב-blur ונמחקת מיד כשהערך תקין. יש בו צבע, עובי קו ו-"Reset to defaults".
+  - `ChartEngine.setIndicatorLines`: קו לכל output על ה-pane של המחיר. נתונים נשלחים מחדש רק כשהערכים או הנרות השתנו, כך ששינוי צבע לא מצייר מחדש.
+- **באג שנמצא ב-E2E ותוקן:** ה-canvas של lightweight-charts קיבל את הלחיצות על כפתורי ה-legend (ה-z-index הפנימי שלו התחרה ב-legend). תוקן ב-`isolation: isolate` על מיכל הגרף.
+- **בדיקות:** backend 421 (+ skipped של fixtures אמיתיים ושל TV cross-check), frontend 161, E2E 5 (חדשה: EMA 9 → 20 → 50 → נשמר אחרי רענון → הסתרה → הסרה, והערך ב-legend מול EMA שחושב ב-TypeScript מה-CSV).
+
 ## יומן החלטות
 | תאריך | החלטה | סיבה | ADR |
 |---|---|---|---|
@@ -153,6 +171,7 @@
 | 2026-11-22 | `openapi-typescript` ~7.13 עם `overrides` ל-TS 6 | types שנוצרים מה-backend, תלות dev קטנה | [0008](docs/adr/0008-openapi-typescript.md) |
 | 2026-11-22 | R2b: כפתורי טווח מחליפים interval (כמו TradingView); Heikin Ashi מחושב ב-backend; דפדוף לאחור עם `before`; `@playwright/test` 1.63.0 (dev) | ROADMAP R2b, PLAN S1 | ARCHITECTURE §3.1 |
 | 2026-11-22 | D2/D4/D6 לפי ההמלצה: TA-Lib אופציונלי לבדיקות, KAMA/T3/ZLEMA נכללים, פאנל הגדרות חי | המשתמש ביקש לממש S1–S3 בלי לבחור | PLAN §7 |
+| 2026-11-23 | R3a: תשובת compute בעמודות (`time[]`, `outputs{}`); offset ≥ 0 בלבד; פאנל הגדרות צד חי (לא חלון OK/Cancel); סדר פרמטרים Length/Source/Offset כמו ב-TV; `ta-lib` כתלות dev בלבד | יעילות, no-lookahead, D6 | ARCHITECTURE §4, §5.1 |
 | 2026-11-22 | `PLAN.md` כתוכנית העבודה ל-sessions הבאים: R3 מתפצל ל-R3a/R3b/R3c, ו-L1 (דפי לימוד לממוצעים) ו-U1 (UX) נכנסים לפני R4 | בקשת המשתמש להתמקד בממוצעים נעים ובמתמטיקה שלהם וב-UX | [PLAN.md](PLAN.md) |
 
 ## שאלות פתוחות אליך
@@ -175,7 +194,10 @@
 - סוג הגרף נשמר אחד לכל הסימבולים (לא לכל סימבול בנפרד). Layouts ב-R6.
 - בעמודת Chg% ב-Watchlist המספר נחתך מימין כשהמחירים ארוכים (למשל 12,912.115 בנתונים הסינתטיים). עם מחירים אמיתיים זה לא קרה; לבדוק ב-R2b.
 - צילום המסך ב-README עדיין של R0. יוחלף בצילום של גרף עם נתונים אמיתיים אחרי הדמו.
-- EMA seeding מול TradingView לא אומת מול המקור הרשמי של Pine (יאומת ב-R3).
+- EMA seeding: TA-Lib זהה לנו עד 1e-9. מול TradingView עצמו עוד לא אומת: צריך למלא את `tv_crosscheck.json` (3 תאריכים לכל ממוצע).
+- **מצב `%` עם indicators:** lightweight-charts מחשב אחוזים לכל series מול הערך הראשון הנראה **שלו**, ולא מול המחיר (ב-TradingView הכול יחסי למחיר). לכן במצב `%` קו ה-MA מוזז קצת מהמחיר. במצבים normal ו-log הכול תקין. פתרון אפשרי: לממש את מצב האחוזים ב-`ChartEngine` בעצמנו. ל-U1 או R6.
+- בגרף מסוג Line, צבע ברירת המחדל של SMA (`#2962FF`) זהה לצבע הקו של המחיר (כמו ב-TV). אפשר לשנות בפאנל ההגדרות.
+- גלישה אופקית מתחת ל-960px (סרגל הכלים העליון). קיים מ-R2 ומתוכנן ל-U1.
 - Vitest מדווח שה-jsdom environment נוצר 5 פעמים (אופטימיזציה אופציונלית, לא דחוף).
 
 ## הערות סביבה
@@ -244,3 +266,7 @@
 - נמצא ותוקן בדרך: ה-legend בבדיקת ה-E2E הראה את הנר שמתחת לעכבר ולא את האחרון (העכבר נשאר על הגרף אחרי בחירה בתפריט); `setState` בתוך effect הוחלף ב-focus נגזר (`useMemo`) ש-`ChartView` מפעיל פעם אחת לכל `seq`.
 - 9/9 gates ירוקים, E2E 4/4.
 
+### 2026-11-23 — S2 / R3a: מנוע indicators וממוצעים בסיסיים
+- המשך ריצה אוטונומית (S1 → S2 → S3) לבקשת המשתמש.
+- נבנו: core/registry/API, 4 ממוצעים, golden + TA-Lib + properties + scoreboard, תבנית TV cross-check, ובצד ה-frontend הדיאלוג, ה-legend, פאנל ההגדרות והקווים על הגרף. נוספו E2E ו-artifact של ה-scoreboard ב-CI.
+- נמצא ותוקן: לחיצות על כפתורי ה-legend נבלעו ב-canvas (stacking context). התגלה (ולא תוקן): הבסיס של מצב `%` הוא per-series.

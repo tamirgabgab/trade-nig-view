@@ -39,7 +39,7 @@
 | T2 | 1h fixture window (2026-08-01 → 2026-10-30) leaves Yahoo's 730-day limit mid-2028 | calendar reminder, not a round |
 | T3 | README screenshot is still the R0 shell | U1 |
 | T4 | Watchlist Chg% column clips long prices | U1 |
-| T5 | EMA seeding vs TradingView unverified against Pine | R3a (TV cross-check) |
+| T5 | EMA seeding vs TradingView unverified against Pine | R3a: TA-Lib agrees at 1e-9 on all bars; TV cross-check template ready, awaiting the user's numbers |
 | T6 | jsdom created 5× in Vitest (speed only) | U1 (optional) |
 
 ---
@@ -115,23 +115,23 @@ Goal: everything visible on the chart chrome actually works, and the e2e harness
 ### S2 — R3a: indicator engine + core moving averages (Opus 5.5 · high)
 Goal: the pipeline from a Python function to a line on the chart, verified like a DUT; SMA/EMA/WMA/RMA shipped.
 Backend
-- [ ] `app/indicators/core.py`: `fir(x, weights)` (exact sliding window), `ema_recursive(x, alpha, seed)`, `sma`, `ema`, `wma`, `rma`, `source(bars, name)` for close/open/high/low/hl2/hlc3/ohlc4/hlcc4
-- [ ] `app/indicators/registry.py` (`IndicatorSpec`, `ParamSpec`, `OutputSpec` as in ARCHITECTURE §5.1) + `ma.py` generic dispatcher (`MA_TYPES`) reused later by MA Cross, Ribbon, Envelope, BB basis, MACD
-- [ ] Indicators: `sma`, `ema`, `wma`, `smma` (RMA) with `source`, `length`, `offset`
-- [ ] API: `GET /api/indicators`, `POST /api/indicators/compute` (`lookback`, `until`), param validation from `ParamSpec`, problem+json; regenerate TS types
+- [x] `app/indicators/core.py`: `fir(x, weights)` (exact sliding window), `ema_recursive(x, alpha, seed)`, `sma`, `ema`, `wma`, `rma`, `source(bars, name)` for close/open/high/low/hl2/hlc3/ohlc4/hlcc4
+- [x] `app/indicators/registry.py` (`IndicatorSpec`, `ParamSpec`, `OutputSpec` as in ARCHITECTURE §5.1) + `ma.py` generic dispatcher (`MA_TYPES`) reused later by MA Cross, Ribbon, Envelope, BB basis, MACD
+- [x] Indicators: `sma`, `ema`, `wma`, `smma` (RMA) with `source`, `length`, `offset`
+- [x] API: `GET /api/indicators`, `POST /api/indicators/compute` (`lookback`, `until`), param validation from `ParamSpec`, problem+json; regenerate TS types
 Verification harness (reused by every later indicator)
-- [ ] `tests/golden/models.py` scalar loops; hand vectors; golden on all bars `rtol=1e-9, atol=1e-12`
-- [ ] Analytic directed tests from §5: ramp response lag = $\bar k$ exactly, constant in → constant out, impulse response = $h_k$
-- [ ] hypothesis properties incl. `check_no_lookahead`, shift/scale equivariance, convex-hull bound (non-negative kernels)
-- [ ] TA-Lib on the converged region (if D2 = yes); scoreboard CSV in `backend/.reports/`
-- [ ] `tests/golden/tv_crosscheck.json` template + a short instruction for the user (3 AAPL 1D dates × each MA)
+- [x] `tests/golden/models.py` scalar loops; hand vectors; golden on all bars `rtol=1e-9, atol=1e-12`
+- [x] Analytic directed tests from §5: ramp response lag = $\bar k$ exactly, constant in → constant out, impulse response = $h_k$
+- [x] hypothesis properties incl. `check_no_lookahead`, shift/scale equivariance, convex-hull bound (non-negative kernels)
+- [x] TA-Lib on the converged region (if D2 = yes); scoreboard CSV in `backend/.reports/`
+- [x] `tests/golden/tv_crosscheck.json` template + a short instruction for the user (3 AAPL 1D dates × each MA) — values still to be typed in by the user (closes T5 once filled)
 Frontend
-- [ ] `IndicatorsDialog` (search, categories, `/` shortcut, keyboard navigation)
-- [ ] Legend row per instance: name + params + values under the crosshair; eye / gear / learn / remove
-- [ ] Settings panel generated from `ParamSpec`/`OutputSpec`, **applies live** (debounced), "Reset to defaults" (decision D6)
-- [ ] `ChartEngine`: line outputs on the price pane, multiple instances, colours from `OutputSpec`
-- [ ] Learn-page stubs `docs/indicators/{sma,ema,wma,smma}.md`
-- [ ] Playwright: add EMA 20, change to 50, hide, remove; ux-audit
+- [x] `IndicatorsDialog` (search, categories, `/` shortcut, keyboard navigation)
+- [x] Legend row per instance: name + params + values under the crosshair; eye / gear / learn / remove
+- [x] Settings panel generated from `ParamSpec`/`OutputSpec`, **applies live** (debounced), "Reset to defaults" (decision D6)
+- [x] `ChartEngine`: line outputs on the price pane, multiple instances, colours from `OutputSpec`
+- [x] Learn-page stubs `docs/indicators/{sma,ema,wma,smma}.md`
+- [x] Playwright: add EMA 20, change to 50, hide, remove; ux-audit
 
 ### S3 — R3b: the generalised moving-average family (Opus 5.5 · high)
 Goal: TradingView's MA set plus three classic adaptive/low-lag filters, all behind the same harness.

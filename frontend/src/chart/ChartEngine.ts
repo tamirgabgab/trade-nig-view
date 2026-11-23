@@ -14,6 +14,7 @@ import {
   PriceScaleMode,
   type IChartApi,
   type ISeriesApi,
+  type LineWidth,
   type LogicalRange as LwcLogicalRange,
   type MouseEventParams,
   type SeriesType,
@@ -34,6 +35,7 @@ import {
   toCandles,
   toHollowCandles,
   toLine,
+  toValueLine,
   toVolume,
   type ChartTime,
   type LogicalRange,
@@ -85,6 +87,27 @@ export interface ScaleOptions {
   autoScale: boolean;
 }
 
+/** One indicator output drawn as a line on the price pane. */
+export interface IndicatorLine {
+  /** Stable id (instance uid + output name). */
+  key: string;
+  /** One value per bar given to `setBars` (null = no value, e.g. warm-up). */
+  values: readonly (number | null)[];
+  color: string;
+  lineWidth: number;
+  visible: boolean;
+}
+
+interface LineEntry {
+  series: ISeriesApi<'Line'>;
+  values: readonly (number | null)[] | null;
+  times: readonly ChartTime[] | null;
+}
+
+function toLineWidth(width: number): LineWidth {
+  return Math.min(Math.max(Math.round(width), 1), 4) as LineWidth;
+}
+
 export type CrosshairListener = (index: number | null) => void;
 export type VisibleRangeListener = (range: LogicalRange | null) => void;
 
@@ -100,6 +123,7 @@ export class ChartEngine {
   private bars: readonly Bar[] = [];
   private times: ChartTime[] = [];
   private decimals = 2;
+  private readonly lines = new Map<string, LineEntry>();
 
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
     this.theme = theme;
@@ -181,6 +205,42 @@ export class ChartEngine {
     }
   }
 
+  /**
+   * Show exactly these indicator lines (others are removed). Call after `setBars`: values are
+   * matched to the current bars by index. Data is only re-sent when values or bars changed.
+   */
+  setIndicatorLines(lines: readonly IndicatorLine[]): void {
+    const keep = new Set(lines.map((line) => line.key));
+    for (const [key, entry] of this.lines) {
+      if (keep.has(key)) continue;
+      this.chart.removeSeries(entry.series);
+      this.lines.delete(key);
+    }
+    for (const line of lines) {
+      let entry = this.lines.get(line.key);
+      if (entry === undefined) {
+        const series = this.chart.addSeries(LineSeries, {
+          priceLineVisible: false,
+          lastValueVisible: true,
+          crosshairMarkerRadius: 3,
+        });
+        entry = { series, values: null, times: null };
+        this.lines.set(line.key, entry);
+      }
+      entry.series.applyOptions({
+        color: line.color,
+        lineWidth: toLineWidth(line.lineWidth),
+        visible: line.visible,
+        priceFormat: { type: 'price', ...priceFormat(this.decimals) },
+      });
+      if (entry.values !== line.values || entry.times !== this.times) {
+        entry.series.setData(withTime(toValueLine(line.values, this.times)));
+        entry.values = line.values;
+        entry.times = this.times;
+      }
+    }
+  }
+
   /** Switch the main series' type, keeping data and viewport. */
   setChartType(type: ChartType): void {
     if (type === this.chartType) return;
@@ -223,6 +283,7 @@ export class ChartEngine {
     this.hover.cancel();
     this.listeners.clear();
     this.rangeListeners.clear();
+    this.lines.clear();
     this.chart.unsubscribeCrosshairMove(this.handleCrosshairMove);
     this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.handleRangeChange);
     this.chart.remove();

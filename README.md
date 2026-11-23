@@ -4,8 +4,9 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** R2b complete — chart types (incl. Heikin Ashi), log/% scale, range buttons, symbol search (just type a
-> ticker), lazy history on scroll-left, Playwright end-to-end tests. Next: R3a (indicator engine + SMA/EMA/WMA/SMMA).
+> **Status:** R3a complete — indicator engine (Python registry, verified like a DUT against scalar golden models and
+> TA-Lib), SMA/EMA/WMA/SMMA on the chart with a `/` indicators dialog, legend rows and a live settings panel.
+> Next: R3b (the generalised moving-average family).
 > See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
@@ -22,7 +23,8 @@ trading agent can plug in later.
 | 1h and 4h intervals (session-aware, Israel time on the chart), generated API types, fixture download script (R1b) | ✅ Done |
 | Chart: candles + volume, OHLC legend on the crosshair, D/W/M intervals, symbol from the watchlist, pan/zoom (R2a) | ✅ Done |
 | Chart types (bars/hollow/line/area/Heikin Ashi), log/% scale, range buttons, symbol search, lazy history (R2b) | ✅ Done |
-| Indicators: SMA, EMA, WMA, SMMA + generalised MAs (DEMA, TEMA, HMA, ALMA, LSMA, VWMA, McGinley, KAMA, T3, ZLEMA), MA Cross/Ribbon/Envelope (R3a/R3b) | ⏳ Planned |
+| Indicator engine + SMA, EMA, WMA, SMMA: `/` dialog, legend values under the crosshair, live settings, saved between visits (R3a) | ✅ Done |
+| Generalised MAs (DEMA, TEMA, HMA, ALMA, LSMA, VWMA, SWMA, McGinley, KAMA, T3, ZLEMA), MA Cross/Ribbon/Envelope (R3b) | ⏳ Planned |
 | Learn pages for the MA family: formulas, lag, noise reduction, frequency response (L1) | ⏳ Planned |
 | Indicators: BB, VWAP, RSI, MACD, Stochastic, ATR, OBV, Volume SMA — golden-tested (R3c) | ⏳ Planned |
 | UX pass: narrow windows, disabled states, loaders, keyboard map (U1) | ⏳ Planned |
@@ -100,8 +102,12 @@ npx playwright install chromium   # once
 npm run e2e -- --trace off
 ```
 
-On the chart: type any letter to search symbols; range buttons (1D … All) pick a fitting interval; scrolling to the
-left edge loads older history.
+On the chart: type any letter to search symbols; press `/` to add an indicator (gear icon on its legend row = live
+settings); range buttons (1D … All) pick a fitting interval; scrolling to the left edge loads older history.
+
+Indicator verification: `cd backend; uv run python -m pytest tests/golden` writes a scoreboard to
+`backend/.reports/indicator_scoreboard.csv`. To cross-check against TradingView, type three values per indicator into
+`backend/tests/golden/tv_crosscheck.json` (instructions inside) and run the tests.
 
 ## Project layout
 

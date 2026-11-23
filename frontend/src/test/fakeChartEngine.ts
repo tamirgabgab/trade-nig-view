@@ -5,6 +5,7 @@
 import type { Bar } from '../api/bars.ts';
 import type {
   CrosshairListener,
+  IndicatorLine,
   ScaleOptions,
   SetBarsOptions,
   VisibleRangeListener,
@@ -19,6 +20,7 @@ export class FakeChartEngine {
   readonly chartTypes: ChartType[] = [];
   readonly scales: ScaleOptions[] = [];
   readonly ranges: LogicalRange[] = [];
+  readonly lineCalls: (readonly IndicatorLine[])[] = [];
   disposed = false;
   private listener: CrosshairListener | null = null;
   private rangeListener: VisibleRangeListener | null = null;
@@ -29,6 +31,15 @@ export class FakeChartEngine {
 
   setBars(bars: readonly Bar[], options: SetBarsOptions): void {
     this.calls.push({ bars, options });
+  }
+
+  setIndicatorLines(lines: readonly IndicatorLine[]): void {
+    this.lineCalls.push(lines);
+  }
+
+  /** Lines of the latest `setIndicatorLines` call. */
+  get lines(): readonly IndicatorLine[] {
+    return this.lineCalls.at(-1) ?? [];
   }
 
   setChartType(type: ChartType): void {

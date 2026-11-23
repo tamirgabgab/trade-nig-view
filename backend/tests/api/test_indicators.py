@@ -46,8 +46,8 @@ def test_lists_the_registry(client: TestClient) -> None:
     assert ema["category"] == "moving_averages"
     assert ema["overlay"] is True
     assert ema["learn_slug"] == "ema"
-    assert [p["name"] for p in ema["params"]] == ["source", "length", "offset"]
-    length = ema["params"][1]
+    assert [p["name"] for p in ema["params"]] == ["length", "source", "offset"]
+    length = ema["params"][0]
     assert length == {
         "name": "length",
         "type": "int",
@@ -58,7 +58,7 @@ def test_lists_the_registry(client: TestClient) -> None:
         "step": 1.0,
         "options": [],
     }
-    assert ema["params"][0]["options"][:3] == ["close", "open", "high"]
+    assert ema["params"][1]["options"][:3] == ["close", "open", "high"]
     assert ema["outputs"][0]["plot"] == "line"
 
 

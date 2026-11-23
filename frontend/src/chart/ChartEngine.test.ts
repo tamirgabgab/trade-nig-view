@@ -289,4 +289,42 @@ describe('ChartEngine', () => {
     expect(seen).toEqual([{ from: 3, to: 40 }, null]);
     expect(lwc.state.rangeHandler).toBeUndefined();
   });
+
+  it('draws indicator lines on the bars and re-sends data only when it changed', () => {
+    const { engine: chart } = engine();
+    chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
+    const values = [null, 101, 102];
+    chart.setIndicatorLines([
+      { key: 'ema-1:ma', values, color: '#ff6d00', lineWidth: 2, visible: true },
+    ]);
+    const line = lwc.state.series.at(-1);
+    expect(line?.kind).toBe('Line');
+    expect(line?.setData).toHaveBeenCalledWith([
+      { time: '2026-01-01' },
+      { time: '2026-01-02', value: 101 },
+      { time: '2026-01-03', value: 102 },
+    ]);
+    expect(line?.applyOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ color: '#ff6d00', lineWidth: 2, visible: true }),
+    );
+
+    // Same values, new colour: options only.
+    chart.setIndicatorLines([
+      { key: 'ema-1:ma', values, color: '#2962ff', lineWidth: 9, visible: false },
+    ]);
+    expect(line?.setData).toHaveBeenCalledTimes(1);
+    expect(line?.applyOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ color: '#2962ff', lineWidth: 4, visible: false }),
+    );
+
+    // New bars: the same values array is sent again against the new times.
+    chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: false });
+    chart.setIndicatorLines([
+      { key: 'ema-1:ma', values, color: '#2962ff', lineWidth: 2, visible: true },
+    ]);
+    expect(line?.setData).toHaveBeenCalledTimes(2);
+
+    chart.setIndicatorLines([]);
+    expect(lwc.state.removed).toContain(line);
+  });
 });
