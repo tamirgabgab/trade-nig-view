@@ -13,6 +13,7 @@ import {
   HistogramSeries,
   LineSeries,
   LineStyle,
+  LineType,
   PriceScaleMode,
   type IChartApi,
   type IPriceLine,
@@ -55,6 +56,7 @@ import { logicalToTime, logicalToX, timeToLogical } from '../drawings/anchors.ts
 import { spanBetween, type Span } from '../drawings/measure.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 import { DrawingLayer } from './drawingLayer.ts';
+import { GapLayer, type GapZone } from './gapLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
 import { barSeconds } from './visibleRange.ts';
 import { DISPLAY_TIME_ZONE } from './timeZone.ts';
@@ -134,6 +136,8 @@ export interface IndicatorLine {
    * `down_weak`, a fill (`fill_to` + `fill`), `price_scale: 'volume'`, `format: 'volume'`.
    */
   style: Readonly<Record<string, string>>;
+  /** Bars the line is drawn to the left of its values' bars (markers only, e.g. pivots). */
+  displayShift: number;
   /** Dashed horizontal levels of the indicator's pane (on its first line). */
   levels: readonly number[];
   /** Band between two levels shaded in the line's colour (on its first line), or null. */
@@ -211,6 +215,11 @@ export class ChartEngine {
       span: (a, b) => this.span(a, b),
     }),
   );
+  private readonly gapLayer = new GapLayer(
+    (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),
+    (price) => this.priceToY(price),
+    () => ({ up: this.theme.up, down: this.theme.down, filled: this.theme.textMuted }),
+  );
   private lastLines: readonly IndicatorLine[] = [];
   private times: ChartTime[] = [];
   private decimals = 2;
@@ -259,6 +268,7 @@ export class ChartEngine {
     });
     this.chart.priceScale(VOLUME_SCALE_ID).applyOptions({ scaleMargins: VOLUME_MARGINS });
     this.main = this.createMainSeries(this.chartType);
+    this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
 
     this.hover = rafLatest((index) => {
@@ -322,6 +332,9 @@ export class ChartEngine {
           color: line.color,
           upColor: line.style.up,
           downColor: line.style.down,
+          shape: line.style.shape === 'circle' ? ('circle' as const) : undefined,
+          position: markerPosition(line.style.position),
+          shift: line.displayShift,
         })),
     );
     const keep = new Map(lines.map((line) => [line.key, line]));
@@ -351,7 +364,12 @@ export class ChartEngine {
         // A volume-scale line has nothing to follow on a symbol without volume (forex, indices).
         visible: line.visible && (this.hasVolume || !volumeScale),
         priceFormat: format,
-        ...(line.plot === 'histogram' ? {} : { lineWidth: toLineWidth(line.lineWidth) }),
+        ...(line.plot === 'histogram'
+          ? {}
+          : {
+              lineWidth: toLineWidth(line.lineWidth),
+              lineType: line.style.line_type === 'step' ? LineType.WithSteps : LineType.Simple,
+            }),
       });
       if (
         entry.values !== line.values ||
@@ -572,6 +590,7 @@ export class ChartEngine {
     this.markers = null;
     this.chart.removeSeries(this.main);
     this.main = this.createMainSeries(this.chartType);
+    this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
     this.renderMain();
     this.renderMarkers();
@@ -609,6 +628,21 @@ export class ChartEngine {
   priceAt(y: number): number | null {
     if (y < 0 || y > (this.chart.panes()[0]?.getHeight() ?? 0)) return null;
     return this.main.coordinateToPrice(y);
+  }
+
+  /** Show these gap zones (bar indexes of the current bars) under the bars. */
+  setGaps(zones: readonly GapZone[]): void {
+    this.gapLayer.set(zones);
+  }
+
+  /** Scroll so the bar at `index` is in the middle, keeping the zoom. */
+  showBar(index: number): void {
+    const range = this.chart.timeScale().getVisibleLogicalRange();
+    const half = range === null ? 50 : (range.to - range.from) / 2;
+    this.chart.timeScale().setVisibleLogicalRange({
+      from: index - half,
+      to: index + half,
+    });
   }
 
   /** Show these drawings (plus the one being drawn) on the price pane. */
@@ -773,4 +807,11 @@ export class ChartEngine {
     const value = range === null ? null : { from: range.from, to: range.to };
     for (const listener of this.rangeListeners) listener(value);
   };
+}
+
+/** A marker output's fixed position from its style, if it has one. */
+function markerPosition(position: string | undefined): 'aboveBar' | 'belowBar' | undefined {
+  if (position === 'above') return 'aboveBar';
+  if (position === 'below') return 'belowBar';
+  return undefined;
 }

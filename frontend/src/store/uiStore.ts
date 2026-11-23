@@ -13,6 +13,8 @@ export interface Toast {
 export type SnapshotMode = 'copy' | 'download';
 
 /** The modal dialogs; at most one is open, so they can never stack. */
+export type SidebarTab = 'watchlist' | 'data' | 'gaps';
+
 export type Modal =
   | 'symbols'
   | 'indicators'
@@ -50,8 +52,11 @@ export interface UiState {
   /** Forget panels, hover focus and emphasis of removed indicators (one uid, or all). */
   forgetIndicator: (uid?: string) => void;
   /** Watchlist column on a wide window; floating panel below 1100 px (closed by default). */
+  /** The right panel: open (docked on a wide window, floating on a narrow one) and its tab. */
   watchlist: { docked: boolean; floating: boolean };
-  toggleWatchlist: (narrow: boolean) => void;
+  sidebarTab: SidebarTab;
+  /** A widget button: open the panel on `tab`, or close it when it already shows `tab`. */
+  showSidebar: (tab: SidebarTab, narrow: boolean) => void;
   closeFloatingWatchlist: () => void;
   toast: Toast | null;
   showToast: (message: string, undo?: () => void) => void;
@@ -118,10 +123,15 @@ export const useUiStore = create<UiState>()((set) => ({
     }));
   },
   watchlist: { docked: true, floating: false },
-  toggleWatchlist: (narrow) => {
-    set(({ watchlist: w }) => ({
-      watchlist: narrow ? { ...w, floating: !w.floating } : { ...w, docked: !w.docked },
-    }));
+  sidebarTab: 'watchlist',
+  showSidebar: (tab, narrow) => {
+    set(({ watchlist: w, sidebarTab }) => {
+      const open = !((narrow ? w.floating : w.docked) && sidebarTab === tab);
+      return {
+        sidebarTab: tab,
+        watchlist: narrow ? { ...w, floating: open } : { ...w, docked: open },
+      };
+    });
   },
   closeFloatingWatchlist: () => {
     set(({ watchlist: w }) => ({ watchlist: { ...w, floating: false } }));

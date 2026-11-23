@@ -1,7 +1,9 @@
-import { Bell, CalendarRange, Layers, List } from 'lucide-react';
+import { Bell, CalendarRange, ChartColumnBig, List, TableProperties } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
-import { useUiStore } from '../store/uiStore.ts';
+import { useUiStore, type SidebarTab } from '../store/uiStore.ts';
+import { DataWindow } from './DataWindow.tsx';
+import { GapsPanel } from './GapsPanel.tsx';
 
 import { IconButton } from './IconButton.tsx';
 import styles from './RightSidebar.module.css';
@@ -14,18 +16,25 @@ interface RightSidebarProps {
   className?: string | undefined;
 }
 
+const TABS: { tab: SidebarTab; title: string; icon: typeof List }[] = [
+  { tab: 'watchlist', title: 'Watchlist', icon: List },
+  { tab: 'data', title: 'Data window', icon: TableProperties },
+  { tab: 'gaps', title: 'Gaps', icon: ChartColumnBig },
+];
+
 /**
- * Watchlist panel plus the narrow widget bar on the far right. On a wide window the panel is a
- * column (the Watchlist button collapses it); below 1100 px it floats over the chart, opened from
- * the button and closed with the button, Esc or a click outside.
+ * The side panel (Watchlist, Data window or Gaps) plus the narrow widget bar on the far right. On
+ * a wide window the panel is a column (its button collapses it); below 1100 px it floats over the
+ * chart, opened from a button and closed with that button, Esc or a click outside.
  */
 export function RightSidebar({ className }: RightSidebarProps) {
   const narrow = useMediaQuery(NARROW_QUERY);
   const { docked, floating } = useUiStore((s) => s.watchlist);
-  const toggleWatchlist = useUiStore((s) => s.toggleWatchlist);
+  const tab = useUiStore((s) => s.sidebarTab);
+  const showSidebar = useUiStore((s) => s.showSidebar);
   const closeFloating = useUiStore((s) => s.closeFloatingWatchlist);
   const open = narrow ? floating : docked;
-  const panel = usePresence(open ? true : null);
+  const panel = usePresence(open ? tab : null);
   const asideRef = useRef<HTMLElement>(null);
 
   // Floating: Esc or a click outside the sidebar closes it.
@@ -57,16 +66,18 @@ export function RightSidebar({ className }: RightSidebarProps) {
       {panel.shown !== null && (
         <section
           className={[styles.panel, narrow ? styles.floating : ''].join(' ')}
-          aria-labelledby="watchlist-title"
+          aria-labelledby="sidebar-title"
           {...panel.attrs}
         >
           <div className={styles.panelHeader}>
-            <span id="watchlist-title">Watchlist</span>
+            <span id="sidebar-title">{TABS.find((t) => t.tab === panel.shown)?.title}</span>
           </div>
           <div className={styles.scroll}>
-            <Watchlist />
+            {panel.shown === 'watchlist' && <Watchlist />}
+            {panel.shown === 'data' && <DataWindow />}
+            {panel.shown === 'gaps' && <GapsPanel />}
           </div>
-          <SymbolCard />
+          {panel.shown === 'watchlist' && <SymbolCard />}
         </section>
       )}
       <div
@@ -75,25 +86,25 @@ export function RightSidebar({ className }: RightSidebarProps) {
         aria-label="Sidebar widgets"
         aria-orientation="vertical"
       >
-        <IconButton
-          label={open ? 'Hide watchlist' : 'Show watchlist'}
-          icon={<List size={20} />}
-          pressed={open}
-          tooltipSide="left"
-          onClick={() => {
-            toggleWatchlist(narrow);
-          }}
-        />
+        {TABS.map(({ tab: id, title, icon: Icon }) => {
+          const shown = open && tab === id;
+          return (
+            <IconButton
+              key={id}
+              label={`${shown ? 'Hide' : 'Show'} ${title.toLowerCase()}`}
+              icon={<Icon size={20} />}
+              pressed={shown}
+              tooltipSide="left"
+              onClick={() => {
+                showSidebar(id, narrow);
+              }}
+            />
+          );
+        })}
         <IconButton
           label="Alerts"
           icon={<Bell size={20} />}
           comingIn="a later phase"
-          tooltipSide="left"
-        />
-        <IconButton
-          label="Object tree and data window"
-          icon={<Layers size={20} />}
-          comingIn="R5"
           tooltipSide="left"
         />
         <IconButton

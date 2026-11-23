@@ -27,6 +27,7 @@ export function usePaletteCommands(): Command[] {
   );
   const instances = useIndicatorStore((s) => s.instances);
   const watchlist = useUiStore((s) => s.watchlist);
+  const sidebarTab = useUiStore((s) => s.sidebarTab);
   const act = useChartStore.getState;
   const ui = useUiStore.getState;
   const theme = useThemeStore((s) => s.theme);
@@ -166,15 +167,21 @@ export function usePaletteCommands(): Command[] {
       keywords: 'dark light mode colors',
       run: toggleTheme,
     },
-    {
-      id: 'watchlist',
+    ...(
+      [
+        ['watchlist', 'watchlist', 'sidebar symbols'],
+        ['data', 'data window', 'values crosshair ohlc'],
+        ['gaps', 'gaps panel', 'structure gap list'],
+      ] as const
+    ).map(([tab, name, keywords]) => ({
+      id: `sidebar-${tab}`,
       group: 'View',
-      label: `${(narrow ? watchlist.floating : watchlist.docked) ? 'Hide' : 'Show'} watchlist`,
-      keywords: 'sidebar',
+      label: `${(narrow ? watchlist.floating : watchlist.docked) && sidebarTab === tab ? 'Hide' : 'Show'} ${name}`,
+      keywords,
       run: () => {
-        ui().toggleWatchlist(narrow);
+        ui().showSidebar(tab, narrow);
       },
-    },
+    })),
     {
       id: 'shortcuts',
       group: 'View',

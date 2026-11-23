@@ -204,18 +204,25 @@ export interface MarkerSource {
   color: string;
   upColor?: string | undefined;
   downColor?: string | undefined;
+  /** A fixed look (pivots: a dot above or below the bar) instead of arrows by sign. */
+  shape?: 'circle' | undefined;
+  position?: 'belowBar' | 'aboveBar' | undefined;
+  /** Draw each marker this many bars to the left of its value's bar. */
+  shift?: number | undefined;
 }
 
 export interface MarkerPoint {
   time: ChartTime;
   position: 'belowBar' | 'aboveBar';
-  shape: 'arrowUp' | 'arrowDown';
+  shape: 'arrowUp' | 'arrowDown' | 'circle';
   color: string;
 }
 
 /**
  * Arrows for marker outputs (by bar index: +1 = up arrow below the bar, -1 = down arrow above it,
  * null or 0 = none), in time order as lightweight-charts requires. Colours default to `color`.
+ * A source with a fixed `shape` and `position` marks every bar with a value (any number) that way,
+ * `shift` bars to the left.
  */
 export function toMarkers(
   lines: readonly MarkerSource[],
@@ -224,8 +231,13 @@ export function toMarkers(
   const out: MarkerPoint[] = [];
   times.forEach((time, i) => {
     for (const line of lines) {
-      const value = line.values[i];
-      if (value === null || value === undefined || value === 0) continue;
+      const value = line.values[i + (line.shift ?? 0)];
+      if (value === null || value === undefined) continue;
+      if (line.shape !== undefined && line.position !== undefined) {
+        out.push({ time, position: line.position, shape: line.shape, color: line.color });
+        continue;
+      }
+      if (value === 0) continue;
       const up = value > 0;
       out.push({
         time,

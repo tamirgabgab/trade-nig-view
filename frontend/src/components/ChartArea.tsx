@@ -4,11 +4,15 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useBarHistory } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
+import { useGaps } from '../api/analysis.ts';
 import type { ChartEngine, PaneLayout } from '../chart/ChartEngine.ts';
+import type { GapZone } from '../chart/gapLayer.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
+import { useChartDataStore } from '../store/chartDataStore.ts';
+import { useStructureStore } from '../store/structureStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
 import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
@@ -60,17 +64,20 @@ export function ChartArea({ className }: ChartAreaProps) {
   const symbols = useSymbols().data;
   const transform = transformFor(chartType);
   const history = useBarHistory({ symbol, interval, adjusted, transform });
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const hoverIndex = useChartDataStore((s) => s.hoverIndex);
+  const setHoverIndex = useChartDataStore((s) => s.setHoverIndex);
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
   const setAutoScale = useChartStore((s) => s.setAutoScale);
   const learn = usePresence(useUiStore((s) => s.learnFor));
   // The chart engine, for one-shot actions (jump to latest, reset view, snapshot).
   const engineRef = useRef<ChartEngine | null>(null);
   const attachDrawings = useDrawingManager();
+  const gapZonesRef = useRef<readonly GapZone[]>([]);
   const onEngine = useCallback(
     (engine: ChartEngine | null) => {
       engineRef.current = engine;
       attachDrawings(engine);
+      engine?.setGaps(gapZonesRef.current);
     },
     [attachDrawings],
   );
@@ -169,6 +176,41 @@ export function ChartArea({ className }: ChartAreaProps) {
     [history.isLoading, data, transform],
   );
   const indicators = useChartIndicators(series, bars);
+
+  // Gap zones of the loaded bars (Structure menu), shared with the Gaps panel.
+  const structure = useStructureStore();
+  const allGaps = useGaps(series, {
+    enabled: structure.gaps,
+    minPct: structure.gapMinPct,
+    partial: structure.gapPartial,
+  });
+  const barIndex = useMemo(() => new Map(bars.map((bar, i) => [bar.time, i])), [bars]);
+  const gaps = useMemo(() => allGaps.filter((g) => barIndex.has(g.time)), [allGaps, barIndex]);
+  useEffect(() => {
+    gapZonesRef.current = gaps.map((g) => ({
+      start: barIndex.get(g.time) ?? 0,
+      end: g.filledTime === null ? null : (barIndex.get(g.filledTime) ?? null),
+      top: g.top,
+      bottom: g.bottom,
+      direction: g.direction,
+    }));
+    engineRef.current?.setGaps(gapZonesRef.current);
+  }, [gaps, barIndex]);
+
+  // What the side panels (Data window, Gaps) show.
+  const setChartData = useChartDataStore((s) => s.setData);
+  useEffect(() => {
+    setChartData({ bars, decimals, hasVolume, views: indicators.views, gaps });
+  }, [setChartData, bars, decimals, hasVolume, indicators.views, gaps]);
+  // A gap picked in the Gaps panel: scroll the chart to it.
+  const focusBar = useChartDataStore((s) => s.focus);
+  useEffect(() => {
+    if (focusBar === null) return;
+    const index = barIndex.get(focusBar.time);
+    if (index !== undefined) engineRef.current?.showBar(index);
+    // Only a new request scrolls (not new bars).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusBar]);
   const shownLines = useMemo(
     () => presentLines(indicators.lines, legendFocus, emphasis),
     [indicators.lines, legendFocus, emphasis],

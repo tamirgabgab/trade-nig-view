@@ -181,6 +181,7 @@ describe('indicators on the chart', () => {
           lineWidth: 2,
           visible: true,
           style: {},
+          displayShift: 0,
           levels: [],
           levelFill: null,
         },

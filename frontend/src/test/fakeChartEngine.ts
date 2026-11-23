@@ -1,3 +1,4 @@
+import type { GapZone } from '../chart/gapLayer.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 /**
  * Test double for chart/ChartEngine.ts (jsdom has no canvas). Use with
@@ -132,6 +133,17 @@ export class FakeChartEngine {
 
   setDrawings(view: DrawingView): void {
     this.drawingView = view;
+  }
+
+  gapZones: readonly GapZone[] = [];
+  shownBar: number | null = null;
+
+  setGaps(zones: readonly GapZone[]): void {
+    this.gapZones = zones;
+  }
+
+  showBar(index: number): void {
+    this.shownBar = index;
   }
 
   snapshot(): HTMLCanvasElement {

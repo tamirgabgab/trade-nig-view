@@ -22,6 +22,7 @@ import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IntervalSwitcher } from './IntervalSwitcher.tsx';
 import { SnapshotMenu } from './SnapshotMenu.tsx';
+import { StructureMenu } from './StructureMenu.tsx';
 import styles from './Toolbar.module.css';
 
 const ICON_SIZE = 18;
@@ -71,6 +72,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
           openModal('indicators');
         }}
       />
+      <StructureMenu />
       <span className={styles.separator} aria-hidden="true" />
       <IconButton
         label="Create alert"

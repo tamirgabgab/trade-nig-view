@@ -174,6 +174,20 @@ describe('toMarkers', () => {
     ]);
   });
 
+  it('draws a fixed-look source as dots on every bar with a value, shifted to the left', () => {
+    // Pivots: the value of bar 2 is drawn on bar 0 (confirmed 2 bars later).
+    const pivots = {
+      values: [null, null, 123.5, null],
+      color: '#f23645',
+      shape: 'circle' as const,
+      position: 'aboveBar' as const,
+      shift: 2,
+    };
+    expect(toMarkers([pivots], DATES)).toEqual([
+      { time: DATES[0], position: 'aboveBar', shape: 'circle', color: '#f23645' },
+    ]);
+  });
+
   it('ignores values past the last bar', () => {
     expect(toMarkers([{ values: [null, null, null, 1], color: '#111111' }], DATES)).toEqual([]);
   });

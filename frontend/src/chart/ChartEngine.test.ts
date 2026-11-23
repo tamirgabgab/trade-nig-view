@@ -152,6 +152,7 @@ vi.mock('lightweight-charts', () => ({
   HistogramSeries: { kind: 'Histogram' },
   LineSeries: { kind: 'Line' },
   LineStyle: { Dashed: 2 },
+  LineType: { Simple: 0, WithSteps: 1 },
   PriceScaleMode: { Normal: 0, Logarithmic: 1, Percentage: 2 },
   ColorType: { Solid: 'solid' },
   CrosshairMode: { Normal: 0 },
@@ -179,6 +180,7 @@ const EMA_LINE: IndicatorLine = {
   style: {},
   levels: [],
   levelFill: null,
+  displayShift: 0,
 };
 
 let frames: FrameRequestCallback[] = [];
@@ -495,6 +497,7 @@ describe('ChartEngine', () => {
       style: { up: '#00ff00', down: '#ff0000' },
       levels: [],
       levelFill: null,
+      displayShift: 0,
     };
     const before = lwc.state.series.length;
     chart.setIndicatorLines([markers]);

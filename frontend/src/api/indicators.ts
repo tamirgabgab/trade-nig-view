@@ -247,6 +247,8 @@ export interface ComputeData {
   time: (string | number)[];
   outputs: Record<string, (number | null)[]>;
   warmup: number;
+  /** Bars the chart draws the outputs to the left of their bar (pivots: the right bars). */
+  displayShift: number;
 }
 
 export function parseCompute(body: unknown): ComputeData {
@@ -273,6 +275,7 @@ export function parseCompute(body: unknown): ComputeData {
     ),
     outputs: parsed,
     warmup: Number(field('warmup')),
+    displayShift: Number(field('display_shift') ?? 0),
   };
 }
 

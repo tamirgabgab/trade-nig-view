@@ -1,4 +1,4 @@
-import { defaultParams, type IndicatorInfo } from '../api/indicators.ts';
+import { defaultParams, type IndicatorInfo, type Params } from '../api/indicators.ts';
 import { MAX_INSTANCES, useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 
@@ -7,8 +7,11 @@ import { useUiStore } from '../store/uiStore.ts';
  * functions over the stores (no React state), so every caller behaves the same.
  */
 
-/** Add with default inputs and the "just added" emphasis; says so when the chart is full. */
-export function addIndicator(spec: IndicatorInfo): boolean {
+/**
+ * Add with default inputs (or these `params` over them) and the "just added" emphasis; says so
+ * when the chart is full.
+ */
+export function addIndicator(spec: IndicatorInfo, params: Params = {}): boolean {
   const { instances, add } = useIndicatorStore.getState();
   const ui = useUiStore.getState();
   if (instances.length >= MAX_INSTANCES) {
@@ -17,7 +20,7 @@ export function addIndicator(spec: IndicatorInfo): boolean {
     );
     return false;
   }
-  ui.setEmphasis(add(spec.id, defaultParams(spec)));
+  ui.setEmphasis(add(spec.id, { ...defaultParams(spec), ...params }));
   return true;
 }
 

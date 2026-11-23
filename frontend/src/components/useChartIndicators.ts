@@ -29,6 +29,8 @@ export interface OutputView {
   lineWidth: number;
   /** One value per loaded bar (null = no value). */
   values: (number | null)[];
+  /** Bars the chart draws the values to the left of their bar (pivots: confirmed later). */
+  displayShift: number;
 }
 
 /** Everything the legend, settings panel and chart need about one indicator instance. */
@@ -107,6 +109,7 @@ export function useChartIndicators(
             color: style?.color ?? output.color,
             lineWidth: style?.lineWidth ?? output.lineWidth,
             values: values[output.name] ?? EMPTY,
+            displayShift: result?.data?.displayShift ?? 0,
           };
         });
         return {
@@ -136,6 +139,7 @@ export function useChartIndicators(
           lineWidth: output.lineWidth,
           visible: view.instance.visible,
           style: output.style,
+          displayShift: output.displayShift,
           levels: i === 0 ? (view.spec?.levels ?? NO_LEVELS) : NO_LEVELS,
           levelFill: i === 0 ? (view.spec?.levelFill ?? null) : null,
         })),

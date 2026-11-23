@@ -1,4 +1,4 @@
-import { formatClock } from './formatClock.ts';
+import { formatBarTime, formatClock } from './formatClock.ts';
 
 describe('formatClock', () => {
   it('shows Israel winter time as UTC+2 with zero padding', () => {
@@ -11,5 +11,15 @@ describe('formatClock', () => {
 
   it('ignores the browser time zone and supports UTC', () => {
     expect(formatClock(new Date('2026-11-22T23:59:59-05:00'), 'UTC')).toBe('04:59:59 UTC+0');
+  });
+});
+
+describe('formatBarTime', () => {
+  it('shows a daily bar as its date and an intraday bar in the display time zone', () => {
+    expect(formatBarTime('2026-11-20', 'Asia/Jerusalem')).toBe('Fri 20 Nov 2026');
+    // 14:30 UTC is 16:30 in Israel in winter.
+    expect(formatBarTime(Date.UTC(2026, 10, 20, 14, 30) / 1000, 'Asia/Jerusalem')).toBe(
+      'Fri 20 Nov 2026 16:30',
+    );
   });
 });
