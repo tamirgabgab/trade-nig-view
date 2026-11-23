@@ -8,6 +8,7 @@ from fastapi import Request
 
 from app.data.bar_service import BarService
 from app.data.universe import Universe
+from app.storage.documents import DocumentStore
 from app.storage.drawings import DrawingsRepository
 
 
@@ -21,3 +22,11 @@ def get_bar_service(request: Request) -> BarService:
 
 def get_drawings(request: Request) -> DrawingsRepository:
     return cast("DrawingsRepository", request.app.state.drawings)
+
+
+def get_layouts(request: Request) -> DocumentStore:
+    return cast("DocumentStore", request.app.state.layouts)
+
+
+def get_watchlists(request: Request) -> DocumentStore:
+    return cast("DocumentStore", request.app.state.watchlists)

@@ -552,6 +552,320 @@
         }
       }
     },
+    "/api/layouts": {
+      "get": {
+        "tags": [
+          "layouts"
+        ],
+        "summary": "List Layouts",
+        "description": "Every saved layout, newest first.",
+        "operationId": "list_layouts_api_layouts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/layouts/{name}": {
+      "get": {
+        "tags": [
+          "layouts"
+        ],
+        "summary": "Get Layout",
+        "description": "One saved layout.",
+        "operationId": "get_layout_api_layouts__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutDocument"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No layout with this name (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "layouts"
+        ],
+        "summary": "Put Layout",
+        "description": "Create (``revision`` 0) or replace a layout; a stale ``revision`` is a 409.",
+        "operationId": "put_layout_api_layouts__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LayoutUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutDocument"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "layouts"
+        ],
+        "summary": "Delete Layout",
+        "description": "Delete a layout; a stale ``revision`` is a 409.",
+        "operationId": "delete_layout_api_layouts__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Revision the client last read",
+              "title": "Revision"
+            },
+            "description": "Revision the client last read"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No layout with this name (problem+json)"
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/watchlists": {
+      "get": {
+        "tags": [
+          "watchlists"
+        ],
+        "summary": "List Watchlists",
+        "description": "Every saved watchlist, newest first; just the unsaved ``Default`` when none is saved.",
+        "operationId": "list_watchlists_api_watchlists_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/watchlists/{name}": {
+      "put": {
+        "tags": [
+          "watchlists"
+        ],
+        "summary": "Put Watchlist",
+        "description": "Create (``revision`` 0) or replace a watchlist; a stale ``revision`` is a 409.",
+        "operationId": "put_watchlist_api_watchlists__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistDocument"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "watchlists"
+        ],
+        "summary": "Delete Watchlist",
+        "description": "Delete a watchlist; a stale ``revision`` is a 409.",
+        "operationId": "delete_watchlist_api_watchlists__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Revision the client last read",
+              "title": "Revision"
+            },
+            "description": "Revision the client last read"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No watchlist with this name (problem+json)"
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/analysis/gaps": {
       "get": {
         "tags": [
@@ -1577,6 +1891,316 @@
         "title": "Interval",
         "description": "Bar intervals served by the API.\n\n``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and\n``1W``/``1M`` from ``1D``."
       },
+      "LayoutDocument": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "chart_type": {
+            "type": "string",
+            "enum": [
+              "candles",
+              "hollow",
+              "bars",
+              "line",
+              "area",
+              "heikin_ashi"
+            ],
+            "title": "Chart Type"
+          },
+          "scale_mode": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "log",
+              "percent"
+            ],
+            "title": "Scale Mode"
+          },
+          "auto_scale": {
+            "type": "boolean",
+            "title": "Auto Scale",
+            "default": true
+          },
+          "adjusted": {
+            "type": "boolean",
+            "title": "Adjusted",
+            "default": true
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutIndicator"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Indicators"
+          },
+          "visible_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisibleRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version",
+            "default": 1
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Revision",
+            "description": "Bumped by every save"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "UTC ISO time of the last save"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "chart_type",
+          "scale_mode",
+          "name",
+          "revision",
+          "updated_at"
+        ],
+        "title": "LayoutDocument"
+      },
+      "LayoutIndicator": {
+        "properties": {
+          "uid": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Uid",
+            "description": "Client id of this instance"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Indicator id from GET /api/indicators"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Params that differ from the defaults (validated like /api/indicators)"
+          },
+          "styles": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LayoutStyle"
+            },
+            "type": "object",
+            "title": "Styles",
+            "description": "Style per output name"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible",
+            "default": true
+          },
+          "pane_stretch": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pane Stretch"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "uid",
+          "id"
+        ],
+        "title": "LayoutIndicator"
+      },
+      "LayoutList": {
+        "properties": {
+          "layouts": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutSummary"
+            },
+            "type": "array",
+            "title": "Layouts",
+            "description": "Newest first"
+          }
+        },
+        "type": "object",
+        "required": [
+          "layouts"
+        ],
+        "title": "LayoutList"
+      },
+      "LayoutStyle": {
+        "properties": {
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "title": "Color"
+          },
+          "line_width": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Line Width"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "color",
+          "line_width"
+        ],
+        "title": "LayoutStyle"
+      },
+      "LayoutSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "revision",
+          "updated_at",
+          "symbol",
+          "interval"
+        ],
+        "title": "LayoutSummary"
+      },
+      "LayoutUpdate": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "chart_type": {
+            "type": "string",
+            "enum": [
+              "candles",
+              "hollow",
+              "bars",
+              "line",
+              "area",
+              "heikin_ashi"
+            ],
+            "title": "Chart Type"
+          },
+          "scale_mode": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "log",
+              "percent"
+            ],
+            "title": "Scale Mode"
+          },
+          "auto_scale": {
+            "type": "boolean",
+            "title": "Auto Scale",
+            "default": true
+          },
+          "adjusted": {
+            "type": "boolean",
+            "title": "Adjusted",
+            "default": true
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutIndicator"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Indicators"
+          },
+          "visible_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisibleRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "description": "Revision the client last read; 0 = create"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "chart_type",
+          "scale_mode",
+          "revision"
+        ],
+        "title": "LayoutUpdate",
+        "description": "``PUT`` body: the whole layout, and the revision it was based on (optimistic locking)."
+      },
       "LearnPage": {
         "properties": {
           "slug": {
@@ -2257,6 +2881,148 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VisibleRange": {
+        "properties": {
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "From"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "VisibleRange",
+        "description": "Visible bar times, in the ``/api/bars`` format (``YYYY-MM-DD`` or UTC epoch seconds)."
+      },
+      "WatchlistDocument": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version",
+            "default": 1
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "description": "Bumped by every save; 0 = the unsaved default"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "UTC ISO time of the last save; '' when never saved"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistSection"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "revision",
+          "updated_at",
+          "sections"
+        ],
+        "title": "WatchlistDocument"
+      },
+      "WatchlistList": {
+        "properties": {
+          "watchlists": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistDocument"
+            },
+            "type": "array",
+            "title": "Watchlists",
+            "description": "Newest first; one unsaved 'Default' list when none is saved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watchlists"
+        ],
+        "title": "WatchlistList"
+      },
+      "WatchlistSection": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Symbols"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "symbols"
+        ],
+        "title": "WatchlistSection"
+      },
+      "WatchlistUpdate": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "description": "Revision the client last read; 0 = create"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistSection"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Sections"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision",
+          "sections"
+        ],
+        "title": "WatchlistUpdate",
+        "description": "``PUT`` body: every section, and the revision it was based on (optimistic locking)."
       }
     }
   }

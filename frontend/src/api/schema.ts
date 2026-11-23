@@ -197,6 +197,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/layouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Layouts
+         * @description Every saved layout, newest first.
+         */
+        get: operations["list_layouts_api_layouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/layouts/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Layout
+         * @description One saved layout.
+         */
+        get: operations["get_layout_api_layouts__name__get"];
+        /**
+         * Put Layout
+         * @description Create (``revision`` 0) or replace a layout; a stale ``revision`` is a 409.
+         */
+        put: operations["put_layout_api_layouts__name__put"];
+        post?: never;
+        /**
+         * Delete Layout
+         * @description Delete a layout; a stale ``revision`` is a 409.
+         */
+        delete: operations["delete_layout_api_layouts__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/watchlists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Watchlists
+         * @description Every saved watchlist, newest first; just the unsaved ``Default`` when none is saved.
+         */
+        get: operations["list_watchlists_api_watchlists_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/watchlists/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Watchlist
+         * @description Create (``revision`` 0) or replace a watchlist; a stale ``revision`` is a 409.
+         */
+        put: operations["put_watchlist_api_watchlists__name__put"];
+        post?: never;
+        /**
+         * Delete Watchlist
+         * @description Delete a watchlist; a stale ``revision`` is a 409.
+         */
+        delete: operations["delete_watchlist_api_watchlists__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/analysis/gaps": {
         parameters: {
             query?: never;
@@ -659,6 +751,150 @@ export interface components {
          * @enum {string}
          */
         Interval: "1h" | "4h" | "1D" | "1W" | "1M";
+        /** LayoutDocument */
+        LayoutDocument: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Chart Type
+             * @enum {string}
+             */
+            chart_type: "candles" | "hollow" | "bars" | "line" | "area" | "heikin_ashi";
+            /**
+             * Scale Mode
+             * @enum {string}
+             */
+            scale_mode: "normal" | "log" | "percent";
+            /**
+             * Auto Scale
+             * @default true
+             */
+            auto_scale: boolean;
+            /**
+             * Adjusted
+             * @default true
+             */
+            adjusted: boolean;
+            /** Indicators */
+            indicators?: components["schemas"]["LayoutIndicator"][];
+            visible_range?: components["schemas"]["VisibleRange"] | null;
+            /**
+             * Schema Version
+             * @default 1
+             */
+            schema_version: number;
+            /** Name */
+            name: string;
+            /**
+             * Revision
+             * @description Bumped by every save
+             */
+            revision: number;
+            /**
+             * Updated At
+             * @description UTC ISO time of the last save
+             */
+            updated_at: string;
+        };
+        /** LayoutIndicator */
+        LayoutIndicator: {
+            /**
+             * Uid
+             * @description Client id of this instance
+             */
+            uid: string;
+            /**
+             * Id
+             * @description Indicator id from GET /api/indicators
+             */
+            id: string;
+            /**
+             * Params
+             * @description Params that differ from the defaults (validated like /api/indicators)
+             */
+            params?: {
+                [key: string]: boolean | number | string;
+            };
+            /**
+             * Styles
+             * @description Style per output name
+             */
+            styles?: {
+                [key: string]: components["schemas"]["LayoutStyle"];
+            };
+            /**
+             * Visible
+             * @default true
+             */
+            visible: boolean;
+            /** Pane Stretch */
+            pane_stretch?: number | null;
+        };
+        /** LayoutList */
+        LayoutList: {
+            /**
+             * Layouts
+             * @description Newest first
+             */
+            layouts: components["schemas"]["LayoutSummary"][];
+        };
+        /** LayoutStyle */
+        LayoutStyle: {
+            /** Color */
+            color: string;
+            /** Line Width */
+            line_width: number;
+        };
+        /** LayoutSummary */
+        LayoutSummary: {
+            /** Name */
+            name: string;
+            /** Revision */
+            revision: number;
+            /** Updated At */
+            updated_at: string;
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+        };
+        /**
+         * LayoutUpdate
+         * @description ``PUT`` body: the whole layout, and the revision it was based on (optimistic locking).
+         */
+        LayoutUpdate: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Chart Type
+             * @enum {string}
+             */
+            chart_type: "candles" | "hollow" | "bars" | "line" | "area" | "heikin_ashi";
+            /**
+             * Scale Mode
+             * @enum {string}
+             */
+            scale_mode: "normal" | "log" | "percent";
+            /**
+             * Auto Scale
+             * @default true
+             */
+            auto_scale: boolean;
+            /**
+             * Adjusted
+             * @default true
+             */
+            adjusted: boolean;
+            /** Indicators */
+            indicators?: components["schemas"]["LayoutIndicator"][];
+            visible_range?: components["schemas"]["VisibleRange"] | null;
+            /**
+             * Revision
+             * @description Revision the client last read; 0 = create
+             */
+            revision: number;
+        };
         /** LearnPage */
         LearnPage: {
             /** Slug */
@@ -924,6 +1160,66 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VisibleRange
+         * @description Visible bar times, in the ``/api/bars`` format (``YYYY-MM-DD`` or UTC epoch seconds).
+         */
+        VisibleRange: {
+            /** From */
+            from: string | number;
+            /** To */
+            to: string | number;
+        };
+        /** WatchlistDocument */
+        WatchlistDocument: {
+            /**
+             * Schema Version
+             * @default 1
+             */
+            schema_version: number;
+            /** Name */
+            name: string;
+            /**
+             * Revision
+             * @description Bumped by every save; 0 = the unsaved default
+             */
+            revision: number;
+            /**
+             * Updated At
+             * @description UTC ISO time of the last save; '' when never saved
+             */
+            updated_at: string;
+            /** Sections */
+            sections: components["schemas"]["WatchlistSection"][];
+        };
+        /** WatchlistList */
+        WatchlistList: {
+            /**
+             * Watchlists
+             * @description Newest first; one unsaved 'Default' list when none is saved
+             */
+            watchlists: components["schemas"]["WatchlistDocument"][];
+        };
+        /** WatchlistSection */
+        WatchlistSection: {
+            /** Title */
+            title: string;
+            /** Symbols */
+            symbols: string[];
+        };
+        /**
+         * WatchlistUpdate
+         * @description ``PUT`` body: every section, and the revision it was based on (optimistic locking).
+         */
+        WatchlistUpdate: {
+            /**
+             * Revision
+             * @description Revision the client last read; 0 = create
+             */
+            revision: number;
+            /** Sections */
+            sections: components["schemas"]["WatchlistSection"][];
         };
     };
     responses: never;
@@ -1232,6 +1528,260 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DrawingsDocument"];
                 };
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_layouts_api_layouts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LayoutList"];
+                };
+            };
+        };
+    };
+    get_layout_api_layouts__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LayoutDocument"];
+                };
+            };
+            /** @description No layout with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_layout_api_layouts__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LayoutUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LayoutDocument"];
+                };
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_layout_api_layouts__name__delete: {
+        parameters: {
+            query: {
+                /** @description Revision the client last read */
+                revision: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No layout with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_watchlists_api_watchlists_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistList"];
+                };
+            };
+        };
+    };
+    put_watchlist_api_watchlists__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchlistUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistDocument"];
+                };
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_watchlist_api_watchlists__name__delete: {
+        parameters: {
+            query: {
+                /** @description Revision the client last read */
+                revision: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No watchlist with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Saved meanwhile elsewhere: reload (problem+json) */
             409: {

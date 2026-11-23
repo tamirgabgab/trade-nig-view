@@ -38,6 +38,13 @@ class SymbolNotFoundError(ChartLabError):
     code = "symbol_not_found"
 
 
+class RevisionConflictError(ChartLabError):
+    """The client saved on top of an older revision (another tab or window saved meanwhile)."""
+
+    status = HTTPStatus.CONFLICT
+    code = "revision_conflict"
+
+
 class DataUnavailableError(ChartLabError):
     """No provider could deliver data and nothing is cached."""
 

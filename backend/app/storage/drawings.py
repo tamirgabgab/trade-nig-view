@@ -11,8 +11,10 @@ import sqlite3
 import threading
 from pathlib import Path
 
-from app.errors import ChartLabError
+from app.errors import RevisionConflictError
 from app.models.drawings import SCHEMA_VERSION, Drawing, DrawingsDocument
+
+__all__ = ["DrawingsRepository", "RevisionConflictError", "migrate"]
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS drawings (
@@ -22,13 +24,6 @@ CREATE TABLE IF NOT EXISTS drawings (
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 )
 """
-
-
-class RevisionConflictError(ChartLabError):
-    """The client saved on top of an older revision (another tab or window saved meanwhile)."""
-
-    status = 409
-    code = "revision_conflict"
 
 
 def migrate(document: dict[str, object]) -> dict[str, object]:

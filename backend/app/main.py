@@ -12,7 +12,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import analysis, bars, drawings, health, indicators, learn, quotes, symbols
+from app.api import (
+    analysis,
+    bars,
+    drawings,
+    health,
+    indicators,
+    layouts,
+    learn,
+    quotes,
+    symbols,
+    watchlists,
+)
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
 from app.data.cache.bar_cache import BarCache
@@ -22,6 +33,7 @@ from app.data.providers.tiingo import TiingoProvider
 from app.data.providers.yahoo import YahooProvider
 from app.data.universe import Universe
 from app.errors import register_error_handlers
+from app.storage.documents import DocumentStore
 from app.storage.drawings import DrawingsRepository
 
 API_PREFIX = "/api"
@@ -76,7 +88,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         build_providers(settings),
         refresh_ttl_s=settings.refresh_ttl_s,
     )
-    app.state.drawings = DrawingsRepository(settings.chartlab_data_dir / "app.db")
+    app_db = settings.chartlab_data_dir / "app.db"
+    app.state.drawings = DrawingsRepository(app_db)
+    app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)
+    app.state.watchlists = DocumentStore(app_db, "watchlists", watchlists.WatchlistNotFoundError)
 
     for router in (
         health.router,
@@ -86,6 +101,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         indicators.router,
         learn.router,
         drawings.router,
+        layouts.router,
+        watchlists.router,
         analysis.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
