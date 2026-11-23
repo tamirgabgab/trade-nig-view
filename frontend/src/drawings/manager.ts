@@ -1,5 +1,6 @@
 import type { StoreApi } from 'zustand';
 
+import { isBareKeyOutsideField } from '../components/keyTarget.ts';
 import type { DrawingState } from '../store/drawingStore.ts';
 import { snapAngle } from './geometry.ts';
 import { hitTest, type Hit, type Size } from './shapes.ts';
@@ -224,15 +225,7 @@ export class DrawingManager {
         };
       } else {
         // The click places the next anchor where it is (also without a move first, e.g. touch).
-        const { drawing, placed } = this.creating;
-        const first = this.surface.project(drawing.points[0] ?? { time: 0, price: 0 });
-        const anchor = this.anchorAt(p, first, drawing.type);
-        if (anchor !== null) {
-          this.creating.drawing = {
-            ...drawing,
-            points: drawing.points.map((a, i) => (i < placed ? a : anchor)),
-          };
-        }
+        this.follow(this.creating, p);
         this.creating.placed += 1;
       }
       this.render();
@@ -259,20 +252,13 @@ export class DrawingManager {
 
     if (this.creating !== null) {
       if (p === null) return;
-      const { drawing, placed, down } = this.creating;
+      const { down } = this.creating;
       // Drawing by dragging: only while the button is held (moving between two clicks is not).
       if (this.down && Math.hypot(p.x - down.x, p.y - down.y) > CLICK_SLOP) {
         this.creating.dragged = true;
       }
-      const first = this.surface.project(drawing.points[0] ?? { time: 0, price: 0 });
-      const anchor = this.anchorAt(p, first, drawing.type);
-      if (anchor !== null) {
-        this.creating.drawing = {
-          ...drawing,
-          points: drawing.points.map((a, i) => (i < placed ? a : anchor)),
-        };
-        this.render();
-      }
+      this.follow(this.creating, p);
+      this.render();
       return;
     }
 
@@ -297,6 +283,18 @@ export class DrawingManager {
             ? 'default'
             : 'move';
   };
+
+  /** Move the anchors not placed yet to `p`. */
+  private follow(creating: Creating, p: Point): void {
+    const { drawing, placed } = creating;
+    const first = this.surface.project(drawing.points[0] ?? { time: 0, price: 0 });
+    const anchor = this.anchorAt(p, first, drawing.type);
+    if (anchor === null) return;
+    creating.drawing = {
+      ...drawing,
+      points: drawing.points.map((a, i) => (i < placed ? a : anchor)),
+    };
+  }
 
   private drag(p: Point): void {
     const drag = this.dragging;
@@ -373,14 +371,7 @@ export class DrawingManager {
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     this.shift = event.shiftKey;
-    const target = event.target;
-    if (
-      target instanceof HTMLElement &&
-      (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
-    ) {
-      return;
-    }
-    if (event.defaultPrevented || this.callbacks.blocked()) return;
+    if (!isBareKeyOutsideField(event) || this.callbacks.blocked()) return;
     const s = this.store.getState();
     if (event.key === 'Escape') {
       if (this.creating !== null) {

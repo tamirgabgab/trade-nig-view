@@ -5,7 +5,7 @@ import type { Drawing, LineStyle, Point } from './types.ts';
 const DASHES: Record<LineStyle, number[]> = { solid: [], dashed: [6, 4], dotted: [1.5, 3] };
 const RECT_FILL_ALPHA = 0.12;
 
-export interface DrawState {
+interface DrawState {
   selected: boolean;
   hovered: boolean;
   /** Colour of handle centres (the chart background). */

@@ -51,7 +51,7 @@ function parseDrawing(item: unknown): Drawing | null {
 }
 
 /** A drawings document; drawings that fail to parse (an unknown tool) are skipped, not fatal. */
-export function parseDrawingsDoc(body: unknown): DrawingsDoc {
+function parseDrawingsDoc(body: unknown): DrawingsDoc {
   if (!isRecord(body)) throw new Error('Unexpected drawings response');
   const field = fieldsOf<Schemas['DrawingsDocument']>(body);
   const drawings = field('drawings');

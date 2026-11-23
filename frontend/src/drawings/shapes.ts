@@ -7,7 +7,7 @@ import type { Drawing, Point } from './types.ts';
  */
 
 /** How close (CSS px) the pointer must be to a line or a handle to grab it. */
-export const HIT_PX = 6;
+const HIT_PX = 6;
 export const HANDLE_RADIUS = 4.5;
 
 export interface Size {

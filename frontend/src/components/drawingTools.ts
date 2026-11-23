@@ -18,7 +18,7 @@ import {
 import { TOOL_LABELS } from '../drawings/manager.ts';
 import type { DrawingType } from '../drawings/types.ts';
 
-export interface ToolDef {
+interface ToolDef {
   type: DrawingType;
   label: string;
   icon: LucideIcon;
