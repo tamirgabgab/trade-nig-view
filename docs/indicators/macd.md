@@ -132,8 +132,8 @@ $$
 
 **How the lengths move it.** The peak period grows with the geometric mean $\sqrt{f\,s}$; the peak gain depends
 only on the ratio $s/f$. Doubling both lengths (24/52) moves the peak to 111 bars at the same −8.67 dB; 5/35 (ratio
-7) peaks at 41 bars and passes much more, −2.47 dB, since $\frac{35-5}{35+5} = 0.75$ ($-2.5$ dB). Closed form (exact, not the
-approximation) against the implementation's Filter view:
+7) peaks at 41 bars and passes much more, −2.47 dB, since $\frac{35-5}{35+5} = 0.75$ ($-2.5$ dB). Closed form
+(exact, not the approximation) against the implementation's Filter view:
 
 | Output (12/26/9) | Peak period, closed form | Peak gain | −3 dB band |
 |---|---|---|---|
