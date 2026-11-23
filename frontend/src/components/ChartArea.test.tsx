@@ -66,7 +66,12 @@ describe('ChartArea', () => {
 
     const call = liveEngine().calls.at(-1);
     expect(call?.bars).toHaveLength(3);
-    expect(call?.options).toEqual({ decimals: 2, hasVolume: true, resetView: true });
+    expect(call?.options).toEqual({
+      decimals: 2,
+      hasVolume: true,
+      resetView: true,
+      timeZone: 'Asia/Jerusalem',
+    });
   });
 
   it('follows the crosshair and returns to the last bar when it leaves', async () => {

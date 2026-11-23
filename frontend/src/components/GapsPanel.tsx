@@ -1,7 +1,7 @@
 import { useChartDataStore } from '../store/chartDataStore.ts';
 import { GAP_MIN_PCTS, useStructureStore } from '../store/structureStore.ts';
-import { DISPLAY_TIME_ZONE } from '../chart/timeZone.ts';
 import { formatBarTime } from './formatClock.ts';
+import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 import { formatPercent, formatPrice, plural } from './formatNumber.ts';
 import styles from './GapsPanel.module.css';
 
@@ -11,6 +11,7 @@ import styles from './GapsPanel.module.css';
  * here; the zones show on the chart while "Gaps" is on in the Structure menu.
  */
 export function GapsPanel() {
+  const zone = useDisplayTimeZone();
   const on = useStructureStore((s) => s.gaps);
   const toggleGaps = useStructureStore((s) => s.toggleGaps);
   const minPct = useStructureStore((s) => s.gapMinPct);
@@ -80,14 +81,14 @@ export function GapsPanel() {
                     {gap.direction === 'up' ? '▲' : '▼'} {formatPercent(gap.sizePct)}
                     {gap.kind === 'partial' ? ' partial' : ''}
                   </span>
-                  <span className={styles.date}>{formatBarTime(gap.time, DISPLAY_TIME_ZONE)}</span>
+                  <span className={styles.date}>{formatBarTime(gap.time, zone)}</span>
                   <span className={styles.zone}>
                     {formatPrice(gap.bottom, decimals)} – {formatPrice(gap.top, decimals)}
                   </span>
                   <span className={styles.status}>
                     {gap.filledTime === null
                       ? 'Open'
-                      : `Filled ${formatBarTime(gap.filledTime, DISPLAY_TIME_ZONE)}`}
+                      : `Filled ${formatBarTime(gap.filledTime, zone)}`}
                   </span>
                 </button>
               </li>

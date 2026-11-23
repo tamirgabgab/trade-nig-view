@@ -1,9 +1,10 @@
-import { Bell, CalendarRange, ChartColumnBig, List, TableProperties } from 'lucide-react';
+import { Bell, CalendarRange, ChartColumnBig, List, ListTree, TableProperties } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 import { useUiStore, type SidebarTab } from '../store/uiStore.ts';
 import { DataWindow } from './DataWindow.tsx';
 import { GapsPanel } from './GapsPanel.tsx';
+import { ObjectTree } from './ObjectTree.tsx';
 
 import { IconButton } from './IconButton.tsx';
 import styles from './RightSidebar.module.css';
@@ -18,6 +19,7 @@ interface RightSidebarProps {
 
 const TABS: { tab: SidebarTab; title: string; icon: typeof List }[] = [
   { tab: 'watchlist', title: 'Watchlist', icon: List },
+  { tab: 'objects', title: 'Object tree', icon: ListTree },
   { tab: 'data', title: 'Data window', icon: TableProperties },
   { tab: 'gaps', title: 'Gaps', icon: ChartColumnBig },
 ];
@@ -74,6 +76,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
           </div>
           <div className={styles.scroll}>
             {panel.shown === 'watchlist' && <Watchlist />}
+            {panel.shown === 'objects' && <ObjectTree />}
             {panel.shown === 'data' && <DataWindow />}
             {panel.shown === 'gaps' && <GapsPanel />}
           </div>

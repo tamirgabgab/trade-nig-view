@@ -144,6 +144,21 @@ export interface IndicatorLine {
   levelFill: readonly [number, number] | null;
 }
 
+/** Chart settings the engine applies (null colour = the theme's). */
+export interface ChartDisplay {
+  upColor: string | null;
+  downColor: string | null;
+  lastPriceLine: boolean;
+  volume: boolean;
+}
+
+const DEFAULT_DISPLAY: ChartDisplay = {
+  upColor: null,
+  downColor: null,
+  lastPriceLine: true,
+  volume: true,
+};
+
 /** Top of each own-pane indicator's pane (by group), in px from the top of the chart. */
 export type PaneLayout = Readonly<Record<string, number>>;
 export type PaneLayoutListener = (layout: PaneLayout) => void;
@@ -199,6 +214,9 @@ export class ChartEngine {
   private main: ISeriesApi<SeriesType>;
   private readonly volume: ISeriesApi<'Histogram'>;
   private theme: ChartTheme;
+  /** The light/dark theme before the user's candle colours are applied. */
+  private baseTheme: ChartTheme;
+  private display: ChartDisplay = DEFAULT_DISPLAY;
   private readonly listeners = new Set<CrosshairListener>();
   private readonly rangeListeners = new Set<VisibleRangeListener>();
   private readonly hover: RafLatest<number | null>;
@@ -244,6 +262,7 @@ export class ChartEngine {
 
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
     this.theme = theme;
+    this.baseTheme = theme;
     this.container = container;
     const colors = themeOptions(theme);
     this.chart = createChart(container, {
@@ -303,7 +322,7 @@ export class ChartEngine {
     this.chart.applyOptions({ timeScale: { timeVisible: hasIntradayTimes(bars) } });
     this.renderMain();
 
-    this.volume.applyOptions({ visible: hasVolume });
+    this.volume.applyOptions({ visible: hasVolume && this.display.volume });
     this.renderVolume();
 
     if (before !== null) {
@@ -560,13 +579,29 @@ export class ChartEngine {
 
   /** Repaint with another theme (light/dark), keeping data and viewport. */
   setTheme(theme: ChartTheme): void {
-    this.theme = theme;
-    this.chart.applyOptions(themeOptions(theme));
+    this.baseTheme = theme;
+    this.theme = {
+      ...theme,
+      up: this.display.upColor ?? theme.up,
+      down: this.display.downColor ?? theme.down,
+    };
+    this.chart.applyOptions(themeOptions(this.theme));
     this.recreateMain();
     this.renderVolume();
     // Level lines take their colour from the theme: redraw them (indicator data stays as is).
     for (const entry of this.lines.values()) entry.levels = '';
     this.setIndicatorLines(this.lastLines);
+  }
+
+  /** The user's chart settings: candle colours, the last-price line, the volume. */
+  setDisplay(display: ChartDisplay): void {
+    const same = Object.entries(display).every(
+      ([key, value]) => this.display[key as keyof ChartDisplay] === value,
+    );
+    if (same) return;
+    this.display = display;
+    this.volume.applyOptions({ visible: this.hasVolume && display.volume });
+    this.setTheme(this.baseTheme);
   }
 
   /** Volume bars coloured by candle direction (the colours come from the theme). */
@@ -752,7 +787,10 @@ export class ChartEngine {
 
   private createMainSeries(type: ChartType): ISeriesApi<SeriesType> {
     const { up, down, line } = this.theme;
-    const options = { priceFormat: { type: 'price' as const, ...priceFormat(this.decimals) } };
+    const options = {
+      priceFormat: { type: 'price' as const, ...priceFormat(this.decimals) },
+      priceLineVisible: this.display.lastPriceLine,
+    };
     switch (type) {
       case 'bars':
         return this.chart.addSeries(BarSeries, { ...options, upColor: up, downColor: down });

@@ -170,6 +170,7 @@ export function usePaletteCommands(): Command[] {
     ...(
       [
         ['watchlist', 'watchlist', 'sidebar symbols'],
+        ['objects', 'object tree', 'drawings indicators list hide lock'],
         ['data', 'data window', 'values crosshair ohlc'],
         ['gaps', 'gaps panel', 'structure gap list'],
       ] as const

@@ -42,6 +42,8 @@ export interface DrawingState {
   remove: (id: string) => Removed | null;
   /** Put a removed drawing back (only on the symbol it came from). */
   restore: (removed: Removed) => void;
+  /** Replace the loaded drawings (undo/redo); the selection goes if its drawing does. */
+  replaceAll: (drawings: Drawing[]) => void;
   /** Remove every drawing of the symbol; returns them so `restoreAll` can undo it. */
   removeAll: () => RemovedAll;
   /** Put the drawings back (only on the symbol they came from), before any drawn since. */
@@ -162,6 +164,14 @@ export const useDrawingStore = create<DrawingState>()(
           drawings.splice(index, 0, drawing);
           return { drawings, edits: s.edits + 1 };
         });
+      },
+      replaceAll: (drawings) => {
+        set((s) => ({
+          drawings,
+          edits: s.edits + 1,
+          selectedId: drawings.some((d) => d.id === s.selectedId) ? s.selectedId : null,
+          hoverId: null,
+        }));
       },
       removeAll: () => {
         const { drawings, symbol } = get();

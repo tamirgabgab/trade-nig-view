@@ -2,7 +2,15 @@ import { useUiStore } from '../store/uiStore.ts';
 import { opensIndicators } from './indicatorSearch.ts';
 import { useDrawingStore } from '../store/drawingStore.ts';
 import { TOOL_SHORTCUTS } from './drawingTools.ts';
-import { altKey, copiesSnapshot, opensPalette, opensShortcuts } from './keyTarget.ts';
+import { useHistoryStore } from '../store/historyStore.ts';
+import {
+  altKey,
+  copiesSnapshot,
+  opensPalette,
+  opensShortcuts,
+  redoesChart,
+  undoesChart,
+} from './keyTarget.ts';
 import { opensSymbolSearch } from './symbolSearch.ts';
 import { useGlobalHotkey } from './useGlobalHotkey.ts';
 
@@ -12,6 +20,12 @@ export function useAppHotkeys(): void {
   // A typed letter or digit opens symbol search with that key as the query, as on TradingView.
   useGlobalHotkey(opensSymbolSearch, (event) => {
     ui().openModal('symbols', event.key.toUpperCase());
+  });
+  useGlobalHotkey(undoesChart, () => {
+    useHistoryStore.getState().undo();
+  });
+  useGlobalHotkey(redoesChart, () => {
+    useHistoryStore.getState().redo();
   });
   useGlobalHotkey(opensIndicators, () => {
     ui().openModal('indicators');

@@ -30,6 +30,34 @@ export function altKey(code: string, shift = false): (event: KeyboardEvent) => b
     event.code === code;
 }
 
+/** Not typed into a text field (those have their own Ctrl+Z). */
+function outsideField(event: KeyboardEvent): boolean {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return true;
+  return !target.isContentEditable && !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
+/** Ctrl+Z (Cmd+Z): undo the last chart change. */
+export function undoesChart(event: KeyboardEvent): boolean {
+  return (
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.code === 'KeyZ' &&
+    outsideField(event)
+  );
+}
+
+/** Ctrl+Y or Ctrl+Shift+Z: redo. */
+export function redoesChart(event: KeyboardEvent): boolean {
+  return (
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey &&
+    ((!event.shiftKey && event.code === 'KeyY') || (event.shiftKey && event.code === 'KeyZ')) &&
+    outsideField(event)
+  );
+}
+
 /** Alt+S: copy the chart image. `code`, not `key`: Option+S on a Mac types "ß". */
 export function copiesSnapshot(event: KeyboardEvent): boolean {
   return event.altKey && !event.ctrlKey && !event.metaKey && event.code === 'KeyS';

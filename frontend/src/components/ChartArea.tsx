@@ -12,6 +12,7 @@ import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../cha
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 import { useStructureStore } from '../store/structureStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
 import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
@@ -34,6 +35,7 @@ import { useChartIndicators } from './useChartIndicators.ts';
 import { useChartSnapshot } from './useChartSnapshot.ts';
 import { useDrawingManager, useDrawingsSync } from './useDrawings.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
+import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 
 // Markdown + KaTeX load with the first learn page, not with the chart.
 const LearnDrawer = lazy(() =>
@@ -92,6 +94,15 @@ export function ChartArea({ className }: ChartAreaProps) {
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
   const firstRun = useIndicatorStore((s) => s.seq === 0);
   const theme = useThemeStore((s) => s.theme);
+  const timeZone = useDisplayTimeZone();
+  const upColor = useSettingsStore((s) => s.upColor);
+  const downColor = useSettingsStore((s) => s.downColor);
+  const lastPriceLine = useSettingsStore((s) => s.lastPriceLine);
+  const showVolume = useSettingsStore((s) => s.volume);
+  const display = useMemo(
+    () => ({ upColor, downColor, lastPriceLine, volume: showVolume }),
+    [upColor, downColor, lastPriceLine, showVolume],
+  );
   const legendFocus = useUiStore((s) => s.legendFocus);
   const emphasis = useUiStore((s) => s.emphasis);
   const setEmphasis = useUiStore((s) => s.setEmphasis);
@@ -292,6 +303,8 @@ export function ChartArea({ className }: ChartAreaProps) {
         decimals={decimals}
         hasVolume={hasVolume}
         viewKey={`${shownSymbol}|${shownInterval}`}
+        display={display}
+        timeZone={timeZone}
         chartType={chartType}
         scaleMode={scaleMode}
         autoScale={autoScale}

@@ -1,7 +1,12 @@
 import { memo, useEffect, useRef } from 'react';
 
 import type { Bar } from '../api/bars.ts';
-import { ChartEngine, type IndicatorLine, type PaneLayoutListener } from '../chart/ChartEngine.ts';
+import {
+  ChartEngine,
+  type ChartDisplay,
+  type IndicatorLine,
+  type PaneLayoutListener,
+} from '../chart/ChartEngine.ts';
 import type { ChartType, ScaleMode } from '../chart/chartTypes.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { readChartTheme } from '../chart/theme.ts';
@@ -39,6 +44,10 @@ interface ChartViewProps {
   onContextMenu: (at: { x: number; y: number; price: number | null }) => void;
   /** UI theme: a change repaints the chart from the CSS tokens. */
   theme: string;
+  /** Candle colours, last-price line and volume (chart settings). */
+  display: ChartDisplay;
+  /** IANA zone intraday bars are shown in. */
+  timeZone: string;
 }
 
 /** Hosts one ChartEngine in a div. Re-renders only when its props change (memo). */
@@ -59,6 +68,8 @@ export const ChartView = memo(function ChartView({
   onEngine,
   onContextMenu,
   theme,
+  display,
+  timeZone,
 }: ChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<ChartEngine | null>(null);
@@ -94,14 +105,24 @@ export const ChartView = memo(function ChartView({
     engineRef.current?.setChartType(chartType);
   }, [chartType]);
 
+  // Chart settings (a no-op when unchanged), before the bars' first paint.
+  useEffect(() => {
+    engineRef.current?.setDisplay(display);
+  }, [display]);
+
   useEffect(() => {
     const engine = engineRef.current;
     if (engine === null) return;
-    engine.setBars(bars, { decimals, hasVolume, resetView: shownKeyRef.current !== viewKey });
+    engine.setBars(bars, {
+      decimals,
+      hasVolume,
+      timeZone,
+      resetView: shownKeyRef.current !== viewKey,
+    });
     // Mark the data set as shown only once it has bars: the empty placeholder before the first
     // response must not consume the reset, or the chart would open on the oldest bars.
     if (bars.length > 0) shownKeyRef.current = viewKey;
-  }, [bars, decimals, hasVolume, viewKey]);
+  }, [bars, decimals, hasVolume, viewKey, timeZone]);
 
   // The engine reads the theme when created; repaint only when it changes.
   useEffect(() => {

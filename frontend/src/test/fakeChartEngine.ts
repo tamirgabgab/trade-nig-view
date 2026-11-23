@@ -6,6 +6,7 @@ import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
  */
 import type { Bar } from '../api/bars.ts';
 import type {
+  ChartDisplay,
   CrosshairListener,
   IndicatorLine,
   PaneLayout,
@@ -148,6 +149,12 @@ export class FakeChartEngine {
 
   snapshot(): HTMLCanvasElement {
     return document.createElement('canvas');
+  }
+
+  display: ChartDisplay | null = null;
+
+  setDisplay(display: ChartDisplay): void {
+    this.display = display;
   }
 
   setTheme(): void {

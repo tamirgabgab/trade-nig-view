@@ -3,6 +3,7 @@ import {
   ChartSpline,
   Keyboard,
   Maximize2,
+  Minimize2,
   Moon,
   Plus,
   Redo2,
@@ -16,11 +17,13 @@ import {
 
 import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
+import { useHistoryStore } from '../store/historyStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IntervalSwitcher } from './IntervalSwitcher.tsx';
+import { useFullscreen } from './useFullscreen.ts';
 import { SnapshotMenu } from './SnapshotMenu.tsx';
 import { StructureMenu } from './StructureMenu.tsx';
 import styles from './Toolbar.module.css';
@@ -38,6 +41,11 @@ export function TopToolbar({ className }: TopToolbarProps) {
   const openModal = useUiStore((s) => s.openModal);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  const fullscreen = useFullscreen();
+  const canUndo = useHistoryStore((s) => s.past.length > 0);
+  const canRedo = useHistoryStore((s) => s.future.length > 0);
+  const undo = useHistoryStore((s) => s.undo);
+  const redo = useHistoryStore((s) => s.redo);
   return (
     <header className={[styles.bar, className].join(' ')} role="toolbar" aria-label="Chart toolbar">
       <button
@@ -87,8 +95,20 @@ export function TopToolbar({ className }: TopToolbarProps) {
         comingIn="R7"
       />
       <span className={styles.separator} aria-hidden="true" />
-      <IconButton label="Undo" shortcut="Ctrl+Z" icon={<Undo2 size={ICON_SIZE} />} comingIn="R6" />
-      <IconButton label="Redo" shortcut="Ctrl+Y" icon={<Redo2 size={ICON_SIZE} />} comingIn="R6" />
+      <IconButton
+        label="Undo"
+        shortcut="Ctrl+Z"
+        icon={<Undo2 size={ICON_SIZE} />}
+        disabled={!canUndo}
+        onClick={undo}
+      />
+      <IconButton
+        label="Redo"
+        shortcut="Ctrl+Y"
+        icon={<Redo2 size={ICON_SIZE} />}
+        disabled={!canRedo}
+        onClick={redo}
+      />
       <span className={styles.spacer} />
       <span className={styles.layoutName}>Unnamed</span>
       <IconButton
@@ -117,13 +137,20 @@ export function TopToolbar({ className }: TopToolbarProps) {
         label="Open chart settings"
         tooltipSide="bottom-end"
         icon={<Settings size={ICON_SIZE} />}
-        comingIn="R6"
+        aria-haspopup="dialog"
+        onClick={() => {
+          openModal('settings');
+        }}
       />
       <IconButton
-        label="Enter fullscreen"
+        label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
         tooltipSide="bottom-end"
-        icon={<Maximize2 size={ICON_SIZE} />}
-        comingIn="R6"
+        icon={fullscreen ? <Minimize2 size={ICON_SIZE} /> : <Maximize2 size={ICON_SIZE} />}
+        onClick={() => {
+          void (
+            fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen()
+          ).catch(() => undefined);
+        }}
       />
       <SnapshotMenu />
     </header>

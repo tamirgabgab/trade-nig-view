@@ -1,12 +1,13 @@
-import { DISPLAY_TIME_ZONE } from '../chart/timeZone.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
 import styles from './DataWindow.module.css';
 import { formatBarTime } from './formatClock.ts';
+import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 import { formatChange, formatPrice, formatVolume } from './formatNumber.ts';
 import { legendValues } from './legendValues.ts';
 
 /** Every value of the bar under the crosshair (the last bar when it is off the chart). */
 export function DataWindow() {
+  const zone = useDisplayTimeZone();
   const data = useChartDataStore((s) => s.data);
   const hoverIndex = useChartDataStore((s) => s.hoverIndex);
   const values = data === null ? null : legendValues(data.bars, hoverIndex);
@@ -32,7 +33,7 @@ export function DataWindow() {
 
   return (
     <div className={styles.window}>
-      <p className={styles.time}>{formatBarTime(values.time, DISPLAY_TIME_ZONE)}</p>
+      <p className={styles.time}>{formatBarTime(values.time, zone)}</p>
       <dl className={styles.list}>
         {rows.map(([label, value]) => (
           <div key={label} className={styles.row}>
