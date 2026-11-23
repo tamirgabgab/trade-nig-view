@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react';
 
 import type { Bar } from '../api/bars.ts';
-import { ChartEngine, type IndicatorLine } from '../chart/ChartEngine.ts';
+import { ChartEngine, type IndicatorLine, type PaneLayoutListener } from '../chart/ChartEngine.ts';
 import type { ChartType, ScaleMode } from '../chart/chartTypes.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import styles from './ChartArea.module.css';
@@ -28,6 +28,8 @@ interface ChartViewProps {
   onHover: (index: number | null) => void;
   /** Visible logical range after every scroll or zoom. Must be a stable function. */
   onVisibleRangeChange: (range: LogicalRange | null) => void;
+  /** Tops of the indicator panes whenever they move. Must be a stable function. */
+  onPaneLayout: PaneLayoutListener;
 }
 
 /** Hosts one ChartEngine in a div. Re-renders only when its props change (memo). */
@@ -43,6 +45,7 @@ export const ChartView = memo(function ChartView({
   lines,
   onHover,
   onVisibleRangeChange,
+  onPaneLayout,
 }: ChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<ChartEngine | null>(null);
@@ -55,15 +58,17 @@ export const ChartView = memo(function ChartView({
     const engine = new ChartEngine(container);
     const offHover = engine.onCrosshairMove(onHover);
     const offRange = engine.onVisibleRangeChange(onVisibleRangeChange);
+    const offPanes = engine.onPaneLayout(onPaneLayout);
     engineRef.current = engine;
     return () => {
       offHover();
       offRange();
+      offPanes();
       engine.dispose();
       engineRef.current = null;
       shownKeyRef.current = null;
     };
-  }, [onHover, onVisibleRangeChange]);
+  }, [onHover, onVisibleRangeChange, onPaneLayout]);
 
   // Chart type first, so the bars below are drawn once with the right series.
   useEffect(() => {

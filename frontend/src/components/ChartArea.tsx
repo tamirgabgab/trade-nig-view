@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useBarHistory } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
+import type { PaneLayout } from '../chart/ChartEngine.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
@@ -46,6 +47,7 @@ export function ChartArea({ className }: ChartAreaProps) {
   const transform = transformFor(chartType);
   const history = useBarHistory({ symbol, interval, adjusted, transform });
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
   const learnOpen = useUiStore((s) => s.learnFor !== null);
 
   const data = history.data;
@@ -110,6 +112,9 @@ export function ChartArea({ className }: ChartAreaProps) {
     [history.isLoading, data, transform],
   );
   const indicators = useChartIndicators(series, bars);
+  // Oscillators get their own pane and a legend at its top; the rest are listed over the price.
+  const priceViews = indicators.views.filter((view) => view.spec?.overlay !== false);
+  const paneViews = indicators.views.filter((view) => view.spec?.overlay === false);
 
   const showProgress = useDelayedFlag(
     history.isLoading || history.isLoadingOlder,
@@ -147,12 +152,26 @@ export function ChartArea({ className }: ChartAreaProps) {
         status={status}
       >
         <IndicatorLegend
-          views={indicators.views}
+          views={priceViews}
           hoverIndex={hoverIndex}
           barCount={bars.length}
           decimals={decimals}
         />
       </LegendOHLC>
+      {paneViews.map((view) => {
+        const top = paneLayout[view.instance.uid];
+        return top === undefined ? null : (
+          <div key={view.instance.uid} className={styles.paneLegend} style={{ top }}>
+            <IndicatorLegend
+              views={[view]}
+              hoverIndex={hoverIndex}
+              barCount={bars.length}
+              decimals={decimals}
+              label={`${view.label} pane`}
+            />
+          </div>
+        );
+      })}
       <ChartView
         bars={bars}
         decimals={decimals}
@@ -165,6 +184,7 @@ export function ChartArea({ className }: ChartAreaProps) {
         lines={indicators.lines}
         onHover={setHoverIndex}
         onVisibleRangeChange={onVisibleRangeChange}
+        onPaneLayout={setPaneLayout}
       />
       <IndicatorSettingsPanel views={indicators.views} />
       {learnOpen && (

@@ -165,6 +165,38 @@ export function toValueLine(
   });
 }
 
+/** Bar colours of a histogram output by sign and direction (backend output `style` keys). */
+export interface HistogramColors {
+  /** Above zero and rising. */
+  up: string;
+  /** Above zero and falling. */
+  upWeak: string;
+  /** Below zero and falling. */
+  down: string;
+  /** Below zero and rising. */
+  downWeak: string;
+}
+
+/**
+ * Histogram bars (MACD style): the colour says whether the value is above or below zero and
+ * whether it grew since the previous bar (a missing previous bar counts as growing).
+ */
+export function toHistogram(
+  values: readonly (number | null)[],
+  times: readonly ChartTime[],
+  colors: HistogramColors,
+): ({ time: ChartTime; value: number; color: string } | { time: ChartTime })[] {
+  return times.map((time, i) => {
+    const value = values[i];
+    if (value === null || value === undefined) return { time };
+    const previous = values[i - 1];
+    const rising = previous === null || previous === undefined || value >= previous;
+    const color =
+      value >= 0 ? (rising ? colors.up : colors.upWeak) : rising ? colors.downWeak : colors.down;
+    return { time, value, color };
+  });
+}
+
 /** Values and colours of one marker output (see `toMarkers`). */
 export interface MarkerSource {
   values: readonly (number | null)[];

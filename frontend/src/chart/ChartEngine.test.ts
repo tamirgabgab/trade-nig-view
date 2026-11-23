@@ -1,5 +1,5 @@
 import type { Bar } from '../api/bars.ts';
-import { ChartEngine } from './ChartEngine.ts';
+import { ChartEngine, type IndicatorLine } from './ChartEngine.ts';
 import { FALLBACK_THEME } from './theme.ts';
 
 interface FakeSeries {
@@ -7,6 +7,21 @@ interface FakeSeries {
   options: Record<string, unknown>;
   setData: ReturnType<typeof vi.fn>;
   applyOptions: ReturnType<typeof vi.fn>;
+  pane: FakePane;
+  priceLines: { price: number }[];
+  primitives: unknown[];
+  getPane: () => FakePane;
+  createPriceLine: (options: { price: number }) => { price: number };
+  removePriceLine: (line: { price: number }) => void;
+  attachPrimitive: (primitive: unknown) => void;
+}
+
+interface FakePane {
+  stretch: number;
+  paneIndex: () => number;
+  getSeries: () => FakeSeries[];
+  setStretchFactor: (factor: number) => void;
+  getHTMLElement: () => HTMLElement | null;
 }
 
 const lwc = vi.hoisted(() => {
@@ -14,6 +29,7 @@ const lwc = vi.hoisted(() => {
     chartOptions: undefined as unknown,
     appliedOptions: [] as unknown[],
     series: [] as FakeSeries[],
+    panes: [] as FakePane[],
     crosshair: undefined as ((param: { time?: unknown; logical?: number }) => void) | undefined,
     priceScaleOptions: new Map<string, unknown>(),
     removed: [] as FakeSeries[],
@@ -30,13 +46,41 @@ const lwc = vi.hoisted(() => {
     remove: vi.fn(),
     unsubscribe: vi.fn(),
   };
+  const pane = (): FakePane => {
+    const self: FakePane = {
+      stretch: 1,
+      paneIndex: () => state.panes.indexOf(self),
+      getSeries: () => state.series.filter((s) => s.pane === self),
+      setStretchFactor: (factor) => {
+        self.stretch = factor;
+      },
+      getHTMLElement: () => null,
+    };
+    return self;
+  };
   const chart = {
-    addSeries: (definition: { kind: string }, options: Record<string, unknown>) => {
+    addSeries: (definition: { kind: string }, options: Record<string, unknown>, index = 0) => {
+      while (state.panes.length <= index) state.panes.push(pane());
+      const target = state.panes[index] ?? pane();
       const series: FakeSeries = {
         kind: definition.kind,
         options,
         setData: vi.fn(),
         applyOptions: vi.fn(),
+        pane: target,
+        priceLines: [],
+        primitives: [],
+        getPane: () => target,
+        createPriceLine: (line) => {
+          series.priceLines.push(line);
+          return line;
+        },
+        removePriceLine: (line) => {
+          series.priceLines = series.priceLines.filter((l) => l !== line);
+        },
+        attachPrimitive: (primitive) => {
+          series.primitives.push(primitive);
+        },
       };
       state.series.push(series);
       return series;
@@ -44,6 +88,10 @@ const lwc = vi.hoisted(() => {
     removeSeries: (series: FakeSeries) => {
       state.removed.push(series);
       state.series = state.series.filter((s) => s !== series);
+    },
+    panes: () => state.panes,
+    removePane: (index: number) => {
+      state.panes.splice(index, 1);
     },
     priceScale: (id: string) => ({
       applyOptions: (options: unknown) => state.priceScaleOptions.set(id, options),
@@ -95,6 +143,7 @@ vi.mock('lightweight-charts', () => ({
   CandlestickSeries: { kind: 'Candlestick' },
   HistogramSeries: { kind: 'Histogram' },
   LineSeries: { kind: 'Line' },
+  LineStyle: { Dashed: 2 },
   PriceScaleMode: { Normal: 0, Logarithmic: 1, Percentage: 2 },
   ColorType: { Solid: 'solid' },
   CrosshairMode: { Normal: 0 },
@@ -109,10 +158,25 @@ const BARS: Bar[] = Array.from({ length: 200 }, (_, i) => ({
   volume: 1000 + i,
 }));
 
+const EMA_LINE: IndicatorLine = {
+  key: 'ema-1:ma',
+  group: 'ema-1',
+  output: 'ma',
+  ownPane: false,
+  plot: 'line',
+  values: [],
+  color: '#ff6d00',
+  lineWidth: 2,
+  visible: true,
+  style: {},
+  levels: [],
+};
+
 let frames: FrameRequestCallback[] = [];
 
 beforeEach(() => {
   lwc.state.series = [];
+  lwc.state.panes = [];
   lwc.state.crosshair = undefined;
   lwc.state.priceScaleOptions.clear();
   lwc.state.removed = [];
@@ -318,7 +382,7 @@ describe('ChartEngine', () => {
     chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
     const values = [null, 101, 102];
     chart.setIndicatorLines([
-      { key: 'ema-1:ma', plot: 'line', values, color: '#ff6d00', lineWidth: 2, visible: true },
+      { ...EMA_LINE, values, color: '#ff6d00', lineWidth: 2, visible: true },
     ]);
     const line = lwc.state.series.at(-1);
     expect(line?.kind).toBe('Line');
@@ -333,7 +397,7 @@ describe('ChartEngine', () => {
 
     // Same values, new colour: options only.
     chart.setIndicatorLines([
-      { key: 'ema-1:ma', plot: 'line', values, color: '#2962ff', lineWidth: 9, visible: false },
+      { ...EMA_LINE, values, color: '#2962ff', lineWidth: 9, visible: false },
     ]);
     expect(line?.setData).toHaveBeenCalledTimes(1);
     expect(line?.applyOptions).toHaveBeenLastCalledWith(
@@ -343,7 +407,7 @@ describe('ChartEngine', () => {
     // New bars: the same values array is sent again against the new times.
     chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: false });
     chart.setIndicatorLines([
-      { key: 'ema-1:ma', plot: 'line', values, color: '#2962ff', lineWidth: 2, visible: true },
+      { ...EMA_LINE, values, color: '#2962ff', lineWidth: 2, visible: true },
     ]);
     expect(line?.setData).toHaveBeenCalledTimes(2);
 
@@ -355,15 +419,18 @@ describe('ChartEngine', () => {
     const { engine: chart } = engine();
     chart.setBars(BARS.slice(0, 4), { decimals: 2, hasVolume: true, resetView: true });
     const crosses = [null, 1, null, -1];
-    const markers = {
+    const markers: IndicatorLine = {
       key: 'x-1:crosses',
-      plot: 'markers' as const,
+      group: 'x-1',
+      output: 'crosses',
+      ownPane: false,
+      plot: 'markers',
       values: crosses,
       color: '#089981',
       lineWidth: 2,
       visible: true,
-      upColor: '#00ff00',
-      downColor: '#ff0000',
+      style: { up: '#00ff00', down: '#ff0000' },
+      levels: [],
     };
     const before = lwc.state.series.length;
     chart.setIndicatorLines([markers]);
@@ -384,5 +451,75 @@ describe('ChartEngine', () => {
 
     chart.setIndicatorLines([{ ...markers, visible: false }]);
     expect(moved?.markers).toEqual([]);
+  });
+
+  it('puts each own-pane indicator in its own pane with levels, and closes the pane on removal', () => {
+    const { engine: chart } = engine();
+    chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
+    const rsi: IndicatorLine = {
+      ...EMA_LINE,
+      key: 'rsi-1:rsi',
+      group: 'rsi-1',
+      output: 'rsi',
+      ownPane: true,
+      values: [null, 40, 60],
+      levels: [70, 50, 30],
+    };
+    const macd = (output: string, plot: IndicatorLine['plot']): IndicatorLine => ({
+      ...EMA_LINE,
+      key: `macd-1:${output}`,
+      group: 'macd-1',
+      output,
+      ownPane: true,
+      plot,
+      values: [null, 1, -2],
+      style: { up: 'U', up_weak: 'u', down: 'D', down_weak: 'd' },
+    });
+    chart.setIndicatorLines([rsi, macd('hist', 'histogram'), macd('macd', 'line')]);
+
+    const [rsiSeries, hist, macdLine] = lwc.state.series.slice(-3);
+    expect(rsiSeries?.pane.paneIndex()).toBe(1);
+    expect(rsiSeries?.pane.stretch).toBe(0.3);
+    expect(rsiSeries?.priceLines.map((l) => l.price)).toEqual([70, 50, 30]);
+    expect(hist?.kind).toBe('Histogram');
+    expect(hist?.pane.paneIndex()).toBe(2);
+    expect(macdLine?.pane).toBe(hist?.pane);
+    expect(hist?.setData).toHaveBeenCalledWith([
+      { time: '2026-01-01' },
+      { time: '2026-01-02', value: 1, color: 'U' },
+      { time: '2026-01-03', value: -2, color: 'D' },
+    ]);
+
+    // Removing the RSI closes its pane; the MACD pane moves up.
+    chart.setIndicatorLines([macd('hist', 'histogram'), macd('macd', 'line')]);
+    expect(lwc.state.removed).toContain(rsiSeries);
+    expect(lwc.state.panes).toHaveLength(2);
+    expect(hist?.pane.paneIndex()).toBe(1);
+  });
+
+  it('shades between two lines and draws volume-scale lines on the volume histogram', () => {
+    const { engine: chart } = engine();
+    chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
+    const band = (output: string, style: Record<string, string>): IndicatorLine => ({
+      ...EMA_LINE,
+      key: `bb-1:${output}`,
+      group: 'bb-1',
+      output,
+      values: [null, 1, 2],
+      style,
+    });
+    chart.setIndicatorLines([
+      band('upper', { fill_to: 'lower', fill: 'rgba(0, 0, 255, 0.1)' }),
+      band('lower', {}),
+      { ...EMA_LINE, key: 'v-1:ma', group: 'v-1', style: { price_scale: 'volume' } },
+    ]);
+    const [upper, lower, volumeMa] = lwc.state.series.slice(-3);
+    expect(upper?.pane.paneIndex()).toBe(0);
+    expect(upper?.primitives).toHaveLength(1);
+    expect(lower?.primitives).toHaveLength(0);
+    expect(volumeMa?.options).toMatchObject({ priceScaleId: 'volume' });
+    expect(volumeMa?.applyOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ priceFormat: { type: 'volume' } }),
+    );
   });
 });

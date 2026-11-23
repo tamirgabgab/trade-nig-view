@@ -33,7 +33,43 @@ let computeStatus = 200;
 let registry: unknown[] = INDICATORS;
 
 /** A fake compute: value = close + length (easy to check), no warm-up on the first bar only. */
+/** An oscillator in its own pane (backend `obv`): volume-formatted values, a zero level. */
+const OBV_SPEC = {
+  id: 'obv',
+  version: 1,
+  name: 'On Balance Volume',
+  short_name: 'OBV',
+  category: 'volume',
+  overlay: false,
+  inputs: ['close', 'volume'],
+  params: [],
+  outputs: [
+    {
+      name: 'obv',
+      label: 'OBV',
+      plot: 'line',
+      color: '#2962FF',
+      line_width: 2,
+      style: { format: 'volume' },
+    },
+  ],
+  levels: [0],
+  learn_slug: 'obv',
+  description: 'Cumulative volume signed by the close-to-close change.',
+};
+
 function compute(body: ComputeBody) {
+  if (body.id === 'obv') {
+    return {
+      id: body.id,
+      version: 1,
+      params: body.params,
+      time: AAPL_BARS.map((b) => b.time),
+      outputs: { obv: [0, 48_700_000, -13_650_000] },
+      warmup: 0,
+      lookback: 1_000_000_000,
+    };
+  }
   if (body.id === 'ma_cross') {
     return {
       id: body.id,
@@ -133,11 +169,16 @@ describe('indicators on the chart', () => {
       expect(liveEngine().lines).toEqual([
         {
           key: expect.stringMatching(/^ema-\d+:ma$/) as unknown,
+          group: expect.stringMatching(/^ema-\d+$/) as unknown,
+          output: 'ma',
+          ownPane: false,
           plot: 'line',
           values: [null, 349.21 + 9, 342.56 + 9],
           color: '#FF6D00',
           lineWidth: 2,
           visible: true,
+          style: {},
+          levels: [],
         },
       ]);
     });
@@ -255,7 +296,7 @@ describe('indicators on the chart', () => {
     });
     expect(row.querySelector('[data-output="crosses"]')).toBeNull();
     await waitFor(() => {
-      expect(liveEngine().lines.map((l) => [l.plot, l.upColor ?? null])).toEqual([
+      expect(liveEngine().lines.map((l) => [l.plot, l.style.up ?? null])).toEqual([
         ['line', null],
         ['line', null],
         ['markers', '#089981'],
@@ -271,5 +312,27 @@ describe('indicators on the chart', () => {
     await user.selectOptions(fastType, 'ema');
     await within(legend()).findByText('MA Cross EMA 9 SMA 21');
     expect(computes.at(-1)?.params['fast_type']).toBe('ema');
+  });
+
+  it('puts an oscillator in its own pane with a legend at the top of that pane', async () => {
+    registry = [...INDICATORS, OBV_SPEC];
+    useIndicatorStore.getState().add('obv', {});
+    renderWithQuery(<App />);
+    await waitFor(() => {
+      expect(liveEngine().lines).toHaveLength(1);
+    });
+    const [line] = liveEngine().lines;
+    expect(line).toMatchObject({ ownPane: true, levels: [0], style: { format: 'volume' } });
+    expect(screen.queryByRole('list', { name: 'Indicators on the chart' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'OBV pane' })).toBeNull();
+
+    act(() => {
+      liveEngine().layoutPanes({ [line?.group ?? '']: 320 });
+    });
+    const pane = screen.getByRole('list', { name: 'OBV pane' });
+    expect(pane.parentElement).toHaveStyle({ top: '320px' });
+    await waitFor(() => {
+      expect(pane.querySelector('[data-output="obv"]')).toHaveTextContent('-13.65M');
+    });
   });
 });

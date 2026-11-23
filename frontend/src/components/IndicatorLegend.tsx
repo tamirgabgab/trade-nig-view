@@ -2,7 +2,7 @@ import { BookOpen, Eye, EyeOff, Settings2, TriangleAlert, X } from 'lucide-react
 
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
-import { formatPrice } from './formatNumber.ts';
+import { formatPrice, formatVolume } from './formatNumber.ts';
 import { IconButton } from './IconButton.tsx';
 import styles from './IndicatorLegend.module.css';
 import { valueOutputs, type IndicatorView } from './useChartIndicators.ts';
@@ -15,10 +15,18 @@ interface IndicatorLegendProps {
   hoverIndex: number | null;
   barCount: number;
   decimals: number;
+  /** Accessible name of the list (one list per indicator pane). */
+  label?: string;
 }
 
 /** One row per indicator under the price legend: label, values at the crosshair and actions. */
-export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: IndicatorLegendProps) {
+export function IndicatorLegend({
+  views,
+  hoverIndex,
+  barCount,
+  decimals,
+  label = 'Indicators on the chart',
+}: IndicatorLegendProps) {
   const toggleVisible = useIndicatorStore((s) => s.toggleVisible);
   const remove = useIndicatorStore((s) => s.remove);
   const openSettings = useUiStore((s) => s.openSettings);
@@ -29,7 +37,7 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
   const index = hoverIndex ?? barCount - 1;
 
   return (
-    <ul className={styles.list} aria-label="Indicators on the chart">
+    <ul className={styles.list} aria-label={label}>
       {views.map((view) => {
         const { uid, visible } = view.instance;
         return (
@@ -42,6 +50,8 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
             {visible &&
               valueOutputs(view).map((output) => {
                 const value = output.values[index];
+                const volume =
+                  output.style.format === 'volume' || output.style.price_scale === 'volume';
                 return (
                   <span
                     key={output.name}
@@ -49,7 +59,11 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
                     style={{ color: output.color }}
                     data-output={output.name}
                   >
-                    {value === null || value === undefined ? '—' : formatPrice(value, decimals)}
+                    {value === null || value === undefined
+                      ? '—'
+                      : volume
+                        ? formatVolume(value)
+                        : formatPrice(value, decimals)}
                   </span>
                 );
               })}

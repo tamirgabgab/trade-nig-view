@@ -49,6 +49,7 @@ export function valueOutputs(view: IndicatorView): OutputView[] {
 
 const NO_VALUES: Record<string, (number | null)[]> = {};
 const EMPTY: (number | null)[] = [];
+const NO_LEVELS: readonly number[] = [];
 
 type Aligned = Record<string, (number | null)[]>;
 const alignedCache = new WeakMap<ComputeData, { bars: readonly Bar[]; aligned: Aligned }>();
@@ -121,15 +122,18 @@ export function useChartIndicators(
   const lines = useMemo(
     () =>
       views.flatMap((view) =>
-        view.outputs.map((output): IndicatorLine => ({
+        view.outputs.map((output, i): IndicatorLine => ({
           key: `${view.instance.uid}:${output.name}`,
+          group: view.instance.uid,
+          output: output.name,
+          ownPane: view.spec?.overlay === false,
           plot: output.plot,
           values: output.values,
           color: output.color,
           lineWidth: output.lineWidth,
           visible: view.instance.visible,
-          upColor: output.style.up,
-          downColor: output.style.down,
+          style: output.style,
+          levels: i === 0 ? (view.spec?.levels ?? NO_LEVELS) : NO_LEVELS,
         })),
       ),
     [views],

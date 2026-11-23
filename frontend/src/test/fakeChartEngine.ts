@@ -6,6 +6,8 @@ import type { Bar } from '../api/bars.ts';
 import type {
   CrosshairListener,
   IndicatorLine,
+  PaneLayout,
+  PaneLayoutListener,
   ScaleOptions,
   SetBarsOptions,
   VisibleRangeListener,
@@ -24,6 +26,7 @@ export class FakeChartEngine {
   disposed = false;
   private listener: CrosshairListener | null = null;
   private rangeListener: VisibleRangeListener | null = null;
+  private paneListener: PaneLayoutListener | null = null;
 
   constructor() {
     engines.push(this);
@@ -68,8 +71,20 @@ export class FakeChartEngine {
     };
   }
 
+  onPaneLayout(listener: PaneLayoutListener): () => void {
+    this.paneListener = listener;
+    return () => {
+      this.paneListener = null;
+    };
+  }
+
   dispose(): void {
     this.disposed = true;
+  }
+
+  /** Simulate the indicator panes being laid out with these tops. */
+  layoutPanes(layout: PaneLayout): void {
+    this.paneListener?.(layout);
   }
 
   /** Simulate the crosshair moving onto bar `index` (null = off the data). */

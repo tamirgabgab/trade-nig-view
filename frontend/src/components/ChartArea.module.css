@@ -15,6 +15,15 @@
   isolation: isolate;
 }
 
+/* The legend of an indicator pane, at the pane's top-left (like the price legend). */
+.paneLegend {
+  position: absolute;
+  left: var(--space-3);
+  z-index: 2;
+  font-size: var(--font-size-md);
+  pointer-events: none;
+}
+
 .overlay {
   position: absolute;
   inset: 0;

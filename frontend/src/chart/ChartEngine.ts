@@ -12,8 +12,10 @@ import {
   CrosshairMode,
   HistogramSeries,
   LineSeries,
+  LineStyle,
   PriceScaleMode,
   type IChartApi,
+  type IPriceLine,
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
   type LineWidth,
@@ -26,6 +28,7 @@ import {
 
 import type { Bar } from '../api/bars.ts';
 import type { OutputInfo } from '../api/indicators.ts';
+import { BandFill } from './bandFill.ts';
 import type { ChartType, ScaleMode } from './chartTypes.ts';
 import { rafLatest, type RafLatest } from './rafLatest.ts';
 import {
@@ -36,6 +39,7 @@ import {
   prependedCount,
   priceFormat,
   toCandles,
+  toHistogram,
   toHollowCandles,
   toLine,
   toMarkers,
@@ -44,6 +48,7 @@ import {
   type ChartTime,
   type LogicalRange,
   type MarkerPoint,
+  type MarkerSource,
 } from './seriesData.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
 import { DISPLAY_TIME_ZONE } from './timeZone.ts';
@@ -56,6 +61,9 @@ const VOLUME_ALPHA = 0.5;
 const AREA_TOP_ALPHA = 0.28;
 const AREA_BOTTOM_ALPHA = 0.02;
 const VOLUME_SCALE_ID = 'volume';
+/** Height of an indicator pane relative to the price pane (stretch factor 1). */
+const PANE_STRETCH = 0.3;
+const LEVEL_ALPHA = 0.6;
 
 const SCALE_MODES: Record<ScaleMode, PriceScaleMode> = {
   normal: PriceScaleMode.Normal,
@@ -93,28 +101,49 @@ export interface ScaleOptions {
 }
 
 /**
- * One indicator output on the price pane: a line, or markers (arrows on the price bars: +1 = up
- * arrow below the bar, -1 = down arrow above it, null = none). Histogram and area plots are drawn
- * as lines until the oscillator panes (R4).
+ * One indicator output: a line or histogram over the price (or in the indicator's own pane), or
+ * markers (arrows on the price bars: +1 = up arrow below the bar, -1 = down arrow above it, null =
+ * none).
  */
 export interface IndicatorLine {
   /** Stable id (instance uid + output name). */
   key: string;
+  /** The indicator instance: the lines of an own-pane indicator share one pane. */
+  group: string;
+  /** Output name (a `fill_to` style names another output of the same group). */
+  output: string;
+  /** In its own pane below the price (an oscillator) instead of over the price. */
+  ownPane: boolean;
   plot: OutputInfo['plot'];
   /** One value per bar given to `setBars` (null = no value, e.g. warm-up). */
   values: readonly (number | null)[];
   color: string;
   lineWidth: number;
   visible: boolean;
-  /** Marker colours (default: `color`). */
-  upColor?: string | undefined;
-  downColor?: string | undefined;
+  /**
+   * The backend output style: marker `up` / `down`, histogram `up` / `up_weak` / `down` /
+   * `down_weak`, a fill (`fill_to` + `fill`), `price_scale: 'volume'`, `format: 'volume'`.
+   */
+  style: Readonly<Record<string, string>>;
+  /** Dashed horizontal levels of the indicator's pane (on its first line). */
+  levels: readonly number[];
 }
 
+/** Top of each own-pane indicator's pane (by group), in px from the top of the chart. */
+export type PaneLayout = Readonly<Record<string, number>>;
+export type PaneLayoutListener = (layout: PaneLayout) => void;
+
 interface LineEntry {
-  series: ISeriesApi<'Line'>;
+  series: ISeriesApi<'Line'> | ISeriesApi<'Histogram'>;
+  plot: OutputInfo['plot'];
+  group: string;
+  ownPane: boolean;
   values: readonly (number | null)[] | null;
   times: readonly ChartTime[] | null;
+  style: Readonly<Record<string, string>> | null;
+  levels: string;
+  priceLines: IPriceLine[];
+  fill: BandFill | null;
 }
 
 function toLineWidth(width: number): LineWidth {
@@ -139,9 +168,15 @@ export class ChartEngine {
   private readonly lines = new Map<string, LineEntry>();
   private markerData: (Omit<MarkerPoint, 'time'> & { time: Time })[] = [];
   private markers: ISeriesMarkersPluginApi<Time> | null = null;
+  private readonly container: HTMLElement;
+  private readonly paneListeners = new Set<PaneLayoutListener>();
+  private paneLayout: PaneLayout = {};
+  private readonly paneObserver: ResizeObserver | null;
+  private layoutFrame = 0;
 
   constructor(container: HTMLElement, theme: ChartTheme = readChartTheme()) {
     this.theme = theme;
+    this.container = container;
     this.chart = createChart(container, {
       autoSize: true,
       layout: {
@@ -179,6 +214,9 @@ export class ChartEngine {
     });
     this.chart.subscribeCrosshairMove(this.handleCrosshairMove);
     this.chart.timeScale().subscribeVisibleLogicalRangeChange(this.handleRangeChange);
+    // Pane resizes (window, separator drags, panes added or removed) move the pane legends.
+    this.paneObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(this.schedulePaneLayout);
   }
 
   /** Replace the displayed bars (oldest first, as the API returns them). */
@@ -221,45 +259,182 @@ export class ChartEngine {
   }
 
   /**
-   * Show exactly these indicator lines (others are removed). Call after `setBars`: values are
-   * matched to the current bars by index. Data is only re-sent when values or bars changed.
+   * Show exactly these indicator lines (others are removed, with their panes when empty). Call
+   * after `setBars`: values are matched to the current bars by index. Data is only re-sent when
+   * values, bars or colours changed.
    */
   setIndicatorLines(all: readonly IndicatorLine[]): void {
     const lines = all.filter((line) => line.plot !== 'markers');
-    this.setMarkers(all.filter((line) => line.plot === 'markers' && line.visible));
-    const keep = new Set(lines.map((line) => line.key));
+    this.setMarkers(
+      all
+        .filter((line) => line.plot === 'markers' && line.visible)
+        .map((line) => ({
+          values: line.values,
+          color: line.color,
+          upColor: line.style.up,
+          downColor: line.style.down,
+        })),
+    );
+    const keep = new Map(lines.map((line) => [line.key, line]));
     for (const [key, entry] of this.lines) {
-      if (keep.has(key)) continue;
+      const line = keep.get(key);
+      if (line !== undefined && line.plot === entry.plot && line.ownPane === entry.ownPane)
+        continue;
       this.chart.removeSeries(entry.series);
       this.lines.delete(key);
     }
+    this.removeEmptyPanes();
+
     for (const line of lines) {
-      let entry = this.lines.get(line.key);
-      if (entry === undefined) {
-        const series = this.chart.addSeries(LineSeries, {
-          priceLineVisible: false,
-          lastValueVisible: true,
-          crosshairMarkerRadius: 3,
-        });
-        entry = { series, values: null, times: null };
-        this.lines.set(line.key, entry);
-      }
+      const entry = this.lines.get(line.key) ?? this.addLine(line);
+      const volumeScale = line.style.price_scale === 'volume';
+      const format =
+        volumeScale || line.style.format === 'volume'
+          ? { type: 'volume' as const }
+          : { type: 'price' as const, ...priceFormat(this.decimals) };
       entry.series.applyOptions({
         color: line.color,
-        lineWidth: toLineWidth(line.lineWidth),
         visible: line.visible,
-        priceFormat: { type: 'price', ...priceFormat(this.decimals) },
+        priceFormat: format,
+        ...(line.plot === 'histogram' ? {} : { lineWidth: toLineWidth(line.lineWidth) }),
       });
-      if (entry.values !== line.values || entry.times !== this.times) {
-        entry.series.setData(withTime(toValueLine(line.values, this.times)));
+      if (
+        entry.values !== line.values ||
+        entry.times !== this.times ||
+        entry.style !== line.style
+      ) {
+        entry.series.setData(
+          withTime(
+            line.plot === 'histogram'
+              ? toHistogram(line.values, this.times, {
+                  up: line.style.up ?? line.color,
+                  upWeak: line.style.up_weak ?? line.color,
+                  down: line.style.down ?? line.color,
+                  downWeak: line.style.down_weak ?? line.color,
+                })
+              : toValueLine(line.values, this.times),
+          ),
+        );
         entry.values = line.values;
         entry.times = this.times;
+        entry.style = line.style;
       }
+      this.setLevels(entry, line.levels);
+    }
+
+    for (const line of lines) {
+      const entry = this.lines.get(line.key);
+      const target = line.style.fill_to;
+      if (entry === undefined || target === undefined) continue;
+      if (entry.fill === null) {
+        entry.fill = new BandFill();
+        entry.series.attachPrimitive(entry.fill);
+      }
+      const other = keep.get(`${line.group}:${target}`);
+      entry.fill.set(line.values, other?.values ?? [], line.style.fill ?? line.color, line.visible);
+    }
+    this.schedulePaneLayout();
+  }
+
+  /**
+   * Call `listener` with the top of every indicator pane whenever the panes move. Returns an
+   * unsubscribe function.
+   */
+  onPaneLayout(listener: PaneLayoutListener): () => void {
+    this.paneListeners.add(listener);
+    listener(this.paneLayout);
+    return () => {
+      this.paneListeners.delete(listener);
+    };
+  }
+
+  private addLine(line: IndicatorLine): LineEntry {
+    const sibling = line.ownPane
+      ? [...this.lines.values()].find((e) => e.ownPane && e.group === line.group)
+      : undefined;
+    const pane = !line.ownPane
+      ? 0
+      : (sibling?.series.getPane().paneIndex() ?? this.chart.panes().length);
+    const options = {
+      priceLineVisible: false,
+      lastValueVisible: true,
+      ...(line.style.price_scale === 'volume' ? { priceScaleId: VOLUME_SCALE_ID } : {}),
+    };
+    const series =
+      line.plot === 'histogram'
+        ? this.chart.addSeries(HistogramSeries, options, pane)
+        : this.chart.addSeries(LineSeries, { ...options, crosshairMarkerRadius: 3 }, pane);
+    if (line.ownPane && sibling === undefined) {
+      series.getPane().setStretchFactor(PANE_STRETCH);
+      const element = series.getPane().getHTMLElement();
+      if (element !== null) this.paneObserver?.observe(element);
+    }
+    const entry: LineEntry = {
+      series,
+      plot: line.plot,
+      group: line.group,
+      ownPane: line.ownPane,
+      values: null,
+      times: null,
+      style: null,
+      levels: '',
+      priceLines: [],
+      fill: null,
+    };
+    this.lines.set(line.key, entry);
+    return entry;
+  }
+
+  private setLevels(entry: LineEntry, levels: readonly number[]): void {
+    const key = levels.join(',');
+    if (key === entry.levels) return;
+    for (const priceLine of entry.priceLines) entry.series.removePriceLine(priceLine);
+    entry.priceLines = levels.map((price) =>
+      entry.series.createPriceLine({
+        price,
+        color: withAlpha(this.theme.textMuted, LEVEL_ALPHA),
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: false,
+      }),
+    );
+    entry.levels = key;
+  }
+
+  /** Indicator panes left without series (their indicator was removed) are closed. */
+  private removeEmptyPanes(): void {
+    const panes = this.chart.panes();
+    for (let i = panes.length - 1; i > 0; i--) {
+      if (panes[i]?.getSeries().length === 0) this.chart.removePane(i);
     }
   }
 
+  private readonly schedulePaneLayout = (): void => {
+    if (this.layoutFrame !== 0) return;
+    this.layoutFrame = requestAnimationFrame(() => {
+      this.layoutFrame = 0;
+      this.emitPaneLayout();
+    });
+  };
+
+  private emitPaneLayout(): void {
+    const origin = this.container.getBoundingClientRect().top;
+    const layout: Record<string, number> = {};
+    for (const entry of this.lines.values()) {
+      if (!entry.ownPane || entry.group in layout) continue;
+      const element = entry.series.getPane().getHTMLElement();
+      if (element !== null) layout[entry.group] = element.getBoundingClientRect().top - origin;
+    }
+    const same =
+      Object.keys(layout).length === Object.keys(this.paneLayout).length &&
+      Object.entries(layout).every(([group, top]) => this.paneLayout[group] === top);
+    if (same) return;
+    this.paneLayout = layout;
+    for (const listener of this.paneListeners) listener(layout);
+  }
+
   /** Marker outputs sit on the main series, so they follow the candles' highs and lows. */
-  private setMarkers(lines: readonly IndicatorLine[]): void {
+  private setMarkers(lines: readonly MarkerSource[]): void {
     this.markerData = withTime(toMarkers(lines, this.times));
     this.renderMarkers();
   }
@@ -316,6 +491,9 @@ export class ChartEngine {
 
   dispose(): void {
     this.hover.cancel();
+    cancelAnimationFrame(this.layoutFrame);
+    this.paneObserver?.disconnect();
+    this.paneListeners.clear();
     this.listeners.clear();
     this.rangeListeners.clear();
     this.lines.clear();
