@@ -266,4 +266,49 @@ describe('learn drawer', () => {
       await within(drawer).findByRole('img', { name: 'Simple Moving Average' }),
     ).toBeInTheDocument();
   });
+
+  it('draws a band-pass filter figure inside a page: no lag, zero DC gain', async () => {
+    const user = userEvent.setup();
+    const page = `${PAGE}\n\n\`\`\`lab\n{"kind": "filter", "indicator": "sma"}\n\`\`\`\n`;
+    stubApi({
+      '/api/health': { body: HEALTH_OK },
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
+      '/api/indicators': { body: INDICATORS },
+      '/api/indicators/compute': () => jsonResponse({ detail: 'not needed' }, 500),
+      '/api/learn/sma': { body: { slug: 'sma', markdown: page } },
+      '/api/indicators/response': {
+        body: {
+          id: 'sma',
+          outputs: [
+            {
+              name: 'ma',
+              label: 'MA',
+              linear: true,
+              reason: null,
+              step: [0.5, 0.2, 0],
+              ramp_lag: null,
+              impulse: [0.5, -0.3, -0.2],
+              dc_gain: 0,
+              lag: null,
+              nrf: 0.38,
+              frequency: {
+                period: [2, 20, 200],
+                magnitude_db: [-20, -3, -30],
+                group_delay: [1, 2, 3],
+              },
+              truncated: false,
+            },
+          ],
+        },
+      },
+    });
+    renderWithQuery(<App />);
+    const drawer = await openLearn(user, 'sma', 'Simple Moving Average');
+    const figure = await within(drawer).findByRole('region', { name: 'SMA: filter view' });
+    const table = await within(figure).findByRole('table');
+    expect(within(table).getByRole('row', { name: /^Lag \(bars\)/ })).toHaveTextContent('—');
+    expect(within(table).getByRole('row', { name: /DC gain/ })).toHaveTextContent('0.000');
+  });
 });
