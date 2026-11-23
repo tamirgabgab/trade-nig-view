@@ -193,3 +193,17 @@ test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI
   await expect(pane).toBeHidden();
   await expect(bands).toContainText('BB 30 2');
 });
+
+test('learn index: the MACD page draws its measured band-pass response', async ({ page }) => {
+  await page.getByRole('button', { name: 'Learn pages' }).click();
+  await page.keyboard.type('MACD');
+  await page.keyboard.press('Enter');
+  const drawer = page.getByRole('complementary', { name: 'MACD' });
+  const figure = drawer.getByRole('region', { name: 'MACD: filter view' }).first();
+  await figure.scrollIntoViewIfNeeded();
+  const table = figure.getByRole('table');
+  // A difference of EMAs: no DC gain, so no lag.
+  await expect(table.getByRole('row', { name: /^Lag \(bars\)/ })).toContainText('—');
+  await expect(table.getByRole('row', { name: /DC gain/ })).toContainText('0.000');
+  await expect(figure.getByRole('figure', { name: /Magnitude/ })).toBeVisible();
+});

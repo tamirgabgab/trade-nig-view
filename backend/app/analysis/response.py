@@ -211,51 +211,35 @@ def filter_response(spec: IndicatorSpec, params: Params) -> list[OutputResponse]
     results: list[OutputResponse] = []
     for name, reason in reasons.items():
         flat, flat_doubled = steps[name][start - 1], doubled[name][start - 1]
-        if reason is None and _band_pass(flat, flat_doubled):
-            h = impulses[name][start:]
-            results.append(
-                OutputResponse(
-                    name,
-                    labels[name],
-                    None,
-                    _shown(np.cumsum(h), 0.0),
-                    None,
-                    impulse=_shown(h, 0.0),
-                    dc_gain=float(h.sum()),
-                    nrf=float(h @ h),
-                    frequency=_frequency(h),
-                    truncated=taps < wanted and abs(float(h[-1])) > TAIL * float(np.abs(h).max()),
-                )
-            )
-            continue
-        if not _follows_price(flat, flat_doubled):
+        band = reason is None and _band_pass(flat, flat_doubled)
+        if not band and not _follows_price(flat, flat_doubled):
             continue
         if reason is not None:
             # A scaled output (an envelope band) settles at gain x input: the flat bar before the
             # step gives that gain.
-            gain = float(steps[name][start - 1] / BASE)
+            gain = float(flat / BASE)
             step = (steps[name][start:] / gain - BASE) / STEP
             ramp_lag = float((ramp_in[-1] - ramps[name][-1] / gain) / SLOPE)
             results.append(OutputResponse(name, labels[name], reason, _shown(step, 1.0), ramp_lag))
             continue
         h = impulses[name][start:]
         gain = float(h.sum())
-        # On a ramp a + b t a linear filter gives gain (a + b (t - lag)).
-        ramp_lag = float((ramp_in[-1] - ramps[name][-1] / gain) / SLOPE)
-        peak = float(np.abs(h).max())
+        # On a ramp a + b t a linear filter gives gain (a + b (t - lag)); a band-pass has no lag.
+        lag = None if band else float(np.arange(len(h)) @ h / gain)
+        ramp_lag = None if band else float((ramp_in[-1] - ramps[name][-1] / gain) / SLOPE)
         results.append(
             OutputResponse(
                 name,
                 labels[name],
                 None,
-                _shown(np.cumsum(h), gain),
+                _shown(np.cumsum(h), 0.0 if band else gain),
                 ramp_lag,
                 impulse=_shown(h, 0.0),
                 dc_gain=gain,
-                lag=float(np.arange(len(h)) @ h / gain),
+                lag=lag,
                 nrf=float(h @ h),
                 frequency=_frequency(h),
-                truncated=taps < wanted and abs(float(h[-1])) > TAIL * peak,
+                truncated=taps < wanted and abs(float(h[-1])) > TAIL * float(np.abs(h).max()),
             )
         )
     return results
