@@ -25,6 +25,8 @@ export interface ParamInfo {
   options: string[];
   /** Display names of `options` (same order and length). */
   optionLabels: string[];
+  /** The bool / enum param that switches this one on (true, or not "none"); null = always on. */
+  requires: string | null;
 }
 
 export interface OutputInfo {
@@ -35,6 +37,8 @@ export interface OutputInfo {
   lineWidth: number;
   /** Extra colours by role, e.g. markers' `up` / `down`. */
   style: Record<string, string>;
+  /** As `ParamInfo.requires`: the line exists only while that param switches it on. */
+  requires: string | null;
 }
 
 export interface IndicatorInfo {
@@ -100,6 +104,7 @@ function parseParam(item: unknown): ParamInfo {
   if (!isParamValue(value)) throw new Error('Unexpected param default');
   const options = strings(field('options'));
   const labels = strings(field('option_labels'));
+  const requires = field('requires');
   return {
     name: str(field('name'), 'param name'),
     type: type as ParamType,
@@ -110,6 +115,7 @@ function parseParam(item: unknown): ParamInfo {
     step: numOrNull(field('step')),
     options,
     optionLabels: labels.length === options.length ? labels : options,
+    requires: typeof requires === 'string' ? requires : null,
   };
 }
 
@@ -119,6 +125,7 @@ function parseOutput(item: unknown): OutputInfo {
   const plot = field('plot');
   if (!PLOTS.includes(plot as OutputInfo['plot'])) throw new Error('Unexpected plot style');
   const width = field('line_width');
+  const requires = field('requires');
   return {
     name: str(field('name'), 'output name'),
     label: str(field('label'), 'output label'),
@@ -126,6 +133,7 @@ function parseOutput(item: unknown): OutputInfo {
     color: str(field('color'), 'output color'),
     lineWidth: typeof width === 'number' ? width : 2,
     style: stringRecord(field('style')),
+    requires: typeof requires === 'string' ? requires : null,
   };
 }
 
@@ -188,9 +196,22 @@ export function optionLabel(param: ParamInfo, value: string): string {
   return param.optionLabels[param.options.indexOf(value)] ?? value;
 }
 
+/** False while the param that switches `item` (a param or an output) on is off (false or "none"). */
+export function isActive(
+  spec: IndicatorInfo,
+  item: { requires: string | null },
+  params: Params,
+): boolean {
+  const switchParam = spec.params.find((p) => p.name === item.requires);
+  if (switchParam === undefined) return true;
+  const value = params[switchParam.name] ?? switchParam.default;
+  return value !== false && value !== 'none' && isActive(spec, switchParam, params);
+}
+
 /** One input as the legend shows it, or null to leave it out. */
 function shownValue(param: ParamInfo, value: ParamValue): string | null {
   if (param.name === 'offset' && value === param.default) return null;
+  if (value === 'none') return null;
   if (param.type === 'bool') return value === true ? param.label : null;
   if (param.type === 'enum' && typeof value === 'string') {
     // The short form: "HMA (Hull)" -> "HMA".
@@ -202,6 +223,7 @@ function shownValue(param: ParamInfo, value: ParamValue): string | null {
 /** Short legend label: "EMA 20 close", "MA Cross SMA 9 SMA 21 close" (non-default offset too). */
 export function instanceLabel(spec: IndicatorInfo, params: Params): string {
   const shown = spec.params
+    .filter((p) => isActive(spec, p, params))
     .map((p) => shownValue(p, params[p.name] ?? p.default))
     .filter((text): text is string => text !== null);
   return [spec.shortName, ...shown].join(' ');

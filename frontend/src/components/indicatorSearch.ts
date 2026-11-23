@@ -16,22 +16,28 @@ function rank(spec: IndicatorInfo, q: string): number {
 }
 
 /**
- * Registry entries matching `query` (short name, name or description), grouped by category in
- * the registry's category order; within a group, better matches first, then by name.
+ * Registry entries matching `query` (short name, name or description), grouped by category;
+ * within a group, better matches first, then by name. Groups follow the registry's category
+ * order, except that the group holding the best match comes first ("rsi" lists RSI before
+ * EMA, whose description says "Recursive").
  */
 export function searchIndicators(specs: readonly IndicatorInfo[], query: string): IndicatorGroup[] {
   const q = query.trim().toLowerCase();
-  const groups: IndicatorGroup[] = [];
+  const groups: (IndicatorGroup & { best: number })[] = [];
   for (const [category, label] of Object.entries(CATEGORY_LABELS)) {
     const matches = specs
       .filter((spec) => spec.category === category)
       .map((spec) => ({ spec, rank: q === '' ? 0 : rank(spec, q) }))
       .filter((m) => m.rank >= 0)
-      .sort((a, b) => a.rank - b.rank || a.spec.name.localeCompare(b.spec.name))
-      .map((m) => m.spec);
-    if (matches.length > 0) groups.push({ label, indicators: matches });
+      .sort((a, b) => a.rank - b.rank || a.spec.name.localeCompare(b.spec.name));
+    const first = matches[0];
+    if (first !== undefined) {
+      groups.push({ label, indicators: matches.map((m) => m.spec), best: first.rank });
+    }
   }
-  return groups;
+  return groups
+    .sort((a, b) => a.best - b.best)
+    .map(({ label, indicators }) => ({ label, indicators }));
 }
 
 /** True for a plain `/` typed outside a text field (opens the indicators dialog). */

@@ -122,3 +122,70 @@ test('learn drawer: KaTeX page and the measured filter view of SMA 9', async ({ 
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
 });
+
+/** Reference RSI: Wilder averages (alpha = 1/n) seeded with the mean of the first n changes. */
+function rsi(values: readonly number[], n: number): number {
+  const changes = values.slice(1).map((value, i) => value - (values[i] ?? value));
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / n;
+  let gain = mean(changes.slice(0, n).map((c) => Math.max(c, 0)));
+  let loss = mean(changes.slice(0, n).map((c) => Math.max(-c, 0)));
+  for (const c of changes.slice(n)) {
+    gain += (Math.max(c, 0) - gain) / n;
+    loss += (Math.max(-c, 0) - loss) / n;
+  }
+  return loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+}
+
+/** Population standard deviation of the last n values. */
+function stdev(values: readonly number[], n: number): number {
+  const window = values.slice(-n);
+  const mean = sma(window, n);
+  return Math.sqrt(window.reduce((a, v) => a + (v - mean) ** 2, 0) / n);
+}
+
+test('oscillator pane: RSI next to Bollinger Bands, change BB length, remove RSI', async ({
+  page,
+}) => {
+  const closes = dailyRows('AAPL.csv').map((row) => adjusted(row).close);
+
+  await addIndicator(page, 'rsi', 'Relative Strength Index');
+  const pane = page.getByRole('list', { name: 'RSI 14 close pane' });
+  await expect(pane).toBeVisible();
+  await expect(pane.locator('[data-output="rsi"]')).toHaveText(price(rsi(closes, 14)));
+  // The price legend does not list an indicator that has its own pane.
+  await expect(indicators(page)).toBeHidden();
+
+  // Smoothing inputs stay greyed out until a smoothing is picked.
+  await pane.getByRole('button', { name: 'Settings: RSI 14 close' }).click();
+  const rsiPanel = page.getByRole('dialog', { name: /^RSI/ });
+  await expect(rsiPanel.getByRole('spinbutton', { name: 'Smoothing length' })).toBeDisabled();
+  await rsiPanel.getByRole('combobox', { name: 'Smoothing' }).selectOption({ label: 'SMA' });
+  await expect(rsiPanel.getByRole('spinbutton', { name: 'Smoothing length' })).toBeEnabled();
+  // The pane's legend is named after the instance label.
+  await expect(page.getByRole('list', { name: 'RSI 14 close SMA 14 pane' })).toBeVisible();
+  await rsiPanel.getByRole('combobox', { name: 'Smoothing' }).selectOption({ label: 'None' });
+  await rsiPanel.getByRole('button', { name: 'Close', exact: true }).click();
+
+  await addIndicator(page, 'bollinger', 'Bollinger Bands');
+  const bands = indicators(page).getByRole('listitem').first();
+  await expect(bands).toContainText('BB 20 SMA close 2');
+  const check = async (n: number) => {
+    const basis = sma(closes, n);
+    const width = 2 * stdev(closes, n);
+    await expect(bands.locator('[data-output="basis"]')).toHaveText(price(basis));
+    await expect(bands.locator('[data-output="upper"]')).toHaveText(price(basis + width));
+    await expect(bands.locator('[data-output="lower"]')).toHaveText(price(basis - width));
+  };
+  await check(20);
+
+  await bands.getByRole('button', { name: /^Settings: BB/ }).click();
+  const bbPanel = page.getByRole('dialog', { name: /^BB/ });
+  await bbPanel.getByRole('spinbutton', { name: 'Length' }).fill('30');
+  await expect(bands).toContainText('BB 30 SMA close 2');
+  await check(30);
+  await bbPanel.getByRole('button', { name: 'Close', exact: true }).click();
+
+  await pane.getByRole('button', { name: 'Remove RSI 14 close' }).click();
+  await expect(pane).toBeHidden();
+  await expect(bands).toContainText('BB 30 SMA close 2');
+});

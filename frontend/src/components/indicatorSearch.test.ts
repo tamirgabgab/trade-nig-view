@@ -23,6 +23,21 @@ describe('searchIndicators', () => {
     expect(ids('weighted')).toEqual(['wma']);
     expect(ids('zzz')).toEqual([]);
   });
+
+  it('lists the group with the best match first', () => {
+    const [ema] = SPECS;
+    if (ema === undefined) throw new Error('fixture');
+    const rsi = {
+      ...ema,
+      id: 'rsi',
+      shortName: 'RSI',
+      name: 'Relative Strength Index',
+      category: 'oscillators' as const,
+      description: '',
+    };
+    const groups = searchIndicators([{ ...ema, description: 'Recursive average' }, rsi], 'rsi');
+    expect(groups.map((g) => g.label)).toEqual(['Oscillators', 'Moving averages']);
+  });
 });
 
 describe('opensIndicators', () => {

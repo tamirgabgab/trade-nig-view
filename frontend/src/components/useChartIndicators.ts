@@ -6,6 +6,7 @@ import {
   computeBody,
   effectiveParams,
   instanceLabel,
+  isActive,
   useIndicatorComputes,
   useIndicatorList,
   type ComputeData,
@@ -94,7 +95,9 @@ export function useChartIndicators(
         const params =
           spec === undefined ? instance.params : effectiveParams(spec, instance.params);
         const values = result?.data === undefined ? NO_VALUES : aligned(bars, result.data);
-        const outputs = (spec?.outputs ?? []).map((output) => {
+        const active =
+          spec === undefined ? [] : spec.outputs.filter((o) => isActive(spec, o, params));
+        const outputs = active.map((output) => {
           const style = instance.styles[output.name];
           return {
             name: output.name,

@@ -101,6 +101,16 @@
   border-color: var(--color-down);
 }
 
+.control:disabled,
+.check:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field:has(.control:disabled) .label {
+  color: var(--color-text-muted);
+}
+
 .error {
   grid-column: 1 / -1;
   margin: 0;

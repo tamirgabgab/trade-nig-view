@@ -5,6 +5,7 @@ import {
   defaultParams,
   effectiveParams,
   instanceLabel,
+  isActive,
   parseCompute,
   parseIndicatorList,
 } from './indicators.ts';
@@ -71,6 +72,7 @@ describe('indicator registry', () => {
       step: 1,
       options: [],
       optionLabels: [],
+      requires: null,
     });
   });
 
@@ -101,6 +103,46 @@ describe('indicator registry', () => {
     expect(instanceLabel(cross, { fast_type: 'sma', fast_length: 5, floor: true })).toBe(
       'MA Cross SMA 5 Floor',
     );
+  });
+
+  it('leaves switched-off inputs and "none" out of the label', () => {
+    const [rsi] = parseIndicatorList([
+      {
+        ...MA_CROSS,
+        short_name: 'RSI',
+        params: [
+          { name: 'length', type: 'int', default: 14, label: 'Length' },
+          {
+            name: 'ma_type',
+            type: 'enum',
+            default: 'none',
+            label: 'Smoothing',
+            options: ['none', 'sma'],
+            option_labels: ['None', 'SMA'],
+          },
+          { name: 'ma_length', type: 'int', default: 14, label: 'Length', requires: 'ma_type' },
+          { name: 'bb', type: 'bool', default: false, label: 'BB', requires: 'ma_type' },
+          { name: 'bb_mult', type: 'float', default: 2, label: 'Mult', requires: 'bb' },
+        ],
+      },
+    ]);
+    if (rsi === undefined) throw new Error('fixture');
+    const bbMult = rsi.params[4];
+    if (bbMult === undefined) throw new Error('fixture');
+    expect(instanceLabel(rsi, defaultParams(rsi))).toBe('RSI 14');
+    // bb stays true, but it is off while the smoothing that it needs is None.
+    expect(isActive(rsi, bbMult, { ma_type: 'none', bb: true })).toBe(false);
+    expect(instanceLabel(rsi, { ...defaultParams(rsi), ma_type: 'sma', ma_length: 9 })).toBe(
+      'RSI 14 SMA 9',
+    );
+    expect(instanceLabel(rsi, { ...defaultParams(rsi), ma_type: 'sma', bb: true })).toBe(
+      'RSI 14 SMA 14 BB 2',
+    );
+    // Outputs follow the same switches.
+    const band = { requires: 'bb' };
+    expect(isActive(rsi, band, defaultParams(rsi))).toBe(false);
+    expect(isActive(rsi, band, { ...defaultParams(rsi), ma_type: 'sma', bb: true })).toBe(true);
+    expect(isActive(rsi, { requires: null }, {})).toBe(true);
   });
 
   it('rejects malformed registry entries', () => {

@@ -11,6 +11,7 @@ const LENGTH: ParamInfo = {
   step: 1,
   options: [],
   optionLabels: [],
+  requires: null,
 };
 
 describe('parseParamInput', () => {

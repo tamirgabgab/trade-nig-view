@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import {
   defaultParams,
   effectiveParams,
+  isActive,
   optionLabel,
   type IndicatorInfo,
   type ParamInfo,
@@ -143,6 +144,8 @@ function SettingsForm({ view, spec }: { view: IndicatorView; spec: IndicatorInfo
           </h3>
           {spec.params.map((param) => {
             const id = `${titleId}-${param.name}`;
+            // Inputs of a switched-off option (e.g. RSI smoothing length while Smoothing is None).
+            const disabled = !isActive(spec, param, view.params);
             if (isNumeric(param)) {
               const text = draft[param.name] ?? '';
               const parsed = parseParamInput(param, text);
@@ -161,6 +164,7 @@ function SettingsForm({ view, spec }: { view: IndicatorView; spec: IndicatorInfo
                     max={param.max ?? undefined}
                     step={param.step ?? (param.type === 'int' ? 1 : 'any')}
                     value={text}
+                    disabled={disabled}
                     aria-invalid={showError || undefined}
                     aria-describedby={showError ? `${id}-error` : undefined}
                     onChange={(event) => {
@@ -184,6 +188,7 @@ function SettingsForm({ view, spec }: { view: IndicatorView; spec: IndicatorInfo
                   <input
                     type="checkbox"
                     checked={view.params[param.name] === true}
+                    disabled={disabled}
                     onChange={(event) => {
                       commit({ [param.name]: event.target.checked });
                     }}
@@ -201,6 +206,7 @@ function SettingsForm({ view, spec }: { view: IndicatorView; spec: IndicatorInfo
                   id={id}
                   className={styles.control}
                   value={String(view.params[param.name] ?? param.default)}
+                  disabled={disabled}
                   onChange={(event) => {
                     commit({ [param.name]: event.target.value });
                   }}
