@@ -116,10 +116,10 @@ export const ChartView = memo(function ChartView({
     engineRef.current?.setTheme(readChartTheme());
   }, [theme]);
 
-  // After the bars (and a theme repaint): line values are matched to the bars by index.
+  // After the bars: line values are matched to the bars by index.
   useEffect(() => {
     engineRef.current?.setIndicatorLines(lines);
-  }, [lines, bars, theme]);
+  }, [lines, bars]);
 
   useEffect(() => {
     engineRef.current?.setScale({ mode: scaleMode, autoScale });

@@ -5,6 +5,12 @@ import { useUiStore } from '../store/uiStore.ts';
 import { renderWithQuery } from '../test/render.tsx';
 import { snapshotFileName } from './snapshot.ts';
 import { SnapshotMenu } from './SnapshotMenu.tsx';
+import { useAppHotkeys } from './useAppHotkeys.ts';
+
+function Harness() {
+  useAppHotkeys();
+  return <SnapshotMenu />;
+}
 
 afterEach(() => {
   useUiStore.setState(useUiStore.getInitialState());
@@ -13,7 +19,7 @@ afterEach(() => {
 describe('SnapshotMenu', () => {
   it('asks for a download or a copy from the menu, and a copy with Alt+S', async () => {
     const user = userEvent.setup();
-    renderWithQuery(<SnapshotMenu />);
+    renderWithQuery(<Harness />);
     const camera = screen.getByRole('button', { name: 'Take a snapshot' });
 
     await user.click(camera);

@@ -1,9 +1,4 @@
-import {
-  defaultParams,
-  effectiveParams,
-  instanceLabel,
-  useIndicatorList,
-} from '../api/indicators.ts';
+import { effectiveParams, instanceLabel, useIndicatorList } from '../api/indicators.ts';
 import { useSymbols } from '../api/market.ts';
 import { CHART_TYPES } from '../chart/chartTypes.ts';
 import { RANGE_LABEL, RANGES } from '../chart/visibleRange.ts';
@@ -12,6 +7,7 @@ import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import type { Command } from './commands.ts';
+import { addIndicator, removeIndicator } from './indicatorActions.ts';
 import { INTERVALS } from './intervals.ts';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery.ts';
 
@@ -21,10 +17,7 @@ const onOff = (on: boolean) => (on ? 'Turn off' : 'Turn on');
 export function usePaletteCommands(): Command[] {
   const chart = useChartStore();
   const instances = useIndicatorStore((s) => s.instances);
-  const add = useIndicatorStore((s) => s.add);
   const toggleVisible = useIndicatorStore((s) => s.toggleVisible);
-  const remove = useIndicatorStore((s) => s.remove);
-  const restore = useIndicatorStore((s) => s.restore);
   const ui = useUiStore();
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
@@ -69,12 +62,7 @@ export function usePaletteCommands(): Command[] {
         id: `rm-${instance.uid}`,
         label: `${label}: Remove`,
         run: () => {
-          ui.forgetIndicator(instance.uid);
-          const removed = remove(instance.uid);
-          if (removed !== null)
-            ui.showToast(`Removed ${label}`, () => {
-              restore(removed);
-            });
+          removeIndicator(instance.uid, label);
         },
       },
     );
@@ -197,7 +185,7 @@ export function usePaletteCommands(): Command[] {
       hint: spec.shortName,
       keywords: spec.description,
       run: () => {
-        ui.setEmphasis(add(spec.id, defaultParams(spec)));
+        addIndicator(spec);
       },
     });
   }

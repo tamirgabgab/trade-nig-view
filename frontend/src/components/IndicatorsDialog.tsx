@@ -1,10 +1,11 @@
 import { Search, X } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
-import { defaultParams, useIndicatorList } from '../api/indicators.ts';
+import { useIndicatorList } from '../api/indicators.ts';
 import { MAX_INSTANCES, useIndicatorStore } from '../store/indicatorStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import styles from './IndicatorsDialog.module.css';
+import { addIndicator } from './indicatorActions.ts';
 import { searchIndicators } from './indicatorSearch.ts';
 import dialog from './SymbolSearchDialog.module.css';
 import { restoreFocus, usePresence, type OverlayAttrs } from './usePresence.ts';
@@ -19,8 +20,6 @@ export function IndicatorsDialog() {
 
 function IndicatorsPanel({ attrs }: { attrs: OverlayAttrs }) {
   const setOpen = useUiStore((s) => s.setIndicatorsDialog);
-  const add = useIndicatorStore((s) => s.add);
-  const setEmphasis = useUiStore((s) => s.setEmphasis);
   const count = useIndicatorStore((s) => s.instances.length);
   const registry = useIndicatorList();
   const [query, setQuery] = useState('');
@@ -61,7 +60,7 @@ function IndicatorsPanel({ attrs }: { attrs: OverlayAttrs }) {
   const choose = (id: string) => {
     const spec = registry.data?.find((s) => s.id === id);
     if (spec === undefined || full) return;
-    setEmphasis(add(spec.id, defaultParams(spec)));
+    addIndicator(spec);
     close();
   };
 

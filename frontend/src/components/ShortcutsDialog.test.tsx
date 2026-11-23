@@ -4,12 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { useUiStore } from '../store/uiStore.ts';
 import { renderWithQuery } from '../test/render.tsx';
 import { ShortcutsDialog } from './ShortcutsDialog.tsx';
-import { opensShortcuts, useShortcutsHotkey } from './useShortcutsHotkey.ts';
-import { useSymbolSearchHotkey } from './useSymbolSearchHotkey.ts';
+import { opensShortcuts } from './keyTarget.ts';
+import { useAppHotkeys } from './useAppHotkeys.ts';
 
 function Harness() {
-  useShortcutsHotkey();
-  useSymbolSearchHotkey();
+  useAppHotkeys();
   return (
     <>
       <input aria-label="Field" />

@@ -4,6 +4,7 @@ import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import { formatPrice, formatVolume } from './formatNumber.ts';
 import { IconButton } from './IconButton.tsx';
+import { removeIndicator } from './indicatorActions.ts';
 import styles from './IndicatorLegend.module.css';
 import { valueOutputs, type IndicatorView } from './useChartIndicators.ts';
 
@@ -28,11 +29,7 @@ export function IndicatorLegend({
   label = 'Indicators on the chart',
 }: IndicatorLegendProps) {
   const toggleVisible = useIndicatorStore((s) => s.toggleVisible);
-  const remove = useIndicatorStore((s) => s.remove);
-  const restore = useIndicatorStore((s) => s.restore);
-  const showToast = useUiStore((s) => s.showToast);
   const setLegendFocus = useUiStore((s) => s.setLegendFocus);
-  const forgetIndicator = useUiStore((s) => s.forgetIndicator);
   const emphasis = useUiStore((s) => s.emphasis);
   const openSettings = useUiStore((s) => s.openSettings);
   const settingsFor = useUiStore((s) => s.settingsFor);
@@ -130,13 +127,7 @@ export function IndicatorLegend({
                 label={`Remove ${view.label}`}
                 icon={<X size={ICON} />}
                 onClick={() => {
-                  forgetIndicator(uid);
-                  const removed = remove(uid);
-                  if (removed !== null) {
-                    showToast(`Removed ${view.label}`, () => {
-                      restore(removed);
-                    });
-                  }
+                  removeIndicator(uid, view.label);
                 }}
               />
             </span>

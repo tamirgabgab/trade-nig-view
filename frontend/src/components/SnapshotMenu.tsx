@@ -1,34 +1,18 @@
 import { Camera } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
-import { selectModalOpen, useUiStore } from '../store/uiStore.ts';
+import { useUiStore } from '../store/uiStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import styles from './ChartTypeMenu.module.css';
 import { IconButton } from './IconButton.tsx';
 import { usePresence } from './usePresence.ts';
 
-/** Camera button: a menu to copy the chart image (Alt+S) or save it as a PNG. */
+/** Camera button: a menu to copy the chart image (also Alt+S, in useAppHotkeys) or save a PNG. */
 export function SnapshotMenu() {
   const requestSnapshot = useUiStore((s) => s.requestSnapshot);
-  const modalOpen = useUiStore(selectModalOpen);
   const [open, setOpen] = useState(false);
   const menu = usePresence(open ? true : null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  // Alt+S copies the chart from anywhere (no dialog open).
-  useEffect(() => {
-    if (modalOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      // code, not key: Option+S on a Mac types "ß".
-      if (!event.altKey || event.ctrlKey || event.metaKey || event.code !== 'KeyS') return;
-      event.preventDefault();
-      requestSnapshot('copy');
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [modalOpen, requestSnapshot]);
 
   const close = useCallback((restoreFocus: boolean) => {
     setOpen(false);

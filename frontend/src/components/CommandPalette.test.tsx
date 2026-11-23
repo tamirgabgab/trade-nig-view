@@ -16,7 +16,7 @@ import {
   stubApi,
   SYMBOLS,
 } from '../test/render.tsx';
-import { opensPalette } from './useCommandPaletteHotkey.ts';
+import { opensPalette } from './keyTarget.ts';
 
 vi.mock('../chart/ChartEngine.ts', () => import('../test/fakeChartEngine.ts'));
 

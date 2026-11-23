@@ -10,10 +10,7 @@ import { RightSidebar } from './components/RightSidebar.tsx';
 import { ShortcutsDialog } from './components/ShortcutsDialog.tsx';
 import { SymbolSearchDialog } from './components/SymbolSearchDialog.tsx';
 import { TopToolbar } from './components/TopToolbar.tsx';
-import { useCommandPaletteHotkey } from './components/useCommandPaletteHotkey.ts';
-import { useIndicatorsHotkey } from './components/useIndicatorsHotkey.ts';
-import { useShortcutsHotkey } from './components/useShortcutsHotkey.ts';
-import { useSymbolSearchHotkey } from './components/useSymbolSearchHotkey.ts';
+import { useAppHotkeys } from './components/useAppHotkeys.ts';
 import { useThemeStore } from './store/themeStore.ts';
 
 /** Application shell: five regions laid out like a desktop charting terminal. */
@@ -23,10 +20,7 @@ export function App() {
   useLayoutEffect(() => {
     document.documentElement.dataset['theme'] = theme;
   }, [theme]);
-  useSymbolSearchHotkey();
-  useIndicatorsHotkey();
-  useShortcutsHotkey();
-  useCommandPaletteHotkey();
+  useAppHotkeys();
   return (
     <div className={styles.shell}>
       <TopToolbar className={styles.top} />

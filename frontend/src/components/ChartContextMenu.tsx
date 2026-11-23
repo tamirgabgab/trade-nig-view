@@ -15,7 +15,6 @@ interface ChartContextMenuProps {
   attrs: OverlayAttrs;
   onClose: () => void;
   onResetView: () => void;
-  onRemoveAll: () => void;
 }
 
 /** Right-click menu on the chart. */
@@ -25,7 +24,6 @@ export function ChartContextMenu({
   attrs,
   onClose,
   onResetView,
-  onRemoveAll,
 }: ChartContextMenuProps) {
   const scaleMode = useChartStore((s) => s.scaleMode);
   const toggleScaleMode = useChartStore((s) => s.toggleScaleMode);
@@ -33,6 +31,7 @@ export function ChartContextMenu({
   const setIndicatorsDialog = useUiStore((s) => s.setIndicatorsDialog);
   const requestSnapshot = useUiStore((s) => s.requestSnapshot);
   const showToast = useUiStore((s) => s.showToast);
+  const confirmRemoveAll = useUiStore((s) => s.setConfirmRemoveAll);
 
   const items: MenuItem[] = [
     { label: 'Reset chart view', onSelect: onResetView },
@@ -85,7 +84,13 @@ export function ChartContextMenu({
     },
   );
   if (indicatorCount > 0) {
-    items.push({ label: 'Remove all indicators…', divider: true, onSelect: onRemoveAll });
+    items.push({
+      label: 'Remove all indicators…',
+      divider: true,
+      onSelect: () => {
+        confirmRemoveAll(true);
+      },
+    });
   }
 
   return (

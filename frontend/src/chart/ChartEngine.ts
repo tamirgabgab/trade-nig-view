@@ -194,6 +194,7 @@ export class ChartEngine {
   private readonly hover: RafLatest<number | null>;
   private chartType: ChartType = 'candles';
   private bars: readonly Bar[] = [];
+  private lastLines: readonly IndicatorLine[] = [];
   private times: ChartTime[] = [];
   private decimals = 2;
   private readonly lines = new Map<string, LineEntry>();
@@ -274,18 +275,7 @@ export class ChartEngine {
     this.renderMain();
 
     this.volume.applyOptions({ visible: hasVolume });
-    this.volume.setData(
-      hasVolume
-        ? withTime(
-            toVolume(
-              bars,
-              this.times,
-              withAlpha(this.theme.up, VOLUME_ALPHA),
-              withAlpha(this.theme.down, VOLUME_ALPHA),
-            ),
-          )
-        : [],
-    );
+    this.renderVolume();
 
     if (before !== null) {
       // Older bars were prepended: every bar index moved right by `shift`; keep the same bars.
@@ -303,6 +293,7 @@ export class ChartEngine {
    * values, bars or colours changed.
    */
   setIndicatorLines(all: readonly IndicatorLine[]): void {
+    this.lastLines = all;
     const lines = all.filter((line) => line.plot !== 'markers');
     this.setMarkers(
       all
@@ -530,22 +521,31 @@ export class ChartEngine {
     this.recreateMain();
   }
 
-  /**
-   * Repaint with another theme (light/dark), keeping data and viewport. Indicator level lines
-   * take the new colours on the next `setIndicatorLines`.
-   */
+  /** Repaint with another theme (light/dark), keeping data and viewport. */
   setTheme(theme: ChartTheme): void {
     this.theme = theme;
     this.chart.applyOptions(themeOptions(theme));
     this.recreateMain();
-    if (this.bars.length > 0) {
-      this.setBars(this.bars, {
-        decimals: this.decimals,
-        hasVolume: this.hasVolume,
-        resetView: false,
-      });
-    }
+    this.renderVolume();
+    // Level lines take their colour from the theme: redraw them (indicator data stays as is).
     for (const entry of this.lines.values()) entry.levels = '';
+    this.setIndicatorLines(this.lastLines);
+  }
+
+  /** Volume bars coloured by candle direction (the colours come from the theme). */
+  private renderVolume(): void {
+    this.volume.setData(
+      this.hasVolume
+        ? withTime(
+            toVolume(
+              this.bars,
+              this.times,
+              withAlpha(this.theme.up, VOLUME_ALPHA),
+              withAlpha(this.theme.down, VOLUME_ALPHA),
+            ),
+          )
+        : [],
+    );
   }
 
   private recreateMain(): void {

@@ -1,3 +1,4 @@
+import { zoneOffsetSeconds } from '../chart/timeZone.ts';
 import type { SymbolInfo } from '../api/market.ts';
 
 /** Regular US cash session, used for symbols without a session spanning midnight. */
@@ -6,8 +7,6 @@ const CLOSE = 16 * 60;
 /** Futures and forex close on Friday (and pause each weekday) at 17:00 exchange time. */
 const WEEKLY_CLOSE = 17 * 60;
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 function minutesOf(hhmm: string): number {
   const [h = 0, m = 0] = hhmm.split(':').map(Number);
   return h * 60 + m;
@@ -15,18 +14,9 @@ function minutesOf(hhmm: string): number {
 
 /** Weekday (0 = Sunday) and minutes after midnight of `now` in `timeZone`. */
 function localTime(now: Date, timeZone: string): { day: number; minutes: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-  return {
-    day: WEEKDAYS.indexOf(part('weekday')),
-    minutes: Number(part('hour')) * 60 + Number(part('minute')),
-  };
+  const ms = now.getTime();
+  const wall = new Date(ms + zoneOffsetSeconds(ms / 1000, timeZone) * 1000);
+  return { day: wall.getUTCDay(), minutes: wall.getUTCHours() * 60 + wall.getUTCMinutes() };
 }
 
 /**

@@ -10,10 +10,7 @@ import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../cha
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useThemeStore } from '../store/themeStore.ts';
-import { EMPHASIS_MS, useUiStore, type SnapshotMode } from '../store/uiStore.ts';
-import { readChartTheme } from '../chart/theme.ts';
-import { formatPrice } from './formatNumber.ts';
-import { copyImage, downloadImage, snapshotFileName, withTitleBand } from './snapshot.ts';
+import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
 import { IconButton } from './IconButton.tsx';
@@ -21,6 +18,7 @@ import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { ChartContextMenu } from './ChartContextMenu.tsx';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
+import { removeAllIndicators } from './indicatorActions.ts';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
 import { legendValues } from './legendValues.ts';
@@ -28,6 +26,7 @@ import { presentLines } from './presentLines.ts';
 import { Toast } from './Toast.tsx';
 import { usePresence } from './usePresence.ts';
 import { useChartIndicators } from './useChartIndicators.ts';
+import { useChartSnapshot } from './useChartSnapshot.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
 
 // Markdown + KaTeX load with the first learn page, not with the chart.
@@ -75,9 +74,6 @@ export function ChartArea({ className }: ChartAreaProps) {
   }, []);
   const confirmClear = useUiStore((s) => s.confirmRemoveAll);
   const setConfirmClear = useUiStore((s) => s.setConfirmRemoveAll);
-  const forgetIndicator = useUiStore((s) => s.forgetIndicator);
-  const removeAll = useIndicatorStore((s) => s.removeAll);
-  const restoreAll = useIndicatorStore((s) => s.restoreAll);
   const [offLatest, setOffLatest] = useState(false);
   // Until the first indicator is ever added (uids are never reused, so seq counts additions).
   const firstRun = useIndicatorStore((s) => s.seq === 0);
@@ -119,44 +115,14 @@ export function ChartArea({ className }: ChartAreaProps) {
     latest.current = history;
   });
 
-  // Chart image: the title band names the symbol and its latest bar (read when the image comes).
   const snapshot = useUiStore((s) => s.snapshot);
-  const showToast = useUiStore((s) => s.showToast);
-  const snapshotText = useRef({ title: '', detail: '', file: '' });
-  useEffect(() => {
-    const last = legendValues(bars, null);
-    const ohlc =
-      last === null
-        ? ''
-        : `O ${formatPrice(last.open, decimals)}  H ${formatPrice(last.high, decimals)}  L ${formatPrice(last.low, decimals)}  C ${formatPrice(last.close, decimals)}`;
-    snapshotText.current = {
-      title: [info?.display ?? shownSymbol, info?.name, shownInterval, info?.exchange]
-        .filter(Boolean)
-        .join(' · '),
-      detail: [ohlc, typeof last?.time === 'string' ? last.time : ''].filter(Boolean).join('   '),
-      file: snapshotFileName(info?.display ?? shownSymbol, shownInterval, new Date()),
-    };
+  const onSnapshot = useChartSnapshot({
+    bars,
+    decimals,
+    info,
+    symbol: shownSymbol,
+    interval: shownInterval,
   });
-  const onSnapshot = useCallback(
-    (image: HTMLCanvasElement, mode: SnapshotMode) => {
-      const { title, detail, file } = snapshotText.current;
-      const out = withTitleBand(image, title, detail, readChartTheme());
-      const done =
-        mode === 'copy'
-          ? copyImage(out).then(() => 'Chart image copied')
-          : downloadImage(out, file).then(() => `Chart saved as ${file}`);
-      done.then(
-        (message) => {
-          showToast(message);
-        },
-        (error: unknown) => {
-          const reason = error instanceof Error ? error.message : String(error);
-          showToast(`Could not ${mode === 'copy' ? 'copy' : 'save'} the chart image (${reason})`);
-        },
-      );
-    },
-    [showToast],
-  );
   const onVisibleRangeChange = useCallback((range: LogicalRange | null) => {
     const h = latest.current;
     if (range !== null && range.from < LOAD_OLDER_THRESHOLD && h.hasOlder && !h.isLoadingOlder) {
@@ -313,9 +279,6 @@ export function ChartArea({ className }: ChartAreaProps) {
           onResetView={() => {
             runCommand('reset');
           }}
-          onRemoveAll={() => {
-            setConfirmClear(true);
-          }}
         />
       )}
       {confirmClear && (
@@ -328,12 +291,7 @@ export function ChartArea({ className }: ChartAreaProps) {
           }}
           onConfirm={() => {
             setConfirmClear(false);
-            forgetIndicator();
-            const removed = removeAll();
-            const n = removed.length;
-            showToast(`Removed ${String(n)} indicator${n === 1 ? '' : 's'}`, () => {
-              restoreAll(removed);
-            });
+            removeAllIndicators();
           }}
         />
       )}
