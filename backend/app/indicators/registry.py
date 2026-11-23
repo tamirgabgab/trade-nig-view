@@ -27,7 +27,8 @@ Input = Literal["open", "high", "low", "close", "volume"]
 
 #: Minimum warm-up history added before the requested range (ARCHITECTURE section 3.2).
 MIN_LOOKBACK = 250
-#: Lookback per bar of the longest length: residual seed weight of an RMA is e^-25 = 1.4e-11.
+#: Lookback per bar of the longest length: the RMA seed sits at bar n-1 of the loaded history, so
+#: its weight on the first visible bar is at most e^-24 = 3.8e-11.
 LOOKBACK_PER_LENGTH = 25
 
 

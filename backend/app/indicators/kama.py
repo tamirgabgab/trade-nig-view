@@ -5,8 +5,10 @@ r"""Kaufman Adaptive Moving Average (Perry Kaufman, 1995).
    c_t = \left(ER_t\,(f - s) + s\right)^2,\quad
    K_t = K_{t-1} + c_t\,(x_t - K_{t-1})
 
-with :math:`f = \frac{2}{F+1}`, :math:`s = \frac{2}{S+1}`. A trending market (ER near 1) makes it
-an EMA of length F; a choppy one (ER near 0) an EMA of length S. Seed :math:`K_{n-1} = x_{n-1}`,
+with :math:`f = \frac{2}{F+1}`, :math:`s = \frac{2}{S+1}`. Because :math:`c` is squared, a trending
+market (ER near 1) makes it an EMA with :math:`\alpha = f^2` and a choppy one (ER near 0) one with
+:math:`\alpha = s^2`: EMA lengths :math:`2/\alpha - 1` = 3.5 and 479.5 at the defaults, not F and S.
+Seed :math:`K_{n-1} = x_{n-1}`,
 first value at bar :math:`n` (identical to TA-Lib). Not a TradingView built-in (decision D4).
 Defaults (Kaufman): 10, 2, 30; ``fast > slow`` is rejected.
 """

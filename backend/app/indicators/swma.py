@@ -2,7 +2,8 @@ r"""Symmetrically Weighted Moving Average (Pine ``ta.swma``).
 
 .. math:: \mathrm{SWMA}_t = \frac{x_t + 2x_{t-1} + 2x_{t-2} + x_{t-3}}{6}
 
-A fixed 4-tap triangular filter (no length input): lag 1.5 bars, NRF 5/18. Warm-up 3 bars.
+A fixed 4-tap trapezoidal filter, SMA2 of SMA3 (no length input): lag 1.5 bars, NRF 5/18.
+Warm-up 3 bars.
 Available in Pine as a function, used by other indicators (e.g. RVI); shown here as an overlay.
 """
 

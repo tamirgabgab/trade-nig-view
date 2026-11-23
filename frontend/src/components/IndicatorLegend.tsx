@@ -23,6 +23,8 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
   const remove = useIndicatorStore((s) => s.remove);
   const openSettings = useUiStore((s) => s.openSettings);
   const settingsFor = useUiStore((s) => s.settingsFor);
+  const openLearn = useUiStore((s) => s.openLearn);
+  const learnFor = useUiStore((s) => s.learnFor);
   if (views.length === 0) return null;
   const index = hoverIndex ?? barCount - 1;
 
@@ -83,7 +85,11 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
                 className={styles.action}
                 label={`Learn: ${view.spec?.name ?? view.label}`}
                 icon={<BookOpen size={ICON} />}
-                comingIn="L1"
+                pressed={learnFor === uid}
+                disabled={view.spec === undefined}
+                onClick={() => {
+                  openLearn(learnFor === uid ? null : uid);
+                }}
               />
               <IconButton
                 className={styles.action}
@@ -91,6 +97,7 @@ export function IndicatorLegend({ views, hoverIndex, barCount, decimals }: Indic
                 icon={<X size={ICON} />}
                 onClick={() => {
                   if (settingsFor === uid) openSettings(null);
+                  if (learnFor === uid) openLearn(null);
                   remove(uid);
                 }}
               />

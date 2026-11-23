@@ -27,6 +27,9 @@
 
   --color-chart-grid: #1c1c1c;
   --color-chart-crosshair: #6a6d78;
+  /* Categorical plot series (learn drawer), validated for CVD separation on each surface. */
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
 
   --color-tooltip-bg: #e9e9ea;
   --color-tooltip-text: #0f0f0f;
@@ -75,6 +78,8 @@
 
   --color-chart-grid: #f0f3fa;
   --color-chart-crosshair: #9598a1;
+  --color-series-1: #2a78d6;
+  --color-series-2: #eb6834;
 
   --color-tooltip-bg: #131722;
   --color-tooltip-text: #ffffff;

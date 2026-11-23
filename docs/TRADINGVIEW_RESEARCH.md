@@ -194,7 +194,7 @@ fabricated. Every indicator value at bar $t$ uses only bars $\le t$ (no lookahea
 
 | Indicator | Formula | TV defaults | Warm-up (first valid index) | Notes / TradingView differences |
 |---|---|---|---|---|
-| **SMA** | $\mathrm{SMA}_t = \frac{1}{n}\sum_{i=0}^{n-1} x_{t-i}$ | length 9, source close, offset 0 | $n-1$ | Rolling sum with periodic re-summation (Kahan or exact recompute) to bound float drift |
+| **SMA** | $\mathrm{SMA}_t = \frac{1}{n}\sum_{i=0}^{n-1} x_{t-i}$ | length 9, source close, offset 0 | $n-1$ | Each window summed exactly (no running sum, so no float drift) |
 | **EMA** | $\alpha = \frac{2}{n+1}$, $E_t = \alpha x_t + (1-\alpha) E_{t-1}$ | length 9, close | $n-1$ | **Seeding**: we use $E_{n-1} = \mathrm{SMA}_{n-1}$ (TA-Lib convention, and the same seed Pine uses for `ta.rma`). The Pine manual's illustrative `pine_ema` seeds with the first value ($E_0 = x_0$). The seed error decays as $(1-\alpha)^k$: for $n=9$ after 100 bars it is $0.8^{100}\approx 2\times10^{-10}$ of the initial difference, so the two conventions agree to display precision except in the first few dozen bars. Option `seed="first"` available for experiments. Verify against TV on a fresh symbol in R3 |
 | **RMA** (Wilder/SMMA) | $\alpha = 1/n$, seed $R_{n-1}=\mathrm{SMA}_{n-1}$ | — (internal) | $n-1$ | Same as Pine `ta.rma` |
 | **WMA** | $\frac{\sum_{i=0}^{n-1}(n-i)\,x_{t-i}}{n(n+1)/2}$ | length 9 | $n-1$ | |

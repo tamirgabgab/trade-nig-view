@@ -102,3 +102,23 @@ test('composites: Envelope with an EMA basis and MA Cross', async ({ page }) => 
   await expect(cross.locator('[data-output="fast"]')).toHaveText(price(sma(closes, 9)));
   await expect(cross.locator('[data-output="slow"]')).toHaveText(price(sma(closes, 21)));
 });
+
+test('learn drawer: KaTeX page and the measured filter view of SMA 9', async ({ page }) => {
+  await addIndicator(page, 'sma', 'Simple Moving Average');
+  await indicators(page).getByRole('button', { name: 'Learn: Simple Moving Average' }).click();
+
+  const drawer = page.getByRole('complementary', { name: 'Simple Moving Average' });
+  await expect(drawer.locator('.katex').first()).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: 'Formula' })).toBeVisible();
+
+  await drawer.getByRole('tab', { name: 'Filter view' }).click();
+  const table = drawer.getByRole('table');
+  // A 9-tap boxcar: lag (n - 1) / 2 = 4, NRF 1 / n, unit DC gain.
+  await expect(table.getByRole('row', { name: /^Lag \(bars\)/ })).toContainText('4.00');
+  await expect(table.getByRole('row', { name: /Noise/ })).toContainText('0.111');
+  await expect(table.getByRole('row', { name: /DC gain/ })).toContainText('1.000');
+  await expect(drawer.getByRole('figure', { name: /Magnitude/ })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+});

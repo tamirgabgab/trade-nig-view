@@ -1,0 +1,109 @@
+.figure {
+  margin: 0 0 var(--space-4);
+}
+
+.title {
+  margin-bottom: var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.frame {
+  position: relative;
+  border-radius: var(--radius-sm);
+}
+
+.frame:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+}
+
+.grid {
+  stroke: var(--color-chart-grid);
+  stroke-width: 1;
+}
+
+.axis {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.reference {
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.tick,
+.axisLabel {
+  fill: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stems {
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.crosshair {
+  stroke: var(--color-chart-crosshair);
+  stroke-width: 1;
+}
+
+.tooltip {
+  position: absolute;
+  top: var(--space-1);
+  z-index: var(--z-tooltip);
+  min-width: 120px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-tooltip-bg);
+  color: var(--color-tooltip-text);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transform: translateX(10px);
+}
+
+.flip {
+  transform: translateX(calc(-100% - 10px));
+}
+
+.tooltipX {
+  margin-bottom: 2px;
+  opacity: 0.75;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.key {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.tooltipLabel {
+  opacity: 0.75;
+}

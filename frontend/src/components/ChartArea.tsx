@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useBarHistory } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
@@ -6,6 +6,7 @@ import { transformFor } from '../chart/chartTypes.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
+import { useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
@@ -14,6 +15,11 @@ import { LegendOHLC } from './LegendOHLC.tsx';
 import { legendValues } from './legendValues.ts';
 import { useChartIndicators } from './useChartIndicators.ts';
 import { useDelayedFlag } from './useDelayedFlag.ts';
+
+// Markdown + KaTeX load with the first learn page, not with the chart.
+const LearnDrawer = lazy(() =>
+  import('./LearnDrawer.tsx').then((m) => ({ default: m.LearnDrawer })),
+);
 
 interface ChartAreaProps {
   className?: string | undefined;
@@ -40,6 +46,7 @@ export function ChartArea({ className }: ChartAreaProps) {
   const transform = transformFor(chartType);
   const history = useBarHistory({ symbol, interval, adjusted, transform });
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const learnOpen = useUiStore((s) => s.learnFor !== null);
 
   const data = history.data;
   const bars = history.bars;
@@ -160,6 +167,11 @@ export function ChartArea({ className }: ChartAreaProps) {
         onVisibleRangeChange={onVisibleRangeChange}
       />
       <IndicatorSettingsPanel views={indicators.views} />
+      {learnOpen && (
+        <Suspense fallback={null}>
+          <LearnDrawer views={indicators.views} />
+        </Suspense>
+      )}
       {history.isLoadingOlder && (
         <p className={styles.olderPill} role="status">
           Loading older bars…

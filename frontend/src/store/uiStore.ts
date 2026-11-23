@@ -11,6 +11,9 @@ export interface UiState {
   /** Instance whose settings panel is open, or null. */
   settingsFor: string | null;
   openSettings: (uid: string | null) => void;
+  /** Instance whose learn drawer is open, or null (one side panel at a time). */
+  learnFor: string | null;
+  openLearn: (uid: string | null) => void;
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -27,6 +30,10 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   settingsFor: null,
   openSettings: (uid) => {
-    set({ settingsFor: uid });
+    set(uid === null ? { settingsFor: null } : { settingsFor: uid, learnFor: null });
+  },
+  learnFor: null,
+  openLearn: (uid) => {
+    set(uid === null ? { learnFor: null } : { learnFor: uid, settingsFor: null });
   },
 }));
