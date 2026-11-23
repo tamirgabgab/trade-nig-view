@@ -8,6 +8,8 @@ describe('withAlpha', () => {
 
   it('returns other color syntaxes unchanged', () => {
     expect(withAlpha('rgb(1 2 3)', 0.5)).toBe('rgb(1 2 3)');
+    // A dimmed line's colour dims further (the RSI band of a dimmed RSI).
+    expect(withAlpha('rgba(8, 153, 129, 0.2)', 0.5)).toBe('rgba(8, 153, 129, 0.1)');
   });
 });
 

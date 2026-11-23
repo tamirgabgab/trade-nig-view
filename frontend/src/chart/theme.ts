@@ -56,8 +56,17 @@ export function readChartTheme(element: Element = document.documentElement): Cha
   return theme;
 }
 
-/** '#089981' + 0.5 -> 'rgba(8, 153, 129, 0.5)'. Non-hex colors are returned unchanged. */
+/**
+ * '#089981' + 0.5 -> 'rgba(8, 153, 129, 0.5)'; 'rgba(8, 153, 129, 0.5)' + 0.5 -> alpha 0.25.
+ * Other colours are returned unchanged.
+ */
 export function withAlpha(color: string, alpha: number): string {
+  // An rgba colour (e.g. a line already dimmed) multiplies its own alpha.
+  const rgba = /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/.exec(color.trim());
+  if (rgba !== null) {
+    const [, r, g, b, a] = rgba;
+    return `rgba(${String(r)}, ${String(g)}, ${String(b)}, ${String(Number(a) * alpha)})`;
+  }
   const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
   if (match?.[1] === undefined) return color;
   let hex = match[1];
