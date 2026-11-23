@@ -882,9 +882,9 @@ export interface components {
         LabResponse: {
             /**
              * Time
-             * @description Bar times, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)
+             * @description Daily bar dates ('YYYY-MM-DD')
              */
-            time: (string | number)[];
+            time: string[];
             /** Open */
             open: number[];
             /** High */
@@ -1406,19 +1406,12 @@ export interface components {
             kind: "symbol";
             /** Symbol */
             symbol: string;
-            /** @default 1D */
-            interval: components["schemas"]["Interval"];
             /**
              * Bars
-             * @description The last `bars` bars of the history
+             * @description The last `bars` daily (adjusted) bars
              * @default 500
              */
             bars: number;
-            /**
-             * Adjusted
-             * @default true
-             */
-            adjusted: boolean;
         };
         /** SyntheticSource */
         SyntheticSource: {

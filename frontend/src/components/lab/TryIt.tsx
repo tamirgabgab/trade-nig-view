@@ -5,6 +5,7 @@ import { useLab, type LabSource } from '../../api/lab.ts';
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
 import { chartLines, withDefaults } from './labModel.ts';
+import { LabOutcome } from './LabOutcome.tsx';
 import { MiniChart } from './MiniChart.tsx';
 import { SourcePicker } from './SourcePicker.tsx';
 import { useDebounced } from './useDebounced.ts';
@@ -95,22 +96,18 @@ export function TryIt({ spec, initial }: { spec: IndicatorInfo; initial: Params 
           );
         })}
       </div>
-      {lab.isError ? (
-        <p className={styles.error} role="alert">
-          Could not compute: {lab.error.message}
-        </p>
-      ) : lab.data === undefined ? (
-        <p className={styles.note}>Computing…</p>
-      ) : (
-        <MiniChart
-          title={spec.name}
-          time={lab.data.time}
-          close={lab.data.close}
-          overlays={overlays}
-          pane={pane}
-          formatValue={(v) => formatPrice(v, 2)}
-        />
-      )}
+      <LabOutcome lab={lab}>
+        {(data) => (
+          <MiniChart
+            title={spec.name}
+            time={data.time}
+            close={data.close}
+            overlays={overlays}
+            pane={pane}
+            formatValue={(v) => formatPrice(v, 2)}
+          />
+        )}
+      </LabOutcome>
     </div>
   );
 }

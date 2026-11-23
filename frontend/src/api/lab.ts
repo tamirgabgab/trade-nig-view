@@ -14,7 +14,7 @@ export const SCENARIOS = [
   { id: 'range', label: 'Range', hint: 'Mean-reverting: prices pulled back to 100' },
   { id: 'reversal', label: 'Reversal', hint: 'Up for half the bars, then down' },
   { id: 'shock', label: 'Shock', hint: 'A random walk with one −15 % gap' },
-  { id: 'volatility_regime', label: 'Volatility regime', hint: 'Calm, then four times wilder' },
+  { id: 'volatility_regime', label: 'Volatility regime', hint: 'Calm, then 3.75 times wilder' },
 ] as const;
 export type Scenario = (typeof SCENARIOS)[number]['id'];
 
@@ -75,7 +75,7 @@ export interface LabIndicatorResult {
 }
 
 export interface LabResult {
-  time: (string | number)[];
+  time: string[];
   open: number[];
   high: number[];
   low: number[];
@@ -133,9 +133,7 @@ export function parseLab(body: unknown): LabResult {
   if (!Array.isArray(time)) throw new Error('Unexpected lab response');
   const indicators = f('indicators');
   return {
-    time: (time as unknown[]).filter(
-      (t): t is string | number => typeof t === 'string' || typeof t === 'number',
-    ),
+    time: (time as unknown[]).filter((t): t is string => typeof t === 'string'),
     open: nums(f('open')),
     high: nums(f('high')),
     low: nums(f('low')),

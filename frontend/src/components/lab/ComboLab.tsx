@@ -5,6 +5,7 @@ import { useLab, useLabs, type LabSource, type Scenario, type Study } from '../.
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
 import { buildRules, chartLines, logToPercent, type RuleSpec } from './labModel.ts';
+import { LabOutcome } from './LabOutcome.tsx';
 import { MiniChart } from './MiniChart.tsx';
 import { SourcePicker } from './SourcePicker.tsx';
 import { StudyCard } from './StudyCard.tsx';
@@ -85,25 +86,23 @@ export function ComboLab({ block }: { block: ComboBlock }) {
       </table>
       {chosen.length === 0 ? (
         <p className={styles.note}>Switch on at least one rule.</p>
-      ) : combined.isError ? (
-        <p className={styles.error} role="alert">
-          Could not compute: {combined.error.message}
-        </p>
-      ) : combined.data === undefined ? (
-        <p className={styles.note}>Computing…</p>
       ) : (
-        <>
-          <MiniChart
-            title={`Signals where all ${String(chosen.length)} rule${chosen.length === 1 ? '' : 's'} hold`}
-            time={combined.data.time}
-            close={combined.data.close}
-            overlays={overlays}
-            pane={pane}
-            markers={combined.data.study?.eventIndex ?? []}
-            formatValue={(v) => formatPrice(v, 2)}
-          />
-          {combined.data.study !== null && <StudyCard study={combined.data.study} />}
-        </>
+        <LabOutcome lab={combined}>
+          {(data) => (
+            <>
+              <MiniChart
+                title={`Signals where all ${String(chosen.length)} rule${chosen.length === 1 ? '' : 's'} hold`}
+                time={data.time}
+                close={data.close}
+                overlays={overlays}
+                pane={pane}
+                markers={data.study?.eventIndex ?? []}
+                formatValue={(v) => formatPrice(v, 2)}
+              />
+              {data.study !== null && <StudyCard study={data.study} />}
+            </>
+          )}
+        </LabOutcome>
       )}
     </section>
   );

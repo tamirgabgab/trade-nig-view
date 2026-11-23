@@ -2171,18 +2171,11 @@
         "properties": {
           "time": {
             "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
+              "type": "string"
             },
             "type": "array",
             "title": "Time",
-            "description": "Bar times, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)"
+            "description": "Daily bar dates ('YYYY-MM-DD')"
           },
           "open": {
             "items": {
@@ -3510,22 +3503,13 @@
             "minLength": 1,
             "title": "Symbol"
           },
-          "interval": {
-            "$ref": "#/components/schemas/Interval",
-            "default": "1D"
-          },
           "bars": {
             "type": "integer",
             "maximum": 2000.0,
             "minimum": 100.0,
             "title": "Bars",
-            "description": "The last `bars` bars of the history",
+            "description": "The last `bars` daily (adjusted) bars",
             "default": 500
-          },
-          "adjusted": {
-            "type": "boolean",
-            "title": "Adjusted",
-            "default": true
           }
         },
         "type": "object",

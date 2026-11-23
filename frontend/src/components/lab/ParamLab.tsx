@@ -5,6 +5,7 @@ import { useLab, type LabSource, type Scenario } from '../../api/lab.ts';
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
 import { chartLines, withDefaults } from './labModel.ts';
+import { LabOutcome } from './LabOutcome.tsx';
 import { MiniChart } from './MiniChart.tsx';
 import { SourcePicker } from './SourcePicker.tsx';
 import { useDebounced } from './useDebounced.ts';
@@ -70,25 +71,21 @@ export function ParamLab({ block }: { block: ParamBlock }) {
         />
         <output className={styles.value}>{shown}</output>
       </label>
-      {lab.isError ? (
-        <p className={styles.error} role="alert">
-          Could not compute: {lab.error.message}
-        </p>
-      ) : lab.data === undefined ? (
-        <p className={styles.note}>Computing…</p>
-      ) : (
-        <MiniChart
-          title={
-            block.caption ??
-            `${spec?.shortName ?? block.indicator} with ${param?.label ?? block.vary} = ${String(settled)}`
-          }
-          time={lab.data.time}
-          close={lab.data.close}
-          overlays={overlays}
-          pane={pane}
-          formatValue={(v) => formatPrice(v, 2)}
-        />
-      )}
+      <LabOutcome lab={lab}>
+        {(data) => (
+          <MiniChart
+            title={
+              block.caption ??
+              `${spec?.shortName ?? block.indicator} with ${param?.label ?? block.vary} = ${String(settled)}`
+            }
+            time={data.time}
+            close={data.close}
+            overlays={overlays}
+            pane={pane}
+            formatValue={(v) => formatPrice(v, 2)}
+          />
+        )}
+      </LabOutcome>
     </section>
   );
 }

@@ -189,7 +189,7 @@ def test_symbol_source_uses_the_last_bars(e2e_client: TestClient) -> None:
     body = lab(
         e2e_client,
         {
-            "source": {"kind": "symbol", "symbol": "NVDA", "bars": 300, "adjusted": False},
+            "source": {"kind": "symbol", "symbol": "NVDA", "bars": 300},
             "indicators": [{"id": "ma_cross"}],
             "conditions": [
                 {
@@ -200,19 +200,11 @@ def test_symbol_source_uses_the_last_bars(e2e_client: TestClient) -> None:
             ],
         },
     )
-    bars = e2e_client.get(
-        "/api/bars", params={"symbol": "NVDA", "limit": 300, "adjusted": "false"}
-    ).json()["bars"]
+    bars = e2e_client.get("/api/bars", params={"symbol": "NVDA", "limit": 300}).json()["bars"]
     assert body["time"] == [b["time"] for b in bars]
     assert body["close"] == [b["close"] for b in bars]
     assert set(body["indicators"][0]["outputs"]) == {"fast", "slow", "crosses"}
     assert body["study"]["baseline"]["n"] == 290
-
-
-def test_symbol_source_intraday_times_are_epoch_seconds(e2e_client: TestClient) -> None:
-    body = lab(e2e_client, {"source": {"kind": "symbol", "symbol": "AAPL", "interval": "1h"}})
-    assert 0 < len(body["time"]) <= 500  # the fixture has fewer hourly bars than asked for
-    assert all(isinstance(t, int) for t in body["time"])
 
 
 def test_unknown_symbol_is_404(client: TestClient) -> None:

@@ -5,6 +5,7 @@ import { useLab, type LabSource, type Op, type Scenario } from '../../api/lab.ts
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
 import { buildRules, chartLines, OP_LABEL, withDefaults } from './labModel.ts';
+import { LabOutcome } from './LabOutcome.tsx';
 import { MiniChart } from './MiniChart.tsx';
 import { SourcePicker } from './SourcePicker.tsx';
 import { StudyCard } from './StudyCard.tsx';
@@ -105,26 +106,22 @@ export function EventLab({ block }: { block: EventBlock }) {
           <output className={styles.value}>{horizon} bars</output>
         </label>
       </div>
-      {lab.isError ? (
-        <p className={styles.error} role="alert">
-          Could not compute: {lab.error.message}
-        </p>
-      ) : lab.data === undefined ? (
-        <p className={styles.note}>Computing…</p>
-      ) : (
-        <>
-          <MiniChart
-            title={`Signals: ${name} ${OP_LABEL[rule.op]} ${String(Number(rule.threshold.toPrecision(4)))}`}
-            time={lab.data.time}
-            close={lab.data.close}
-            overlays={overlays}
-            pane={pane === null ? null : { ...pane, levels: [rule.threshold] }}
-            markers={lab.data.study?.eventIndex ?? []}
-            formatValue={(v) => formatPrice(v, 2)}
-          />
-          {lab.data.study !== null && <StudyCard study={lab.data.study} />}
-        </>
-      )}
+      <LabOutcome lab={lab}>
+        {(data) => (
+          <>
+            <MiniChart
+              title={`Signals: ${name} ${OP_LABEL[rule.op]} ${String(Number(rule.threshold.toPrecision(4)))}`}
+              time={data.time}
+              close={data.close}
+              overlays={overlays}
+              pane={pane === null ? null : { ...pane, levels: [rule.threshold] }}
+              markers={data.study?.eventIndex ?? []}
+              formatValue={(v) => formatPrice(v, 2)}
+            />
+            {data.study !== null && <StudyCard study={data.study} />}
+          </>
+        )}
+      </LabOutcome>
     </section>
   );
 }

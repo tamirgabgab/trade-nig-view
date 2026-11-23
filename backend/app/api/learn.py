@@ -140,9 +140,7 @@ class SyntheticSource(BaseModel):
 class SymbolSource(BaseModel):
     kind: Literal["symbol"]
     symbol: Annotated[str, Field(min_length=1, max_length=20)]
-    interval: Interval = Interval.D1
-    bars: LabBars = Field(default=500, description="The last `bars` bars of the history")
-    adjusted: bool = True
+    bars: LabBars = Field(default=500, description="The last `bars` daily (adjusted) bars")
 
 
 class LabIndicator(BaseModel):
@@ -199,9 +197,7 @@ class LabStudy(BaseModel):
 
 
 class LabResponse(BaseModel):
-    time: list[str | int] = Field(
-        description="Bar times, as in /api/bars ('YYYY-MM-DD' or UTC epoch seconds)"
-    )
+    time: list[str] = Field(description="Daily bar dates ('YYYY-MM-DD')")
     open: list[float]
     high: list[float]
     low: list[float]
@@ -246,10 +242,7 @@ def _check_operands(conditions: Iterable[Condition], specs: list[IndicatorSpec])
 def _lab_frame(source: SyntheticSource | SymbolSource, service: BarService) -> BarFrame:
     if isinstance(source, SyntheticSource):
         return synthetic_bars(source.scenario, source.seed, source.bars)
-    result = service.get_bars(
-        source.symbol, source.interval, adjusted=source.adjusted, limit=source.bars
-    )
-    return result.frame
+    return service.get_bars(source.symbol, Interval.D1, limit=source.bars).frame
 
 
 @router.post("/learn/lab", response_model=LabResponse)
@@ -267,10 +260,6 @@ def learn_lab(
     _check_operands(request.conditions, specs)
     frame = _lab_frame(request.source, service)
     outputs = [spec.run(frame, p) for spec, p in zip(specs, params, strict=True)]
-    intraday = isinstance(request.source, SymbolSource) and request.source.interval.is_intraday
-    times: list[str] | list[int] = (
-        [int(t) for t in frame.time] if intraday else ts_to_iso_dates(frame.time)
-    )
     study = None
     if request.conditions:
         es = event_study(frame.close, evaluate(request.conditions, frame, outputs), request.horizon)
@@ -290,7 +279,7 @@ def learn_lab(
             event_index=es.event_index.tolist(),
         )
     return LabResponse(
-        time=list(times),
+        time=ts_to_iso_dates(frame.time),
         open=frame.open.tolist(),
         high=frame.high.tolist(),
         low=frame.low.tolist(),
