@@ -44,3 +44,21 @@ def test_take_concat_and_equals() -> None:
     assert BarFrame.concat([head, tail]).equals(frame)
     assert not head.equals(frame)
     assert len(BarFrame.concat([])) == 0
+
+
+def test_session_column_is_optional_and_follows_take_and_concat() -> None:
+    frame = BarFrame.from_columns([0, 1, 2], [1.0] * 3, [2.0] * 3, [0.5] * 3, [1.5] * 3)
+    assert frame.session is None
+    assert frame.take(slice(1, None)).session is None
+    with_session = frame.with_session(np.array([7, 7, 8], dtype=np.int64))
+    masked = with_session.take(np.array([True, False, True])).session
+    assert masked is not None
+    assert masked.tolist() == [7, 8]
+    head, tail = with_session.take(slice(0, 1)), with_session.take(slice(1, None))
+    joined = BarFrame.concat([head, tail]).session
+    assert joined is not None
+    assert joined.tolist() == [7, 7, 8]
+    assert BarFrame.concat([head, frame]).session is None
+    assert with_session.equals(frame)  # sessions are not compared
+    with pytest.raises(ValueError, match="different lengths"):
+        frame.with_session(np.array([1], dtype=np.int64))

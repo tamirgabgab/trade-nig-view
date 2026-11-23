@@ -11,6 +11,7 @@ from app.indicators.catalog import CATALOG, get_spec
 from app.indicators.registry import (
     IndicatorSpec,
     InvalidParamsError,
+    ParamSpec,
     ParamValue,
     UnknownIndicatorError,
     length_lookback,
@@ -23,23 +24,27 @@ SPECS = sorted(CATALOG.values(), key=lambda s: s.id)
 
 
 def clean_frame(n: int = 600) -> BarFrame:
+    """Hourly-like bars, 7 per session (so session-anchored indicators have values)."""
     rng = np.random.default_rng(3)
     close = 100 + np.cumsum(rng.normal(0, 1, n))
     return BarFrame.from_columns(
-        time=np.arange(n) * 86_400,
+        time=np.arange(n) * 3_600,
         open=close + 0.1,
         high=close + 1.0,
         low=close - 1.0,
         close=close,
         volume=np.full(n, 1000.0),
-    )
+    ).with_session(np.arange(n, dtype=np.int64) // 7)
+
+
+#: Outputs that are all ``NaN`` while their switch is off (the defaults): RSI smoothing and bands.
+SWITCHED_OFF = {("rsi", "rsi_ma"), ("rsi", "bb_upper"), ("rsi", "bb_lower")}
 
 
 @pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
 def test_spec_is_complete(spec: IndicatorSpec) -> None:
     assert spec.id == spec.id.lower()
-    assert spec.params
-    assert spec.outputs
+    assert spec.outputs  # params may be empty (OBV)
     assert (DOCS / f"{spec.learn_slug}.md").is_file(), "learn-page stub missing"
     for p in spec.params:
         assert p.label
@@ -72,19 +77,27 @@ def with_length(spec: IndicatorSpec, length: int) -> dict[str, ParamValue]:
 @pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
 @pytest.mark.parametrize("length", [1, 5, 30])
 def test_warmup_matches_the_nan_prefix(spec: IndicatorSpec, length: int) -> None:
-    """Every line output starts exactly at ``warmup`` and has no gaps after it (markers are
-    sparse by design and only must not start earlier)."""
+    """``warmup`` is where the output that starts last starts; every line output starts no later
+    and has no gaps after its start. Markers are sparse by design and only must not start
+    earlier; optional outputs that are switched off are all ``NaN``."""
     params = with_length(spec, length)
     outputs = spec.run(clean_frame(), params)
     warmup = spec.warmup(params)
+    starts: list[int] = []
     for o in spec.outputs:
         values = outputs[o.name]
         valid = np.flatnonzero(~np.isnan(values))
         if o.plot == "markers":
             assert valid.size == 0 or valid[0] > warmup
             continue
-        assert int(valid[0]) == warmup, o.name
-        assert not np.isnan(values[warmup:]).any(), o.name
+        if (spec.id, o.name) in SWITCHED_OFF:
+            assert valid.size == 0, o.name
+            continue
+        start = int(valid[0])
+        assert start <= warmup, o.name
+        assert not np.isnan(values[start:]).any(), o.name
+        starts.append(start)
+    assert max(starts) == warmup
 
 
 @pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
@@ -92,6 +105,16 @@ def test_enum_option_labels_match_options(spec: IndicatorSpec) -> None:
     for p in spec.params:
         if p.option_labels:
             assert len(p.option_labels) == len(p.options)
+
+
+@pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
+def test_requires_names_an_earlier_switch(spec: IndicatorSpec) -> None:
+    earlier: dict[str, ParamSpec] = {}
+    for p in spec.params:
+        if p.requires is not None:
+            switch = earlier[p.requires]
+            assert switch.type == "bool" or "none" in switch.options
+        earlier[p.name] = p
 
 
 def test_defaults_are_filled_in_and_values_coerced() -> None:

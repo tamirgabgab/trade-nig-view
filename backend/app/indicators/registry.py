@@ -55,6 +55,9 @@ class ParamSpec:
     step: float | None = None
     options: tuple[str, ...] = ()
     option_labels: tuple[str, ...] = ()
+    #: Name of the bool / enum param that switches this one on (it applies only while that
+    #: param is true or not "none"); the UI greys it out and leaves it out of the legend.
+    requires: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +70,8 @@ class OutputSpec:
     color: str
     line_width: int = 2
     style: Mapping[str, str] = field(default_factory=dict[str, str])
+    #: As ``ParamSpec.requires``: the line exists only while that param switches it on.
+    requires: str | None = None
 
 
 def length_lookback(params: Params) -> int:

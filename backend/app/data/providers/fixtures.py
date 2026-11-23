@@ -44,6 +44,7 @@ def read_fixture(path: Path) -> BarFrame:
     days = np.array([row["date"] for row in rows], dtype="datetime64[D]").astype(np.int64)
     return BarFrame(
         time=days * SECONDS_PER_DAY,
+        session=None,
         **{
             name: np.array([float(row[name]) for row in rows], dtype=np.float64)
             for name in CSV_COLUMNS[1:]
@@ -74,6 +75,7 @@ def read_hourly_fixture(path: Path) -> BarFrame:
     return BarFrame(
         time=np.array([_parse_iso_utc(row["time"]) for row in rows], dtype=np.int64),
         adj_close=columns["close"].copy(),
+        session=None,
         **columns,
     )
 

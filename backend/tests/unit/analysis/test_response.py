@@ -12,7 +12,7 @@ from collections.abc import Callable
 import numpy as np
 import pytest
 
-from app.analysis.response import ADAPTIVE, VOLUME, OutputResponse, filter_response
+from app.analysis.response import ADAPTIVE, MAX_TAPS, VOLUME, OutputResponse, filter_response
 from app.indicators import core
 from app.indicators.catalog import CATALOG
 from app.indicators.registry import resolve_params
@@ -203,3 +203,44 @@ def test_scaled_nonlinear_outputs_are_normalised_by_their_gain() -> None:
     for band in ("upper", "lower"):
         assert outs[band].ramp_lag == pytest.approx(basis.ramp_lag, abs=1e-6)
         np.testing.assert_allclose(outs[band].step, basis.step, rtol=0, atol=1e-9)
+
+
+@pytest.mark.parametrize("indicator", sorted(CATALOG))
+def test_every_indicator_gives_a_finite_response_or_none(indicator: str) -> None:
+    """Outputs that do not follow the price (oscillators, volume lines, VWAP without sessions)
+    are left out; everything returned is finite (JSON has no NaN), and OBV's whole-history
+    lookback does not size the impulse (it is capped at MAX_TAPS)."""
+    spec = CATALOG[indicator]
+    for r in filter_response(spec, resolve_params(spec, {})):
+        assert np.isfinite(r.step).all()
+        assert math.isfinite(r.ramp_lag)
+        if r.impulse is not None:
+            assert len(r.impulse) <= MAX_TAPS
+            assert np.isfinite(r.impulse).all()
+            assert r.frequency is not None
+
+
+@pytest.mark.parametrize(
+    ("indicator", "names"),
+    [
+        ("bb", ["basis", "upper", "lower"]),
+        ("rsi", []),
+        ("macd", []),
+        ("stoch", []),
+        ("atr", []),
+        ("obv", []),
+        ("vwap", []),
+        ("vol_sma", []),
+    ],
+)
+def test_only_price_following_outputs_are_measured(indicator: str, names: list[str]) -> None:
+    spec = CATALOG[indicator]
+    assert [r.name for r in filter_response(spec, resolve_params(spec, {}))] == names
+
+
+def test_bollinger_bands_are_not_linear_but_the_basis_is() -> None:
+    spec = CATALOG["bb"]
+    out = {r.name: r for r in filter_response(spec, resolve_params(spec, {}))}
+    assert out["basis"].linear
+    assert out["basis"].lag == pytest.approx(9.5, abs=EXACT)
+    assert out["upper"].reason == ADAPTIVE

@@ -1007,6 +1007,18 @@
             },
             "type": "object",
             "title": "Style"
+          },
+          "requires": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requires",
+            "description": "Bool/enum param that switches this line on (true or not \"none\")"
           }
         },
         "type": "object",
@@ -1226,6 +1238,18 @@
             "type": "array",
             "title": "Option Labels",
             "description": "Display names of `options` (same order); empty = the ids"
+          },
+          "requires": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requires",
+            "description": "Bool/enum param that switches this one on (true or not \"none\")"
           }
         },
         "type": "object",

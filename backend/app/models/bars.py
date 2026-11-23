@@ -8,12 +8,15 @@ Conventions (see docs/ARCHITECTURE.md section 6):
 * ``open/high/low/close`` are **split-adjusted only** (what TradingView shows with ADJ off).
 * ``adj_close`` is split **and** dividend adjusted; ``adj_close / close`` is the dividend factor.
 * Arrays are sorted by ``time``, strictly increasing, all the same length.
+* ``session`` (optional) is the trading session of each intraday bar as a day number
+  (``app.data.sessions.session_days``); ``BarService`` sets it for intraday frames, it is ``None``
+  for daily+ and synthetic frames. Session-anchored indicators (VWAP) need it.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from enum import StrEnum
 
@@ -79,9 +82,12 @@ class BarFrame:
     close: FloatArray
     adj_close: FloatArray
     volume: FloatArray
+    session: IntArray | None = None
 
     def __post_init__(self) -> None:
         lengths = {len(getattr(self, name)) for name in _COLUMNS}
+        if self.session is not None:
+            lengths.add(len(self.session))
         if len(lengths) > 1:
             raise ValueError(f"BarFrame columns have different lengths: {sorted(lengths)}")
 
@@ -120,8 +126,12 @@ class BarFrame:
             else np.asarray(volume, dtype=np.float64),
         )
 
+    def with_session(self, session: IntArray | None) -> BarFrame:
+        """The same bars with ``session`` as their session column."""
+        return replace(self, session=session)
+
     def take(self, index: npt.NDArray[np.intp] | npt.NDArray[np.bool_] | slice) -> BarFrame:
-        """Select bars by integer index array, boolean mask or slice."""
+        """Select bars by integer index array, boolean mask or slice (sessions included)."""
         return BarFrame(
             self.time[index],
             self.open[index],
@@ -130,13 +140,16 @@ class BarFrame:
             self.close[index],
             self.adj_close[index],
             self.volume[index],
+            None if self.session is None else self.session[index],
         )
 
     @staticmethod
     def concat(frames: Sequence[BarFrame]) -> BarFrame:
-        """Concatenate frames (no sorting or de-duplication; see ``validate_bars``)."""
+        """Concatenate frames (no sorting or de-duplication; see ``validate_bars``). Sessions are
+        kept only if every frame has them."""
         if not frames:
             return BarFrame.empty()
+        sessions = [f.session for f in frames]
         return BarFrame(
             np.concatenate([f.time for f in frames]),
             np.concatenate([f.open for f in frames]),
@@ -145,10 +158,14 @@ class BarFrame:
             np.concatenate([f.close for f in frames]),
             np.concatenate([f.adj_close for f in frames]),
             np.concatenate([f.volume for f in frames]),
+            None
+            if any(s is None for s in sessions)
+            else np.concatenate([s for s in sessions if s is not None]),
         )
 
     def equals(self, other: BarFrame, *, rtol: float = 0.0) -> bool:
-        """Column-wise equality (exact for time, ``rtol`` for prices and volume)."""
+        """Column-wise equality (exact for time, ``rtol`` for prices and volume; sessions are
+        not compared)."""
         if len(self) != len(other) or not np.array_equal(self.time, other.time):
             return False
         return all(

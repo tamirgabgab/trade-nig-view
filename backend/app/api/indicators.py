@@ -42,6 +42,10 @@ class ParamInfo(BaseModel):
         default_factory=list[str],
         description="Display names of `options` (same order); empty = the ids",
     )
+    requires: str | None = Field(
+        default=None,
+        description='Bool/enum param that switches this one on (true or not "none")',
+    )
 
 
 class OutputInfo(BaseModel):
@@ -51,6 +55,10 @@ class OutputInfo(BaseModel):
     color: str = Field(description="Default colour (#RRGGBB)")
     line_width: int
     style: dict[str, str] = Field(default_factory=dict[str, str])
+    requires: str | None = Field(
+        default=None,
+        description='Bool/enum param that switches this line on (true or not "none")',
+    )
 
 
 class IndicatorInfo(BaseModel):
@@ -88,6 +96,7 @@ def _info(spec: IndicatorSpec) -> IndicatorInfo:
                 step=p.step,
                 options=list(p.options),
                 option_labels=list(p.option_labels),
+                requires=p.requires,
             )
             for p in spec.params
         ],
@@ -99,6 +108,7 @@ def _info(spec: IndicatorSpec) -> IndicatorInfo:
                 color=o.color,
                 line_width=o.line_width,
                 style=dict(o.style),
+                requires=o.requires,
             )
             for o in spec.outputs
         ],

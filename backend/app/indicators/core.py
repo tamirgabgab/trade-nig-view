@@ -391,3 +391,67 @@ def shift(y: FloatArray, offset: int) -> FloatArray:
     if offset < 0:
         raise ValueError("offset must be >= 0 (a negative offset would read future bars)")
     return y if offset == 0 else lagged(y, offset)
+
+
+#: Window values processed per block by ``stdev`` (bounds its N x n temporaries to ~8 MB).
+_STDEV_BLOCK = 1 << 20
+
+
+def stdev(x: FloatArray, length: int) -> FloatArray:
+    r"""Population standard deviation of each window (Pine ``ta.stdev``, ``biased = true``).
+
+    .. math:: \mu_t = \frac1n\sum_{k=0}^{n-1} x_{t-k}, \qquad
+       \sigma_t = \sqrt{\frac1n\sum_{k=0}^{n-1} (x_{t-k} - \mu_t)^2}
+
+    Two passes per window (mean, then squared deviations), never :math:`E[x^2] - E[x]^2`, which
+    cancels catastrophically when :math:`\sigma \ll |\mu|`. The first :math:`n-1` outputs are
+    ``NaN``; a ``NaN`` anywhere in the window gives ``NaN``.
+    """
+    x = as_float(x)
+    if length < 1:
+        raise ValueError(f"length must be >= 1, got {length}")
+    out = nan_like(x)
+    if len(x) < length:
+        return out
+    windows = sliding_window_view(x, length)
+    rows = max(1, _STDEV_BLOCK // length)
+    for lo in range(0, len(windows), rows):
+        block = windows[lo : lo + rows]
+        deviation = block - block.mean(axis=1, keepdims=True)
+        out[length - 1 + lo : length - 1 + lo + len(block)] = np.sqrt(
+            (deviation * deviation).mean(axis=1)
+        )
+    return out
+
+
+def highest(x: FloatArray, length: int) -> FloatArray:
+    r""":math:`\max_{0 \le k < n} x_{t-k}` (Pine ``ta.highest``); first :math:`n-1` outputs
+    ``NaN``."""
+    x = as_float(x)
+    out = nan_like(x)
+    if len(x) >= length:
+        out[length - 1 :] = sliding_window_view(x, length).max(axis=1)
+    return out
+
+
+def lowest(x: FloatArray, length: int) -> FloatArray:
+    r""":math:`\min_{0 \le k < n} x_{t-k}` (Pine ``ta.lowest``); first :math:`n-1` outputs
+    ``NaN``."""
+    x = as_float(x)
+    out = nan_like(x)
+    if len(x) >= length:
+        out[length - 1 :] = sliding_window_view(x, length).min(axis=1)
+    return out
+
+
+def true_range(high: FloatArray, low: FloatArray, close: FloatArray) -> FloatArray:
+    r"""True range :math:`TR_t = \max(H_t - L_t,\ |H_t - C_{t-1}|,\ |L_t - C_{t-1}|)` with
+    :math:`TR_0 = H_0 - L_0` (Pine ``ta.tr(true)``; TA-Lib's ``TRANGE`` leaves bar 0 empty)."""
+    high, low, close = as_float(high), as_float(low), as_float(close)
+    out = high - low
+    if len(out) > 1:
+        previous = close[:-1]
+        out[1:] = np.maximum(
+            out[1:], np.maximum(np.abs(high[1:] - previous), np.abs(low[1:] - previous))
+        )
+    return out

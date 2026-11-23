@@ -429,6 +429,11 @@ export interface components {
             style?: {
                 [key: string]: string;
             };
+            /**
+             * Requires
+             * @description Bool/enum param that switches this line on (true or not "none")
+             */
+            requires?: string | null;
         };
         /** OutputResponseInfo */
         OutputResponseInfo: {
@@ -503,6 +508,11 @@ export interface components {
              * @description Display names of `options` (same order); empty = the ids
              */
             option_labels?: string[];
+            /**
+             * Requires
+             * @description Bool/enum param that switches this one on (true or not "none")
+             */
+            requires?: string | null;
         };
         /**
          * ProviderStatus

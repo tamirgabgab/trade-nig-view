@@ -306,3 +306,50 @@ def test_mcginley_equals_pine_while_the_level_stays_positive() -> None:
     for t in range(10, len(x)):
         level += (x[t] - level) / (10 * (x[t] / level) ** 4)
         assert y[t] == pytest.approx(level, rel=1e-12)
+
+
+def test_stdev_hand_vectors() -> None:
+    np.testing.assert_allclose(
+        core.stdev(arr(1, 2, 3, 4), 2), arr(NAN, 0.5, 0.5, 0.5), equal_nan=True
+    )
+    # The textbook population example: mean 5, sigma 2.
+    assert core.stdev(arr(2, 4, 4, 4, 5, 5, 7, 9), 8)[-1] == pytest.approx(2.0, abs=1e-15)
+    np.testing.assert_array_equal(core.stdev(arr(3, 3, 3), 1), arr(0, 0, 0))
+
+
+def test_stdev_has_no_catastrophic_cancellation() -> None:
+    """E[x^2] - E[x]^2 would lose every digit here (x^2 ~ 1e18, variance 2/3)."""
+    x = 1e9 + arr(0, 1, 2, 0, 1, 2)
+    np.testing.assert_allclose(core.stdev(x, 3)[2:], np.sqrt(2 / 3), rtol=1e-12)
+
+
+def test_stdev_edge_cases() -> None:
+    assert np.isnan(core.stdev(arr(1, 2), 3)).all()
+    np.testing.assert_array_equal(np.isnan(core.stdev(arr(NAN, 1, 2, 3), 2)), [1, 1, 0, 0])
+    with pytest.raises(ValueError, match="length"):
+        core.stdev(arr(1, 2), 0)
+
+
+def test_stdev_blocks_cover_every_window() -> None:
+    x = np.random.default_rng(1).normal(100, 5, 3000)
+    n = 1500  # several blocks of 1 << 20 // 1500 = 699 windows
+    expected = [np.std(x[t - n + 1 : t + 1]) for t in range(n - 1, len(x))]
+    np.testing.assert_allclose(core.stdev(x, n)[n - 1 :], expected, rtol=1e-12)
+
+
+def test_highest_and_lowest_hand_vectors() -> None:
+    x = arr(3, 1, 4, 1, 5)
+    np.testing.assert_array_equal(core.highest(x, 3), arr(NAN, NAN, 4, 4, 5))
+    np.testing.assert_array_equal(core.lowest(x, 3), arr(NAN, NAN, 1, 1, 1))
+    np.testing.assert_array_equal(core.highest(x, 1), x)
+    assert np.isnan(core.lowest(x, 6)).all()
+
+
+def test_true_range_hand_vector_and_gaps() -> None:
+    # TR_0 = H - L; TR_1 = max(3, |12 - 9|, |9 - 9|); TR_2 = max(4, |11 - 11|, |7 - 11|)
+    np.testing.assert_array_equal(
+        core.true_range(arr(10, 12, 11), arr(8, 9, 7), arr(9, 11, 8)), arr(2, 3, 4)
+    )
+    # A gap up: the previous close is below today's low, so TR = H - C_prev.
+    assert core.true_range(arr(10, 15), arr(9, 14), arr(9.5, 14.5))[1] == 5.5
+    assert len(core.true_range(arr(), arr(), arr())) == 0

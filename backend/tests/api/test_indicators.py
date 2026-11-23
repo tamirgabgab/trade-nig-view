@@ -11,11 +11,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings
+from app.data.sessions import session_days
 from app.indicators.catalog import CATALOG
 from app.main import create_app
 from app.models.bars import date_to_ts
 from tests.conftest import IsolatedSettings
-from tests.golden.models import golden_ema, golden_sma
+from tests.golden.models import golden_ema, golden_sma, golden_vwap
 
 E2E_DATA = Path(__file__).resolve().parents[3] / "frontend" / "e2e" / "data"
 
@@ -59,6 +60,7 @@ def test_lists_the_registry(client: TestClient) -> None:
         "step": 1.0,
         "options": [],
         "option_labels": [],
+        "requires": None,
     }
     assert ema["params"][1]["options"][:3] == ["close", "open", "high"]
     assert ema["outputs"][0]["plot"] == "line"
@@ -66,7 +68,7 @@ def test_lists_the_registry(client: TestClient) -> None:
 
 def test_lists_ma_types_with_display_names(client: TestClient) -> None:
     by_id = {item["id"]: item for item in client.get("/api/indicators").json()}
-    assert len(by_id) == 19
+    assert len(by_id) == 27
     ma_type = by_id["ma"]["params"][0]
     assert ma_type["name"] == "ma_type"
     assert ma_type["type"] == "enum"
@@ -166,6 +168,9 @@ def _stress_params(indicator: str) -> dict[str, object]:
         "ma": {"ma_type": "ema", "length": 9, "offset": 400},
         "t3": {"length": 5, "offset": 300},
         "kama": {"length": 10, "fast": 30, "slow": 30},
+        "rsi": {"ma_type": "ema", "bb": True},
+        "macd": {"signal_ma_type": "smma", "osc_ma_type": "wma"},
+        "atr": {"ma_type": "ema"},
     }
     params = dict(stress.get(indicator, {}))
     names = {p.name for p in CATALOG[indicator].params}
@@ -318,3 +323,53 @@ def test_response_rejects_unknown_indicators_and_bad_params(client: TestClient) 
     assert unknown.status_code == 404
     bad = client.post("/api/indicators/response", json={"id": "sma", "params": {"length": 0}})
     assert bad.status_code == 422
+
+
+def test_vwap_resets_each_session_on_intraday_bars(client: TestClient) -> None:
+    bars = client.get("/api/bars", params={"symbol": "AAA", "interval": "1h"}).json()["bars"]
+    body = client.post(
+        "/api/indicators/compute",
+        json={"symbol": "AAA", "interval": "1h", "id": "vwap", "params": {"source": "close"}},
+    ).json()
+    times = np.array([bar["time"] for bar in bars], dtype=np.int64)
+    sessions = session_days(times, "America/New_York").tolist()
+    closes = [bar["close"] for bar in bars]
+    expected = golden_vwap(closes, [bar["volume"] for bar in bars], sessions)
+    np.testing.assert_allclose(body["outputs"]["vwap"], expected, rtol=1e-12)
+    first_bars = [i for i in range(len(bars)) if i == 0 or sessions[i] != sessions[i - 1]]
+    assert len(first_bars) > 1
+    assert all(body["outputs"]["vwap"][i] == pytest.approx(closes[i]) for i in first_bars)
+
+
+@pytest.mark.parametrize("interval", ["1h", "4h"])
+def test_vwap_window_starting_mid_history_matches_the_full_history(
+    client: TestClient, interval: str
+) -> None:
+    request = {"symbol": "AAA", "interval": interval, "id": "vwap"}
+    full = client.post("/api/indicators/compute", json=request).json()
+    middle = full["time"][len(full["time"]) // 2 + 1]
+    window = client.post("/api/indicators/compute", json={**request, "start": middle}).json()
+    first = full["time"].index(middle)
+    np.testing.assert_allclose(window["outputs"]["vwap"], full["outputs"]["vwap"][first:])
+
+
+def test_vwap_is_empty_on_daily_bars(client: TestClient) -> None:
+    body = client.post("/api/indicators/compute", json={"symbol": "AAA", "id": "vwap"}).json()
+    assert body["time"]
+    assert set(body["outputs"]["vwap"]) == {None}
+
+
+def test_obv_loads_the_whole_history(client: TestClient) -> None:
+    body = client.post(
+        "/api/indicators/compute",
+        json={"symbol": "AAA", "id": "obv", "start": epoch("2026-02-02")},
+    ).json()
+    assert body["lookback"] == 10**9
+    full = client.post("/api/indicators/compute", json={"symbol": "AAA", "id": "obv"}).json()
+    assert body["outputs"]["obv"] == full["outputs"]["obv"][-len(body["time"]) :]
+
+
+@pytest.mark.parametrize("indicator", sorted(CATALOG))
+def test_response_endpoint_serves_every_indicator(client: TestClient, indicator: str) -> None:
+    response = client.post("/api/indicators/response", json={"id": indicator})
+    assert response.status_code == 200

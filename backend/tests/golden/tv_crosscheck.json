@@ -5,6 +5,7 @@
     "2. Add the indicator with the params below (source close, offset 0).",
     "3. Hover each date and type the value shown in the legend into tv_value (a number, 2 decimals).",
     "4. Run scripts/make-fixtures.ps1 once so backend/fixtures/daily/AAPL.csv exists, then .\\scripts\\test.ps1.",
+    "R3c rows: BB, RSI, MACD (EMA/EMA), Stoch (14, 1, 3), ATR (RMA) and Volume SMA at TradingView's defaults. OBV is left out (its level depends on where the history starts) and VWAP too (intraday only).",
     "Rows with tv_value null are skipped; filled rows must match ChartLab within 0.01."
   ],
   "symbol": "AAPL",
@@ -282,6 +283,188 @@
         "percent": 10
       },
       "output": "lower",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "bb",
+      "params": {
+        "length": 20,
+        "mult": 2
+      },
+      "output": "upper",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "bb",
+      "params": {
+        "length": 20,
+        "mult": 2
+      },
+      "output": "upper",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "bb",
+      "params": {
+        "length": 20,
+        "mult": 2
+      },
+      "output": "lower",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "bb",
+      "params": {
+        "length": 20,
+        "mult": 2
+      },
+      "output": "lower",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "rsi",
+      "params": {
+        "length": 14
+      },
+      "output": "rsi",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "rsi",
+      "params": {
+        "length": 14
+      },
+      "output": "rsi",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "macd",
+      "params": {
+        "fast_length": 12,
+        "slow_length": 26,
+        "signal_length": 9
+      },
+      "output": "macd",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "macd",
+      "params": {
+        "fast_length": 12,
+        "slow_length": 26,
+        "signal_length": 9
+      },
+      "output": "macd",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "macd",
+      "params": {
+        "fast_length": 12,
+        "slow_length": 26,
+        "signal_length": 9
+      },
+      "output": "signal",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "macd",
+      "params": {
+        "fast_length": 12,
+        "slow_length": 26,
+        "signal_length": 9
+      },
+      "output": "signal",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "stoch",
+      "params": {
+        "k_length": 14,
+        "k_smoothing": 1,
+        "d_smoothing": 3
+      },
+      "output": "k",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "stoch",
+      "params": {
+        "k_length": 14,
+        "k_smoothing": 1,
+        "d_smoothing": 3
+      },
+      "output": "k",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "stoch",
+      "params": {
+        "k_length": 14,
+        "k_smoothing": 1,
+        "d_smoothing": 3
+      },
+      "output": "d",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "stoch",
+      "params": {
+        "k_length": 14,
+        "k_smoothing": 1,
+        "d_smoothing": 3
+      },
+      "output": "d",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "atr",
+      "params": {
+        "length": 14
+      },
+      "output": "atr",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "atr",
+      "params": {
+        "length": 14
+      },
+      "output": "atr",
+      "date": "2026-06-01",
+      "tv_value": null
+    },
+    {
+      "indicator": "vol_sma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
+      "date": "2025-11-14",
+      "tv_value": null
+    },
+    {
+      "indicator": "vol_sma",
+      "params": {
+        "length": 20
+      },
+      "output": "ma",
       "date": "2026-06-01",
       "tv_value": null
     }

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from app.indicators import (
     alma,
+    atr,
+    bb,
     dema,
     ema,
     envelope,
@@ -12,13 +14,19 @@ from app.indicators import (
     lsma,
     ma_cross,
     ma_ribbon,
+    macd,
     mcginley,
     moving_average,
+    obv,
+    rsi,
     sma,
     smma,
+    stoch,
     swma,
     t3,
     tema,
+    vol_sma,
+    vwap,
     vwma,
     wma,
     zlema,
@@ -47,6 +55,14 @@ CATALOG: dict[str, IndicatorSpec] = {
         ma_cross.SPEC,
         ma_ribbon.SPEC,
         envelope.SPEC,
+        bb.SPEC,
+        rsi.SPEC,
+        macd.SPEC,
+        stoch.SPEC,
+        atr.SPEC,
+        obv.SPEC,
+        vwap.SPEC,
+        vol_sma.SPEC,
     )
 }
 

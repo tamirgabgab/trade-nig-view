@@ -17,6 +17,38 @@ class TaLib(Protocol):
     def KAMA(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
     def LINEARREG(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
     def T3(self, real: FloatArray, timeperiod: int, vfactor: float) -> FloatArray: ...  # noqa: N802
+    def BBANDS(  # noqa: N802
+        self, real: FloatArray, timeperiod: int, nbdevup: float, nbdevdn: float, matype: int
+    ) -> tuple[FloatArray, FloatArray, FloatArray]: ...
+    def RSI(self, real: FloatArray, timeperiod: int) -> FloatArray: ...  # noqa: N802
+    def MACD(  # noqa: N802
+        self, real: FloatArray, fastperiod: int, slowperiod: int, signalperiod: int
+    ) -> tuple[FloatArray, FloatArray, FloatArray]: ...
+    def STOCH(  # noqa: N802
+        self,
+        high: FloatArray,
+        low: FloatArray,
+        close: FloatArray,
+        fastk_period: int,
+        slowk_period: int,
+        slowk_matype: int,
+        slowd_period: int,
+        slowd_matype: int,
+    ) -> tuple[FloatArray, FloatArray]: ...
+    def STOCHF(  # noqa: N802
+        self,
+        high: FloatArray,
+        low: FloatArray,
+        close: FloatArray,
+        fastk_period: int,
+        fastd_period: int,
+        fastd_matype: int,
+    ) -> tuple[FloatArray, FloatArray]: ...
+    def ATR(  # noqa: N802
+        self, high: FloatArray, low: FloatArray, close: FloatArray, timeperiod: int
+    ) -> FloatArray: ...
+    def TRANGE(self, high: FloatArray, low: FloatArray, close: FloatArray) -> FloatArray: ...  # noqa: N802
+    def OBV(self, real: FloatArray, volume: FloatArray) -> FloatArray: ...  # noqa: N802
 
 
 def load_talib() -> tuple[TaLib | None, str]:

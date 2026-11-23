@@ -21,7 +21,8 @@ bar after the cursor can influence a returned value. For intraday intervals ``st
 ``until`` select whole trading sessions by session date (``app.data.sessions``).
 
 Intraday bars are dividend-adjusted with the factor of their session's daily bar, so with ADJ on the
-last 1h close of a session equals that session's adjusted daily close.
+last 1h close of a session equals that session's adjusted daily close. Intraday frames carry their
+session day numbers (``BarFrame.session``) for session-anchored indicators such as VWAP.
 """
 
 from __future__ import annotations
@@ -356,7 +357,7 @@ class BarService:
         if interval is not Interval.H1:
             frame = resample_intraday(frame, sessions, interval)
             frame_sessions = session_days(frame.time, info.timezone, info.session_start_minutes)
-        frame = apply_transform(frame, transform)
+        frame = apply_transform(frame, transform).with_session(frame_sessions)
         frame, has_more_before = _window(frame, frame_sessions, start, end, limit, before)
         return BarsResult(
             symbol=info,

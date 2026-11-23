@@ -300,3 +300,130 @@ GOLDEN_MA: dict[str, GoldenMa] = {
     "t3": lambda x, n, _v: golden_t3(x, n),
     "zlema": lambda x, n, _v: golden_zlema(x, n),
 }
+
+
+# --- R3c: bands, oscillators, volatility and volume -------------------------------------------
+
+
+def golden_ma_of(ma_type: str, x: Sequence[float], n: int, volume: Sequence[float]) -> list[float]:
+    """Any ``GOLDEN_MA`` type on a series that starts with ``NaN``: the average starts at the
+    first finite value, as on a fresh series (Pine: earlier ``na`` bars do not exist for it)."""
+    f = _first_finite(x)
+    return [NAN] * f + GOLDEN_MA[ma_type](list(x[f:]), n, list(volume[f:]))
+
+
+def golden_stdev(x: Sequence[float], n: int) -> list[float]:
+    """Population standard deviation of each window about its own mean (``NaN`` in the window
+    gives ``NaN``)."""
+    out: list[float] = []
+    for t in range(len(x)):
+        window = list(x[max(t - n + 1, 0) : t + 1])
+        if t < n - 1 or any(math.isnan(v) for v in window):
+            out.append(NAN)
+            continue
+        mean = sum(window) / n
+        out.append(math.sqrt(sum((v - mean) ** 2 for v in window) / n))
+    return out
+
+
+def golden_bb(
+    x: Sequence[float], volume: Sequence[float], ma_type: str, n: int, mult: float
+) -> dict[str, list[float]]:
+    basis = GOLDEN_MA[ma_type](x, n, volume)
+    dev = golden_stdev(x, n)
+    return {
+        "basis": basis,
+        "upper": [b + mult * d for b, d in zip(basis, dev, strict=True)],
+        "lower": [b - mult * d for b, d in zip(basis, dev, strict=True)],
+    }
+
+
+def golden_rsi(x: Sequence[float], n: int) -> list[float]:
+    """Pine ``ta.rsi``: RMA of gains and losses seeded with the SMA of the first ``n`` changes
+    (bars 1..n), ``down == 0 ? 100 : up == 0 ? 0 : 100 - 100 / (1 + up / down)``."""
+    out: list[float] = [NAN] * min(n, len(x))
+    if len(x) <= n:
+        return out
+    gains = [max(x[t] - x[t - 1], 0.0) for t in range(1, len(x))]
+    losses = [max(x[t - 1] - x[t], 0.0) for t in range(1, len(x))]
+    up = sum(gains[:n]) / n
+    down = sum(losses[:n]) / n
+    for t in range(n, len(x)):
+        if t > n:
+            up = (1 / n) * gains[t - 1] + (1 - 1 / n) * up
+            down = (1 / n) * losses[t - 1] + (1 - 1 / n) * down
+        if down == 0:
+            out.append(100.0)
+        elif up == 0:
+            out.append(0.0)
+        else:
+            out.append(100 - 100 / (1 + up / down))
+    return out
+
+
+def golden_macd(
+    x: Sequence[float],
+    volume: Sequence[float],
+    fast: int,
+    slow: int,
+    signal: int,
+    osc_type: str = "ema",
+    signal_type: str = "ema",
+) -> dict[str, list[float]]:
+    line = _combine(
+        (1.0, -1.0), (GOLDEN_MA[osc_type](x, fast, volume), GOLDEN_MA[osc_type](x, slow, volume))
+    )
+    sig = golden_ma_of(signal_type, line, signal, volume)
+    return {"macd": line, "signal": sig, "hist": _combine((1.0, -1.0), (line, sig))}
+
+
+def golden_stoch(
+    h: Sequence[float], lo: Sequence[float], c: Sequence[float], n: int, sk: int, sd: int
+) -> dict[str, list[float]]:
+    raw: list[float] = []
+    for t in range(len(c)):
+        if t < n - 1:
+            raw.append(NAN)
+            continue
+        hh = max(h[t - n + 1 : t + 1])
+        ll = min(lo[t - n + 1 : t + 1])
+        raw.append(NAN if hh == ll else 100 * (c[t] - ll) / (hh - ll))
+    k = golden_sma(raw, sk)
+    return {"k": k, "d": golden_sma(k, sd)}
+
+
+def golden_true_range(h: Sequence[float], lo: Sequence[float], c: Sequence[float]) -> list[float]:
+    out: list[float] = []
+    for t in range(len(c)):
+        if t == 0:
+            out.append(h[0] - lo[0])
+        else:
+            out.append(max(h[t] - lo[t], abs(h[t] - c[t - 1]), abs(lo[t] - c[t - 1])))
+    return out
+
+
+def golden_obv(c: Sequence[float], volume: Sequence[float]) -> list[float]:
+    out: list[float] = []
+    level = 0.0
+    for t in range(len(c)):
+        if t > 0:
+            if c[t] > c[t - 1]:
+                level += volume[t]
+            elif c[t] < c[t - 1]:
+                level -= volume[t]
+        out.append(level)
+    return out
+
+
+def golden_vwap(
+    price: Sequence[float], volume: Sequence[float], session: Sequence[int]
+) -> list[float]:
+    out: list[float] = []
+    weighted = total = 0.0
+    for t in range(len(price)):
+        if t == 0 or session[t] != session[t - 1]:
+            weighted = total = 0.0
+        weighted += price[t] * volume[t]
+        total += volume[t]
+        out.append(weighted / total if total > 0 else NAN)
+    return out

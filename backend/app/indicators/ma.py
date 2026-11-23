@@ -3,9 +3,9 @@ r"""Moving-average types (``MA_TYPES``) and factories for MA indicators.
 Every MA is implemented once in :mod:`app.indicators.core`; ``MA_TYPES`` wraps each as
 :math:`(x, n, V) \mapsto y` with its warm-up, lookback and minimum length. Single-line MA
 indicators, the generic "Moving Average" (type enum) and the composites (MA Cross, Ribbon,
-Envelope; later the Bollinger basis and MACD) all pick their averages from it. Types with extra
-inputs (ALMA, KAMA, T3) use their TradingView/author defaults here; their own indicators expose
-those inputs.
+Envelope, the Bollinger basis, MACD, the RSI smoothing, ATR) all pick their averages from it.
+Types with extra inputs (ALMA, KAMA, T3) use their TradingView/author defaults here; their own
+indicators expose those inputs.
 """
 
 from __future__ import annotations
@@ -101,10 +101,31 @@ MAX_OFFSET = 500
 
 def apply_ma(type_id: str, x: FloatArray, length: int, volume: FloatArray) -> FloatArray:
     """The ``type_id`` MA of ``x``; ``InvalidParamsError`` if ``length`` is below its minimum."""
+    return _checked(type_id, length).fn(x, length, volume)
+
+
+def _checked(type_id: str, length: int) -> MaType:
     ma = MA_TYPES[type_id]
     if length < ma.min_length:
         raise InvalidParamsError(f"{ma.label} needs a length of at least {ma.min_length}")
-    return ma.fn(x, length, volume)
+    return ma
+
+
+def apply_ma_valid(type_id: str, x: FloatArray, length: int, volume: FloatArray) -> FloatArray:
+    """``apply_ma`` on a derived series that starts with ``NaN`` (an MACD line, an RSI).
+
+    The average runs on ``x[f:]`` (and ``volume[f:]``) from the first finite value ``f`` and the
+    head is padded with ``NaN``, so every type is seeded on the first valid values exactly as on a
+    fresh series (Pine semantics: ``na`` inputs before the first value do not exist for the
+    average). First valid output: ``f + ma_warmup(type_id, length)``. The length is checked even
+    when ``x`` has no valid value yet.
+    """
+    _checked(type_id, length)
+    start = core.first_valid(x)
+    out = core.nan_like(x)
+    if start < len(x):
+        out[start:] = apply_ma(type_id, x[start:], length, volume[start:])
+    return out
 
 
 def ma_warmup(type_id: str, length: int) -> int:

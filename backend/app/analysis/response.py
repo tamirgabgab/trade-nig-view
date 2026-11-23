@@ -18,6 +18,12 @@ Linearity is **measured**, not declared: an output is linear only if superpositi
 random walks, :math:`f(x_1 + 2x_2) = f(x_1) + 2f(x_2)`, and the output does not change with the
 volume series. Adaptive (KAMA, McGinley) and volume-weighted (VWMA) averages fail and get the
 step and ramp responses only, with the reason.
+
+Only outputs that follow the price are measured: on flat bars they sit at a fixed non-zero
+multiple of the price level (averages, envelope and Bollinger bands). Oscillators (RSI at 100,
+MACD at 0), volume lines (OBV, Volume SMA) and outputs that are empty on these synthetic bars
+(VWAP without sessions, a switched-off RSI smoothing) have no response in this sense and are
+left out, so their list is empty.
 """
 
 from __future__ import annotations
@@ -110,6 +116,16 @@ def _run(
     return {o.name: outputs[o.name] for o in spec.outputs if o.plot != "markers"}
 
 
+def _follows_price(at_base: float, at_double: float) -> bool:
+    """On flat bars the output is a fixed non-zero multiple of the price: doubling the price
+    doubles it."""
+    return (
+        bool(np.isfinite(at_base))
+        and at_base != 0.0
+        and bool(np.isclose(at_double, 2.0 * at_base, rtol=LINEAR_RTOL, atol=0.0))
+    )
+
+
 def _close(a: FloatArray, b: FloatArray) -> bool:
     return bool(np.allclose(a, b, rtol=LINEAR_RTOL, atol=LINEAR_RTOL * BASE, equal_nan=True))
 
@@ -181,10 +197,13 @@ def filter_response(spec: IndicatorSpec, params: Params) -> list[OutputResponse]
     impulses = _run(spec, params, impulse_in)
     steps = _run(spec, params, step_in)
     ramps = _run(spec, params, ramp_in)
+    doubled = _run(spec, params, np.full(n, 2.0 * BASE))
 
     labels = {o.name: o.label for o in spec.outputs}
     results: list[OutputResponse] = []
     for name, reason in reasons.items():
+        if not _follows_price(steps[name][start - 1], doubled[name][start - 1]):
+            continue
         if reason is not None:
             # A scaled output (an envelope band) settles at gain x input: the flat bar before the
             # step gives that gain.

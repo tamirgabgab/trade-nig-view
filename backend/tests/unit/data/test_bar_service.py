@@ -17,7 +17,7 @@ from app.data.providers.base import ProviderError, RateLimitedError
 from app.data.providers.yahoo import HOURLY_MAX_DAYS
 from app.data.universe import Universe
 from app.errors import DataUnavailableError, SymbolNotFoundError
-from app.models.bars import BarFrame, Interval, date_to_ts, ts_to_iso_dates
+from app.models.bars import BarFrame, Interval, date_to_ts, ts_to_date, ts_to_iso_dates
 from app.models.symbols import SymbolInfo
 from tests.unit.data.factories import bars
 
@@ -442,3 +442,17 @@ def test_history_rejects_derived_intervals(make_service: Factory) -> None:
     service, _ = make_service(FakeProvider("p", history()))
     with pytest.raises(ValueError, match="base interval"):
         service.history(AAA, Interval.W1)
+
+
+def test_intraday_frames_carry_their_sessions_and_daily_frames_do_not(
+    make_service: Factory,
+) -> None:
+    service, _ = make_service(FakeProvider("p", history(), hourly=hourly_history()))
+    assert service.get_bars("AAA", Interval.D1, adjusted=False).frame.session is None
+    hourly = service.get_bars("AAA", Interval.H1, adjusted=False, limit=10).frame
+    four = service.get_bars("AAA", Interval.H4, adjusted=False).frame
+    for frame, per_session in ((hourly, 7), (four, 2)):
+        assert frame.session is not None
+        days = [ts_to_date(int(d) * 86_400) for d in frame.session]
+        assert days[-1] == DAYS[-1]
+        assert days.count(DAYS[-1]) == per_session
