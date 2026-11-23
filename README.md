@@ -8,7 +8,9 @@ trading agent can plug in later.
 > ATR, OBV, VWAP and Volume SMA, oscillators in their own panes, each verified like a DUT against scalar golden
 > models, TA-Lib and property tests. Learn drawer with derived formulas and measured filter responses (L1).
 > U1a done: quiet motion (sliding pills, exit animations, price flashes), undo for removals, legend focus,
-> RSI/Stochastic band shading, half-screen layout and a `?` shortcuts map. Next: U1b.
+> RSI/Stochastic band shading, half-screen layout and a `?` shortcuts map. U1b done: watchlist sparklines and
+> symbol card with market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot.
+> Next: R4 (drawing tools).
 > See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
 > [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
 
@@ -30,7 +32,7 @@ trading agent can plug in later.
 | Learn drawer for the MA family: derived formulas (KaTeX), lag, noise reduction, and a Filter view with the measured impulse, step and frequency response plus an MA-vs-MA compare (L1) | ✅ Done |
 | Indicators: BB, VWAP, RSI (+ smoothing and BB), MACD, Stochastic, ATR, OBV, Volume SMA, oscillator panes with level lines, band fills, coloured MACD histogram — golden-tested (R3c) | ✅ Done |
 | UX pass 1: UX profile, dimmed coming-soon buttons, key caps in tooltips, sliding pills, exit animations, price flashes, legend hover focus, undo toast, RSI/Stoch band shading, resizable panes, jump to latest, floating watchlist below 1100 px, `?` shortcuts (U1a) | ✅ Done |
-| UX pass 2: watchlist sparklines and symbol card, market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot (U1b) | ⏳ Planned |
+| UX pass 2: watchlist sparklines and symbol card, market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot (U1b) | ✅ Done |
 | Drawing tools: lines, rays, channel, rectangle, text, measure, Fibonacci (R4) | ⏳ Planned |
 | Gaps, pivots, previous-period levels, 52-week high/low, data window (R5) | ⏳ Planned |
 | Layouts, watchlists, undo/redo, shortcuts, settings (R6) | ⏳ Planned |

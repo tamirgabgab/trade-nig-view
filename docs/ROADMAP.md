@@ -15,7 +15,7 @@
 | R2 | Chart core | L | ✅ R2a + R2b done (2026-11-22) |
 | R3 | Indicator engine v1 (R3a, R3b, R3c — see PLAN.md) | L | ✅ R3a, R3b, R3c (2026-11-23) |
 | L1 | Learn v1 for the MA family (from Phase 2) | M | ✅ (2026-11-23) |
-| U1 | UX pass (U1a polish + motion + half screen; U1b watchlist, palette, theme) | L | 🔨 U1a ✅ (2026-11-23), U1b next |
+| U1 | UX pass (U1a polish + motion + half screen; U1b watchlist, palette, theme) | L | ✅ U1a + U1b (2026-11-23) |
 | R4 | Drawing tools v1 | L | |
 | R5 | Market structure & reference values | M | |
 | R6 | Persistence, layouts & UX polish | L | |

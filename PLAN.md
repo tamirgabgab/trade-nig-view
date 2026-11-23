@@ -172,15 +172,15 @@ two rounds.
       `—` for missing values (X7); Chg% clipping (T4)
 - [ ] README screenshot with real data (T3): needs the user's fixtures
 
-#### S6b — U1b: watchlist, palette, theme (Sonnet 5.5 · high)
-- [ ] `/api/quotes` gains the last 20 closes, the day range and the 52-week range; watchlist sparkline column
-- [ ] Symbol card under the watchlist: big price, change, day and 52-week range bars, market status (trading hours by
+#### S6b — U1b: watchlist, palette, theme (done 2026-11-23)
+- [x] `/api/quotes` gains the last 20 closes, the day range and the 52-week range; watchlist sparkline column
+- [x] Symbol card under the watchlist: big price, change, day and 52-week range bars, market status (trading hours by
       exchange and time zone, no holiday calendar; the tooltip says so)
-- [ ] `Ctrl+K` command palette (symbols, indicators, actions) next to the existing `type` and `/` shortcuts
-- [ ] Chart context menu: Reset view, Add indicator, Copy price
-- [ ] Light/dark toggle (dark default, remembered); the chart re-reads the tokens
-- [ ] Camera button: menu with Copy image (default, `Alt+S`) and Download PNG (`takeScreenshot`)
-- [ ] ux-audit at 1280 and 960
+- [x] `Ctrl+K` command palette (symbols, indicators, actions) next to the existing `type` and `/` shortcuts
+- [x] Chart context menu: Reset view, Add indicator, Copy price
+- [x] Light/dark toggle (dark default, remembered); the chart re-reads the tokens
+- [x] Camera button: menu with Copy image (default, `Alt+S`) and Download PNG (`takeScreenshot`)
+- [x] ux-audit at 1280 and 960
 
 S7–S11 follow ROADMAP R4–R7 and the review unchanged.
 
