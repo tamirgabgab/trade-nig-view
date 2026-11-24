@@ -17,6 +17,10 @@ export interface ReplayBlock {
   /** '1h' replays hourly bars (VWAP); daily by default. */
   interval?: '1D' | '1h';
   indicators?: { id: string; params?: Params }[];
+  /** A guided exercise: what to do, step by step (plain text). */
+  steps?: string[];
+  /** What to look for, hidden until the reader asks (plain text). */
+  reveal?: string;
 }
 
 const sameParams = (a: Params, b: Params) => Object.keys(b).every((key) => a[key] === b[key]);
@@ -60,6 +64,19 @@ export function ReplayLab({ block }: { block: ReplayBlock }) {
           {indicators.length > 0 && ` with ${indicators.map((i) => i.label).join(', ')}`}
         </span>
       </div>
+      {block.steps !== undefined && block.steps.length > 0 && (
+        <ol className={styles.steps}>
+          {block.steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      )}
+      {block.reveal !== undefined && (
+        <details className={styles.reveal}>
+          <summary>What to look for</summary>
+          <p>{block.reveal}</p>
+        </details>
+      )}
     </section>
   );
 }

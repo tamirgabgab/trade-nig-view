@@ -42,7 +42,11 @@ export function LearnDrawer({
   const opener = useRef<HTMLElement | null>(null);
   // An indicator on the chart (its uid), or a page opened from the index ("page:<slug>").
   const view = views.find((v) => v.instance.uid === learnFor);
-  const pageSlug = learnFor.startsWith(PAGE_PREFIX) ? learnFor.slice(PAGE_PREFIX.length) : null;
+  // "page:<slug>#<heading>" (a learn link) opens the page at that heading.
+  const [pageRef = null, anchor = null] = learnFor.startsWith(PAGE_PREFIX)
+    ? learnFor.slice(PAGE_PREFIX.length).split('#')
+    : [];
+  const pageSlug = pageRef;
   const registry = useIndicatorList().data;
   const index = useLearnIndex().data;
   const spec =
@@ -155,7 +159,7 @@ export function LearnDrawer({
         aria-labelledby={`${titleId}-${shown}`}
       >
         {shown === 'page' || spec === undefined ? (
-          <LearnPage slug={slug} />
+          <LearnPage slug={slug} anchor={anchor} />
         ) : shown === 'try' ? (
           <TryIt key={learnFor} spec={spec} initial={params} />
         ) : (

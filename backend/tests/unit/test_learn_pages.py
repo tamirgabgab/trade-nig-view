@@ -67,6 +67,25 @@ _LAB_BLOCK = re.compile(r"^```lab[ \t]*\n(.*?)^```[ \t]*$", re.MULTILINE | re.DO
 
 ALL_PAGES = sorted(p.stem for p in LEARN_DIR.glob("*.md") if p.stem != "README")
 
+#: `[text](learn:slug#heading)` and `[term](glossary:term)` (frontend/src/components/learnLinks.ts).
+_LINK = re.compile(r"\]\((learn|glossary):([^)\s]*)\)")
+_MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
+
+def anchor_of(heading: str) -> str:
+    """A heading's anchor, as the frontend makes it: its plain text (links keep their text, the
+    marks * ` $ go) in lower case, every run of other characters as '-'."""
+    text = re.sub(r"[*`$]", "", _MD_LINK.sub(r"\1", heading)).strip().lower()
+    return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+
+
+def heading_anchors(markdown: str, levels: tuple[str, ...] = ("## ", "### ")) -> set[str]:
+    return {
+        anchor_of(line.split(" ", 1)[1])
+        for line in markdown.splitlines()
+        if line.startswith(levels)
+    }
+
 
 def missing_sections(markdown: str) -> list[str]:
     """``V2_SECTIONS`` that are absent or out of order among the page's ``## `` headings (other
@@ -132,6 +151,30 @@ def test_lab_block_helpers() -> None:
         "right": {"value": 30},
     }
     assert indicator_ids({"kind": "combo", "rules": [rule]}) == ["rsi"]
+
+
+def test_anchor_rule() -> None:
+    assert anchor_of("Why it works") == "why-it-works"
+    assert anchor_of("`%b` and [bandwidth](learn:x)") == "b-and-bandwidth"
+    assert heading_anchors("# T\n## A b\n### C\n#### D") == {"a-b", "c"}
+
+
+@pytest.mark.parametrize("slug", ALL_PAGES)
+def test_learn_links_resolve(slug: str) -> None:
+    """Every learn: link names a page (and a heading of it), every glossary: link an entry."""
+    markdown = (LEARN_DIR / f"{slug}.md").read_text(encoding="utf-8")
+    for scheme, target in _LINK.findall(markdown):
+        if scheme == "learn":
+            page, _, anchor = target.partition("#")
+            assert page in ALL_PAGES, f"{slug}.md: no page {page!r}"
+            if anchor:
+                text = (LEARN_DIR / f"{page}.md").read_text(encoding="utf-8")
+                assert anchor in heading_anchors(text), f"{slug}.md: no heading #{anchor} in {page}"
+        else:
+            glossary = LEARN_DIR / "glossary.md"
+            assert glossary.is_file(), f"{slug}.md links glossary:{target} but there is no glossary"
+            terms = heading_anchors(glossary.read_text(encoding="utf-8"), ("### ",))
+            assert target in terms, f"{slug}.md: glossary has no ### entry {target!r}"
 
 
 def test_v2_pages_are_known() -> None:

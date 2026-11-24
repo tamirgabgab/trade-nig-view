@@ -120,6 +120,17 @@ accumulation (flat, up bars trade more volume), markup, distribution (flat, down
 
 The backend test also checks every lab block of every page: valid JSON, a known `kind`, registered indicator ids.
 
+### Links and the glossary
+- `[text](learn:slug)` opens another page in the drawer; `[text](learn:slug#heading)` opens it at a `##` or `###`
+  heading, whose anchor is its plain text in lower case with every run of other characters as `-`
+  (`## Why it works` → `#why-it-works`). Link-target headings must be plain text (no math).
+- `[term](glossary:term)` underlines a term: hovering or focusing it shows the definition, a click opens the glossary
+  at it. The glossary (`glossary.md`) has one `### Term` heading per entry, followed by a one-paragraph plain-text
+  definition (the tooltip; no math, no tables), then anything else.
+- The backend page lint checks that every `learn:` link names a page and heading and every `glossary:` link an entry.
+- A `replay` block can be a guided exercise: `"steps": ["...", "..."]` (plain text, numbered) and `"reveal": "..."`
+  (hidden behind "What to look for").
+
 ### Event studies: what they show and what they do not
 Mean $h$-bar log return after the signal minus the mean after any bar ("edge"), its standard error and 95 % interval,
 the hit rates, the two distributions. At most one signal counts per $h + 1$ bars (a signal within $h$ bars of a

@@ -30,7 +30,17 @@ from app.models.bars import BarFrame, FloatArray, Interval, ts_to_iso_dates
 router = APIRouter(tags=["learn"])
 
 #: Concept pages (``docs/indicators/<slug>.md``) that are not about one indicator: slug -> title.
-CONCEPT_PAGES: dict[str, str] = {"combinations": "Combining indicators"}
+CONCEPT_PAGES: dict[str, str] = {
+    "combinations": "Combining indicators",
+    "gaps": "Gaps",
+    "bars-and-sessions": "Bars and sessions",
+    "adjusted-prices": "Adjusted prices",
+    "warm-up": "Warm-up",
+    "lookahead-and-replay": "Lookahead and replay",
+    "lag-and-noise": "Lag and noise",
+    "guided-exercises": "Guided exercises",
+    "glossary": "Glossary",
+}
 _HEADING_ID = re.compile(r"\s*\(`[^`]*`\)\s*$")
 _CATEGORY_ORDER: dict[str | None, int] = {c: i for i, c in enumerate(get_args(Category))}
 

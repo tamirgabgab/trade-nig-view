@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
+import { INDICATORS, renderWithQuery, stubApi, SYMBOLS } from '../../test/render.tsx';
 import { LabBlock } from './LabBlock.tsx';
 
 describe('LabBlock', () => {
@@ -14,5 +16,36 @@ describe('LabBlock', () => {
   ])('shows an error line instead of a widget for %s', (source) => {
     render(<LabBlock source={source} />);
     expect(screen.getByRole('alert')).toHaveTextContent('could not be read');
+  });
+});
+
+describe('a guided replay exercise', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('lists its steps and hides what to look for until asked', async () => {
+    const user = userEvent.setup();
+    stubApi({ '/api/indicators': { body: INDICATORS }, '/api/symbols': { body: SYMBOLS } });
+    renderWithQuery(
+      <LabBlock
+        source={JSON.stringify({
+          kind: 'replay',
+          symbol: 'AAPL',
+          date: '2024-01-02',
+          steps: ['Step one', 'Step two'],
+          reveal: 'The answer',
+        })}
+      />,
+    );
+    const card = screen.getByRole('region', { name: 'Replay exercise' });
+    expect(
+      within(card)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Step one', 'Step two']);
+    expect(within(card).getByText('The answer')).not.toBeVisible();
+    await user.click(within(card).getByText('What to look for'));
+    expect(within(card).getByText('The answer')).toBeVisible();
   });
 });

@@ -10,7 +10,6 @@ from fastapi.testclient import TestClient
 
 from app.analysis.events import event_study
 from app.analysis.synthetic import Scenario, synthetic_bars
-from app.api.learn import CONCEPT_PAGES
 from app.config import Settings
 from app.indicators.catalog import CATALOG
 from app.indicators.registry import Category
@@ -83,7 +82,7 @@ def test_concept_pages_are_listed_and_served_when_present(
             "category": None,
             "indicator_id": None,
         }
-        assert [p["kind"] for p in pages].count("concept") == len(CONCEPT_PAGES)
+        assert [p["kind"] for p in pages].count("concept") == 1  # only the pages that exist
         # a page without a heading falls back to the spec name; one without a file is not listed
         titles = {p["slug"]: p["title"] for p in pages}
         assert titles["rsi"] == CATALOG["rsi"].name

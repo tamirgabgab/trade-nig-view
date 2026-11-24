@@ -331,4 +331,47 @@ describe('learn drawer', () => {
     const figure = await within(drawer).findByRole('region', { name: 'SMA: filter view' });
     expect(await within(figure).findByRole('status')).toHaveTextContent('no linear output');
   });
+
+  it('opens a linked page at its heading and shows glossary definitions on hover', async () => {
+    const user = userEvent.setup();
+    const page = `${PAGE}\nNaN during the [warm-up](glossary:warm-up); see [the glossary](learn:glossary#warm-up).\n`;
+    const glossary =
+      '# Glossary\n\n### Bar\n\nOne period.\n\n### Warm-up\n\nThe first bars without a value.\n';
+    stubApi({
+      '/api/health': { body: HEALTH_OK },
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
+      '/api/indicators': { body: INDICATORS },
+      '/api/indicators/compute': () => jsonResponse({ detail: 'not needed' }, 500),
+      '/api/learn/sma': { body: { slug: 'sma', markdown: page } },
+      '/api/learn/glossary': { body: { slug: 'glossary', markdown: glossary } },
+      '/api/learn': {
+        body: {
+          pages: [
+            {
+              slug: 'glossary',
+              title: 'Glossary',
+              kind: 'concept',
+              category: null,
+              indicator_id: null,
+            },
+          ],
+        },
+      },
+    });
+    renderWithQuery(<App />);
+    const drawer = await openLearn(user, 'sma', 'Simple Moving Average');
+    const term = await within(drawer).findByRole('link', { name: 'warm-up' });
+    await waitFor(() => {
+      expect(term).toHaveAccessibleDescription('The first bars without a value.');
+    });
+
+    await user.click(within(drawer).getByRole('link', { name: 'the glossary' }));
+    const opened = await screen.findByRole('complementary', { name: 'Glossary' });
+    expect(await within(opened).findByRole('heading', { name: 'Warm-up' })).toHaveAttribute(
+      'id',
+      'learn-warm-up',
+    );
+  });
 });

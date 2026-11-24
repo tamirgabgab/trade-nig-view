@@ -1,12 +1,16 @@
 import 'katex/dist/katex.min.css';
 
-import Markdown, { type Components, type ExtraProps } from 'react-markdown';
+import { useEffect } from 'react';
+import Markdown, { defaultUrlTransform, type Components, type ExtraProps } from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
 import { useLearnPage } from '../api/learn.ts';
+import { GlossaryTerm } from './GlossaryTerm.tsx';
 import { LabBlock } from './lab/LabBlock.tsx';
+import { LearnLink } from './LearnLink.tsx';
+import { anchorOf, GLOSSARY_SCHEME, headingDomId, LEARN_SCHEME, nodeText } from './learnLinks.ts';
 import styles from './LearnPage.module.css';
 
 const REMARK = [remarkGfm, remarkMath];
@@ -20,19 +24,48 @@ function labSource(node: ExtraProps['node']): string | null {
   return code.children.map((c) => (c.type === 'text' ? c.value : '')).join('');
 }
 
+/** Our own link schemes pass; every other URL goes through react-markdown's safe default. */
+const urlTransform = (url: string) =>
+  url.startsWith(LEARN_SCHEME) || url.startsWith(GLOSSARY_SCHEME) ? url : defaultUrlTransform(url);
+
 /** The drawer header already names the page: its own title is not repeated. A ```lab block is
- *  an interactive example (LabBlock), any other code block stays a code block. */
+ *  an interactive example (LabBlock), any other code block stays a code block. Headings get an
+ *  anchor; `learn:` and `glossary:` links open pages and definitions (learnLinks.ts). */
 const COMPONENTS: Components = {
   h1: () => null,
+  h2: ({ node, children }) => <h2 id={headingDomId(anchorOf(nodeText(node)))}>{children}</h2>,
+  h3: ({ node, children }) => <h3 id={headingDomId(anchorOf(nodeText(node)))}>{children}</h3>,
+  a: ({ href = '', children }) => {
+    if (href.startsWith(LEARN_SCHEME)) {
+      return <LearnLink target={href.slice(LEARN_SCHEME.length)}>{children}</LearnLink>;
+    }
+    if (href.startsWith(GLOSSARY_SCHEME)) {
+      return <GlossaryTerm term={href.slice(GLOSSARY_SCHEME.length)}>{children}</GlossaryTerm>;
+    }
+    return (
+      <a href={href} target="_blank" rel="noreferrer">
+        {children}
+      </a>
+    );
+  },
   pre: ({ node, children, ...rest }) => {
     const source = labSource(node);
     return source === null ? <pre {...rest}>{children}</pre> : <LabBlock source={source} />;
   },
 };
 
-/** An indicator's learn page: Markdown with KaTeX math (raw HTML is not rendered). */
-export function LearnPage({ slug }: { slug: string }) {
+/** A learn page: Markdown with KaTeX math (raw HTML is not rendered), scrolled to `anchor`. */
+export function LearnPage({ slug, anchor = null }: { slug: string; anchor?: string | null }) {
   const page = useLearnPage(slug);
+  const loaded = page.data !== undefined;
+  useEffect(() => {
+    if (loaded && anchor !== null) {
+      const heading = document.getElementById(headingDomId(anchor));
+      // jsdom (tests) has no scrollIntoView.
+      if (heading !== null && 'scrollIntoView' in heading)
+        heading.scrollIntoView({ block: 'start' });
+    }
+  }, [loaded, anchor]);
   if (page.isError) {
     return (
       <p className={styles.status} role="alert">
@@ -49,7 +82,12 @@ export function LearnPage({ slug }: { slug: string }) {
   }
   return (
     <article className={styles.page}>
-      <Markdown remarkPlugins={REMARK} rehypePlugins={REHYPE} components={COMPONENTS}>
+      <Markdown
+        remarkPlugins={REMARK}
+        rehypePlugins={REHYPE}
+        components={COMPONENTS}
+        urlTransform={urlTransform}
+      >
         {page.data}
       </Markdown>
     </article>
