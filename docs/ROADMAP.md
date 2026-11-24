@@ -299,7 +299,8 @@ Phase-2 plan.
 - [x] Statistics tool: a dragged range; the Statistics tab shows the histograms of the bar returns and of their change
   (curvature) with the normal curve, mean, standard deviation, annualised mean and volatility.
 - [x] F1: OHLC forecast backend (ADR 0010): k bars ahead as probabilities, models A (OLS) and C (ridge + HAR),
-  walk-forward validation and auto-tuning. [ ] F2: chart, Forecast tab, learn page.
+  walk-forward validation and auto-tuning. [x] F2: on the chart (fan, median candles), the Forecast tab, the replay
+  freeze, the Forecasting OHLC learn page with a live widget.
 - Deferred: the Python plugin API (`plugins/` folder, hot reload, `chartlab test-indicator`), if ever needed.
 
 ### Phase 4 — Strategies & backtesting

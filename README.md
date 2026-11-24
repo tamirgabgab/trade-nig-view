@@ -48,8 +48,8 @@ The screenshot above still shows the empty R0 shell; a screenshot of the current
 | Learn pages for bands, volatility and volume (P2c): Bollinger Bands, ATR, OBV, VWAP, Volume SMA, with hourly lab data in sessions and an accumulation scenario where volume leads price | ✅ Done |
 | Structure, concepts and exercises (P2d): pivots, previous-period levels, gaps; concept pages (bars and sessions, adjusted prices, warm-up, lookahead and replay, lag and noise); a glossary whose terms show their definition on hover in every page; links between pages; guided Replay exercises with steps and a hidden answer | ✅ Done |
 | Custom tools (P3): **Return** (two points: the change and the equivalent compound return per year, month, week, day or bar) and **Statistics** (a range: histograms of the returns and of their change with the normal curve, mean, standard deviation, annualised mean and volatility, in a Statistics side-panel tab) | ✅ Done |
-| OHLC forecast, backend (P3 F1): the next k bars' open, high, low and close as probabilities (models A: OLS, C: ridge + HAR volatility), validated walk-forward against a naive benchmark, auto-tuned on past data (`GET /api/forecast`; the chart and Forecast tab follow in F2) | ✅ Done |
-| Forecast on the chart (F2), more custom indicators, backtesting, paper agent (Phases 3–5) | 🗺️ Roadmap |
+| OHLC forecast (P3 F1–F2): the next k bars' open, high, low and close as probabilities (models A: OLS, C: ridge + HAR volatility), validated walk-forward against a naive benchmark and auto-tuned on past data; on the chart (Structure → Forecast: a fan of 50/80/95 % intervals and median candles), a Forecast tab with the validation and coefficients, frozen at the start of a replay ("Forecast from here"), and a Forecasting OHLC learn page with a live widget | ✅ Done |
+| More custom indicators (designed with the user), backtesting, paper agent (Phases 3–5) | 🗺️ Roadmap |
 
 ## Quick start
 
