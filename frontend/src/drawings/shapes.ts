@@ -59,6 +59,8 @@ const RANGES: ReadonlySet<Drawing['type']> = new Set([
   'price_range',
   'date_range',
   'date_price_range',
+  'return_range',
+  'stats_range',
 ]);
 
 /** A range tool: a box between its two anchors with a measurement label. */
@@ -129,6 +131,8 @@ export function strokes(
     case 'price_range':
     case 'date_range':
     case 'date_price_range':
+    case 'return_range':
+    case 'stats_range':
       return [];
   }
 }

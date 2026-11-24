@@ -513,7 +513,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text" | "fib_retracement" | "fib_extension" | "parallel_channel" | "price_range" | "date_range" | "date_price_range";
+            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text" | "fib_retracement" | "fib_extension" | "parallel_channel" | "price_range" | "date_range" | "date_price_range" | "return_range" | "stats_range";
             /** Points */
             points: components["schemas"]["DrawingPoint"][];
             /**
@@ -587,6 +587,21 @@ export interface components {
              * @description Fib tools: the levels
              */
             levels?: components["schemas"]["FibLevel"][] | null;
+            /**
+             * Unit
+             * @description return range: the unit T of the equivalent return
+             */
+            unit?: ("year" | "month" | "week" | "day" | "bar") | null;
+            /**
+             * Returns
+             * @description statistics range: log or simple returns
+             */
+            returns?: ("log" | "simple") | null;
+            /**
+             * Basis
+             * @description statistics range: close-to-close returns, or open-to-close (within the bar)
+             */
+            basis?: ("close" | "open") | null;
         };
         /** DrawingStyle */
         DrawingStyle: {

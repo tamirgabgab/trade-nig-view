@@ -1,5 +1,6 @@
 import {
   AlignVerticalSpaceAround,
+  ChartNoAxesColumn,
   ArrowRightFromLine,
   BetweenHorizontalStart,
   Minus,
@@ -8,6 +9,7 @@ import {
   MoveHorizontal,
   MoveUpRight,
   MoveVertical,
+  Percent,
   RectangleHorizontal,
   Rows4,
   Ruler,
@@ -82,6 +84,8 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       tool('price_range', MoveVertical),
       tool('date_range', MoveHorizontal),
       tool('date_price_range', Move),
+      tool('return_range', Percent),
+      tool('stats_range', ChartNoAxesColumn),
     ],
   },
   {

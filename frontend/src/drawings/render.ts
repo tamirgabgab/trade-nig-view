@@ -123,7 +123,10 @@ function drawRange(
   ctx.fillStyle = withAlpha(color, FILL_ALPHA);
   ctx.fillRect(left, top, right - left, bottom - top);
 
-  if (drawing.type !== 'date_range') {
+  // A statistics range is a span of time (like a date range); a return range is two prices at
+  // two times (like a date and price range).
+  const timeOnly = drawing.type === 'date_range' || drawing.type === 'stats_range';
+  if (!timeOnly) {
     arrow(ctx, { x: mid.x, y: a.y }, { x: mid.x, y: b.y });
     if (drawing.type === 'price_range') {
       segment(ctx, { x: left, y: a.y }, { x: right, y: a.y });
@@ -132,7 +135,7 @@ function drawRange(
   }
   if (drawing.type !== 'price_range') {
     arrow(ctx, { x: a.x, y: mid.y }, { x: b.x, y: mid.y });
-    if (drawing.type === 'date_range') {
+    if (timeOnly) {
       segment(ctx, { x: a.x, y: top }, { x: a.x, y: bottom });
       segment(ctx, { x: b.x, y: top }, { x: b.x, y: bottom });
     }

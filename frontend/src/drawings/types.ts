@@ -16,7 +16,12 @@ export type DrawingType =
   | 'parallel_channel'
   | 'price_range'
   | 'date_range'
-  | 'date_price_range';
+  | 'date_price_range'
+  | 'return_range'
+  | 'stats_range';
+
+/** The unit T of a return range's equivalent return. */
+export type ReturnUnit = 'year' | 'month' | 'week' | 'day' | 'bar';
 
 export type LineStyle = 'solid' | 'dashed' | 'dotted';
 
@@ -44,6 +49,11 @@ export interface DrawingProps {
   fill?: boolean;
   /** Fib tools. */
   levels?: FibLevel[];
+  /** Return range: the equivalent return is per this unit. */
+  unit?: ReturnUnit;
+  /** Statistics range: log or simple returns, close-to-close or open-to-close. */
+  returns?: 'log' | 'simple';
+  basis?: 'close' | 'open';
 }
 
 export interface Drawing {
@@ -75,6 +85,8 @@ export const POINT_COUNT: Record<DrawingType, number> = {
   price_range: 2,
   date_range: 2,
   date_price_range: 2,
+  return_range: 2,
+  stats_range: 2,
 };
 
 export const DEFAULT_STYLE: DrawingStyle = {

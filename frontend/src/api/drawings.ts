@@ -1,4 +1,5 @@
-import type { Drawing, DrawingType, FibLevel, LineStyle } from '../drawings/types.ts';
+import { RETURN_UNITS } from '../drawings/measure.ts';
+import type { Drawing, DrawingType, FibLevel, LineStyle, ReturnUnit } from '../drawings/types.ts';
 import { POINT_COUNT } from '../drawings/types.ts';
 import { apiGet, apiPut, fieldsOf, isRecord, type Schemas } from './client.ts';
 
@@ -50,6 +51,11 @@ function parseDrawing(item: unknown): Drawing | null {
       ...(typeof pr['font_size'] === 'number' ? { font_size: pr['font_size'] } : {}),
       ...(typeof pr['fill'] === 'boolean' ? { fill: pr['fill'] } : {}),
       ...(Array.isArray(pr['levels']) ? { levels: parseLevels(pr['levels'] as unknown[]) } : {}),
+      ...(RETURN_UNITS.some((u) => u.unit === pr['unit'])
+        ? { unit: pr['unit'] as ReturnUnit }
+        : {}),
+      ...(pr['returns'] === 'log' || pr['returns'] === 'simple' ? { returns: pr['returns'] } : {}),
+      ...(pr['basis'] === 'close' || pr['basis'] === 'open' ? { basis: pr['basis'] } : {}),
     },
     locked: field('locked') === true,
     hidden: field('hidden') === true,

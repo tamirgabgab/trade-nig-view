@@ -29,6 +29,8 @@ DrawingType = Literal[
     "price_range",
     "date_range",
     "date_price_range",
+    "return_range",
+    "stats_range",
 ]
 
 #: Number of anchors each tool needs.
@@ -47,6 +49,8 @@ POINTS: dict[str, int] = {
     "price_range": 2,
     "date_range": 2,
     "date_price_range": 2,
+    "return_range": 2,
+    "stats_range": 2,
 }
 
 MAX_FIB_LEVELS = 24
@@ -97,6 +101,16 @@ class DrawingProps(BaseModel):
     levels: list[FibLevel] | None = Field(
         default=None, max_length=MAX_FIB_LEVELS, description="Fib tools: the levels"
     )
+    unit: Literal["year", "month", "week", "day", "bar"] | None = Field(
+        default=None, description="return range: the unit T of the equivalent return"
+    )
+    returns: Literal["log", "simple"] | None = Field(
+        default=None, description="statistics range: log or simple returns"
+    )
+    basis: Literal["close", "open"] | None = Field(
+        default=None,
+        description="statistics range: close-to-close returns, or open-to-close (within the bar)",
+    )
 
 
 #: Props each tool may set.
@@ -105,6 +119,8 @@ ALLOWED_PROPS: dict[str, frozenset[str]] = {
     "rectangle": frozenset({"fill"}),
     "fib_retracement": frozenset({"levels"}),
     "fib_extension": frozenset({"levels"}),
+    "return_range": frozenset({"unit"}),
+    "stats_range": frozenset({"returns", "basis"}),
 }
 
 

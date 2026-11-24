@@ -64,6 +64,8 @@ export const TOOL_LABELS: Record<DrawingType, string> = {
   price_range: 'Price range',
   date_range: 'Date range',
   date_price_range: 'Date and price range',
+  return_range: 'Return',
+  stats_range: 'Statistics',
 };
 
 /** Thin lines for the tools whose look comes from fills and labels. */
@@ -74,6 +76,8 @@ const THIN: ReadonlySet<DrawingType> = new Set([
   'price_range',
   'date_range',
   'date_price_range',
+  'return_range',
+  'stats_range',
 ]);
 
 function defaultProps(type: DrawingType): Drawing['props'] {
@@ -85,6 +89,10 @@ function defaultProps(type: DrawingType): Drawing['props'] {
     case 'fib_retracement':
     case 'fib_extension':
       return { levels: DEFAULT_FIB_LEVELS.map((level) => ({ ...level })) };
+    case 'return_range':
+      return { unit: 'year' };
+    case 'stats_range':
+      return { returns: 'log', basis: 'close' };
     default:
       return {};
   }

@@ -1398,7 +1398,9 @@
               "parallel_channel",
               "price_range",
               "date_range",
-              "date_price_range"
+              "date_price_range",
+              "return_range",
+              "stats_range"
             ],
             "title": "Type"
           },
@@ -1532,6 +1534,57 @@
             ],
             "title": "Levels",
             "description": "Fib tools: the levels"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "year",
+                  "month",
+                  "week",
+                  "day",
+                  "bar"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "return range: the unit T of the equivalent return"
+          },
+          "returns": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "log",
+                  "simple"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returns",
+            "description": "statistics range: log or simple returns"
+          },
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "close",
+                  "open"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis",
+            "description": "statistics range: close-to-close returns, or open-to-close (within the bar)"
           }
         },
         "additionalProperties": false,
