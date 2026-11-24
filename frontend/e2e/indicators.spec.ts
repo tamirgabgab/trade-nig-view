@@ -207,3 +207,19 @@ test('learn index: the MACD page draws its measured band-pass response', async (
   await expect(table.getByRole('row', { name: /DC gain/ })).toContainText('0.000');
   await expect(figure.getByRole('figure', { name: /Magnitude/ })).toBeVisible();
 });
+
+test('glossary terms show their definition and open the glossary at the entry', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Learn pages' }).click();
+  await page.keyboard.type('Simple Moving');
+  await page.keyboard.press('Enter');
+  const drawer = page.getByRole('complementary', { name: 'Simple Moving Average' });
+  const term = drawer.getByRole('link', { name: 'edge', exact: true });
+  await term.scrollIntoViewIfNeeded();
+  await term.hover();
+  await expect(term).toHaveAccessibleDescription(/^In an event study, the mean forward log return/);
+  await term.click();
+  const glossary = page.getByRole('complementary', { name: 'Glossary' });
+  await expect(glossary.getByRole('heading', { name: 'Edge', exact: true })).toBeInViewport();
+});

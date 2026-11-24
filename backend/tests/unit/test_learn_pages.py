@@ -32,6 +32,8 @@ V2_PAGES: set[str] = {
     "mcginley",
     "moving-average",
     "obv",
+    "pivots",
+    "previous-hlc",
     "rsi",
     "sma",
     "smma",
