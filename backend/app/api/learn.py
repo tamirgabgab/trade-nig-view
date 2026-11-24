@@ -12,13 +12,14 @@ from pathlib import Path
 from typing import Annotated, Literal, get_args
 
 import numpy as np
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from app.analysis.conditions import Condition, evaluate
 from app.analysis.events import Stats, event_study
 from app.analysis.synthetic import Scenario, synthetic_bars
 from app.api.deps import get_bar_service
+from app.api.forecast import ForecastResponse, forecast_cache, forecast_frame
 from app.api.indicators import ParamValue
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
@@ -315,4 +316,38 @@ def learn_lab(
             for spec, p, out in zip(specs, params, outputs, strict=True)
         ],
         study=study,
+    )
+
+
+class LabForecastRequest(BaseModel):
+    source: Annotated[SyntheticSource | SymbolSource, Field(discriminator="kind")]
+    k: Annotated[int, Field(ge=1, le=20, description="Bars ahead")] = 5
+    model: Literal["a", "c"] = "c"
+
+
+@router.post("/learn/forecast", response_model=ForecastResponse)
+def learn_forecast(
+    body: LabForecastRequest,
+    request: Request,
+    service: Annotated[BarService, Depends(get_bar_service)],
+) -> ForecastResponse:
+    """The OHLC forecast (``GET /api/forecast``, auto-tuned) on a lab source: a synthetic
+    scenario or a symbol's last bars, for the learn page's widget."""
+    source = body.source
+    frame = _lab_frame(source, service)
+    origin: tuple[object, ...] = (
+        ("synthetic", source.scenario, source.seed, source.bars)
+        if isinstance(source, SyntheticSource)
+        else ("lab-symbol", source.symbol, source.bars)
+    )
+    name = source.scenario.value if isinstance(source, SyntheticSource) else source.symbol
+    return forecast_frame(
+        forecast_cache(request),
+        origin,
+        frame,
+        Interval(source.interval),
+        name,
+        body.k,
+        body.model,
+        None,
     )

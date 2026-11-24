@@ -215,6 +215,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/learn/forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn Forecast
+         * @description The OHLC forecast (``GET /api/forecast``, auto-tuned) on a lab source: a synthetic
+         *     scenario or a symbol's last bars, for the learn page's widget.
+         */
+        post: operations["learn_forecast_api_learn_forecast_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/drawings/{symbol}": {
         parameters: {
             query?: never;
@@ -361,7 +382,7 @@ export interface paths {
         /**
          * Get Forecast
          * @description Quantiles of the next ``k`` bars' open, high, low and close from the whole history up to
-         *     the last bar (``until`` in replay), with the models' walk-forward scores. Cached per bars.
+         *     the last bar (``until``, ``origin`` in replay), with the models' walk-forward scores.
          */
         get: operations["get_forecast_api_forecast_get"];
         put?: never;
@@ -958,6 +979,23 @@ export interface components {
          * @enum {string}
          */
         Interval: "1h" | "4h" | "1D" | "1W" | "1M";
+        /** LabForecastRequest */
+        LabForecastRequest: {
+            /** Source */
+            source: components["schemas"]["SyntheticSource"] | components["schemas"]["SymbolSource"];
+            /**
+             * K
+             * @description Bars ahead
+             * @default 5
+             */
+            k: number;
+            /**
+             * Model
+             * @default c
+             * @enum {string}
+             */
+            model: "a" | "c";
+        };
         /** LabIndicator */
         LabIndicator: {
             /**
@@ -2016,6 +2054,39 @@ export interface operations {
             };
         };
     };
+    learn_forecast_api_learn_forecast_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabForecastRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_drawings_of_api_drawings__symbol__get: {
         parameters: {
             query?: never;
@@ -2401,6 +2472,8 @@ export interface operations {
                 adjusted?: boolean;
                 /** @description Replay cursor: no bar after it */
                 until?: string | null;
+                /** @description Forecast from this bar (UTC epoch seconds of its open; replay) */
+                origin?: number | null;
             };
             header?: never;
             path?: never;

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -97,3 +98,30 @@ def test_auto_tuning_is_scored_before_the_validated_bars() -> None:
     tuning = fc.eval_origins(n, 1, EVALUATE_BARS, skip=EVALUATE_BARS)
     assert tuning[-1] + 1 == validated[0]
     assert len(tuning) == len(validated) == EVALUATE_BARS
+
+
+def test_origin_starts_the_forecast_at_that_bar(e2e_client: TestClient) -> None:
+    """Replay: the forecast is made at the cursor bar (its open time), whatever the interval."""
+    bars = e2e_client.get(
+        "/api/bars", params={"symbol": "AAPL", "until": "2024-01-10", "limit": 3}
+    ).json()["bars"]
+    middle = bars[1]
+    origin = int(datetime.fromisoformat(f"{middle['time']}T00:00:00+00:00").timestamp())
+    body = forecast(e2e_client, k=2, auto=False, origin=origin)
+    assert body["last_time"] == middle["time"]
+    assert body["last_close"] == middle["close"]
+
+
+def test_the_learn_widget_forecasts_a_synthetic_scenario(client: TestClient) -> None:
+    response = client.post(
+        "/api/learn/forecast",
+        json={
+            "source": {"kind": "synthetic", "scenario": "volatility_regime", "bars": 1500},
+            "k": 3,
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["symbol"] == "volatility_regime"
+    assert body["auto"] is True
+    assert [hz["h"] for hz in body["horizons"]] == [1, 2, 3]

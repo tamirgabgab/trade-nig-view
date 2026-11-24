@@ -227,7 +227,47 @@ def _forecast(
     )
 
 
-def _cache(request: Request) -> ForecastCache:
+def bars_key(frame: BarFrame) -> tuple[object, ...]:
+    """A frame's identity for the caches: its bars' values too, not only their count and last
+    time (a refreshed last bar or a re-adjusted history is another frame)."""
+    return (
+        len(frame),
+        int(frame.time[-1]),
+        float(frame.close.sum()),
+        *(float(x[-1]) for x in (frame.open, frame.high, frame.low, frame.close)),
+    )
+
+
+def forecast_frame(
+    cache: ForecastCache,
+    source: tuple[object, ...],
+    frame: BarFrame,
+    interval: Interval,
+    symbol: str,
+    k: int,
+    model: Literal["a", "c"],
+    params: fc.Params | None,
+) -> ForecastResponse:
+    """The (cached) forecast of ``frame``; ``source`` names where its bars came from."""
+    if len(frame) < fc.MIN_TRAIN + max(fc.HAR) + k + 1:
+        raise NotEnoughHistoryError(f"{symbol}: {len(frame)} bars are too few for a forecast")
+    frame_id = (*source, interval, *bars_key(frame))
+    key = (*frame_id, k, model, params)
+    response = cache.get(cache.responses, key)
+    if response is None:
+        tuned = None
+        if params is None:
+            tuned = cache.get(cache.tuned, frame_id)
+            if tuned is None:
+                tuned = tune_all(frame)
+                cache.put(cache.tuned, frame_id, tuned)
+        response = _forecast(frame, interval, symbol, k, model, params, tuned)
+        cache.put(cache.responses, key, response)
+    return response
+
+
+def forecast_cache(request: Request) -> ForecastCache:
+    """The app's forecast caches (created on first use)."""
     state = request.app.state
     if not hasattr(state, "forecast_cache"):
         state.forecast_cache = ForecastCache()
@@ -254,39 +294,29 @@ def get_forecast(
     lags: Annotated[int, Query(ge=1, le=10, description="Manual: past bars as features")] = 3,
     adjusted: bool = True,
     until: Annotated[date | None, Query(description="Replay cursor: no bar after it")] = None,
+    origin: Annotated[
+        int | None,
+        Query(description="Forecast from this bar (UTC epoch seconds of its open; replay)"),
+    ] = None,
 ) -> ForecastResponse:
     """Quantiles of the next ``k`` bars' open, high, low and close from the whole history up to
-    the last bar (``until`` in replay), with the models' walk-forward scores. Cached per bars."""
+    the last bar (``until``, ``origin`` in replay), with the models' walk-forward scores."""
     if not auto and 0 < window < fc.MIN_TRAIN:
         raise InvalidForecastParamsError(
             f"window must be 0 (all the history) or at least {fc.MIN_TRAIN} bars, got {window}"
         )
     result = service.get_bars(symbol, interval, adjusted=adjusted, until=until, limit=1_000_000_000)
     frame = result.frame
-    if len(frame) < fc.MIN_TRAIN + max(fc.HAR) + k + 1:
-        raise NotEnoughHistoryError(f"{symbol}: {len(frame)} bars are too few for a forecast")
-    # The bars themselves, not only their count and last time: a refreshed last bar or a
-    # re-adjusted history (a dividend) is another frame.
-    bars_key = (
-        result.symbol.symbol,
-        interval,
-        adjusted,
-        len(frame),
-        int(frame.time[-1]),
-        float(frame.close.sum()),
-        *(float(x[-1]) for x in (frame.open, frame.high, frame.low, frame.close)),
-    )
+    if origin is not None:
+        frame = frame.take(frame.time <= origin)
     params = None if auto else fc.Params(window or None, ridge, lags)
-    cache = _cache(request)
-    key = (*bars_key, k, model, params)
-    response = cache.get(cache.responses, key)
-    if response is None:
-        tuned = None
-        if auto:
-            tuned = cache.get(cache.tuned, bars_key)
-            if tuned is None:
-                tuned = tune_all(frame)
-                cache.put(cache.tuned, bars_key, tuned)
-        response = _forecast(frame, interval, result.symbol.symbol, k, model, params, tuned)
-        cache.put(cache.responses, key, response)
-    return response
+    return forecast_frame(
+        forecast_cache(request),
+        ("symbol", result.symbol.symbol, adjusted),
+        frame,
+        interval,
+        result.symbol.symbol,
+        k,
+        model,
+        params,
+    )

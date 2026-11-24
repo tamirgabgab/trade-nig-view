@@ -519,6 +519,48 @@
         }
       }
     },
+    "/api/learn/forecast": {
+      "post": {
+        "tags": [
+          "learn"
+        ],
+        "summary": "Learn Forecast",
+        "description": "The OHLC forecast (``GET /api/forecast``, auto-tuned) on a lab source: a synthetic\nscenario or a symbol's last bars, for the learn page's widget.",
+        "operationId": "learn_forecast_api_learn_forecast_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabForecastRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/drawings/{symbol}": {
       "get": {
         "tags": [
@@ -1045,7 +1087,7 @@
           "forecast"
         ],
         "summary": "Get Forecast",
-        "description": "Quantiles of the next ``k`` bars' open, high, low and close from the whole history up to\nthe last bar (``until`` in replay), with the models' walk-forward scores. Cached per bars.",
+        "description": "Quantiles of the next ``k`` bars' open, high, low and close from the whole history up to\nthe last bar (``until``, ``origin`` in replay), with the models' walk-forward scores.",
         "operationId": "get_forecast_api_forecast_get",
         "parameters": [
           {
@@ -1178,6 +1220,24 @@
               "title": "Until"
             },
             "description": "Replay cursor: no bar after it"
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Forecast from this bar (UTC epoch seconds of its open; replay)",
+              "title": "Origin"
+            },
+            "description": "Forecast from this bar (UTC epoch seconds of its open; replay)"
           }
         ],
         "responses": {
@@ -2448,6 +2508,50 @@
         ],
         "title": "Interval",
         "description": "Bar intervals served by the API.\n\n``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and\n``1W``/``1M`` from ``1D``."
+      },
+      "LabForecastRequest": {
+        "properties": {
+          "source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SyntheticSource"
+              },
+              {
+                "$ref": "#/components/schemas/SymbolSource"
+              }
+            ],
+            "title": "Source",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "symbol": "#/components/schemas/SymbolSource",
+                "synthetic": "#/components/schemas/SyntheticSource"
+              }
+            }
+          },
+          "k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "K",
+            "description": "Bars ahead",
+            "default": 5
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "a",
+              "c"
+            ],
+            "title": "Model",
+            "default": "c"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "LabForecastRequest"
       },
       "LabIndicator": {
         "properties": {
