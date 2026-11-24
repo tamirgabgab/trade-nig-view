@@ -43,10 +43,9 @@ export function LearnDrawer({
   // An indicator on the chart (its uid), or a page opened from the index ("page:<slug>").
   const view = views.find((v) => v.instance.uid === learnFor);
   // "page:<slug>#<heading>" (a learn link) opens the page at that heading.
-  const [pageRef = null, anchor = null] = learnFor.startsWith(PAGE_PREFIX)
+  const [pageSlug = null, anchor = null] = learnFor.startsWith(PAGE_PREFIX)
     ? learnFor.slice(PAGE_PREFIX.length).split('#')
     : [];
-  const pageSlug = pageRef;
   const registry = useIndicatorList().data;
   const index = useLearnIndex().data;
   const spec =
