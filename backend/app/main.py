@@ -23,6 +23,7 @@ from app.api import (
     learn,
     quotes,
     symbols,
+    volatility,
     watchlists,
 )
 from app.config import Settings, get_settings
@@ -106,6 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         watchlists.router,
         analysis.router,
         forecast.router,
+        volatility.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

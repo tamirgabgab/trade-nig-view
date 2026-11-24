@@ -49,6 +49,7 @@ class TaLib(Protocol):
     ) -> FloatArray: ...
     def TRANGE(self, high: FloatArray, low: FloatArray, close: FloatArray) -> FloatArray: ...  # noqa: N802
     def OBV(self, real: FloatArray, volume: FloatArray) -> FloatArray: ...  # noqa: N802
+    def STDDEV(self, real: FloatArray, timeperiod: int, nbdev: float) -> FloatArray: ...  # noqa: N802
 
 
 def load_talib() -> tuple[TaLib | None, str]:

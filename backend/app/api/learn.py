@@ -21,6 +21,7 @@ from app.analysis.synthetic import Scenario, synthetic_bars
 from app.api.deps import get_bar_service
 from app.api.forecast import ForecastResponse, forecast_cache, forecast_frame
 from app.api.indicators import ParamValue
+from app.api.volatility import Estimator, VolatilityResponse, volatility_response
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
 from app.errors import ChartLabError
@@ -351,4 +352,23 @@ def learn_forecast(
         body.k,
         body.model,
         None,
+    )
+
+
+class LabVolatilityRequest(BaseModel):
+    source: Annotated[SyntheticSource | SymbolSource, Field(discriminator="kind")]
+    estimator: Estimator = "yang_zhang"
+
+
+@router.post("/learn/volatility", response_model=VolatilityResponse)
+def learn_volatility(
+    body: LabVolatilityRequest, service: Annotated[BarService, Depends(get_bar_service)]
+) -> VolatilityResponse:
+    """The volatility cone (``GET /api/volatility``, default squeeze) on a lab source, for the
+    learn page's widget."""
+    source = body.source
+    frame = _lab_frame(source, service)
+    name = source.scenario.value if isinstance(source, SyntheticSource) else source.symbol
+    return volatility_response(
+        frame, Interval(source.interval), name, body.estimator, "month", 10.0, 1.5
     )

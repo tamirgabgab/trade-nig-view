@@ -23,6 +23,7 @@ V2_PAGES: set[str] = {
     "dema",
     "ema",
     "envelope",
+    "historical-volatility",
     "hma",
     "kama",
     "lsma",
@@ -68,6 +69,7 @@ LAB_REQUIRED: dict[str, set[str]] = {
     "replay": {"symbol", "date"},
     "filter": {"indicator"},
     "forecast": set(),
+    "volatility": set(),
 }
 MAX_AGO = 500  # app.analysis.conditions.Operand.ago's bound
 RULE_REQUIRED = {"label", "left", "op", "right"}

@@ -236,6 +236,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/learn/volatility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn Volatility
+         * @description The volatility cone (``GET /api/volatility``, default squeeze) on a lab source, for the
+         *     learn page's widget.
+         */
+        post: operations["learn_volatility_api_learn_volatility_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/drawings/{symbol}": {
         parameters: {
             query?: never;
@@ -385,6 +406,27 @@ export interface paths {
          *     the last bar (``until``, ``origin`` in replay), with the models' walk-forward scores.
          */
         get: operations["get_forecast_api_forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/volatility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Volatility
+         * @description The volatility cone from the whole history up to the last bar (``until``, ``origin`` in
+         *     replay); on daily bars, the 1h bars (when there are any) add a realised variance.
+         */
+        get: operations["get_volatility_api_volatility_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1107,6 +1149,17 @@ export interface components {
              */
             event_index: number[];
         };
+        /** LabVolatilityRequest */
+        LabVolatilityRequest: {
+            /** Source */
+            source: components["schemas"]["SyntheticSource"] | components["schemas"]["SymbolSource"];
+            /**
+             * Estimator
+             * @default yang_zhang
+             * @enum {string}
+             */
+            estimator: "yang_zhang" | "close" | "parkinson" | "garman_klass" | "rogers_satchell";
+        };
         /** LayoutDocument */
         LayoutDocument: {
             /** Symbol */
@@ -1698,6 +1751,214 @@ export interface components {
             /** To */
             to: string | number;
         };
+        /** VolForecast */
+        VolForecast: {
+            /**
+             * Low
+             * @description 10 % of the per-bar volatility over the next h bars
+             */
+            low: number;
+            /** Median */
+            median: number;
+            /**
+             * High
+             * @description 90 %
+             */
+            high: number;
+            /**
+             * Coverage
+             * @description Walk-forward share of outcomes in the 80 % band
+             */
+            coverage: number | null;
+            /**
+             * Qlike
+             * @description Walk-forward QLIKE of the HAR forecast
+             */
+            qlike: number | null;
+            /**
+             * Qlike Naive
+             * @description QLIKE of 'the next h bars as the last h'
+             */
+            qlike_naive: number | null;
+        };
+        /** VolHorizon */
+        VolHorizon: {
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "week" | "month" | "quarter" | "half" | "year";
+            /** Bars */
+            bars: number;
+            /**
+             * Current
+             * @description Per-bar volatility of the last h bars (a fraction)
+             */
+            current: number;
+            /**
+             * Ci
+             * @description Approximate 95 % interval of `current`
+             */
+            ci: (number | null)[];
+            /**
+             * Percentiles
+             * @description At `levels`, over every h-bar window
+             */
+            percentiles: number[];
+            /**
+             * Rank
+             * @description % of the history's h-bar windows at or below `current`
+             */
+            rank: number;
+            /** @description Null if the history is too short */
+            forecast: components["schemas"]["VolForecast"] | null;
+        };
+        /** VolScore */
+        VolScore: {
+            /**
+             * Estimator
+             * @description An estimator id, 'har' or 'realized' (1h bars)
+             */
+            estimator: string;
+            /** Label */
+            label: string;
+            /** N */
+            n: number;
+            /**
+             * Qlike
+             * @description Mean QLIKE over the scored origins (lower is better)
+             */
+            qlike: number;
+            /**
+             * Bias
+             * @description Volatility over the 1h realised one (median)
+             */
+            bias: number | null;
+        };
+        /** VolShares */
+        VolShares: {
+            /**
+             * Window
+             * @description Over the last h bars
+             */
+            window: number | null;
+            /**
+             * History
+             * @description Over the whole history
+             */
+            history: number | null;
+        };
+        /** VolSqueeze */
+        VolSqueeze: {
+            /**
+             * Horizon
+             * @enum {string}
+             */
+            horizon: "week" | "month" | "quarter" | "half" | "year";
+            /** Bars */
+            bars: number;
+            /**
+             * Threshold
+             * @description Squeeze: rank among the last year at or below this
+             */
+            threshold: number;
+            /**
+             * Factor
+             * @description Expansion: the next h bars' volatility >= factor x today's
+             */
+            factor: number;
+            /**
+             * Rank
+             * @description Today's rank among the last year's values
+             */
+            rank: number | null;
+            /** Active */
+            active: boolean;
+            /**
+             * Events
+             * @description Past bars in a squeeze (with an outcome)
+             */
+            events: number;
+            /**
+             * Independent
+             * @description Events at least h bars apart (used for the interval)
+             */
+            independent: number;
+            /**
+             * P
+             * @description P(expansion | squeeze)
+             */
+            p: number | null;
+            /**
+             * Ci
+             * @description Wilson 95 % interval of p
+             */
+            ci: (number | null)[];
+            /**
+             * Base Rate
+             * @description P(expansion) after any bar
+             */
+            base_rate: number;
+            /**
+             * Move Events
+             * @description Median and 80th percentile of |h-bar log return| after a squeeze
+             */
+            move_events: (number | null)[];
+            /**
+             * Move All
+             * @description The same after any bar
+             */
+            move_all: (number | null)[];
+        };
+        /** VolatilityResponse */
+        VolatilityResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Estimator
+             * @enum {string}
+             */
+            estimator: "yang_zhang" | "close" | "parkinson" | "garman_klass" | "rogers_satchell";
+            /**
+             * Last Time
+             * @description The origin bar, as in /api/bars
+             */
+            last_time: string | number;
+            /**
+             * Bars Per Year
+             * @description Annualise a per-bar volatility by its square root
+             */
+            bars_per_year: number;
+            /**
+             * Levels
+             * @description Percentile levels of the cone
+             */
+            levels: number[];
+            /** Horizons */
+            horizons: components["schemas"]["VolHorizon"][];
+            /**
+             * Main
+             * @description The horizon of the squeeze, shares and scores
+             * @enum {string}
+             */
+            main: "week" | "month" | "quarter" | "half" | "year";
+            squeeze: components["schemas"]["VolSqueeze"] | null;
+            /** @description Share of the variance from the gaps */
+            overnight: components["schemas"]["VolShares"];
+            /** @description Share of the squared returns from falling bars */
+            downside: components["schemas"]["VolShares"];
+            /**
+             * Scores
+             * @description Best first; empty if the history is too short
+             */
+            scores: components["schemas"]["VolScore"][];
+            /**
+             * Realized
+             * @description Whether 1h bars gave a realised variance (daily only)
+             */
+            realized: boolean;
+        };
         /** WatchlistDocument */
         WatchlistDocument: {
             /**
@@ -2074,6 +2335,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForecastResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    learn_volatility_api_learn_volatility_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabVolatilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VolatilityResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2488,6 +2782,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForecastResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_volatility_api_volatility_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                interval?: components["schemas"]["Interval"];
+                estimator?: "yang_zhang" | "close" | "parkinson" | "garman_klass" | "rogers_satchell";
+                /** @description Horizon of the squeeze, the shares and the scores */
+                horizon?: "week" | "month" | "quarter";
+                /** @description Squeeze rank (%) */
+                threshold?: number;
+                /** @description Expansion factor */
+                factor?: number;
+                adjusted?: boolean;
+                /** @description Replay cursor: no bar after it */
+                until?: string | null;
+                /** @description The cone at this bar (UTC epoch seconds of its open) */
+                origin?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VolatilityResponse"];
                 };
             };
             /** @description Validation Error */

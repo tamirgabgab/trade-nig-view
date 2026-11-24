@@ -562,3 +562,114 @@ def golden_gaps(
                 gap.see(k, h[k], lo[k])
             gaps.append(gap)
     return gaps
+
+
+# --- historical volatility (V1) -----------------------------------------------------------------
+
+YEAR_SECONDS = 365.25 * 86_400
+
+
+def _mean(xs: Sequence[float]) -> float:
+    return sum(xs) / len(xs)
+
+
+def _var(xs: Sequence[float], ddof: int) -> float:
+    m = _mean(xs)
+    return sum((x - m) ** 2 for x in xs) / (len(xs) - ddof)
+
+
+def golden_bar_terms(
+    o: Sequence[float], h: Sequence[float], lo: Sequence[float], c: Sequence[float], t: int
+) -> dict[str, float]:
+    """The per-bar quantities of bar t (gap and return NaN on bar 0)."""
+    prev = c[t - 1] if t > 0 else NAN
+    hl = math.log(h[t] / lo[t])
+    body = math.log(c[t] / o[t])
+    return {
+        "gap": math.log(o[t] / prev) if t > 0 else NAN,
+        "ret": math.log(c[t] / prev) if t > 0 else NAN,
+        "body": body,
+        "parkinson": hl * hl / (4 * math.log(2)),
+        "garman_klass": 0.5 * hl * hl - (2 * math.log(2) - 1) * body * body,
+        "rogers_satchell": math.log(h[t] / c[t]) * math.log(h[t] / o[t])
+        + math.log(lo[t] / c[t]) * math.log(lo[t] / o[t]),
+    }
+
+
+def golden_variance(
+    o: Sequence[float],
+    h: Sequence[float],
+    lo: Sequence[float],
+    c: Sequence[float],
+    estimator: str,
+    n: int,
+) -> list[float]:
+    """Per-bar variance of the last n bars, one estimator, straight from the formulas."""
+    rows = [golden_bar_terms(o, h, lo, c, t) for t in range(len(c))]
+    out: list[float] = []
+    for t in range(len(c)):
+        window = rows[t - n + 1 : t + 1] if t >= n - 1 else []
+        needs_previous = estimator in ("close", "yang_zhang")
+        if not window or (needs_previous and t < n):
+            out.append(NAN)
+            continue
+        match estimator:
+            case "close":
+                out.append(_var([r["ret"] for r in window], 0))
+            case "yang_zhang":
+                k = 0.34 / (1.34 + (n + 1) / (n - 1))
+                out.append(
+                    _var([r["gap"] for r in window], 1)
+                    + k * _var([r["body"] for r in window], 1)
+                    + (1 - k) * _mean([r["rogers_satchell"] for r in window])
+                )
+            case _:
+                out.append(_mean([r[estimator] for r in window]))
+    return out
+
+
+def golden_bars_per_year(times: Sequence[int]) -> list[float]:
+    """Bars with an open in (t - 1 year, t]; before a year, the bar rate so far times a year."""
+    out: list[float] = []
+    first = 0  # the oldest bar inside the year up to t
+    for t, now in enumerate(times):
+        while times[first] <= now - YEAR_SECONDS:
+            first += 1
+        elapsed = now - times[0]
+        if elapsed >= YEAR_SECONDS:
+            out.append(float(t - first + 1))
+        elif elapsed > 0:
+            out.append(t / (elapsed / YEAR_SECONDS))
+        else:
+            out.append(NAN)
+    return out
+
+
+def golden_hv(
+    o: Sequence[float],
+    h: Sequence[float],
+    lo: Sequence[float],
+    c: Sequence[float],
+    times: Sequence[int],
+    estimator: str,
+    n: int,
+    annualize: bool,
+) -> list[float]:
+    per_year = golden_bars_per_year(times)
+    out: list[float] = []
+    for v, year in zip(golden_variance(o, h, lo, c, estimator, n), per_year, strict=True):
+        sigma = math.sqrt(max(v, 0.0)) if not math.isnan(v) else NAN
+        out.append(100 * sigma * (math.sqrt(year) if annualize else 1.0))
+    return out
+
+
+def golden_percentrank(x: Sequence[float], m: int) -> list[float]:
+    """Pine ``ta.percentrank``: % of the previous m values <= the current one."""
+    out: list[float] = []
+    for t in range(len(x)):
+        window: Sequence[float] = x[t - m : t] if t >= m else []
+        if not window or math.isnan(x[t]) or any(math.isnan(v) for v in window):
+            out.append(NAN)
+            continue
+        out.append(100 * sum(1 for v in window if v <= x[t]) / m)
+    return out

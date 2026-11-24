@@ -561,6 +561,48 @@
         }
       }
     },
+    "/api/learn/volatility": {
+      "post": {
+        "tags": [
+          "learn"
+        ],
+        "summary": "Learn Volatility",
+        "description": "The volatility cone (``GET /api/volatility``, default squeeze) on a lab source, for the\nlearn page's widget.",
+        "operationId": "learn_volatility_api_learn_volatility_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabVolatilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VolatilityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/drawings/{symbol}": {
       "get": {
         "tags": [
@@ -1247,6 +1289,169 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/volatility": {
+      "get": {
+        "tags": [
+          "volatility"
+        ],
+        "summary": "Get Volatility",
+        "description": "The volatility cone from the whole history up to the last bar (``until``, ``origin`` in\nreplay); on daily bars, the 1h bars (when there are any) add a realised variance.",
+        "operationId": "get_volatility_api_volatility_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Interval",
+              "default": "1D"
+            }
+          },
+          {
+            "name": "estimator",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "yang_zhang",
+                "close",
+                "parkinson",
+                "garman_klass",
+                "rogers_satchell"
+              ],
+              "type": "string",
+              "default": "yang_zhang",
+              "title": "Estimator"
+            }
+          },
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "week",
+                "month",
+                "quarter"
+              ],
+              "type": "string",
+              "description": "Horizon of the squeeze, the shares and the scores",
+              "default": "month",
+              "title": "Horizon"
+            },
+            "description": "Horizon of the squeeze, the shares and the scores"
+          },
+          {
+            "name": "threshold",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Squeeze rank (%)",
+              "default": 10.0,
+              "title": "Threshold"
+            },
+            "description": "Squeeze rank (%)"
+          },
+          {
+            "name": "factor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 5,
+              "minimum": 1.05,
+              "description": "Expansion factor",
+              "default": 1.5,
+              "title": "Factor"
+            },
+            "description": "Expansion factor"
+          },
+          {
+            "name": "adjusted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjusted"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Replay cursor: no bar after it",
+              "title": "Until"
+            },
+            "description": "Replay cursor: no bar after it"
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The cone at this bar (UTC epoch seconds of its open)",
+              "title": "Origin"
+            },
+            "description": "The cone at this bar (UTC epoch seconds of its open)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VolatilityResponse"
                 }
               }
             }
@@ -2876,6 +3081,45 @@
         ],
         "title": "LabStudy"
       },
+      "LabVolatilityRequest": {
+        "properties": {
+          "source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SyntheticSource"
+              },
+              {
+                "$ref": "#/components/schemas/SymbolSource"
+              }
+            ],
+            "title": "Source",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "symbol": "#/components/schemas/SymbolSource",
+                "synthetic": "#/components/schemas/SyntheticSource"
+              }
+            }
+          },
+          "estimator": {
+            "type": "string",
+            "enum": [
+              "yang_zhang",
+              "close",
+              "parkinson",
+              "garman_klass",
+              "rogers_satchell"
+            ],
+            "title": "Estimator",
+            "default": "yang_zhang"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "LabVolatilityRequest"
+      },
       "LayoutDocument": {
         "properties": {
           "symbol": {
@@ -4298,6 +4542,469 @@
         ],
         "title": "VisibleRange",
         "description": "Visible bar times, in the ``/api/bars`` format (``YYYY-MM-DD`` or UTC epoch seconds)."
+      },
+      "VolForecast": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "10 % of the per-bar volatility over the next h bars"
+          },
+          "median": {
+            "type": "number",
+            "title": "Median"
+          },
+          "high": {
+            "type": "number",
+            "title": "High",
+            "description": "90 %"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage",
+            "description": "Walk-forward share of outcomes in the 80 % band"
+          },
+          "qlike": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qlike",
+            "description": "Walk-forward QLIKE of the HAR forecast"
+          },
+          "qlike_naive": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qlike Naive",
+            "description": "QLIKE of 'the next h bars as the last h'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "median",
+          "high",
+          "coverage",
+          "qlike",
+          "qlike_naive"
+        ],
+        "title": "VolForecast"
+      },
+      "VolHorizon": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "week",
+              "month",
+              "quarter",
+              "half",
+              "year"
+            ],
+            "title": "Label"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars"
+          },
+          "current": {
+            "type": "number",
+            "title": "Current",
+            "description": "Per-bar volatility of the last h bars (a fraction)"
+          },
+          "ci": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Ci",
+            "description": "Approximate 95 % interval of `current`"
+          },
+          "percentiles": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Percentiles",
+            "description": "At `levels`, over every h-bar window"
+          },
+          "rank": {
+            "type": "number",
+            "title": "Rank",
+            "description": "% of the history's h-bar windows at or below `current`"
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VolForecast"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null if the history is too short"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "bars",
+          "current",
+          "ci",
+          "percentiles",
+          "rank",
+          "forecast"
+        ],
+        "title": "VolHorizon"
+      },
+      "VolScore": {
+        "properties": {
+          "estimator": {
+            "type": "string",
+            "title": "Estimator",
+            "description": "An estimator id, 'har' or 'realized' (1h bars)"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "qlike": {
+            "type": "number",
+            "title": "Qlike",
+            "description": "Mean QLIKE over the scored origins (lower is better)"
+          },
+          "bias": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bias",
+            "description": "Volatility over the 1h realised one (median)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estimator",
+          "label",
+          "n",
+          "qlike",
+          "bias"
+        ],
+        "title": "VolScore"
+      },
+      "VolShares": {
+        "properties": {
+          "window": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window",
+            "description": "Over the last h bars"
+          },
+          "history": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History",
+            "description": "Over the whole history"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window",
+          "history"
+        ],
+        "title": "VolShares"
+      },
+      "VolSqueeze": {
+        "properties": {
+          "horizon": {
+            "type": "string",
+            "enum": [
+              "week",
+              "month",
+              "quarter",
+              "half",
+              "year"
+            ],
+            "title": "Horizon"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold",
+            "description": "Squeeze: rank among the last year at or below this"
+          },
+          "factor": {
+            "type": "number",
+            "title": "Factor",
+            "description": "Expansion: the next h bars' volatility >= factor x today's"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank",
+            "description": "Today's rank among the last year's values"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "events": {
+            "type": "integer",
+            "title": "Events",
+            "description": "Past bars in a squeeze (with an outcome)"
+          },
+          "independent": {
+            "type": "integer",
+            "title": "Independent",
+            "description": "Events at least h bars apart (used for the interval)"
+          },
+          "p": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P",
+            "description": "P(expansion | squeeze)"
+          },
+          "ci": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Ci",
+            "description": "Wilson 95 % interval of p"
+          },
+          "base_rate": {
+            "type": "number",
+            "title": "Base Rate",
+            "description": "P(expansion) after any bar"
+          },
+          "move_events": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Move Events",
+            "description": "Median and 80th percentile of |h-bar log return| after a squeeze"
+          },
+          "move_all": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Move All",
+            "description": "The same after any bar"
+          }
+        },
+        "type": "object",
+        "required": [
+          "horizon",
+          "bars",
+          "threshold",
+          "factor",
+          "rank",
+          "active",
+          "events",
+          "independent",
+          "p",
+          "ci",
+          "base_rate",
+          "move_events",
+          "move_all"
+        ],
+        "title": "VolSqueeze"
+      },
+      "VolatilityResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "estimator": {
+            "type": "string",
+            "enum": [
+              "yang_zhang",
+              "close",
+              "parkinson",
+              "garman_klass",
+              "rogers_satchell"
+            ],
+            "title": "Estimator"
+          },
+          "last_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Last Time",
+            "description": "The origin bar, as in /api/bars"
+          },
+          "bars_per_year": {
+            "type": "number",
+            "title": "Bars Per Year",
+            "description": "Annualise a per-bar volatility by its square root"
+          },
+          "levels": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Levels",
+            "description": "Percentile levels of the cone"
+          },
+          "horizons": {
+            "items": {
+              "$ref": "#/components/schemas/VolHorizon"
+            },
+            "type": "array",
+            "title": "Horizons"
+          },
+          "main": {
+            "type": "string",
+            "enum": [
+              "week",
+              "month",
+              "quarter",
+              "half",
+              "year"
+            ],
+            "title": "Main",
+            "description": "The horizon of the squeeze, shares and scores"
+          },
+          "squeeze": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VolSqueeze"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overnight": {
+            "$ref": "#/components/schemas/VolShares",
+            "description": "Share of the variance from the gaps"
+          },
+          "downside": {
+            "$ref": "#/components/schemas/VolShares",
+            "description": "Share of the squared returns from falling bars"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/VolScore"
+            },
+            "type": "array",
+            "title": "Scores",
+            "description": "Best first; empty if the history is too short"
+          },
+          "realized": {
+            "type": "boolean",
+            "title": "Realized",
+            "description": "Whether 1h bars gave a realised variance (daily only)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "estimator",
+          "last_time",
+          "bars_per_year",
+          "levels",
+          "horizons",
+          "main",
+          "squeeze",
+          "overnight",
+          "downside",
+          "scores",
+          "realized"
+        ],
+        "title": "VolatilityResponse"
       },
       "WatchlistDocument": {
         "properties": {
