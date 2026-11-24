@@ -82,6 +82,13 @@ describe('rangeStats', () => {
   it('skips the chart’s first bar (no previous close) and a range with no bars', () => {
     expect(rangeStats(bars, t(0), t(1), 'log', 'close')?.returns?.n).toBe(1);
     expect(rangeStats(bars, t(10), t(12), 'log', 'close')).toBeNull();
-    expect(rangeStats(bars, t(2), t(2), 'log', 'close')?.barsPerYear).toBeNull();
+    // Bars per year come from the whole series (5 bars over 4 days), not from the range.
+    expect(rangeStats(bars, t(2), t(2), 'log', 'close')?.barsPerYear).toBeCloseTo(365.25, 10);
+  });
+
+  it('includes the bar an anchor falls inside (magnet off)', () => {
+    const s = rangeStats(bars, t(1) + 0.4 * 86_400, t(3) + 0.6 * 86_400, 'log', 'close');
+    expect(s?.bars).toBe(3);
+    expect([s?.firstTime, s?.lastTime]).toEqual([day(1), day(3)]);
   });
 });

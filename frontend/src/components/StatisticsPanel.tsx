@@ -16,7 +16,8 @@ import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 
 const pct = (v: number) => (Number.isFinite(v) ? `${(v * 100).toFixed(3)}%` : '—');
 
-function Numbers({ dist, rows }: { dist: Distribution; rows?: [string, string][] }) {
+/** The table under a histogram (a render helper, not a component). */
+function numbersTable(dist: Distribution, rows: [string, string][] = []) {
   return (
     <table className={styles.numbers}>
       <tbody>
@@ -26,7 +27,7 @@ function Numbers({ dist, rows }: { dist: Distribution; rows?: [string, string][]
             ['Mean', pct(dist.mean)],
             ['Standard deviation', pct(dist.std)],
             ['Min / max', `${pct(dist.min)} / ${pct(dist.max)}`],
-            ...(rows ?? []),
+            ...rows,
           ] as [string, string][]
         ).map(([name, value]) => (
           <tr key={name}>
@@ -51,7 +52,7 @@ export function StatisticsPanel() {
   const update = useDrawingStore((s) => s.update);
   const bars = useChartDataStore((s) => s.data?.bars);
   const heikinAshi = useChartStore((s) => s.chartType === 'heikin_ashi');
-  const ranges = drawings.filter((d) => d.type === 'stats_range');
+  const ranges = drawings.filter((d) => d.type === 'stats_range' && !d.hidden);
   const range = ranges.find((d) => d.id === selectedId) ?? ranges.at(-1);
   const kind: ReturnKind = range?.props.returns ?? 'log';
   const basis: ReturnBasis = range?.props.basis ?? 'close';
@@ -137,18 +138,16 @@ export function StatisticsPanel() {
                   dist={returns}
                   label="Histogram of the returns with a normal curve"
                 />
-                <Numbers
-                  dist={returns}
-                  rows={
-                    k === null
-                      ? []
-                      : [
-                          ['Annualised mean', pct(returns.mean * k)],
-                          ['Annualised volatility', pct(returns.std * Math.sqrt(k))],
-                          ['Bars per year', k.toFixed(1)],
-                        ]
-                  }
-                />
+                {numbersTable(
+                  returns,
+                  k === null
+                    ? []
+                    : [
+                        ['Annualised mean', pct(returns.mean * k)],
+                        ['Annualised volatility', pct(returns.std * Math.sqrt(k))],
+                        ['Bars per year', k.toFixed(1)],
+                      ],
+                )}
               </>
             )}
           </section>
@@ -162,7 +161,7 @@ export function StatisticsPanel() {
                   dist={curvature}
                   label="Histogram of the change of the returns with a normal curve"
                 />
-                <Numbers dist={curvature} />
+                {numbersTable(curvature)}
               </>
             )}
           </section>

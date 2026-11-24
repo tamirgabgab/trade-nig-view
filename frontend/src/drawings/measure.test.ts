@@ -84,4 +84,19 @@ describe('the return range label', () => {
       'Statistics: see the side panel',
     ]);
   });
+
+  it('reads a return forward in time when the later point was clicked first', () => {
+    const reversed = returnRange(730.5, 100, 121);
+    reversed.points = [...reversed.points].reverse();
+    expect(rangeLabel(reversed, 2, { bars: -504, volume: null }).slice(0, 2)).toEqual([
+      '+21.00 (21.00%)',
+      '≈ +10.00% / year',
+    ]);
+  });
+
+  it('shows a positive duration for a statistics range dragged right to left', () => {
+    const range = { ...returnRange(10, 100, 100), type: 'stats_range' as const };
+    range.points = [...range.points].reverse();
+    expect(rangeLabel(range, 2, { bars: -7, volume: null })[0]).toBe('8 bars, 10d');
+  });
 });

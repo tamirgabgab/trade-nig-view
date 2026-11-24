@@ -94,8 +94,10 @@ function formatRate(rate: number | null, unit: ReturnUnit): string {
 export function rangeLabel(drawing: Drawing, decimals: number, span: Span | null): string[] {
   const [a, b] = drawing.points as [Anchor | undefined, Anchor | undefined];
   if (a === undefined || b === undefined) return [];
-  const change = b.price - a.price;
-  const price = `${formatSigned(change, decimals)} (${a.price === 0 ? '—' : formatPercent((change / a.price) * 100)})`;
+  // A return runs forward in time, whichever point was clicked first (its rate is per time).
+  const [p, q] = drawing.type === 'return_range' && b.time < a.time ? [b, a] : [a, b];
+  const change = q.price - p.price;
+  const price = `${formatSigned(change, decimals)} (${p.price === 0 ? '—' : formatPercent((change / p.price) * 100)})`;
   const time = `${String(span?.bars ?? '—')} bars, ${formatDuration(b.time - a.time)}`;
   switch (drawing.type) {
     case 'price_range':
@@ -111,7 +113,7 @@ export function rangeLabel(drawing: Drawing, decimals: number, span: Span | null
     case 'stats_range':
       // The bars in the range, both ends included, as the Statistics panel counts them.
       return [
-        `${span === null ? '—' : String(Math.abs(span.bars) + 1)} bars, ${formatDuration(b.time - a.time)}`,
+        `${span === null ? '—' : String(Math.abs(span.bars) + 1)} bars, ${formatDuration(Math.abs(b.time - a.time))}`,
         'Statistics: see the side panel',
       ];
     default:
