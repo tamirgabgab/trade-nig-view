@@ -148,6 +148,11 @@ def test_a_forecast_is_a_valid_candle_with_ordered_quantiles() -> None:
         assert median[2] <= min(median[0], median[3]) <= max(median[0], median[3]) <= median[1]
 
 
+def test_a_horizon_past_the_data_is_all_nan() -> None:
+    assert np.isnan(fc.horizon_log_range(BARS, 7)).all()
+    assert np.isnan(fc.targets(BARS, 7)).all()
+
+
 def test_too_little_history_gives_no_fit() -> None:
     # 22 bars of HAR warm-up, then 50 training rows: below MIN_TRAIN (60).
     frame = synthetic_bars(Scenario.RANDOM_WALK, 1, 73)

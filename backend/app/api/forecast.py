@@ -7,10 +7,11 @@ from __future__ import annotations
 from collections import OrderedDict
 from datetime import date
 from http import HTTPStatus
+from threading import Lock
 from typing import Annotated, Literal
 
 import numpy as np
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 
 from app.analysis import forecast as fc
@@ -31,6 +32,11 @@ MODELS: tuple[fc.Model, ...] = ("naive", "a", "c")
 class NotEnoughHistoryError(ChartLabError):
     status = HTTPStatus.UNPROCESSABLE_ENTITY
     code = "not_enough_history"
+
+
+class InvalidForecastParamsError(ChartLabError):
+    status = HTTPStatus.UNPROCESSABLE_ENTITY
+    code = "invalid_params"
 
 
 class ForecastParams(BaseModel):
@@ -98,20 +104,42 @@ def _num(x: float) -> float | None:
     return x if np.isfinite(x) else None
 
 
-def compute(
-    frame: BarFrame, model: Literal["a", "c"], params: fc.Params | None
-) -> tuple[fc.Params, dict[fc.Model, fc.Params], list[tuple[fc.Params, float]]]:
-    """The parameters of every model: tuned (``params`` None) or as given."""
-    if params is not None:
-        return params, dict.fromkeys(MODELS, params), []
-    chosen: dict[fc.Model, fc.Params] = {}
-    tried: list[tuple[fc.Params, float]] = []
-    for m in MODELS:
-        best, grid = fc.tune(frame, m, EVALUATE_BARS, REFIT_EVERY)
-        chosen[m] = best
-        if m == model:
-            tried = grid
-    return chosen[model], chosen, tried
+Tuned = dict[fc.Model, tuple[fc.Params, list[tuple[fc.Params, float]]]]
+
+
+def tune_all(frame: BarFrame) -> Tuned:
+    """Every model's tuned parameters and its grid, on the EVALUATE_BARS origins before the
+    validated ones: the reported validation stays out of sample for the tuning too."""
+    return {m: fc.tune(frame, m, EVALUATE_BARS, REFIT_EVERY, skip=EVALUATE_BARS) for m in MODELS}
+
+
+class ForecastCache:
+    """Per-app LRU caches (on ``app.state``, guarded by a lock: sync endpoints run in a
+    threadpool): the tuning per frame, and the responses per frame and request."""
+
+    def __init__(self, size: int = CACHE_SIZE) -> None:
+        self.size = size
+        self.lock = Lock()
+        self.tuned: OrderedDict[tuple[object, ...], Tuned] = OrderedDict()
+        self.responses: OrderedDict[tuple[object, ...], ForecastResponse] = OrderedDict()
+
+    def get[V](
+        self, store: OrderedDict[tuple[object, ...], V], key: tuple[object, ...]
+    ) -> V | None:
+        with self.lock:
+            value = store.get(key)
+            if value is not None:
+                store.move_to_end(key)
+            return value
+
+    def put[V](
+        self, store: OrderedDict[tuple[object, ...], V], key: tuple[object, ...], value: V
+    ) -> None:
+        with self.lock:
+            store[key] = value
+            store.move_to_end(key)
+            while len(store) > self.size:
+                store.popitem(last=False)
 
 
 def _forecast(
@@ -121,9 +149,18 @@ def _forecast(
     k: int,
     model: Literal["a", "c"],
     params: fc.Params | None,
+    tuned: Tuned | None,
 ) -> ForecastResponse:
+    """``params`` for every model, or (auto) each model's tuned parameters."""
     horizons = list(range(1, k + 1))
-    best, per_model, tried = compute(frame, model, params)
+    if tuned is None:
+        assert params is not None  # noqa: S101 - manual mode has params
+        per_model: dict[fc.Model, fc.Params] = dict.fromkeys(MODELS, params)
+        tried: list[tuple[fc.Params, float]] = []
+    else:
+        per_model = {m: best for m, (best, _) in tuned.items()}
+        tried = tuned[model][1]
+    best = per_model[model]
     origin = len(frame) - 1
     validation: list[Validation] = []
     for m in MODELS:
@@ -190,11 +227,17 @@ def _forecast(
     )
 
 
-_cache: OrderedDict[tuple[object, ...], ForecastResponse] = OrderedDict()
+def _cache(request: Request) -> ForecastCache:
+    state = request.app.state
+    if not hasattr(state, "forecast_cache"):
+        state.forecast_cache = ForecastCache()
+    cache: ForecastCache = state.forecast_cache
+    return cache
 
 
 @router.get("/forecast", response_model=ForecastResponse)
 def get_forecast(
+    request: Request,
     service: Annotated[BarService, Depends(get_bar_service)],
     symbol: Annotated[str, Query(min_length=1, max_length=20)],
     interval: Interval = Interval.D1,
@@ -202,33 +245,48 @@ def get_forecast(
     model: Literal["a", "c"] = "c",
     auto: Annotated[bool, Query(description="Tune window, ridge and lags out of sample")] = True,
     window: Annotated[
-        int, Query(ge=0, le=5000, description="Manual: training bars, 0 = all")
+        int,
+        Query(
+            ge=0, le=100_000, description=f"Manual: training bars, 0 = all, else >= {fc.MIN_TRAIN}"
+        ),
     ] = 500,
     ridge: Annotated[float, Query(gt=0, le=1e6, description="Manual: model C's penalty")] = 100.0,
     lags: Annotated[int, Query(ge=1, le=10, description="Manual: past bars as features")] = 3,
     adjusted: bool = True,
     until: Annotated[date | None, Query(description="Replay cursor: no bar after it")] = None,
 ) -> ForecastResponse:
-    """Quantiles of the next ``k`` bars' open, high, low and close from the bars up to the last
-    one (``until`` in replay), with the models' walk-forward scores. Cached per last bar."""
-    result = service.get_bars(symbol, interval, adjusted=adjusted, until=until)
+    """Quantiles of the next ``k`` bars' open, high, low and close from the whole history up to
+    the last bar (``until`` in replay), with the models' walk-forward scores. Cached per bars."""
+    if not auto and 0 < window < fc.MIN_TRAIN:
+        raise InvalidForecastParamsError(
+            f"window must be 0 (all the history) or at least {fc.MIN_TRAIN} bars, got {window}"
+        )
+    result = service.get_bars(symbol, interval, adjusted=adjusted, until=until, limit=1_000_000_000)
     frame = result.frame
     if len(frame) < fc.MIN_TRAIN + max(fc.HAR) + k + 1:
         raise NotEnoughHistoryError(f"{symbol}: {len(frame)} bars are too few for a forecast")
-    params = None if auto else fc.Params(window or None, ridge, lags)
-    key = (
+    # The bars themselves, not only their count and last time: a refreshed last bar or a
+    # re-adjusted history (a dividend) is another frame.
+    bars_key = (
         result.symbol.symbol,
         interval,
         adjusted,
         len(frame),
         int(frame.time[-1]),
-        k,
-        model,
-        params,
+        float(frame.close.sum()),
+        *(float(x[-1]) for x in (frame.open, frame.high, frame.low, frame.close)),
     )
-    if key not in _cache:
-        _cache[key] = _forecast(frame, interval, result.symbol.symbol, k, model, params)
-        if len(_cache) > CACHE_SIZE:
-            _cache.popitem(last=False)
-    _cache.move_to_end(key)
-    return _cache[key]
+    params = None if auto else fc.Params(window or None, ridge, lags)
+    cache = _cache(request)
+    key = (*bars_key, k, model, params)
+    response = cache.get(cache.responses, key)
+    if response is None:
+        tuned = None
+        if auto:
+            tuned = cache.get(cache.tuned, bars_key)
+            if tuned is None:
+                tuned = tune_all(frame)
+                cache.put(cache.tuned, bars_key, tuned)
+        response = _forecast(frame, interval, result.symbol.symbol, k, model, params, tuned)
+        cache.put(cache.responses, key, response)
+    return response

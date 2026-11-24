@@ -186,7 +186,8 @@ def horizon_log_range(frame: BarFrame, h: int) -> FloatArray:
     r = np.maximum(np.log(frame.high / frame.low), RANGE_FLOOR)
     mean = _trailing_mean(r, h)  # bars t-h+1..t
     out = np.full(len(frame), np.nan)
-    out[: len(frame) - h] = np.log(mean[h:])
+    if h < len(frame):
+        out[: len(frame) - h] = np.log(mean[h:])
     return out
 
 
@@ -375,19 +376,21 @@ def evaluate(
     )
 
 
-def eval_origins(n: int, h: int, evaluate_bars: int) -> npt.NDArray[np.intp]:
-    """The last ``evaluate_bars`` origins whose outcome at origin + h exists."""
-    last = n - 1 - h
+def eval_origins(n: int, h: int, evaluate_bars: int, skip: int = 0) -> npt.NDArray[np.intp]:
+    """The last ``evaluate_bars`` origins whose outcome at origin + h exists, ending ``skip``
+    origins before the last one (tuning skips the bars the validation scores)."""
+    last = n - 1 - h - skip
     return np.arange(max(0, last - evaluate_bars + 1), last + 1)
 
 
 def tune(
-    frame: BarFrame, model: Model, evaluate_bars: int, refit: int
+    frame: BarFrame, model: Model, evaluate_bars: int, refit: int, skip: int = 0
 ) -> tuple[Params, list[tuple[Params, float]]]:
-    """The grid point with the lowest walk-forward pinball loss at h = 1 (model A ignores
-    ``ridge``, so only its first value is tried)."""
+    """The grid point with the lowest walk-forward pinball loss at h = 1 over ``evaluate_bars``
+    origins ending ``skip`` bars before the last (so a validation of those last bars stays out of
+    sample). Model A has no penalty: only the first ridge value is tried."""
     tried: list[tuple[Params, float]] = []
-    origins = eval_origins(len(frame), 1, evaluate_bars)
+    origins = eval_origins(len(frame), 1, evaluate_bars, skip)
     for lags in LAGS:
         d = design(frame, lags, [1])
         for window in WINDOWS:

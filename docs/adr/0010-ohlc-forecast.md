@@ -19,8 +19,12 @@ direct multi-step forecasts, automatic out-of-sample tuning and OHLC-only inputs
   walk-forward quantiles are computed without building scenarios. Deterministic: no random sampling.
 - **Validation and tuning**: walk-forward over the last 500 bars with a refit every 20, data up to each refit origin
   only. Pinball loss at 2.5–97.5 % (tuning criterion), coverage of the 50/80/95 % close intervals, out-of-sample R²
-  against a zero-mean walk, hit rate. Tuning grid: window {250, 500, 1000, all} × ridge {1, 10, 100, 1000} × lags
-  {1, 3, 5}, at h = 1.
+  against a zero-mean walk, hit rate (over forecasts with a non-zero median). Tuning grid: window {250, 500, 1000,
+  all} × ridge {1, 10, 100, 1000} × lags {1, 3, 5}, at h = 1, scored on the 500 origins **before** the validated
+  ones, so the reported validation is out of sample for the tuning too (and C's larger grid gives it no advantage).
+- The whole history up to the last bar is used (`window` all = every bar, not the 5000 of `/api/bars`).
+- Caches live on `app.state` behind a lock: the tuning per frame (shared by every k and model) and the responses per
+  frame and request; a frame is keyed by its bars' values too (a refreshed last bar or a re-adjusted history is new).
 - Backend only (numpy), `GET /api/forecast`, cached per last bar; the chart and the Forecast tab follow in F2.
 
 ## Consequences

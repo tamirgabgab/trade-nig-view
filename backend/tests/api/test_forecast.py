@@ -7,6 +7,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from app.analysis import forecast as fc
+from app.api.forecast import EVALUATE_BARS
 from tests.api.conftest import E2E_DATA
 
 
@@ -73,6 +74,26 @@ def test_too_little_history_is_422(e2e_client: TestClient) -> None:
 
 
 def test_parameters_are_validated(e2e_client: TestClient) -> None:
+    # A manual window below the minimum training rows is a parameter error, not a data one.
+    assert forecast(e2e_client, 422, auto=False, window=30)["code"] == "invalid_params"
     assert forecast(e2e_client, 422, k=0)["status"] == 422
     assert forecast(e2e_client, 422, model="b")["status"] == 422
     assert forecast(e2e_client, 422, lags=11)["status"] == 422
+
+
+def test_the_cache_follows_the_bars_not_only_their_count(e2e_client: TestClient) -> None:
+    """Same request twice: the cached response. Another replay cursor (other bars): recomputed."""
+    a = forecast(e2e_client, k=1, auto=False, until="2024-01-02")
+    assert forecast(e2e_client, k=1, auto=False, until="2024-01-02") == a
+    b = forecast(e2e_client, k=1, auto=False, until="2024-01-03")
+    assert b["last_time"] != a["last_time"]
+    assert b["horizons"] != a["horizons"]
+
+
+def test_auto_tuning_is_scored_before_the_validated_bars() -> None:
+    """The tuning origins end where the validation origins begin (no in-sample scores)."""
+    n = 2000
+    validated = fc.eval_origins(n, 1, EVALUATE_BARS)
+    tuning = fc.eval_origins(n, 1, EVALUATE_BARS, skip=EVALUATE_BARS)
+    assert tuning[-1] + 1 == validated[0]
+    assert len(tuning) == len(validated) == EVALUATE_BARS
