@@ -12,6 +12,11 @@ async function saved(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Each test starts without drawings (another test may have left one).
+  const { revision, drawings } = await saved(page);
+  if (drawings.length > 0) {
+    await page.request.put('/api/drawings/AAPL', { data: { revision, drawings: [] } });
+  }
   await freshStart(page);
   await expect(page.getByLabel('Price legend').locator('[data-field="C"]')).toBeVisible();
 });
@@ -95,4 +100,64 @@ test('draw a Fib retracement, reload, switch to 1W, then remove it from the tras
   await confirm.getByRole('button', { name: 'Remove 1 drawing' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Removed 1 drawing' })).toBeVisible();
   await expect.poll(async () => (await saved(page)).drawings).toEqual([]);
+});
+
+/** Pick a tool from the measurement group's menu. */
+async function pickMeasureTool(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Forecasting and measurement tools: all tools' }).click();
+  await page.getByRole('menuitemradio', { name, exact: true }).click();
+}
+
+test('Return tool: two points, then the equivalent return per month', async ({ page }) => {
+  const box = await page.getByTestId('chart-canvas').boundingBox();
+  if (box === null) throw new Error('no chart');
+  await pickMeasureTool(page, 'Return');
+  await page.mouse.click(box.x + 200, box.y + 300);
+  await page.mouse.move(box.x + 500, box.y + 150, { steps: 4 });
+  await page.mouse.click(box.x + 500, box.y + 150);
+  await expect
+    .poll(async () => (await saved(page)).drawings.map((d) => d.type))
+    .toEqual(['return_range']);
+
+  // Its settings: the unit T of the equivalent return.
+  await page.mouse.dblclick(box.x + 350, box.y + 225);
+  const panel = page.getByRole('dialog', { name: /Return/ });
+  await panel.getByLabel('Return per').selectOption('month');
+  await expect
+    .poll(async () => {
+      const doc = (await saved(page)) as { drawings: { props?: { unit?: string } }[] };
+      return doc.drawings[0]?.props?.unit;
+    })
+    .toBe('month');
+});
+
+test('Statistics tool: a range opens the panel with its return distribution', async ({ page }) => {
+  const box = await page.getByTestId('chart-canvas').boundingBox();
+  if (box === null) throw new Error('no chart');
+  await pickMeasureTool(page, 'Statistics');
+  await page.mouse.move(box.x + 150, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 600, box.y + 200, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await saved(page)).drawings.map((d) => d.type))
+    .toEqual(['stats_range']);
+
+  const returns = page.getByRole('region', { name: 'Returns' });
+  await expect(returns.getByRole('img', { name: /Histogram of the returns/ })).toBeVisible();
+  await expect(returns.getByRole('row', { name: /Standard deviation/ })).toContainText('%');
+  await expect(
+    page
+      .getByRole('region', { name: 'Curvature' })
+      .getByRole('img', { name: /change of the returns/ }),
+  ).toBeVisible();
+
+  // Switching to simple open-to-close returns is saved on the drawing.
+  await page.getByLabel('From').selectOption('open');
+  await expect
+    .poll(async () => {
+      const doc = (await saved(page)) as { drawings: { props?: { basis?: string } }[] };
+      return doc.drawings[0]?.props?.basis;
+    })
+    .toBe('open');
 });

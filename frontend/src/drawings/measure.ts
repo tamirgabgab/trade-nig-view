@@ -109,7 +109,11 @@ export function rangeLabel(drawing: Drawing, decimals: number, span: Span | null
       return [price, formatRate(equivalentReturn(a, b, span?.bars ?? null, unit), unit), time];
     }
     case 'stats_range':
-      return [time, 'Statistics: see the side panel'];
+      // The bars in the range, both ends included, as the Statistics panel counts them.
+      return [
+        `${span === null ? '—' : String(Math.abs(span.bars) + 1)} bars, ${formatDuration(b.time - a.time)}`,
+        'Statistics: see the side panel',
+      ];
     default:
       return [];
   }

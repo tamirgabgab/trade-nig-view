@@ -5,6 +5,7 @@ import {
   ChartColumnBig,
   List,
   ListTree,
+  Sigma,
   TableProperties,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
@@ -18,6 +19,7 @@ import { IconButton } from './IconButton.tsx';
 import styles from './RightSidebar.module.css';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery.ts';
 import { usePresence } from './usePresence.ts';
+import { StatisticsPanel } from './StatisticsPanel.tsx';
 import { SymbolCard } from './SymbolCard.tsx';
 import { Watchlist } from './Watchlist.tsx';
 
@@ -30,6 +32,7 @@ const TABS: { tab: SidebarTab; title: string; icon: typeof List }[] = [
   { tab: 'objects', title: 'Object tree', icon: ListTree },
   { tab: 'data', title: 'Data window', icon: TableProperties },
   { tab: 'gaps', title: 'Gaps', icon: ChartColumnBig },
+  { tab: 'stats', title: 'Statistics', icon: Sigma },
 ];
 
 /**
@@ -88,6 +91,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
             {panel.shown === 'objects' && <ObjectTree />}
             {panel.shown === 'data' && <DataWindow />}
             {panel.shown === 'gaps' && <GapsPanel />}
+            {panel.shown === 'stats' && <StatisticsPanel />}
           </div>
           {panel.shown === 'watchlist' && <SymbolCard />}
         </section>

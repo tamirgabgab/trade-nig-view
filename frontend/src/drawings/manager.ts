@@ -37,6 +37,8 @@ export interface DrawingCallbacks {
   openSettings: (id: string) => void;
   /** A drawing was deleted (Del): offer Undo. */
   removed: (label: string, undo: () => void) => void;
+  /** A new drawing was finished (a Statistics range opens its panel). */
+  created?: (drawing: Drawing) => void;
 }
 
 /** A click that moves less than this (CSS px) is a click, not a drag. */
@@ -401,6 +403,7 @@ export class DrawingManager {
     s.select(creating.drawing.id);
     if (!s.stayInDrawing) s.setTool(null);
     if (creating.drawing.type === 'text') this.callbacks.openSettings(creating.drawing.id);
+    this.callbacks.created?.(creating.drawing);
   }
 
   private readonly onPointerLeave = (): void => {

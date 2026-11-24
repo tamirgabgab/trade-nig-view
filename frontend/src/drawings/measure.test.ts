@@ -76,4 +76,12 @@ describe('the return range label', () => {
       '≈ > +999,999% / year',
     );
   });
+
+  it('counts a statistics range’s bars with both ends, as its panel does', () => {
+    const range = { ...returnRange(10, 100, 100), type: 'stats_range' as const };
+    expect(rangeLabel(range, 2, { bars: 7, volume: null })).toEqual([
+      '8 bars, 10d',
+      'Statistics: see the side panel',
+    ]);
+  });
 });

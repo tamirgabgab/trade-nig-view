@@ -7,6 +7,7 @@ import { DrawingManager } from '../drawings/manager.ts';
 import { useDrawingStore } from '../store/drawingStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { selectModalOpen, useUiStore } from '../store/uiStore.ts';
+import { NARROW_QUERY } from './useMediaQuery.ts';
 
 /** Saves wait this long after the last change (a drag is many changes). */
 export const SAVE_DELAY_MS = 600;
@@ -138,6 +139,14 @@ export function useDrawingManager(): (engine: ChartEngine | null) => void {
             },
             removed: (label, undo) => {
               useUiStore.getState().showToast(`Removed ${label}`, undo);
+            },
+            created: (drawing) => {
+              if (drawing.type !== 'stats_range') return;
+              // Show the Statistics tab (showSidebar toggles: only when it is not showing).
+              const ui = useUiStore.getState();
+              const narrow = window.matchMedia(NARROW_QUERY).matches;
+              const open = narrow ? ui.watchlist.floating : ui.watchlist.docked;
+              if (!open || ui.sidebarTab !== 'stats') ui.showSidebar('stats', narrow);
             },
           });
   }, []);
