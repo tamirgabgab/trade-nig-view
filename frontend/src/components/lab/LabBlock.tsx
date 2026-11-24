@@ -1,4 +1,5 @@
 import { SCENARIOS } from '../../api/lab.ts';
+import { ESTIMATORS } from '../../api/volatility.ts';
 import { ComboLab, type ComboBlock } from './ComboLab.tsx';
 import { EventLab, type EventBlock } from './EventLab.tsx';
 import { FilterLab, type FilterBlock } from './FilterLab.tsx';
@@ -6,8 +7,16 @@ import { ForecastLab, type ForecastBlock } from './ForecastLab.tsx';
 import styles from './Lab.module.css';
 import { ParamLab, type ParamBlock } from './ParamLab.tsx';
 import { ReplayLab, type ReplayBlock } from './ReplayLab.tsx';
+import { VolatilityLab, type VolatilityBlock } from './VolatilityLab.tsx';
 
-type Block = ParamBlock | EventBlock | ComboBlock | ReplayBlock | FilterBlock | ForecastBlock;
+type Block =
+  | ParamBlock
+  | EventBlock
+  | ComboBlock
+  | ReplayBlock
+  | FilterBlock
+  | ForecastBlock
+  | VolatilityBlock;
 type Json = Record<string, unknown>;
 
 const isText = (v: unknown) => typeof v === 'string';
@@ -25,6 +34,7 @@ const isAgo = (side: unknown) =>
     (side['ago'] as number) <= MAX_AGO);
 const INTERVALS: readonly unknown[] = [undefined, '1D', '1h'];
 const SCENARIO_IDS: readonly unknown[] = SCENARIOS.map((s) => s.id);
+const ESTIMATOR_IDS: readonly unknown[] = ESTIMATORS.map((e) => e.id);
 const isTexts = (v: unknown) => v === undefined || (Array.isArray(v) && v.every(isText));
 const isRule = (r: unknown) =>
   isObject(r) &&
@@ -62,6 +72,10 @@ const SHAPES: Record<Block['kind'], (b: Json) => boolean> = {
     (b['scenario'] === undefined || SCENARIO_IDS.includes(b['scenario'])) &&
     (b['k'] === undefined ||
       (Number.isInteger(b['k']) && (b['k'] as number) >= 1 && (b['k'] as number) <= 20)),
+  volatility: (b) =>
+    INTERVALS.includes(b['interval']) &&
+    (b['scenario'] === undefined || SCENARIO_IDS.includes(b['scenario'])) &&
+    (b['estimator'] === undefined || ESTIMATOR_IDS.includes(b['estimator'])),
 };
 
 function parse(source: string): Block | null {
@@ -79,7 +93,7 @@ function parse(source: string): Block | null {
  * A ```lab block of a learn page (JSON) as its interactive widget: `param` (move one
  * parameter), `event` (what followed a signal), `combo` (combine up to three rules) or `replay`
  * (an exercise: start the bar replay on a symbol and date) or `filter` (a linear indicator's
- * measured Filter view).
+ * measured Filter view), `forecast` (the OHLC forecast) or `volatility` (the volatility cone).
  */
 export function LabBlock({ source }: { source: string }) {
   const block = parse(source);
@@ -103,5 +117,7 @@ export function LabBlock({ source }: { source: string }) {
       return <FilterLab block={block} />;
     case 'forecast':
       return <ForecastLab block={block} />;
+    case 'volatility':
+      return <VolatilityLab block={block} />;
   }
 }

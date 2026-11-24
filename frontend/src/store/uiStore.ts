@@ -16,7 +16,8 @@ export type SnapshotMode = 'copy' | 'download';
 export const PAGE_PREFIX = 'page:';
 
 /** What the right side panel shows. */
-export type SidebarTab = 'watchlist' | 'objects' | 'data' | 'gaps' | 'stats' | 'forecast';
+export type SidebarTab =
+  'watchlist' | 'objects' | 'data' | 'gaps' | 'stats' | 'forecast' | 'volatility';
 
 /** The modal dialogs; at most one is open, so they can never stack. */
 export type Modal =

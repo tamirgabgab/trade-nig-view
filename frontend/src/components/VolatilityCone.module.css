@@ -1,0 +1,85 @@
+.figure {
+  margin: 0;
+}
+
+.figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.band {
+  fill: var(--color-accent);
+}
+
+.median {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+}
+
+.forecast {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-dasharray: 4 3;
+  stroke-width: 1.5;
+}
+
+.forecastRange {
+  stroke: var(--color-text);
+  stroke-width: 1;
+}
+
+.now {
+  fill: var(--color-down);
+}
+
+.ci {
+  stroke: var(--color-down);
+  stroke-width: 1.5;
+}
+
+.grid {
+  stroke: var(--color-border);
+}
+
+.tick,
+.tickEnd,
+.label {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.tickEnd {
+  text-anchor: end;
+}
+
+.label {
+  text-anchor: middle;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs, 11px);
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+
+.swatchBand {
+  background: var(--color-accent);
+  opacity: 0.4;
+}
+
+.swatchNow {
+  background: var(--color-down);
+}

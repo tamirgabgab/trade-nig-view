@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bell,
   BookOpen,
   CalendarRange,
@@ -23,6 +24,7 @@ import { usePresence } from './usePresence.ts';
 import { ForecastPanel } from './ForecastPanel.tsx';
 import { StatisticsPanel } from './StatisticsPanel.tsx';
 import { SymbolCard } from './SymbolCard.tsx';
+import { VolatilityPanel } from './VolatilityPanel.tsx';
 import { Watchlist } from './Watchlist.tsx';
 
 interface RightSidebarProps {
@@ -36,6 +38,7 @@ const TABS: { tab: SidebarTab; title: string; icon: typeof List }[] = [
   { tab: 'gaps', title: 'Gaps', icon: ChartColumnBig },
   { tab: 'stats', title: 'Statistics', icon: Sigma },
   { tab: 'forecast', title: 'Forecast', icon: ChartSpline },
+  { tab: 'volatility', title: 'Volatility', icon: Activity },
 ];
 
 /**
@@ -96,6 +99,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
             {panel.shown === 'gaps' && <GapsPanel />}
             {panel.shown === 'stats' && <StatisticsPanel />}
             {panel.shown === 'forecast' && <ForecastPanel />}
+            {panel.shown === 'volatility' && <VolatilityPanel />}
           </div>
           {panel.shown === 'watchlist' && <SymbolCard />}
         </section>

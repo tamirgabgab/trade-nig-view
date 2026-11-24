@@ -78,3 +78,43 @@ test('the Forecasting OHLC learn page runs the forecast on a random stock', asyn
   ).toHaveCount(6);
   await expect(lab.getByRole('table', { name: 'Validation out of sample' })).toBeVisible();
 });
+
+test('volatility: the cone, the squeeze and the estimators in the Volatility tab', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Show volatility' }).click();
+  const perHorizon = page.getByRole('table', { name: 'Volatility per horizon' });
+  // header + week, month, quarter, half year, year
+  await expect(perHorizon.getByRole('row')).toHaveCount(6, { timeout: 30_000 });
+  await expect(page.getByRole('img', { name: /Volatility cone of AAPL, % \/ year/ })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Squeeze statistics' })).toBeVisible();
+  const scores = page.getByRole('table', { name: 'Estimator scores' });
+  await expect(scores.getByRole('row', { name: /Yang-Zhang/ })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: 'test-results/volatility.png' });
+
+  // Per-bar units: the same cone, other numbers; the setting survives a reload.
+  const monthNow = perHorizon.getByRole('row', { name: /Month/ }).getByRole('cell').first();
+  const yearly = Number(await monthNow.textContent());
+  await page.getByLabel('Units').selectOption('bar');
+  await expect(page.getByRole('img', { name: /% \/ bar/ })).toBeVisible();
+  const perBar = Number(await monthNow.textContent());
+  expect(yearly / perBar).toBeGreaterThan(14);
+  expect(yearly / perBar).toBeLessThan(17);
+  await page.reload();
+  await page.getByRole('button', { name: 'Show volatility' }).click();
+  await expect(page.getByLabel('Units')).toHaveValue('bar');
+});
+
+test('the Historical Volatility page runs the cone on a random stock', async ({ page }) => {
+  await page.getByRole('button', { name: 'Learn pages' }).click();
+  await page.keyboard.type('Historical Volatility');
+  await page.keyboard.press('Enter');
+  const drawer = page.getByRole('complementary', { name: /Historical Volatility/ });
+  const lab = drawer.getByRole('region', { name: 'Volatility lab' });
+  await lab.scrollIntoViewIfNeeded();
+  await expect(lab.getByRole('img', { name: /Volatility cone of accumulation/ })).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(lab.getByRole('table', { name: 'Squeeze statistics' })).toBeVisible();
+});
