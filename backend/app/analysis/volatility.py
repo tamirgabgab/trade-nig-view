@@ -228,7 +228,8 @@ def spaced(index: npt.NDArray[np.int64], gap: int) -> int:
 def har_features(frame: BarFrame, h: int) -> Matrix:
     """1 and the log mean of q over the last 1, 5, 22 and (if longer) h bars."""
     q = np.maximum(proxy(frame), FLOOR)
-    cols = [np.log(trailing_mean(q, m)) for m in (*HAR, h) if m in HAR or m > max(HAR)]
+    lengths = (*HAR, h) if h > max(HAR) else HAR
+    cols = [np.log(trailing_mean(q, m)) for m in lengths]
     return np.column_stack([np.ones(len(q)), *cols])
 
 
@@ -271,17 +272,16 @@ def walk_forward(x: Matrix, y: FloatArray, h: int, origin: int) -> Matrix:
 
 
 def har_forecast(
-    x: Matrix, y: FloatArray, naive: FloatArray, h: int, origin: int
+    x: Matrix, y: FloatArray, wf: Matrix, naive: FloatArray, h: int, origin: int
 ) -> Forecast | None:
-    """The band at ``origin`` and its walk-forward check against the estimator's own outcome
-    (variances in, per-bar volatilities out)."""
+    """The band at ``origin`` and its walk-forward check (``wf``) against the estimator's own
+    outcome (variances in, per-bar volatilities out)."""
     fit = har_fit(x, y, h, origin)
     if fit is None or not np.isfinite(x[origin]).all():
         return None
     beta, resid = fit
     centre = float(x[origin] @ beta)
     low, median, high = (math.sqrt(math.exp(centre + float(np.quantile(resid, b)))) for b in BAND)
-    wf = walk_forward(x, y, h, origin)
     real = np.exp(y)
     ok = np.isfinite(wf).all(axis=1) & np.isfinite(y) & np.isfinite(naive) & (naive > 0)
     if ok.sum() < MIN_WINDOWS:
@@ -431,18 +431,27 @@ def _scores(
 
 def realized_from_hourly(daily: BarFrame, hourly: BarFrame) -> FloatArray:
     """Per daily bar: the sum of the squared 1h close-to-close log returns of its session (the
-    first one includes the overnight gap); NaN on days without 1h bars."""
+    first one includes the overnight gap); NaN on days without 1h bars, and on a day whose first
+    return does not start at the previous daily bar's session (missing 1h sessions in between
+    would load several days of moves onto it)."""
+    day = daily.time // 86_400
     if hourly.session is None or len(hourly) < hv.MIN_WINDOW:
         return np.full(len(daily), np.nan)
     r2 = np.log(hourly.close[1:] / hourly.close[:-1]) ** 2
-    days = hourly.session[1:]
-    unique, start = np.unique(days, return_index=True)
+    before, after = hourly.session[:-1], hourly.session[1:]
+    unique, start = np.unique(after, return_index=True)
     sums = np.add.reduceat(r2, start)
-    # The first session in the data has no previous close for its first bar: drop it.
-    keep = unique != hourly.session[0]
-    lookup = dict(zip(unique[keep].tolist(), sums[keep].tolist(), strict=True))
-    day = (daily.time // 86_400).tolist()
-    return np.array([lookup.get(d, np.nan) for d in day], dtype=np.float64)
+    previous = dict(zip(day[1:].tolist(), day[:-1].tolist(), strict=True))
+    # The first session in the data has no previous close for its first bar: it is dropped too.
+    broken = {
+        int(a)
+        for a, b in zip(after[start].tolist(), before[start].tolist(), strict=True)
+        if a == b or previous.get(a) != b
+    }
+    lookup = {
+        d: total for d, total in zip(unique.tolist(), sums.tolist(), strict=True) if d not in broken
+    }
+    return np.array([lookup.get(d, np.nan) for d in day.tolist()], dtype=np.float64)
 
 
 def cone(
@@ -460,14 +469,17 @@ def cone(
     per_year = float(hv.bars_per_year(frame.time)[-1])
     spans = horizon_bars(per_year)
     horizons: list[Horizon] = []
+    har_walk: dict[int, FloatArray] = {}  # h -> walk-forward mean variance forecasts
     for label, h in spans.items():
         v = hv.rolling_variance(frame, estimator, h)
         values = np.sqrt(np.maximum(v[np.isfinite(v)], 0.0))
         if len(values) < MIN_WINDOWS or not np.isfinite(v[-1]):
             continue
         now = math.sqrt(max(float(v[-1]), 0.0))
-        x = har_features(frame, h)
-        forecast = har_forecast(x, har_target(frame, estimator, h), v, h, n - 1)
+        x, y = har_features(frame, h), har_target(frame, estimator, h)
+        wf = walk_forward(x, y, h, n - 1)
+        har_walk[h] = wf[:, 2]
+        forecast = har_forecast(x, y, wf, v, h, n - 1)
         horizons.append(
             Horizon(
                 label=label,
@@ -486,10 +498,7 @@ def cone(
     squeeze = _squeeze(frame, estimator, main.label, main.bars, year, threshold, factor)
     overnight, downside = _shares(frame, main.bars)
     forecasts = {e: hv.rolling_variance(frame, e, main.bars) for e in hv.ESTIMATORS}
-    h = main.bars
-    forecasts["har"] = walk_forward(
-        har_features(frame, h), har_target(frame, estimator, h), h, n - 1
-    )[:, 2]
+    forecasts["har"] = har_walk[main.bars]
     if realised_1h is not None:  # dropped in _scores when too few days have 1h bars
         forecasts["realized"] = trailing_mean(realised_1h, main.bars)
     return Cone(

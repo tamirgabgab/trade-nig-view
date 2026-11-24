@@ -5,6 +5,9 @@ import { isRecord } from '../api/client.ts';
 import { ESTIMATORS, type VolatilitySettings } from '../api/volatility.ts';
 
 export const SQUEEZE_HORIZONS = ['week', 'month', 'quarter'] as const;
+/** The squeeze ranks and expansion factors the tab offers. */
+export const THRESHOLDS = [5, 10, 20, 30];
+export const FACTORS = [1.25, 1.5, 2, 3];
 
 export interface VolatilityPrefs extends VolatilitySettings {
   /** Show volatilities in % a year (else % a bar). */
@@ -19,18 +22,15 @@ export const DEFAULT_VOLATILITY: VolatilityPrefs = {
   annual: true,
 };
 
-const inRange = (v: unknown, lo: number, hi: number, fallback: number) =>
-  typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : fallback;
-
-/** Only well-formed settings survive (from storage or a typed value), within the API's bounds. */
+/** Only the offered settings survive (from storage too), so the selects show what is queried. */
 export function sanitizeVolatility(v: unknown): VolatilityPrefs {
   const r = isRecord(v) ? v : {};
   const d = DEFAULT_VOLATILITY;
   return {
     estimator: ESTIMATORS.find((e) => e.id === r['estimator'])?.id ?? d.estimator,
     horizon: SQUEEZE_HORIZONS.find((h) => h === r['horizon']) ?? d.horizon,
-    threshold: inRange(r['threshold'], 1, 50, d.threshold),
-    factor: inRange(r['factor'], 1.05, 5, d.factor),
+    threshold: THRESHOLDS.find((t) => t === r['threshold']) ?? d.threshold,
+    factor: FACTORS.find((f) => f === r['factor']) ?? d.factor,
     annual: r['annual'] !== false,
   };
 }

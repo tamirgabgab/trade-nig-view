@@ -2,15 +2,17 @@ import { ESTIMATORS, useVolatility, type VolatilityQuery } from '../api/volatili
 import { barSeconds } from '../chart/visibleRange.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
-import { SQUEEZE_HORIZONS, useVolatilityStore } from '../store/volatilityStore.ts';
+import {
+  FACTORS,
+  SQUEEZE_HORIZONS,
+  THRESHOLDS,
+  useVolatilityStore,
+} from '../store/volatilityStore.ts';
 import { formatBarTime } from './formatClock.ts';
 import styles from './ForecastPanel.module.css';
 import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 import { VolatilityDetails } from './VolatilityDetails.tsx';
 import { HORIZON_LABELS } from './volatilityFormat.ts';
-
-const THRESHOLDS = [5, 10, 20, 30];
-const FACTORS = [1.25, 1.5, 2, 3];
 
 /**
  * The Volatility tab (P3 V1): the volatility cone of the chart's symbol, from the bars up to the

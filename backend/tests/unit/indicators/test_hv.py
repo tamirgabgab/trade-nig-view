@@ -131,7 +131,7 @@ def test_defaults_and_validation() -> None:
     assert HV.defaults() == {"estimator": "yang_zhang", "length": 21, "annualize": True}
     assert HV.warmup(HV.defaults()) == 21
     assert HV.warmup({"estimator": "parkinson", "length": 21, "annualize": True}) == 20
-    assert HV.total_lookback(HV.defaults()) == 300 + 21
+    assert HV.total_lookback(HV.defaults()) == 9_000 + 21  # a year of 24/7 hourly bars
     assert RANK.defaults() == {"estimator": "yang_zhang", "length": 21, "lookback": 252}
     assert RANK.levels == (10.0, 90.0)
     with pytest.raises(InvalidParamsError, match="length"):

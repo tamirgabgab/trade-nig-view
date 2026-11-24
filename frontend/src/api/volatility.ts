@@ -188,13 +188,29 @@ export interface VolatilityQuery extends VolatilitySettings {
   origin: number | null;
 }
 
-/** The chart's cone. No placeholder: another symbol's or the present's cone must never show
- *  while a new one loads (in a replay it would reveal the future). */
+/** The previous cone may stay on screen while the next loads only if it is the same request at an
+ *  earlier (or the same) origin: a replay step forward. Another symbol's cone, or a later one (a
+ *  step back would show the future), must never show. */
+export function keepsPrevious(previous: VolatilityQuery | null, next: VolatilityQuery): boolean {
+  if (previous === null) return false;
+  const { origin: a, ...rest } = previous;
+  const { origin: b, ...nextRest } = next;
+  const same = (Object.keys(rest) as (keyof typeof rest)[]).every((k) => rest[k] === nextRest[k]);
+  return same && a !== null && (b === null || a <= b);
+}
+
+/** The chart's cone; during a replay the last cone stays while the cursor's loads (see
+ *  `keepsPrevious`). */
 export function useVolatility(query: VolatilityQuery | null) {
   return useQuery({
     queryKey: ['volatility', query],
     enabled: query !== null,
     staleTime: 60_000,
+    placeholderData: (previous: Volatility | undefined, previousQuery) =>
+      query !== null &&
+      keepsPrevious((previousQuery?.queryKey[1] ?? null) as VolatilityQuery | null, query)
+        ? previous
+        : undefined,
     queryFn: ({ signal }) => {
       if (query === null) throw new Error('no volatility query');
       const params = new URLSearchParams({

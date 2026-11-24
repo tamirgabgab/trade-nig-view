@@ -59,8 +59,9 @@ YEAR_SECONDS = 365.25 * 86_400
 MIN_WINDOW = 2
 GK_BODY = 2 * math.log(2) - 1
 #: History before the first shown bar: the windows are exact (no recursion), so the window plus a
-#: calendar year of daily bars for the bars-per-year count.
-YEAR_LOOKBACK = 300
+#: calendar year of the densest interval (24/7 hourly bars: 8,766) for the bars-per-year count. A
+#: shorter history is all loaded anyway, and then the rate since its first bar is the full answer.
+YEAR_LOOKBACK = 9_000
 
 
 def gaps(frame: BarFrame) -> FloatArray:

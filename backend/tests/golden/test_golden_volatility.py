@@ -77,13 +77,29 @@ def test_hv_lengths_match_golden_model(estimator: str, length: int) -> None:
 def test_hv_percentile_matches_golden_model(
     data: str, estimator: str, scoreboard: list[Row]
 ) -> None:
-    """The rank of our variances (verified above): two windows with the same variance up to
-    rounding (prices on a 0.01 grid repeat windows) would make ``<=`` flip on a 1e-17 difference
-    between two correct implementations."""
+    """End to end against the scalar models (variance, then rank). Prices on a 0.01 grid repeat
+    windows, so two variances can tie up to rounding and ``<=`` may flip on a 1e-17 difference
+    between two correct implementations: a mismatch is allowed only on such a tie."""
     frame = FRAMES[data]
     out = CATALOG["hv_percentile"].run(frame, {"estimator": estimator})["rank"]
-    want = golden_percentrank(hv.rolling_variance(frame, estimator, 21).tolist(), 252)
-    _record(scoreboard, "hv_percentile", f"{estimator} 21, 252", data, compare(out, want))
+    variance = golden_variance(*_ohlc(frame), estimator, 21)
+    want = np.asarray(golden_percentrank(variance, 252))
+    np.testing.assert_array_equal(np.isnan(out), np.isnan(want))
+    v = np.asarray(variance)
+    for t in np.flatnonzero(~np.isnan(want) & (out != want)):
+        window = v[t - 252 : t]
+        assert np.isclose(window, v[t], rtol=1e-12, atol=0).any(), f"bar {t}: no tie"
+        ties = np.isclose(window, v[t], rtol=1e-12).sum()
+        assert abs(out[t] - want[t]) <= 100 * ties / 252 + 1e-9  # one step per tied value
+    exact = ~np.isnan(want) & (out == want)
+    assert exact.sum() >= 0.99 * (~np.isnan(want)).sum()
+    _record(
+        scoreboard,
+        "hv_percentile",
+        f"{estimator} 21, 252",
+        data,
+        compare(out[exact], want[exact].tolist()),
+    )
 
 
 @pytest.mark.skipif(talib is None, reason=reason)

@@ -1,5 +1,5 @@
 import { BODY } from '../test/volatilityBody.ts';
-import { parseVolatility } from './volatility.ts';
+import { keepsPrevious, parseVolatility, type VolatilityQuery } from './volatility.ts';
 
 describe('parseVolatility', () => {
   it('reads every field, keeping nulls where the API has no value', () => {
@@ -23,5 +23,26 @@ describe('parseVolatility', () => {
     );
     expect(parseVolatility({ ...BODY, squeeze: null }).squeeze).toBeNull();
     expect(() => parseVolatility(null)).toThrow('Unexpected volatility response');
+  });
+});
+
+describe('keepsPrevious', () => {
+  const q: VolatilityQuery = {
+    symbol: 'AAPL',
+    interval: '1D',
+    adjusted: true,
+    estimator: 'yang_zhang',
+    horizon: 'month',
+    threshold: 10,
+    factor: 1.5,
+    origin: 100,
+  };
+  it('keeps the last cone only on a replay step forward of the same request', () => {
+    expect(keepsPrevious(q, { ...q, origin: 200 })).toBe(true);
+    expect(keepsPrevious(q, { ...q, origin: null })).toBe(true); // replay ended: the present
+    expect(keepsPrevious(q, { ...q, origin: 50 })).toBe(false); // a step back: the future
+    expect(keepsPrevious(q, { ...q, symbol: 'MSFT', origin: 200 })).toBe(false);
+    expect(keepsPrevious({ ...q, origin: null }, q)).toBe(false);
+    expect(keepsPrevious(null, q)).toBe(false);
   });
 });

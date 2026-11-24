@@ -13,7 +13,7 @@ describe('volatilityStore', () => {
       }),
     ).toEqual({ estimator: 'close', horizon: 'quarter', threshold: 20, factor: 2, annual: false });
     expect(
-      sanitizeVolatility({ estimator: 'range', horizon: 'year', threshold: 90, factor: 1 }),
+      sanitizeVolatility({ estimator: 'range', horizon: 'year', threshold: 15, factor: 1.75 }),
     ).toEqual(DEFAULT_VOLATILITY);
   });
 

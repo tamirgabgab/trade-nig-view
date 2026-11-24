@@ -60,6 +60,28 @@ def test_realized_variance_from_hourly_bars() -> None:
     assert rv[1] == pytest.approx(2 * g * g)  # +g (overnight), -g, 0
 
 
+def test_a_missing_hourly_session_leaves_the_next_day_without_realised_variance() -> None:
+    # Daily bars on days 0, 1 and 2; the 1h data has sessions 0 and 2 only: day 2's first return
+    # would span two days of moves.
+    hourly = BarFrame.from_columns(
+        time=np.array([0, 3600, 2 * DAY, 2 * DAY + 3600]),
+        open=np.ones(4),
+        high=np.full(4, 2.0),
+        low=np.full(4, 0.5),
+        close=np.array([1.0, 1.1, 1.3, 1.2]),
+    ).with_session(np.array([0, 0, 2, 2]))
+    daily = BarFrame.from_columns(
+        time=np.arange(3) * DAY, open=np.ones(3), high=np.ones(3), low=np.ones(3), close=np.ones(3)
+    )
+    assert np.isnan(vol.realized_from_hourly(daily, hourly)).all()
+
+
+def test_har_features_add_the_horizon_only_beyond_the_har_lags() -> None:
+    frame = synthetic_bars(Scenario.RANDOM_WALK, 1, 100)
+    assert vol.har_features(frame, 5).shape == (100, 4)  # 1, q1, q5, q22: no second q5
+    assert vol.har_features(frame, 63).shape == (100, 5)
+
+
 def test_too_short_history_has_no_cone() -> None:
     assert vol.cone(synthetic_bars(Scenario.RANDOM_WALK, 1, 2)) is None
     assert vol.cone(synthetic_bars(Scenario.RANDOM_WALK, 1, 20)) is None  # under MIN_WINDOWS
