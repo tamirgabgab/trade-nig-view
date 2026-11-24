@@ -1,3 +1,4 @@
+import { SCENARIOS } from '../../api/lab.ts';
 import { ComboLab, type ComboBlock } from './ComboLab.tsx';
 import { EventLab, type EventBlock } from './EventLab.tsx';
 import { FilterLab, type FilterBlock } from './FilterLab.tsx';
@@ -23,6 +24,7 @@ const isAgo = (side: unknown) =>
     (side['ago'] as number) >= 0 &&
     (side['ago'] as number) <= MAX_AGO);
 const INTERVALS: readonly unknown[] = [undefined, '1D', '1h'];
+const SCENARIO_IDS: readonly unknown[] = SCENARIOS.map((s) => s.id);
 const isTexts = (v: unknown) => v === undefined || (Array.isArray(v) && v.every(isText));
 const isRule = (r: unknown) =>
   isObject(r) &&
@@ -56,6 +58,8 @@ const SHAPES: Record<Block['kind'], (b: Json) => boolean> = {
   filter: (b) => isText(b['indicator']),
   forecast: (b) =>
     INTERVALS.includes(b['interval']) &&
+    (b['model'] === undefined || b['model'] === 'a' || b['model'] === 'c') &&
+    (b['scenario'] === undefined || SCENARIO_IDS.includes(b['scenario'])) &&
     (b['k'] === undefined ||
       (Number.isInteger(b['k']) && (b['k'] as number) >= 1 && (b['k'] as number) <= 20)),
 };

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { useChartDataStore } from '../store/chartDataStore.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
@@ -32,6 +34,14 @@ export function ForecastPanel() {
   const cursor = useReplayStore((s) => s.cursor);
   const fromHere = useReplayStore((s) => s.forecastFromHere);
   const forecast = useChartForecast(true);
+  // The window being typed: applied on Enter or when the field is left, not on every keystroke.
+  const [windowDraft, setWindowDraft] = useState<string | null>(null);
+  const commitWindow = () => {
+    if (windowDraft !== null && windowDraft.trim() !== '' && Number.isFinite(Number(windowDraft))) {
+      set({ window: Number(windowDraft) });
+    }
+    setWindowDraft(null);
+  };
   const f = forecast.data;
 
   return (
@@ -89,10 +99,14 @@ export function ForecastPanel() {
                 type="number"
                 min={0}
                 step={50}
-                value={settings.window}
+                value={windowDraft ?? settings.window}
                 title="Training bars (0 = all the history, else at least 60)"
                 onChange={(event) => {
-                  set({ window: Number(event.target.value) });
+                  setWindowDraft(event.target.value);
+                }}
+                onBlur={commitWindow}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') commitWindow();
                 }}
               />
             </label>

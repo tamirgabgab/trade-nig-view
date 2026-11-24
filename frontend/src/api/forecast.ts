@@ -125,12 +125,13 @@ export interface ForecastQuery {
   origin: number | null;
 }
 
-/** The chart's forecast (the backend tunes and caches it per bars). */
+/** The chart's forecast (the backend tunes and caches it per bars). No placeholder: another
+ *  symbol's or the present's forecast must never show while a new one loads (in a replay it would
+ *  reveal the future). */
 export function useForecast(query: ForecastQuery | null) {
   return useQuery({
     queryKey: ['forecast', query],
     enabled: query !== null,
-    placeholderData: keepPreviousData,
     staleTime: 60_000,
     queryFn: ({ signal }) => {
       if (query === null) throw new Error('no forecast query');

@@ -16,7 +16,9 @@ const pct = (v: number | null, digits = 1) => (v === null ? '—' : `${(v * 100)
  * out-of-sample R² of the return and the hit rate.
  */
 export function ForecastValidation({ forecast }: { forecast: Forecast }) {
-  const [h, setH] = useState(1);
+  const [picked, setH] = useState(1);
+  // Fewer bars ahead than the one picked: the last one there is.
+  const h = Math.min(picked, Math.max(forecast.horizons.length, 1));
   const rows = forecast.validation.filter((v) => v.h === h);
   const naive = rows.find((v) => v.model === 'naive')?.pinball ?? null;
   return (
@@ -61,7 +63,7 @@ export function ForecastValidation({ forecast }: { forecast: Forecast }) {
               <tr key={v.model} aria-current={v.model === forecast.model ? 'true' : undefined}>
                 <th scope="row">{NAMES[v.model]}</th>
                 <td>
-                  {naive === null || v.model === 'naive'
+                  {naive === null || naive <= 0 || v.model === 'naive'
                     ? '—'
                     : `${v.pinball <= naive ? '' : '+'}${(((v.pinball - naive) / naive) * 100).toFixed(1)}%`}
                 </td>

@@ -53,8 +53,8 @@ function sanitizeForecast(v: unknown): ForecastSettings {
     k: Math.round(inRange(r['k'], 1, 20, d.k)),
     model: r['model'] === 'a' ? 'a' : 'c',
     auto: r['auto'] !== false,
-    // 1-59 bars cannot train a model (the backend refuses them).
-    window: window > 0 && window < 60 ? d.window : Math.round(window),
+    // 1-59 bars cannot train a model (the backend refuses them): the smallest that can.
+    window: window > 0 && window < 60 ? 60 : Math.round(window),
     ridge: inRange(r['ridge'], 1e-6, 1e6, d.ridge),
     lags: Math.round(inRange(r['lags'], 1, 10, d.lags)),
   };

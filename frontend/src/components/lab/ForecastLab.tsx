@@ -70,7 +70,11 @@ export function ForecastLab({ block }: { block: ForecastBlock }) {
         <p className={styles.error} role="alert">
           Could not forecast: {forecast.error.message}
         </p>
-      ) : f === undefined || bars.data === undefined ? (
+      ) : f === undefined ||
+        bars.data === undefined ||
+        forecast.isPlaceholderData ||
+        bars.isPlaceholderData ? (
+        // The previous source's forecast must not be drawn on the new source's bars.
         <p className={styles.note}>Tuning and validating the models (a few seconds)…</p>
       ) : (
         <>

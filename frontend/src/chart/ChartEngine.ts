@@ -723,10 +723,13 @@ export class ChartEngine {
     this.forecastLayer.set(view);
     const ahead = view === null ? 0 : (view.bars.at(-1)?.index ?? view.origin) - view.origin;
     const offset = Math.max(RIGHT_OFFSET, ahead + 3);
-    // Only a change: applying the option scrolls the chart (a restored view would be lost).
-    if (offset !== this.chart.timeScale().options().rightOffset) {
-      this.chart.timeScale().applyOptions({ rightOffset: offset });
-    }
+    // Only a change: applying the option scrolls to the latest bar, so a view scrolled back into
+    // the history is put back afterwards (a restored view would be lost otherwise).
+    const ts = this.chart.timeScale();
+    if (offset === ts.options().rightOffset) return;
+    const before = ts.getVisibleLogicalRange();
+    ts.applyOptions({ rightOffset: offset });
+    if (before !== null && before.to < this.bars.length - 1) ts.setVisibleLogicalRange(before);
   }
 
   /** Show these gap zones (bar indexes of the current bars) under the bars. */
