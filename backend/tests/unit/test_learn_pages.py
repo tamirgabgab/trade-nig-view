@@ -18,6 +18,8 @@ LEARN_DIR: Path = REPO_ROOT / "docs" / "indicators"  # Settings.learn_dir's defa
 #: Pages rewritten to the v2 structure (add a slug here once its page follows ``V2_SECTIONS``).
 V2_PAGES: set[str] = {
     "alma",
+    "atr",
+    "bollinger-bands",
     "dema",
     "ema",
     "envelope",
@@ -29,6 +31,7 @@ V2_PAGES: set[str] = {
     "macd",
     "mcginley",
     "moving-average",
+    "obv",
     "rsi",
     "sma",
     "smma",
@@ -36,6 +39,7 @@ V2_PAGES: set[str] = {
     "swma",
     "t3",
     "tema",
+    "volume-sma",
     "vwap",
     "vwma",
     "wma",
