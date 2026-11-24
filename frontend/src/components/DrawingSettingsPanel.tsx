@@ -229,44 +229,6 @@ export function DrawingSettingsPanel() {
             </div>
           </section>
         )}
-        {shown.type === 'stats_range' && (
-          <section aria-label="Statistics">
-            <div className={styles.field}>
-              <label htmlFor={`${titleId}-returns`} className={styles.label}>
-                Returns
-              </label>
-              <select
-                id={`${titleId}-returns`}
-                className={styles.control}
-                value={shown.props.returns ?? 'log'}
-                onChange={(event) => {
-                  const returns = event.target.value as 'log' | 'simple';
-                  change((d) => ({ ...d, props: { ...d.props, returns } }));
-                }}
-              >
-                <option value="log">Log</option>
-                <option value="simple">Simple</option>
-              </select>
-            </div>
-            <div className={styles.field}>
-              <label htmlFor={`${titleId}-basis`} className={styles.label}>
-                From
-              </label>
-              <select
-                id={`${titleId}-basis`}
-                className={styles.control}
-                value={shown.props.basis ?? 'close'}
-                onChange={(event) => {
-                  const basis = event.target.value as 'close' | 'open';
-                  change((d) => ({ ...d, props: { ...d.props, basis } }));
-                }}
-              >
-                <option value="close">Previous close to close</option>
-                <option value="open">Open to close (within the bar)</option>
-              </select>
-            </div>
-          </section>
-        )}
         {(shown.type === 'fib_retracement' || shown.type === 'fib_extension') && (
           <section aria-labelledby={`${titleId}-levels`}>
             <h3 id={`${titleId}-levels`} className={styles.section}>
