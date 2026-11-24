@@ -14,3 +14,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0007](0007-styling.md) | Styling: CSS Modules + CSS custom properties | Accepted |
 | [0008](0008-openapi-typescript.md) | TypeScript API types generated with openapi-typescript | Accepted |
 | [0009](0009-learn-markdown-katex.md) | Learn pages: Markdown + KaTeX via react-markdown | Accepted |
+| [0010](0010-ohlc-forecast.md) | OHLC forecast: direct multi-horizon regressions, empirical joint distribution | Accepted |

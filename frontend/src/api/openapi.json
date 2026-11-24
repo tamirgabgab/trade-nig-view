@@ -1038,6 +1038,171 @@
           }
         }
       }
+    },
+    "/api/forecast": {
+      "get": {
+        "tags": [
+          "forecast"
+        ],
+        "summary": "Get Forecast",
+        "description": "Quantiles of the next ``k`` bars' open, high, low and close from the bars up to the last\none (``until`` in replay), with the models' walk-forward scores. Cached per last bar.",
+        "operationId": "get_forecast_api_forecast_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Interval",
+              "default": "1D"
+            }
+          },
+          {
+            "name": "k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "Bars ahead",
+              "default": 5,
+              "title": "K"
+            },
+            "description": "Bars ahead"
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "a",
+                "c"
+              ],
+              "type": "string",
+              "default": "c",
+              "title": "Model"
+            }
+          },
+          {
+            "name": "auto",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Tune window, ridge and lags out of sample",
+              "default": true,
+              "title": "Auto"
+            },
+            "description": "Tune window, ridge and lags out of sample"
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 0,
+              "description": "Manual: training bars, 0 = all",
+              "default": 500,
+              "title": "Window"
+            },
+            "description": "Manual: training bars, 0 = all"
+          },
+          {
+            "name": "ridge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 1000000.0,
+              "exclusiveMinimum": 0,
+              "description": "Manual: model C's penalty",
+              "default": 100.0,
+              "title": "Ridge"
+            },
+            "description": "Manual: model C's penalty"
+          },
+          {
+            "name": "lags",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "description": "Manual: past bars as features",
+              "default": 3,
+              "title": "Lags"
+            },
+            "description": "Manual: past bars as features"
+          },
+          {
+            "name": "adjusted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjusted"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Replay cursor: no bar after it",
+              "title": "Until"
+            },
+            "description": "Replay cursor: no bar after it"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1155,6 +1320,24 @@
           "bars"
         ],
         "title": "BarsResponse"
+      },
+      "Coefficient": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "value"
+        ],
+        "title": "Coefficient"
       },
       "ComputeRequest": {
         "properties": {
@@ -1709,6 +1892,136 @@
         "title": "FibLevel",
         "description": "One Fibonacci level: ratio ``value`` (0 = second anchor for a retracement), shown or not."
       },
+      "ForecastParams": {
+        "properties": {
+          "window": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window",
+            "description": "Training bars; null = all the history"
+          },
+          "ridge": {
+            "type": "number",
+            "title": "Ridge",
+            "description": "Ridge penalty (model C only)"
+          },
+          "lags": {
+            "type": "integer",
+            "title": "Lags",
+            "description": "Past bars p used as features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window",
+          "ridge",
+          "lags"
+        ],
+        "title": "ForecastParams"
+      },
+      "ForecastResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "a",
+              "c"
+            ],
+            "title": "Model"
+          },
+          "auto": {
+            "type": "boolean",
+            "title": "Auto"
+          },
+          "params": {
+            "$ref": "#/components/schemas/ForecastParams",
+            "description": "Parameters of the forecast model (tuned if auto)"
+          },
+          "last_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Last Time",
+            "description": "The forecast origin bar, as in /api/bars"
+          },
+          "last_close": {
+            "type": "number",
+            "title": "Last Close"
+          },
+          "levels": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Levels"
+          },
+          "horizons": {
+            "items": {
+              "$ref": "#/components/schemas/HorizonForecast"
+            },
+            "type": "array",
+            "title": "Horizons"
+          },
+          "validation": {
+            "items": {
+              "$ref": "#/components/schemas/Validation"
+            },
+            "type": "array",
+            "title": "Validation",
+            "description": "Walk-forward scores per model and horizon"
+          },
+          "coefficients": {
+            "items": {
+              "$ref": "#/components/schemas/Coefficient"
+            },
+            "type": "array",
+            "title": "Coefficients",
+            "description": "h = 1 return coefficients of the model (model C: on standardised features)"
+          },
+          "tuning": {
+            "items": {
+              "$ref": "#/components/schemas/Tried"
+            },
+            "type": "array",
+            "title": "Tuning",
+            "description": "The best tuning grid points (auto only)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "model",
+          "auto",
+          "params",
+          "last_time",
+          "last_close",
+          "levels",
+          "horizons",
+          "validation",
+          "coefficients",
+          "tuning"
+        ],
+        "title": "ForecastResponse"
+      },
       "FrequencyInfo": {
         "properties": {
           "period": {
@@ -1944,6 +2257,65 @@
           "baseline"
         ],
         "title": "Histogram"
+      },
+      "HorizonForecast": {
+        "properties": {
+          "h": {
+            "type": "integer",
+            "title": "H",
+            "description": "Bars ahead"
+          },
+          "open": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Open",
+            "description": "Price quantiles at `levels`"
+          },
+          "high": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "High"
+          },
+          "low": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Low"
+          },
+          "close": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Close"
+          },
+          "p_up": {
+            "type": "number",
+            "title": "P Up",
+            "description": "P(close after h bars > last close)"
+          },
+          "expected_range": {
+            "type": "number",
+            "title": "Expected Range",
+            "description": "Mean (high - low) / last close"
+          }
+        },
+        "type": "object",
+        "required": [
+          "h",
+          "open",
+          "high",
+          "low",
+          "close",
+          "p_up",
+          "expected_range"
+        ],
+        "title": "HorizonForecast"
       },
       "IndicatorInfo": {
         "properties": {
@@ -3661,6 +4033,93 @@
         ],
         "title": "Transform",
         "description": "Bar transforms selectable with ``/api/bars?transform=``."
+      },
+      "Tried": {
+        "properties": {
+          "params": {
+            "$ref": "#/components/schemas/ForecastParams"
+          },
+          "pinball": {
+            "type": "number",
+            "title": "Pinball"
+          }
+        },
+        "type": "object",
+        "required": [
+          "params",
+          "pinball"
+        ],
+        "title": "Tried"
+      },
+      "Validation": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "enum": [
+              "naive",
+              "a",
+              "c"
+            ],
+            "title": "Model"
+          },
+          "h": {
+            "type": "integer",
+            "title": "H"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N",
+            "description": "Out-of-sample forecasts scored"
+          },
+          "pinball": {
+            "type": "number",
+            "title": "Pinball",
+            "description": "Mean pinball loss of the four log targets (lower is better)"
+          },
+          "coverage": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Coverage",
+            "description": "Share of closes inside the 50 / 80 / 95 % intervals"
+          },
+          "r2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R2",
+            "description": "Out-of-sample R^2 of the return vs a zero-mean walk"
+          },
+          "hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Rate",
+            "description": "Share of right directions among the forecasts whose median return is not 0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "h",
+          "n",
+          "pinball",
+          "coverage",
+          "r2",
+          "hit_rate"
+        ],
+        "title": "Validation"
       },
       "ValidationError": {
         "properties": {

@@ -16,6 +16,7 @@ from app.api import (
     analysis,
     bars,
     drawings,
+    forecast,
     health,
     indicators,
     layouts,
@@ -104,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         layouts.router,
         watchlists.router,
         analysis.router,
+        forecast.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

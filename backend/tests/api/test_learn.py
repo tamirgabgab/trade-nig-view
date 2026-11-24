@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, get_args
 
@@ -14,8 +13,6 @@ from app.config import Settings
 from app.indicators.catalog import CATALOG
 from app.indicators.registry import Category
 from app.main import create_app
-from tests.api.test_analysis import E2E_DATA
-from tests.conftest import IsolatedSettings
 
 
 @pytest.mark.parametrize("slug", sorted({spec.learn_slug for spec in CATALOG.values()}))
@@ -101,19 +98,6 @@ def test_missing_concept_page_is_not_listed(settings: Settings, tmp_path: Path) 
 
 
 # --- lab ------------------------------------------------------------------------------------------
-
-
-@pytest.fixture
-def e2e_client(tmp_path: Path) -> Iterator[TestClient]:
-    """The synthetic e2e universe (thousands of daily bars per symbol)."""
-    settings = IsolatedSettings(
-        offline=True,
-        chartlab_data_dir=tmp_path / "data",
-        universe_file=E2E_DATA / "universe.toml",
-        fixtures_dir=E2E_DATA,
-    )
-    with TestClient(create_app(settings)) as test_client:
-        yield test_client
 
 
 def lab(client: TestClient, body: dict[str, Any], status: int = 200) -> dict[str, Any]:

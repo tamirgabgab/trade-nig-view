@@ -3,33 +3,14 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
-from tests.conftest import IsolatedSettings
-
-E2E_DATA = Path(__file__).resolve().parents[3] / "frontend" / "e2e" / "data"
 NVDA_GAPS: dict[str, Any] = json.loads(
     (Path(__file__).resolve().parents[1] / "golden" / "nvda_gaps.json").read_text(encoding="utf-8")
 )
-
-
-@pytest.fixture
-def e2e_client(tmp_path: Path) -> Iterator[TestClient]:
-    """The synthetic e2e universe (thousands of daily bars per symbol, so there are gaps)."""
-    settings = IsolatedSettings(
-        offline=True,
-        chartlab_data_dir=tmp_path / "data",
-        universe_file=E2E_DATA / "universe.toml",
-        fixtures_dir=E2E_DATA,
-    )
-    with TestClient(create_app(settings)) as test_client:
-        yield test_client
 
 
 def gaps(client: TestClient, **params: str | float) -> dict[str, Any]:

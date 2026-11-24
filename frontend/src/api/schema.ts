@@ -351,6 +351,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Forecast
+         * @description Quantiles of the next ``k`` bars' open, high, low and close from the bars up to the last
+         *     one (``until`` in replay), with the models' walk-forward scores. Cached per last bar.
+         */
+        get: operations["get_forecast_api_forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -409,6 +430,13 @@ export interface components {
             warnings: string[];
             /** Bars */
             bars: components["schemas"]["Bar"][];
+        };
+        /** Coefficient */
+        Coefficient: {
+            /** Feature */
+            feature: string;
+            /** Value */
+            value: number;
         };
         /** ComputeRequest */
         ComputeRequest: {
@@ -667,6 +695,65 @@ export interface components {
              */
             visible: boolean;
         };
+        /** ForecastParams */
+        ForecastParams: {
+            /**
+             * Window
+             * @description Training bars; null = all the history
+             */
+            window: number | null;
+            /**
+             * Ridge
+             * @description Ridge penalty (model C only)
+             */
+            ridge: number;
+            /**
+             * Lags
+             * @description Past bars p used as features
+             */
+            lags: number;
+        };
+        /** ForecastResponse */
+        ForecastResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Model
+             * @enum {string}
+             */
+            model: "a" | "c";
+            /** Auto */
+            auto: boolean;
+            /** @description Parameters of the forecast model (tuned if auto) */
+            params: components["schemas"]["ForecastParams"];
+            /**
+             * Last Time
+             * @description The forecast origin bar, as in /api/bars
+             */
+            last_time: string | number;
+            /** Last Close */
+            last_close: number;
+            /** Levels */
+            levels: number[];
+            /** Horizons */
+            horizons: components["schemas"]["HorizonForecast"][];
+            /**
+             * Validation
+             * @description Walk-forward scores per model and horizon
+             */
+            validation: components["schemas"]["Validation"][];
+            /**
+             * Coefficients
+             * @description h = 1 return coefficients of the model (model C: on standardised features)
+             */
+            coefficients: components["schemas"]["Coefficient"][];
+            /**
+             * Tuning
+             * @description The best tuning grid points (auto only)
+             */
+            tuning: components["schemas"]["Tried"][];
+        };
         /** FrequencyInfo */
         FrequencyInfo: {
             /**
@@ -779,6 +866,35 @@ export interface components {
              * @description Fraction of baseline returns per bin
              */
             baseline: number[];
+        };
+        /** HorizonForecast */
+        HorizonForecast: {
+            /**
+             * H
+             * @description Bars ahead
+             */
+            h: number;
+            /**
+             * Open
+             * @description Price quantiles at `levels`
+             */
+            open: number[];
+            /** High */
+            high: number[];
+            /** Low */
+            low: number[];
+            /** Close */
+            close: number[];
+            /**
+             * P Up
+             * @description P(close after h bars > last close)
+             */
+            p_up: number;
+            /**
+             * Expected Range
+             * @description Mean (high - low) / last close
+             */
+            expected_range: number;
         };
         /** IndicatorInfo */
         IndicatorInfo: {
@@ -1480,6 +1596,47 @@ export interface components {
          * @enum {string}
          */
         Transform: "none" | "heikin_ashi";
+        /** Tried */
+        Tried: {
+            params: components["schemas"]["ForecastParams"];
+            /** Pinball */
+            pinball: number;
+        };
+        /** Validation */
+        Validation: {
+            /**
+             * Model
+             * @enum {string}
+             */
+            model: "naive" | "a" | "c";
+            /** H */
+            h: number;
+            /**
+             * N
+             * @description Out-of-sample forecasts scored
+             */
+            n: number;
+            /**
+             * Pinball
+             * @description Mean pinball loss of the four log targets (lower is better)
+             */
+            pinball: number;
+            /**
+             * Coverage
+             * @description Share of closes inside the 50 / 80 / 95 % intervals
+             */
+            coverage: number[];
+            /**
+             * R2
+             * @description Out-of-sample R^2 of the return vs a zero-mean walk
+             */
+            r2: number | null;
+            /**
+             * Hit Rate
+             * @description Share of right directions among the forecasts whose median return is not 0
+             */
+            hit_rate: number | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -2212,6 +2369,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GapsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_forecast_api_forecast_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                interval?: components["schemas"]["Interval"];
+                /** @description Bars ahead */
+                k?: number;
+                model?: "a" | "c";
+                /** @description Tune window, ridge and lags out of sample */
+                auto?: boolean;
+                /** @description Manual: training bars, 0 = all */
+                window?: number;
+                /** @description Manual: model C's penalty */
+                ridge?: number;
+                /** @description Manual: past bars as features */
+                lags?: number;
+                adjusted?: boolean;
+                /** @description Replay cursor: no bar after it */
+                until?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastResponse"];
                 };
             };
             /** @description Validation Error */

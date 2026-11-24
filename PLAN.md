@@ -88,6 +88,10 @@ full harness.
   or bar
 - [x] Statistics tool (`stats_range` + the Statistics side-panel tab): histograms of the bar returns (log/simple,
   close-to-close/open-to-close) and of their change, normal curve, mean, std, annualised mean and volatility
+- [x] F1: OHLC forecast backend (ADR 0010): models A (OLS) and C (ridge + HAR), direct forecasts for k bars, empirical
+  joint distribution, walk-forward validation against a naive benchmark, auto-tuning, `GET /api/forecast`
+- [ ] F2: the forecast on the chart (k ghost candles with 50/80/95 % bands), the Forecast side-panel tab (A vs C vs
+  naive validation, coefficients), a learn page, E2E
 
 ---
 
