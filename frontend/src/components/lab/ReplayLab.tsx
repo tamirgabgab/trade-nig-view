@@ -12,15 +12,17 @@ export interface ReplayBlock {
   kind: 'replay';
   /** The universe's provider symbol, e.g. 'SPY' or '^GSPC'. */
   symbol: string;
-  /** 'YYYY-MM-DD': the replay starts at the last daily bar on or before it. */
+  /** 'YYYY-MM-DD': the replay starts at the last bar on or before that day. */
   date: string;
+  /** '1h' replays hourly bars (VWAP); daily by default. */
+  interval?: '1D' | '1h';
   indicators?: { id: string; params?: Params }[];
 }
 
 const sameParams = (a: Params, b: Params) => Object.keys(b).every((key) => a[key] === b[key]);
 
 /**
- * An exercise card's "Start in Replay": the chart switches to the symbol on daily bars, gets the
+ * An exercise card's "Start in Replay": the chart switches to the symbol (daily or hourly), gets the
  * page's indicators (unless already on) and replays from the date.
  */
 export function ReplayLab({ block }: { block: ReplayBlock }) {
@@ -36,7 +38,7 @@ export function ReplayLab({ block }: { block: ReplayBlock }) {
     useReplayStore.getState().exit(); // the interval is locked while a replay runs
     const chart = useChartStore.getState();
     chart.setSymbol(block.symbol);
-    chart.setInterval('1D');
+    chart.setInterval(block.interval ?? '1D');
     const store = useIndicatorStore.getState();
     for (const { id, params } of indicators) {
       const on = store.instances.some((i) => i.id === id && sameParams(i.params, params));
@@ -53,7 +55,8 @@ export function ReplayLab({ block }: { block: ReplayBlock }) {
           Start in Replay
         </button>
         <span>
-          {display ?? block.symbol}, daily, from {block.date}
+          {display ?? block.symbol}, {block.interval === '1h' ? 'hourly' : 'daily'}, from{' '}
+          {block.date}
           {indicators.length > 0 && ` with ${indicators.map((i) => i.label).join(', ')}`}
         </span>
       </div>

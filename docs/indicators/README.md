@@ -101,7 +101,7 @@ accumulation (flat, up bars trade more volume), markup, distribution (flat, down
 - `event`: an event study of `output` `op` `value` (`op`: `lt`, `gt`, `crosses_above`, `crosses_below`); the reader can
   move the threshold within `range`, change the comparison and the look-ahead (`horizon`, bars).
 - `replay`: a "Start in Replay" button for an exercise: the chart switches to `symbol` (the universe's provider
-  symbol, e.g. `SPY`, `^GSPC`) on daily bars, adds `indicators` (each `{"id", "params"}`) unless the same one is already
+  symbol, e.g. `SPY`, `^GSPC`) on daily bars (`"interval": "1h"` for hourly ones; Yahoo keeps about 730 days of them), adds `indicators` (each `{"id", "params"}`) unless the same one is already
   on, and starts the bar replay at the last bar on or before `date` (`YYYY-MM-DD`; daily history reaches about 20 years
   back).
 
