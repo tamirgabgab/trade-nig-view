@@ -14,7 +14,11 @@ export function GlossaryTerm({ term, children }: { term: string; children: React
     () => (glossary.data === undefined ? null : parseGlossary(glossary.data)),
     [glossary.data],
   );
-  const definition = entries === null ? 'Loading…' : (entries.get(term) ?? 'Not in the glossary.');
+  const definition = glossary.isError
+    ? 'Definition unavailable.'
+    : entries === null
+      ? 'Loading…'
+      : (entries.get(term) ?? 'Not in the glossary.');
   return (
     <span className={styles.term}>
       <a

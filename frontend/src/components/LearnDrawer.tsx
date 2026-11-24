@@ -35,6 +35,7 @@ export function LearnDrawer({
   attrs: OverlayAttrs;
 }) {
   const openLearn = useUiStore((s) => s.openLearn);
+  const learnNav = useUiStore((s) => s.learnNav);
   const [tab, setTab] = useState<Tab>('page');
   const titleId = useId();
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
@@ -158,7 +159,7 @@ export function LearnDrawer({
         aria-labelledby={`${titleId}-${shown}`}
       >
         {shown === 'page' || spec === undefined ? (
-          <LearnPage slug={slug} anchor={anchor} />
+          <LearnPage slug={slug} anchor={anchor} nav={learnNav} />
         ) : shown === 'try' ? (
           <TryIt key={learnFor} spec={spec} initial={params} />
         ) : (

@@ -374,4 +374,25 @@ describe('learn drawer', () => {
       'learn-warm-up',
     );
   });
+
+  it('says a definition is unavailable when the glossary cannot be loaded', async () => {
+    const user = userEvent.setup();
+    const page = `${PAGE}\nNaN during the [warm-up](glossary:warm-up).\n`;
+    stubApi({
+      '/api/health': { body: HEALTH_OK },
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
+      '/api/indicators': { body: INDICATORS },
+      '/api/indicators/compute': () => jsonResponse({ detail: 'not needed' }, 500),
+      '/api/learn/sma': { body: { slug: 'sma', markdown: page } },
+      '/api/learn/glossary': { status: 404, body: { title: 'Not Found', detail: 'No page' } },
+    });
+    renderWithQuery(<App />);
+    const drawer = await openLearn(user, 'sma', 'Simple Moving Average');
+    const term = await within(drawer).findByRole('link', { name: 'warm-up' });
+    await waitFor(() => {
+      expect(term).toHaveAccessibleDescription('Definition unavailable.');
+    });
+  });
 });

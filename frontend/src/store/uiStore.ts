@@ -54,6 +54,8 @@ export interface UiState {
   openSettings: (uid: string | null) => void;
   /** Instance whose learn drawer is open, or null (one side panel at a time). */
   learnFor: string | null;
+  /** Bumped by every openLearn, so following the same link twice scrolls again. */
+  learnNav: number;
   openLearn: (uid: string | null) => void;
   /** Drawing whose settings panel is open, or null. */
   drawingSettingsFor: string | null;
@@ -104,11 +106,17 @@ export const useUiStore = create<UiState>()((set) => ({
     );
   },
   learnFor: null,
+  learnNav: 0,
   openLearn: (uid) => {
-    set(
+    set((s) =>
       uid === null
         ? { learnFor: null }
-        : { learnFor: uid, settingsFor: null, drawingSettingsFor: null },
+        : {
+            learnFor: uid,
+            learnNav: s.learnNav + 1,
+            settingsFor: null,
+            drawingSettingsFor: null,
+          },
     );
   },
   drawingSettingsFor: null,

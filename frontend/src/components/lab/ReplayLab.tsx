@@ -66,8 +66,9 @@ export function ReplayLab({ block }: { block: ReplayBlock }) {
       </div>
       {block.steps !== undefined && block.steps.length > 0 && (
         <ol className={styles.steps}>
-          {block.steps.map((step) => (
-            <li key={step}>{step}</li>
+          {block.steps.map((step, i) => (
+            // A static list: the position is the step's identity.
+            <li key={i}>{step}</li>
           ))}
         </ol>
       )}

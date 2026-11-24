@@ -1,6 +1,6 @@
 import 'katex/dist/katex.min.css';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Markdown, { defaultUrlTransform, type Components, type ExtraProps } from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
@@ -54,18 +54,31 @@ const COMPONENTS: Components = {
   },
 };
 
-/** A learn page: Markdown with KaTeX math (raw HTML is not rendered), scrolled to `anchor`. */
-export function LearnPage({ slug, anchor = null }: { slug: string; anchor?: string | null }) {
+/** A learn page: Markdown with KaTeX math (raw HTML is not rendered). Every navigation (`nav`)
+ *  shows it at `anchor`, or at its top. */
+export function LearnPage({
+  slug,
+  anchor = null,
+  nav = 0,
+}: {
+  slug: string;
+  anchor?: string | null;
+  nav?: number;
+}) {
   const page = useLearnPage(slug);
   const loaded = page.data !== undefined;
+  const article = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (loaded && anchor !== null) {
-      const heading = document.getElementById(headingDomId(anchor));
+    if (!loaded) return;
+    const heading = anchor === null ? null : document.getElementById(headingDomId(anchor));
+    if (heading === null) {
+      const body = article.current?.parentElement;
+      if (body) body.scrollTop = 0;
+    } else if ('scrollIntoView' in heading) {
       // jsdom (tests) has no scrollIntoView.
-      if (heading !== null && 'scrollIntoView' in heading)
-        heading.scrollIntoView({ block: 'start' });
+      heading.scrollIntoView({ block: 'start' });
     }
-  }, [loaded, anchor]);
+  }, [loaded, slug, anchor, nav]);
   if (page.isError) {
     return (
       <p className={styles.status} role="alert">
@@ -81,7 +94,7 @@ export function LearnPage({ slug, anchor = null }: { slug: string; anchor?: stri
     );
   }
   return (
-    <article className={styles.page}>
+    <article ref={article} className={styles.page}>
       <Markdown
         remarkPlugins={REMARK}
         rehypePlugins={REHYPE}

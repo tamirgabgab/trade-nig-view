@@ -175,6 +175,9 @@ def test_learn_links_resolve(slug: str) -> None:
             if anchor:
                 text = (LEARN_DIR / f"{page}.md").read_text(encoding="utf-8")
                 assert anchor in heading_anchors(text), f"{slug}.md: no heading #{anchor} in {page}"
+                math = [h for h in text.splitlines() if h.startswith("#") and "$" in h]
+                targeted = [h for h in math if anchor_of(h.split(" ", 1)[1]) == anchor]
+                assert not targeted, f"{slug}.md: #{anchor} in {page} has math (no stable anchor)"
         else:
             glossary = LEARN_DIR / "glossary.md"
             assert glossary.is_file(), f"{slug}.md links glossary:{target} but there is no glossary"
@@ -213,6 +216,10 @@ def test_lab_blocks_are_valid(slug: str) -> None:
             assert rule.keys() >= RULE_REQUIRED, f"{where} rule {j}: needs {sorted(RULE_REQUIRED)}"
         if kind == "combo":
             assert len(rules) > 0, f"{where}: no rules"
+        assert fields.get("interval", "1D") in {"1D", "1h"}, f"{where}: interval is 1D or 1h"
+        steps: Any = fields.get("steps", [])
+        assert isinstance(steps, list), f"{where}: steps is a list of strings"
+        assert all(isinstance(s, str) for s in cast("list[Any]", steps)), f"{where}: steps"
         if kind == "filter" and "output" in fields:
             outputs = [o.name for o in CATALOG[fields["indicator"]].outputs]
             assert fields["output"] in outputs, f"{where}: output not in {outputs}"

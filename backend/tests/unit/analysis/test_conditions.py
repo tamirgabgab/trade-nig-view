@@ -140,3 +140,5 @@ def test_ago_reads_the_series_k_bars_earlier() -> None:
     assert evaluate([above], frame, []).tolist() == [False, False, True, True, True]
     with pytest.raises(ValidationError):
         Operand.model_validate({"price": "close", "ago": -1})
+    with pytest.raises(ValidationError, match="needs a series"):
+        Operand.model_validate({"value": 30, "ago": 5})

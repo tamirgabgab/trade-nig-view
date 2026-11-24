@@ -26,6 +26,12 @@ describe('forgetIndicator', () => {
     expect(useUiStore.getState()).toMatchObject({ learnFor: null, legendFocus: null });
   });
 
+  it('counts every navigation, so the same link scrolls again', () => {
+    useUiStore.getState().openLearn('page:sma#why-it-works');
+    useUiStore.getState().openLearn('page:sma#why-it-works');
+    expect(useUiStore.getState()).toMatchObject({ learnFor: 'page:sma#why-it-works', learnNav: 2 });
+  });
+
   it('keeps a learn page opened from the index when every indicator goes', () => {
     useUiStore.setState({ learnFor: 'page:combinations', legendFocus: 'ema-2' });
     useUiStore.getState().forgetIndicator();

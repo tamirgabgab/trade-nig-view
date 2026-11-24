@@ -51,6 +51,8 @@ class Operand(BaseModel):
             raise ValueError("an indicator operand needs both `indicator` and `output`")
         if sum((series, self.price is not None, self.value is not None)) != 1:
             raise ValueError("give exactly one of {indicator, output}, {price} or {value}")
+        if self.value is not None and self.ago:
+            raise ValueError("`ago` needs a series (an indicator output or a price), not a value")
         return self
 
 

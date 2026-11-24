@@ -21,7 +21,8 @@ export function TryIt({ spec, initial }: { spec: IndicatorInfo; initial: Params 
     scenario: 'random_walk',
     seed: 1,
     bars: 400,
-    interval: '1D',
+    // VWAP needs sessions: it is empty on daily bars.
+    interval: spec.id === 'vwap' ? '1h' : '1D',
   });
   const settled = useDebounced(params);
   const lab = useLab({

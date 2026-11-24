@@ -48,8 +48,9 @@ larger on bars that move more (:math:`k_t = 0` except in ``accumulation``). ``ad
 session stamped 14:30-20:30 UTC (09:30-15:30 New York in winter), with ``session`` set (so VWAP
 anchors there). The first bar of a session opens with an overnight gap four times wider,
 :math:`O_t = C_{t-1} J_t e^{\eta_t \sigma_t}`, and volume follows the intraday U shape
-(1.8, 1.1, 0.8, 0.7, 0.8, 1.0, 1.6 times the bar's daily-style volume). The daily bars are
-unchanged by this option: the extra randomness is drawn after theirs.
+(1.8, 1.1, 0.8, 0.7, 0.8, 1.0, 1.6 times the bar's daily-style volume). It draws no randomness
+of its own (only the first bar's gap and the volume are rescaled), so the close path is the daily
+one.
 """
 
 from __future__ import annotations

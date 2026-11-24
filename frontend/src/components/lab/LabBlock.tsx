@@ -12,23 +12,41 @@ const isText = (v: unknown) => typeof v === 'string';
 const isObject = (v: unknown): v is Json =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 const OPS: readonly unknown[] = ['lt', 'gt', 'crosses_above', 'crosses_below'];
+const isAgo = (side: unknown) =>
+  !isObject(side) ||
+  side['ago'] === undefined ||
+  (Number.isInteger(side['ago']) && (side['ago'] as number) >= 0);
+const INTERVALS: readonly unknown[] = [undefined, '1D', '1h'];
+const isTexts = (v: unknown) => v === undefined || (Array.isArray(v) && v.every(isText));
 const isRule = (r: unknown) =>
   isObject(r) &&
   isText(r['label']) &&
   isObject(r['left']) &&
   isObject(r['right']) &&
-  OPS.includes(r['op']);
+  OPS.includes(r['op']) &&
+  isAgo(r['left']) &&
+  isAgo(r['right']);
 
 /** The fields each kind cannot do without: a typo shows the error line instead of crashing. */
 const SHAPES: Record<Block['kind'], (b: Json) => boolean> = {
-  param: (b) => isText(b['indicator']) && isText(b['vary']),
+  param: (b) => isText(b['indicator']) && isText(b['vary']) && INTERVALS.includes(b['interval']),
   event: (b) =>
     isText(b['indicator']) &&
     isText(b['output']) &&
     OPS.includes(b['op']) &&
-    typeof b['value'] === 'number',
-  combo: (b) => Array.isArray(b['rules']) && b['rules'].length > 0 && b['rules'].every(isRule),
-  replay: (b) => isText(b['symbol']) && isText(b['date']),
+    typeof b['value'] === 'number' &&
+    INTERVALS.includes(b['interval']),
+  combo: (b) =>
+    Array.isArray(b['rules']) &&
+    b['rules'].length > 0 &&
+    b['rules'].every(isRule) &&
+    INTERVALS.includes(b['interval']),
+  replay: (b) =>
+    isText(b['symbol']) &&
+    isText(b['date']) &&
+    isTexts(b['steps']) &&
+    (b['reveal'] === undefined || isText(b['reveal'])) &&
+    INTERVALS.includes(b['interval']),
   filter: (b) => isText(b['indicator']),
 };
 

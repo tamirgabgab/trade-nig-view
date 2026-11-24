@@ -13,6 +13,9 @@ describe('LabBlock', () => {
     '{"kind": "event", "indicator": "rsi", "output": "rsi", "op": "lt"}',
     '{"kind": "param", "vary": "length"}',
     '{"kind": "replay", "symbol": "SPY"}',
+    '{"kind": "replay", "symbol": "SPY", "date": "2020-02-19", "steps": "one step"}',
+    '{"kind": "param", "indicator": "sma", "vary": "length", "interval": "1H"}',
+    '{"kind": "combo", "rules": [{"label": "x", "left": {"price": "close"}, "op": "gt", "right": {"price": "close", "ago": "20"}}]}',
   ])('shows an error line instead of a widget for %s', (source) => {
     render(<LabBlock source={source} />);
     expect(screen.getByRole('alert')).toHaveTextContent('could not be read');
