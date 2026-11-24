@@ -45,7 +45,9 @@ The screenshot above still shows the empty R0 shell; a screenshot of the current
 | Bar replay (R7): start by a click, a date or at random; play/pause, `Shift+→` step, 0.5–10 bars/s; chart, legend, Data window, indicators and gaps end at the cursor; interval locked; no lookahead, tested for every registered indicator | ✅ Done |
 | Learn platform (P2a): learn index (sidebar button, `Ctrl+K` → "Learn: …"); interactive widgets inside the pages on a random stock (six scenarios: random walk, uptrend, range, reversal, shock, volatility regime) or any symbol: move a parameter, an event study of a signal ("what followed it" vs an average bar, with the 95 % interval and the two distributions), combine up to three rules; a **Try it** tab with every parameter live; exercise cards that start the bar replay on a symbol and date; the MA family's pages rewritten with coloured equations, a "where" table for every variable, how to read it, why it works and what to combine it with | ✅ Done |
 | Learn pages for the oscillators (P2b): RSI (Wilder's RMA as an IIR filter, why 70/30 from its distribution on a random walk), Stochastic (fast vs slow, pinned in a trend), MACD (a band-pass filter: its measured frequency response drawn inside the page), and "Combining indicators" (filter, trigger, confirmation; the mathematics of AND; redundant rules; multiple testing) | ✅ Done |
-| More learn pages (bands, volume, structure, concepts, glossary), custom indicators, backtesting, paper agent (Phases 2–5) | 🗺️ Roadmap |
+| Learn pages for bands, volatility and volume (P2c): Bollinger Bands, ATR, OBV, VWAP, Volume SMA, with hourly lab data in sessions and an accumulation scenario where volume leads price | ✅ Done |
+| Structure, concepts and exercises (P2d): pivots, previous-period levels, gaps; concept pages (bars and sessions, adjusted prices, warm-up, lookahead and replay, lag and noise); a glossary whose terms show their definition on hover in every page; links between pages; guided Replay exercises with steps and a hidden answer | ✅ Done |
+| Custom indicators, backtesting, paper agent (Phases 3–5) | 🗺️ Roadmap |
 
 ## Quick start
 

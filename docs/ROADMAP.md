@@ -283,9 +283,12 @@ Phase-2 plan.
   the MA family's pages rewritten to it.
 - P2b (oscillators): full pages for RSI, Stochastic and MACD (MACD's measured band-pass response as a figure inside
   the page) and the "Combining indicators" concept page.
-- Remaining: full pages for bands, volatility, volume and structure (e.g. OBV level depends on start date, BB
-  population σ); concept pages; glossary; guided exercises using Replay. Rounds P2c–P2d: see
-  [PLAN.md §0.3](../PLAN.md).
+- P2c (bands, volatility, volume): Bollinger Bands, ATR, OBV, VWAP and Volume SMA pages; hourly lab data in sessions,
+  an accumulation scenario where volume leads price, rules on past values.
+- P2d (structure, concepts, exercises): pivots, previous-period levels and gaps; concept pages (bars and sessions,
+  adjusted prices, warm-up, lookahead and replay, lag and noise); a glossary with definitions on hover, linked from
+  every page; links between pages; guided Replay exercises. **Phase 2 is complete.**
+- Backlog: calendar-gap warnings (need an exchange holiday calendar).
 
 ### Phase 3 — Custom indicators (Python plugin API)
 - `plugins/` folder, `IndicatorSpec` entry point, hot reload (watchfiles), sandboxing level appropriate for a local

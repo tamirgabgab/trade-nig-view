@@ -65,14 +65,18 @@ study) · Combine with · Differences vs TradingView · Pitfalls · Exercise.
   multiple testing) with combo labs
 
 #### P2c — Bands, volatility and volume (Opus 5.5 · high)
-- [ ] Bollinger Bands (population σ, %b and width), ATR (true range, RMA), OBV (level depends on the start
+- [x] Bollinger Bands (population σ, %b and width), ATR (true range, RMA), OBV (level depends on the start
   date: only its shape matters), VWAP (session anchor, why it is hidden on daily bars), Volume SMA
+- [x] Lab data for them: hourly synthetic sessions and real 1h, an `accumulation` scenario where volume leads price,
+  rule sides on past values (`ago`)
 
 #### P2d — Structure, concepts and exercises (Sonnet 5.5 · high)
-- [ ] Pivot points, previous-period levels, and a gaps concept page (full vs partial, fill, why indices rarely gap)
-- [ ] Concept pages: bars and sessions, adjusted prices, warm-up, lookahead and replay, lag and noise (NRF)
-- [ ] A glossary, linked from every page
-- [ ] Guided exercises using Replay (e.g. "an RSI failure swing", "a gap that fills"), one per family
+- [x] Pivot points, previous-period levels, and a gaps concept page (full vs partial, fill, why indices rarely gap)
+- [x] Concept pages: bars and sessions, adjusted prices, warm-up, lookahead and replay, lag and noise (NRF)
+- [x] A glossary, linked from every page (`glossary:` links with the definition on hover; `learn:` links between
+  pages, checked by the page lint)
+- [x] Guided exercises using Replay (steps and a hidden "What to look for"), one per family
+- Deferred (user's decision): calendar-gap warnings, which need an exchange holiday calendar dependency
 
 Each round ends with the cleanup pipeline (CLAUDE.md §9), a demo checklist in Hebrew, and a stop for approval.
 Phases 3–5 (plugins, backtesting, paper-only agent) are planned at the end of Phase 2.
