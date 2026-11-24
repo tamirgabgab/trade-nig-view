@@ -74,10 +74,34 @@ export function LearnPage({
     if (heading === null) {
       const body = article.current?.parentElement;
       if (body) body.scrollTop = 0;
-    } else if ('scrollIntoView' in heading) {
-      // jsdom (tests) has no scrollIntoView.
-      heading.scrollIntoView({ block: 'start' });
+      return;
     }
+    // jsdom (tests) has no scrolling.
+    if (!('scrollIntoView' in heading)) return;
+    const scroll = () => {
+      heading.scrollIntoView({ block: 'start' });
+    };
+    scroll();
+    // Lab widgets above the heading load and grow after this: follow the heading until they
+    // settle or the reader scrolls.
+    if (typeof ResizeObserver === 'undefined' || article.current === null) return;
+    const body = article.current.parentElement;
+    const resize = new ResizeObserver(scroll);
+    resize.observe(article.current);
+    const stop = () => {
+      resize.disconnect();
+    };
+    const timer = window.setTimeout(stop, 3000);
+    body?.addEventListener('wheel', stop, { once: true, passive: true });
+    body?.addEventListener('touchstart', stop, { once: true, passive: true });
+    body?.addEventListener('keydown', stop, { once: true });
+    return () => {
+      window.clearTimeout(timer);
+      stop();
+      body?.removeEventListener('wheel', stop);
+      body?.removeEventListener('touchstart', stop);
+      body?.removeEventListener('keydown', stop);
+    };
   }, [loaded, slug, anchor, nav]);
   if (page.isError) {
     return (

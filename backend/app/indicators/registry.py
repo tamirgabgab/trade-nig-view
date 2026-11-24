@@ -116,6 +116,8 @@ class IndicatorSpec:
     #: Bars the chart draws the outputs to the LEFT of their bar (presentation only: values stay
     #: causal, e.g. a pivot confirmed R bars later is drawn on its pivot bar).
     display_shift: CountFn = no_shift
+    #: Values only on intraday bars (session-anchored, e.g. VWAP); all NaN on daily and longer.
+    intraday_only: bool = False
 
     def total_lookback(self, params: Params) -> int:
         """History needed before the first requested bar: ``lookback`` plus the plot shift.

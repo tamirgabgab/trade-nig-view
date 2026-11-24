@@ -811,6 +811,12 @@ export interface components {
             learn_slug: string;
             /** Description */
             description: string;
+            /**
+             * Intraday Only
+             * @description Values only on intraday bars (sessions): empty on daily+
+             * @default false
+             */
+            intraday_only: boolean;
         };
         /**
          * Interval

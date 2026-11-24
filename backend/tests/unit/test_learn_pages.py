@@ -68,6 +68,7 @@ LAB_REQUIRED: dict[str, set[str]] = {
     "replay": {"symbol", "date"},
     "filter": {"indicator"},
 }
+MAX_AGO = 500  # app.analysis.conditions.Operand.ago's bound
 RULE_REQUIRED = {"label", "left", "op", "right"}
 OPS = {"lt", "gt", "crosses_above", "crosses_below"}
 _LAB_BLOCK = re.compile(r"^```lab[ \t]*\n(.*?)^```[ \t]*$", re.MULTILINE | re.DOTALL)
@@ -86,12 +87,22 @@ def anchor_of(heading: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
 
 
+def headings(markdown: str, levels: tuple[str, ...] = ("## ", "### ")) -> list[str]:
+    """The text of the page's headings at ``levels``, outside fenced code blocks."""
+    found: list[str] = []
+    fenced = False
+    for line in markdown.splitlines():
+        if line.startswith("```"):
+            fenced = not fenced
+        elif not fenced and line.startswith(levels):
+            found.append(line.split(" ", 1)[1])
+    return found
+
+
 def heading_anchors(markdown: str, levels: tuple[str, ...] = ("## ", "### ")) -> set[str]:
-    return {
-        anchor_of(line.split(" ", 1)[1])
-        for line in markdown.splitlines()
-        if line.startswith(levels)
-    }
+    """Anchors of the headings a link can target: those without math (KaTeX renders math into
+    text the anchor rule does not see, so such a heading has no stable anchor)."""
+    return {anchor_of(h) for h in headings(markdown, levels) if "$" not in h}
 
 
 def missing_sections(markdown: str) -> list[str]:
@@ -136,6 +147,16 @@ def indicator_ids(block: Any) -> list[str]:  # JSON: dict / list / scalar
     return found
 
 
+def valid_side(side: Any) -> bool:
+    """A rule side's ``ago``: an integer 0-500, and only on a series (not on a value)."""
+    if not isinstance(side, dict) or "ago" not in side:
+        return True
+    fields = cast("dict[str, Any]", side)
+    ago = fields["ago"]
+    in_range = isinstance(ago, int) and not isinstance(ago, bool) and 0 <= ago <= MAX_AGO
+    return in_range and "value" not in fields
+
+
 def lab_blocks(markdown: str) -> list[str]:
     return _LAB_BLOCK.findall(markdown)
 
@@ -163,7 +184,10 @@ def test_lab_block_helpers() -> None:
 def test_anchor_rule() -> None:
     assert anchor_of("Why it works") == "why-it-works"
     assert anchor_of("`%b` and [bandwidth](learn:x)") == "b-and-bandwidth"
-    assert heading_anchors("# T\n## A b\n### C\n#### D") == {"a-b", "c"}
+    assert heading_anchors("# T\n## A b\n### C\n#### D\n## The $k$\n```\n## not\n```") == {
+        "a-b",
+        "c",
+    }
 
 
 @pytest.mark.parametrize("slug", ALL_PAGES)
@@ -176,10 +200,9 @@ def test_learn_links_resolve(slug: str) -> None:
             assert page in ALL_PAGES, f"{slug}.md: no page {page!r}"
             if anchor:
                 text = (LEARN_DIR / f"{page}.md").read_text(encoding="utf-8")
-                assert anchor in heading_anchors(text), f"{slug}.md: no heading #{anchor} in {page}"
-                math = [h for h in text.splitlines() if h.startswith("#") and "$" in h]
-                targeted = [h for h in math if anchor_of(h.split(" ", 1)[1]) == anchor]
-                assert not targeted, f"{slug}.md: #{anchor} in {page} has math (no stable anchor)"
+                assert anchor in heading_anchors(text), (
+                    f"{slug}.md: no heading #{anchor} (without math) in {page}"
+                )
         else:
             glossary = LEARN_DIR / "glossary.md"
             assert glossary.is_file(), f"{slug}.md links glossary:{target} but there is no glossary"
@@ -218,10 +241,16 @@ def test_lab_blocks_are_valid(slug: str) -> None:
             assert rule.keys() >= RULE_REQUIRED, f"{where} rule {j}: needs {sorted(RULE_REQUIRED)}"
         if kind == "combo":
             assert len(rules) > 0, f"{where}: no rules"
-        assert fields.get("interval", "1D") in {"1D", "1h"}, f"{where}: interval is 1D or 1h"
+        # The same checks as the frontend's LabBlock SHAPES (a failing block shows an error line).
+        if kind != "filter":
+            assert fields.get("interval", "1D") in {"1D", "1h"}, f"{where}: interval is 1D or 1h"
         steps: Any = fields.get("steps", [])
         assert isinstance(steps, list), f"{where}: steps is a list of strings"
         assert all(isinstance(s, str) for s in cast("list[Any]", steps)), f"{where}: steps"
+        assert isinstance(fields.get("reveal", ""), str), f"{where}: reveal is a string"
+        for rule in rules:
+            for side in (rule.get("left"), rule.get("right")):
+                assert valid_side(side), f"{where}: ago is 0-500 bars, and only on a series"
         if kind == "filter" and "output" in fields:
             outputs = [o.name for o in CATALOG[fields["indicator"]].outputs]
             assert fields["output"] in outputs, f"{where}: output not in {outputs}"

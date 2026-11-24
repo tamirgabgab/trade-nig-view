@@ -356,8 +356,13 @@ export function ChartArea({ className }: ChartAreaProps) {
   useEffect(() => {
     if (startDay === null || !loaded) return;
     const bar = allBars.findLast((b) => localDate(b.time, timeZone) <= startDay);
-    if (bar === undefined) useReplayStore.setState({ startDay: null });
-    else useReplayStore.getState().setCursor(bar.time, true);
+    if (bar === undefined) {
+      useReplayStore.setState({ startDay: null });
+      // E.g. an hourly exercise older than the ~730 days of 1h bars the data source keeps.
+      useUiStore
+        .getState()
+        .showToast(`No bars on or before ${startDay} here: pick a start bar on the chart.`);
+    } else useReplayStore.getState().setCursor(bar.time, true);
   }, [startDay, loaded, allBars, timeZone]);
   // Keep the cursor in view while replaying (unless the user scrolled back); a new start bar
   // always comes into view.

@@ -12,10 +12,15 @@ const isText = (v: unknown) => typeof v === 'string';
 const isObject = (v: unknown): v is Json =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 const OPS: readonly unknown[] = ['lt', 'gt', 'crosses_above', 'crosses_below'];
+/** `ago`: 0–500 bars back, and only on a series (an indicator output or a price), as the API. */
+const MAX_AGO = 500;
 const isAgo = (side: unknown) =>
   !isObject(side) ||
   side['ago'] === undefined ||
-  (Number.isInteger(side['ago']) && (side['ago'] as number) >= 0);
+  (side['value'] === undefined &&
+    Number.isInteger(side['ago']) &&
+    (side['ago'] as number) >= 0 &&
+    (side['ago'] as number) <= MAX_AGO);
 const INTERVALS: readonly unknown[] = [undefined, '1D', '1h'];
 const isTexts = (v: unknown) => v === undefined || (Array.isArray(v) && v.every(isText));
 const isRule = (r: unknown) =>

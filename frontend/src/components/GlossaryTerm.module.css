@@ -22,13 +22,12 @@
   font-size: var(--font-size-sm);
   font-weight: 400;
   line-height: 1.45;
-  opacity: 0;
+  /* Out of the layout until shown: a hidden box would still extend the drawer's scroll. */
+  display: none;
   pointer-events: none;
-  visibility: hidden;
 }
 
 .term:hover .definition,
 .term:focus-within .definition {
-  opacity: 1;
-  visibility: visible;
+  display: block;
 }

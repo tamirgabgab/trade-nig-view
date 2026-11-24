@@ -55,6 +55,7 @@ const RSI: IndicatorInfo = {
   levels: [30, 70],
   levelFill: [30, 70],
   learnSlug: 'rsi',
+  intradayOnly: false,
   description: '',
 };
 

@@ -1987,6 +1987,12 @@
           "description": {
             "type": "string",
             "title": "Description"
+          },
+          "intraday_only": {
+            "type": "boolean",
+            "title": "Intraday Only",
+            "description": "Values only on intraday bars (sessions): empty on daily+",
+            "default": false
           }
         },
         "type": "object",

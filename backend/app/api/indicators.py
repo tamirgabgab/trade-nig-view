@@ -77,6 +77,9 @@ class IndicatorInfo(BaseModel):
     )
     learn_slug: str = Field(description="docs/indicators/<learn_slug>.md")
     description: str
+    intraday_only: bool = Field(
+        default=False, description="Values only on intraday bars (sessions): empty on daily+"
+    )
 
 
 def _info(spec: IndicatorSpec) -> IndicatorInfo:
@@ -119,6 +122,7 @@ def _info(spec: IndicatorSpec) -> IndicatorInfo:
         level_fill=None if spec.level_fill is None else list(spec.level_fill),
         learn_slug=spec.learn_slug,
         description=spec.description,
+        intraday_only=spec.intraday_only,
     )
 
 

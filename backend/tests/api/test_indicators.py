@@ -411,3 +411,8 @@ def test_obv_loads_the_whole_history(client: TestClient) -> None:
 def test_response_endpoint_serves_every_indicator(client: TestClient, indicator: str) -> None:
     response = client.post("/api/indicators/response", json={"id": indicator})
     assert response.status_code == 200
+
+
+def test_only_vwap_is_intraday_only(client: TestClient) -> None:
+    infos = client.get("/api/indicators").json()
+    assert {i["id"] for i in infos if i["intraday_only"]} == {"vwap"}

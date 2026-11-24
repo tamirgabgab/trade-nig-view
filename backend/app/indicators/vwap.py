@@ -55,5 +55,6 @@ SPEC = IndicatorSpec(
     warmup=lambda _p: 0,
     compute=compute,
     learn_slug="vwap",
+    intraday_only=True,
     description="Average price weighted by volume since the session open (intraday only).",
 )

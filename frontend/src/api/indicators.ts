@@ -55,6 +55,8 @@ export interface IndicatorInfo {
   levelFill: readonly [number, number] | null;
   learnSlug: string;
   description: string;
+  /** Values only on intraday bars (VWAP): empty on daily and longer. */
+  intradayOnly: boolean;
 }
 
 export const CATEGORY_LABELS: Record<IndicatorCategory, string> = {
@@ -167,6 +169,7 @@ export function parseIndicator(item: unknown): IndicatorInfo {
         : null,
     learnSlug: str(field('learn_slug'), 'learn_slug'),
     description: typeof field('description') === 'string' ? (field('description') as string) : '',
+    intradayOnly: field('intraday_only') === true,
   };
 }
 
