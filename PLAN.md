@@ -93,6 +93,11 @@ full harness.
 - [x] F2: the forecast on the chart (Structure → Forecast: fan of the close's 50/80/95 %, median candles, 80 %
   whiskers), the Forecast side-panel tab (settings, per-bar forecast, A vs C vs naive validation, coefficients), the
   replay freeze with "Forecast from here", the Forecasting OHLC learn page with a forecast lab, E2E
+- [x] V1: the volatility engine (ADR 0011): `hv` (close, Parkinson, Garman-Klass, Rogers-Satchell, Yang-Zhang, % a
+  year from the counted bars per year) and `hv_percentile`; the Volatility tab: the cone per calendar horizon, the
+  HAR forecast with walk-forward coverage, the squeeze probability against its base rate, overnight and downside
+  shares, QLIKE scores of the estimators (with the 1h realised variance); the Historical Volatility learn page
+- [ ] T1: the Trade plan tool (entry, target, stop: probabilities, EV, heat map, calibration) on the V1 engine
 
 ---
 
