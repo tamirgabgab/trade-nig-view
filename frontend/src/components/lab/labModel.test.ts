@@ -165,4 +165,18 @@ describe('lab model', () => {
     expect(missingIndicator({ isError: false, data: [RSI] }, RSI, 'rsi')).toBeNull();
     expect(missingIndicator({ isError: true }, undefined, 'rsi')).toMatch(/Could not load/);
   });
+
+  it('draws a line on the volume scale in a pane with the volume, not over the price', () => {
+    const volSma: IndicatorInfo = {
+      ...RSI,
+      id: 'vol_sma',
+      overlay: true,
+      levels: [],
+      outputs: [{ ...output('ma', '#2196F3'), style: { price_scale: 'volume' } }],
+    };
+    const result = { id: 'vol_sma', params: {}, outputs: { ma: [null, 2e6] }, displayShift: 0 };
+    const { overlays, pane } = chartLines(volSma, result, undefined, [1e6, 3e6]);
+    expect(overlays).toEqual([]);
+    expect(pane?.lines.map((l) => l.key)).toEqual(['volume', 'vol_sma:ma']);
+  });
 });

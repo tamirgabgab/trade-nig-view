@@ -65,6 +65,8 @@ export function ComboLab({ block }: { block: ComboBlock }) {
   const { overlays, pane } = chartLines(
     specs.find((s) => s.id === first?.id),
     combined.data?.indicators[0],
+    undefined,
+    combined.data?.volume,
   );
 
   return (

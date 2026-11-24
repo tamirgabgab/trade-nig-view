@@ -54,7 +54,7 @@ export function ParamLab({ block }: { block: ParamBlock }) {
         },
   );
   const { min, max, step } = sliderRange(param, shown, block);
-  const { overlays, pane } = chartLines(spec, lab.data?.indicators[0]);
+  const { overlays, pane } = chartLines(spec, lab.data?.indicators[0], undefined, lab.data?.volume);
 
   return (
     <section

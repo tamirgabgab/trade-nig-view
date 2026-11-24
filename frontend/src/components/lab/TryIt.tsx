@@ -30,7 +30,7 @@ export function TryIt({ spec, initial }: { spec: IndicatorInfo; initial: Params 
     conditions: [],
     horizon: 10,
   });
-  const { overlays, pane } = chartLines(spec, lab.data?.indicators[0]);
+  const { overlays, pane } = chartLines(spec, lab.data?.indicators[0], undefined, lab.data?.volume);
   const set = (name: string, value: ParamValue) => {
     setParams({ ...params, [name]: value });
   };

@@ -16,6 +16,13 @@ export interface RuleSpec {
   right: OperandSpec;
 }
 
+const VOLUME_LINE = (volume: readonly number[]): MiniLine => ({
+  key: 'volume',
+  label: 'Volume',
+  color: '#787B86',
+  values: volume,
+});
+
 const sameParams = (a: Params, b: Params) =>
   Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((k) => a[k] === b[k]);
 
@@ -48,11 +55,13 @@ export function buildRules(
   return { indicators, conditions };
 }
 
-/** What a computed indicator adds to a MiniChart: lines over the price, or a pane below it. */
+/** What a computed indicator adds to a MiniChart: lines over the price, or a pane below it. A
+ *  line on the volume scale (Volume SMA) goes to a pane with the volume itself, when given. */
 export function chartLines(
   spec: IndicatorInfo | undefined,
   result: LabIndicatorResult | undefined,
   only?: readonly string[],
+  volume?: readonly number[],
 ): { overlays: MiniLine[]; pane: MiniPane | null } {
   if (spec === undefined || result === undefined) return { overlays: [], pane: null };
   const lines = spec.outputs
@@ -67,6 +76,11 @@ export function chartLines(
       values: result.outputs[o.name] ?? [],
       shift: result.displayShift,
     }));
+  const onVolume = spec.outputs.some((o) => o.style['price_scale'] === 'volume');
+  if (onVolume) {
+    const bars = volume === undefined ? [] : [VOLUME_LINE(volume)];
+    return { overlays: [], pane: { lines: [...bars, ...lines] } };
+  }
   if (spec.overlay) return { overlays: lines, pane: null };
   const levels = spec.levels.length > 0 ? spec.levels : undefined;
   const bounded = spec.levels.length > 0 && spec.levels.every((l) => l >= 0 && l <= 100);

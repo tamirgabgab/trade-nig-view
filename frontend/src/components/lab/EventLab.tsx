@@ -58,7 +58,12 @@ export function EventLab({ block }: { block: EventBlock }) {
     spec === undefined ? null : { source, indicators, conditions, horizon: rule.horizon },
   );
   const [lo, hi] = block.range ?? [0, 100];
-  const { overlays, pane } = chartLines(spec, lab.data?.indicators[0], [block.output]);
+  const { overlays, pane } = chartLines(
+    spec,
+    lab.data?.indicators[0],
+    [block.output],
+    lab.data?.volume,
+  );
   const name = spec?.shortName ?? block.indicator;
 
   return (
