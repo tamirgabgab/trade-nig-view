@@ -360,8 +360,8 @@ export interface paths {
         };
         /**
          * Get Forecast
-         * @description Quantiles of the next ``k`` bars' open, high, low and close from the bars up to the last
-         *     one (``until`` in replay), with the models' walk-forward scores. Cached per last bar.
+         * @description Quantiles of the next ``k`` bars' open, high, low and close from the whole history up to
+         *     the last bar (``until`` in replay), with the models' walk-forward scores. Cached per bars.
          */
         get: operations["get_forecast_api_forecast_get"];
         put?: never;
@@ -2392,7 +2392,7 @@ export interface operations {
                 model?: "a" | "c";
                 /** @description Tune window, ridge and lags out of sample */
                 auto?: boolean;
-                /** @description Manual: training bars, 0 = all */
+                /** @description Manual: training bars, 0 = all, else >= 60 */
                 window?: number;
                 /** @description Manual: model C's penalty */
                 ridge?: number;
