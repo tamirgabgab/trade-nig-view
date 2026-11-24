@@ -70,8 +70,11 @@ count and the edge change, and why?" or "start Replay on AAPL at <date>".
 
 ### Interactive labs
 A fenced block with the language `lab` holding JSON becomes a live widget. All of them have a data picker: a random
-stock (scenarios: `random_walk`, `uptrend`, `range`, `reversal`, `shock`, `volatility_regime`; a new-sample button) or
-any symbol of the universe. Every number is computed by the backend's one implementation (`POST /api/learn/lab`).
+stock (scenarios: `random_walk`, `uptrend`, `range`, `reversal`, `shock`, `volatility_regime`, `accumulation`; a
+new-sample button) or any symbol of the universe, on daily bars or hourly bars in sessions (`1h`: seven bars a session,
+so VWAP resets every morning). `accumulation` is the only scenario where volume carries direction: 100-bar cycles of
+accumulation (flat, up bars trade more volume), markup, distribution (flat, down bars trade more) and markdown.
+`param`, `event` and `combo` blocks take `"interval": "1h"` to start on hourly bars. Every number is computed by the backend's one implementation (`POST /api/learn/lab`).
 
 ````markdown
 ```lab
@@ -110,7 +113,10 @@ any symbol of the universe. Every number is computed by the backend's one implem
   `{"kind": "filter", "indicator": "macd", "output": "macd"}`, or the RMA inside RSI:
   `{"kind": "filter", "indicator": "smma", "params": {"length": 14}}`.
 - `combo`: up to three of `rules` at once (their AND), each rule's edge alone next to it. A rule's sides are
-  `{"indicator": {"id", "params"}, "output"}`, `{"price": "close"}` or `{"value": n}`.
+  `{"indicator": {"id", "params"}, "output"}`, `{"price": "close"}` or `{"value": n}`; an indicator or price side
+  takes `"ago": k` for its value `k` bars earlier, e.g. "OBV above its value 20 bars ago":
+  `{"left": {"indicator": {"id": "obv", "params": {}}, "output": "obv"}, "op": "gt",
+  "right": {"indicator": {"id": "obv", "params": {}}, "output": "obv", "ago": 20}}`.
 
 The backend test also checks every lab block of every page: valid JSON, a known `kind`, registered indicator ids.
 

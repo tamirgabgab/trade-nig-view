@@ -207,6 +207,38 @@ def test_symbol_source_uses_the_last_bars(e2e_client: TestClient) -> None:
     assert body["study"]["baseline"]["n"] == 290
 
 
+def test_symbol_source_on_1h_has_epoch_times_and_sessions(e2e_client: TestClient) -> None:
+    body = lab(
+        e2e_client,
+        {
+            "source": {"kind": "symbol", "symbol": "AAPL", "interval": "1h"},
+            "indicators": [{"id": "vwap"}],
+        },
+    )
+    assert 0 < len(body["time"]) <= 500  # the fixture has fewer hourly bars than asked for
+    assert all(isinstance(t, int) for t in body["time"])
+    assert any(v is not None for v in body["indicators"][0]["outputs"]["vwap"])  # sessions are set
+
+
+def test_synthetic_1h_anchors_vwap_to_each_session(client: TestClient) -> None:
+    body = lab(
+        client,
+        {
+            "source": {
+                "kind": "synthetic",
+                "scenario": "accumulation",
+                "bars": 140,
+                "interval": "1h",
+            },
+            "indicators": [{"id": "vwap", "params": {"source": "close"}}],
+        },
+    )
+    vwap = body["indicators"][0]["outputs"]["vwap"]
+    # The first bar of every session: VWAP = that bar's close (the running sums restart).
+    assert all(vwap[i] == pytest.approx(body["close"][i]) for i in range(0, 140, 7))
+    assert all(isinstance(t, int) for t in body["time"])
+
+
 def test_unknown_symbol_is_404(client: TestClient) -> None:
     body = lab(client, {"source": {"kind": "symbol", "symbol": "NOPE"}}, 404)
     assert body["code"] == "symbol_not_found"

@@ -15,21 +15,30 @@ export const SCENARIOS = [
   { id: 'reversal', label: 'Reversal', hint: 'Up for half the bars, then down' },
   { id: 'shock', label: 'Shock', hint: 'A random walk with one −15 % gap' },
   { id: 'volatility_regime', label: 'Volatility regime', hint: 'Calm, then 3.75 times wilder' },
+  {
+    id: 'accumulation',
+    label: 'Accumulation',
+    hint: 'Cycles: volume favours up bars before a rise and down bars before a fall',
+  },
 ] as const;
 export type Scenario = (typeof SCENARIOS)[number]['id'];
 
+/** Daily bars, or hourly bars in sessions (VWAP). */
+export type LabInterval = '1D' | '1h';
+
 export type LabSource =
-  | { kind: 'synthetic'; scenario: Scenario; seed: number; bars: number }
-  | { kind: 'symbol'; symbol: string; bars: number };
+  | { kind: 'synthetic'; scenario: Scenario; seed: number; bars: number; interval: LabInterval }
+  | { kind: 'symbol'; symbol: string; bars: number; interval: LabInterval };
 
 export interface LabIndicator {
   id: string;
   params: Params;
 }
 
+/** `ago`: the series that many bars earlier (e.g. OBV 20 bars ago). */
 export type Operand =
-  | { indicator: number; output: string }
-  | { price: 'open' | 'high' | 'low' | 'close' }
+  | { indicator: number; output: string; ago?: number }
+  | { price: 'open' | 'high' | 'low' | 'close'; ago?: number }
   | { value: number };
 
 export type Op = 'lt' | 'gt' | 'crosses_above' | 'crosses_below';
@@ -75,7 +84,7 @@ export interface LabIndicatorResult {
 }
 
 export interface LabResult {
-  time: string[];
+  time: (string | number)[];
   open: number[];
   high: number[];
   low: number[];
@@ -133,7 +142,9 @@ export function parseLab(body: unknown): LabResult {
   if (!Array.isArray(time)) throw new Error('Unexpected lab response');
   const indicators = f('indicators');
   return {
-    time: (time as unknown[]).filter((t): t is string => typeof t === 'string'),
+    time: (time as unknown[]).filter(
+      (t): t is string | number => typeof t === 'string' || typeof t === 'number',
+    ),
     open: nums(f('open')),
     high: nums(f('high')),
     low: nums(f('low')),

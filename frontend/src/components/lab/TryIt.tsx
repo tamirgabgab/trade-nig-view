@@ -21,6 +21,7 @@ export function TryIt({ spec, initial }: { spec: IndicatorInfo; initial: Params 
     scenario: 'random_walk',
     seed: 1,
     bars: 400,
+    interval: '1D',
   });
   const settled = useDebounced(params);
   const lab = useLab({

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useIndicatorList, type Params } from '../../api/indicators.ts';
-import { useLab, type LabSource, type Op, type Scenario } from '../../api/lab.ts';
+import { useLab, type LabSource, type Op, type LabInterval, type Scenario } from '../../api/lab.ts';
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
 import { buildRules, chartLines, missingIndicator, OP_LABEL, withDefaults } from './labModel.ts';
@@ -23,6 +23,8 @@ export interface EventBlock {
   range?: [number, number];
   horizon?: number;
   scenario?: Scenario;
+  /** '1h' starts the widget on hourly bars in sessions (VWAP). */
+  interval?: LabInterval;
 }
 
 /**
@@ -41,6 +43,7 @@ export function EventLab({ block }: { block: EventBlock }) {
     scenario: block.scenario ?? 'range',
     seed: 1,
     bars: 1000,
+    interval: block.interval ?? '1D',
   });
   const rule = useDebounced({ threshold, op, horizon });
   const { indicators, conditions } = buildRules([

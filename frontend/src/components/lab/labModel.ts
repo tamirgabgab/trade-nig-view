@@ -4,8 +4,8 @@ import type { MiniLine, MiniPane } from './MiniChart.tsx';
 
 /** One side of a rule in a lab block: an indicator output, a price, or a number. */
 export type OperandSpec =
-  | { indicator: LabIndicator; output: string }
-  | { price: 'open' | 'high' | 'low' | 'close' }
+  | { indicator: LabIndicator; output: string; ago?: number }
+  | { price: 'open' | 'high' | 'low' | 'close'; ago?: number }
   | { value: number };
 
 /** A rule as written in a page's lab block, e.g. "RSI 14 below 30". */
@@ -38,7 +38,7 @@ export function buildRules(
     );
     let index = indicators.findIndex((i) => i.id === id && sameParams(i.params, full));
     if (index < 0) index = indicators.push({ id, params: full }) - 1;
-    return { indicator: index, output: spec.output };
+    return { indicator: index, output: spec.output, ...(spec.ago ? { ago: spec.ago } : {}) };
   };
   const conditions = rules.map((r) => ({
     left: operand(r.left),

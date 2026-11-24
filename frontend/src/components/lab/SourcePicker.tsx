@@ -1,8 +1,13 @@
 import { Dices } from 'lucide-react';
 
-import { SCENARIOS, type LabSource, type Scenario } from '../../api/lab.ts';
+import { SCENARIOS, type LabInterval, type LabSource, type Scenario } from '../../api/lab.ts';
 import { useSymbols } from '../../api/market.ts';
 import styles from './Lab.module.css';
+
+const INTERVALS: [LabInterval, string][] = [
+  ['1D', 'D'],
+  ['1h', '1h'],
+];
 
 /** Where a lab's bars come from: a synthetic scenario (with a new-sample button) or a real symbol. */
 export function SourcePicker({
@@ -23,7 +28,13 @@ export function SourcePicker({
           aria-pressed={synthetic}
           onClick={() => {
             if (!synthetic)
-              onChange({ kind: 'synthetic', scenario: 'random_walk', seed: 1, bars: source.bars });
+              onChange({
+                kind: 'synthetic',
+                scenario: 'random_walk',
+                seed: 1,
+                bars: source.bars,
+                interval: source.interval,
+              });
           }}
         >
           Random stock
@@ -33,11 +44,31 @@ export function SourcePicker({
           aria-pressed={!synthetic}
           onClick={() => {
             if (synthetic)
-              onChange({ kind: 'symbol', symbol: symbols[0]?.symbol ?? 'AAPL', bars: source.bars });
+              onChange({
+                kind: 'symbol',
+                symbol: symbols[0]?.symbol ?? 'AAPL',
+                bars: source.bars,
+                interval: source.interval,
+              });
           }}
         >
           Real symbol
         </button>
+      </div>
+      <div className={styles.segment} role="group" aria-label="Interval">
+        {INTERVALS.map(([interval, label]) => (
+          <button
+            key={interval}
+            type="button"
+            aria-pressed={source.interval === interval}
+            title={interval === '1h' ? 'Hourly bars, seven per session' : 'Daily bars'}
+            onClick={() => {
+              onChange({ ...source, interval });
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
       {source.kind === 'synthetic' ? (
         <>

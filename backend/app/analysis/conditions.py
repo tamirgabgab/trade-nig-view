@@ -1,6 +1,8 @@
 r"""Signal conditions for the learn lab: compare indicator outputs, prices and constants per bar.
 
-An operand is a series :math:`a_t`: an indicator output, a price column, or a constant. A condition
+An operand is a series :math:`a_t`: an indicator output, a price column, or a constant; with
+``ago = k`` it is that series :math:`k` bars earlier, :math:`a_{t-k}` (NaN for :math:`t < k`), e.g.
+"OBV above its value 20 bars ago". A condition
 ``left op right`` is true at bar :math:`t` when
 
 * ``lt``: :math:`a_t < b_t`; ``gt``: :math:`a_t > b_t`;
@@ -40,6 +42,7 @@ class Operand(BaseModel):
     output: str | None = Field(default=None, description="Output name of that indicator")
     price: PriceField | None = None
     value: float | None = Field(default=None, allow_inf_nan=False)
+    ago: int = Field(default=0, ge=0, le=500, description="Bars back (the series k bars earlier)")
 
     @model_validator(mode="after")
     def _one_kind(self) -> Self:
@@ -63,13 +66,18 @@ def operand_series(
     operand: Operand, frame: BarFrame, outputs: Sequence[Mapping[str, FloatArray]]
 ) -> FloatArray:
     """The per-bar values of ``operand`` (``outputs[i]`` = the outputs of indicator ``i``)."""
-    if operand.price is not None:
-        return getattr(frame, operand.price)
     if operand.value is not None:
         return np.full(len(frame), operand.value)
-    assert operand.indicator is not None  # noqa: S101 - guaranteed by Operand's validator
-    assert operand.output is not None  # noqa: S101
-    return outputs[operand.indicator][operand.output]
+    if operand.price is not None:
+        series: FloatArray = getattr(frame, operand.price)
+    else:
+        assert operand.indicator is not None  # noqa: S101 - guaranteed by Operand's validator
+        assert operand.output is not None  # noqa: S101
+        series = outputs[operand.indicator][operand.output]
+    if operand.ago == 0:
+        return series
+    k = min(operand.ago, len(series))
+    return np.concatenate((np.full(k, np.nan), series[: len(series) - k]))
 
 
 def _condition(a: FloatArray, op: Op, b: FloatArray) -> BoolArray:

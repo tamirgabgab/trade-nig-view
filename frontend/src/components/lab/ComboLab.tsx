@@ -1,7 +1,14 @@
 import { useState } from 'react';
 
 import { useIndicatorList } from '../../api/indicators.ts';
-import { useLab, useLabs, type LabSource, type Scenario, type Study } from '../../api/lab.ts';
+import {
+  useLab,
+  useLabs,
+  type LabInterval,
+  type LabSource,
+  type Scenario,
+  type Study,
+} from '../../api/lab.ts';
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
 import { buildRules, chartLines, logToPercent, type RuleSpec } from './labModel.ts';
@@ -18,6 +25,8 @@ export interface ComboBlock {
   on?: number[];
   horizon?: number;
   scenario?: Scenario;
+  /** '1h' starts the widget on hourly bars in sessions (VWAP). */
+  interval?: LabInterval;
 }
 
 export const MAX_RULES = 3;
@@ -42,6 +51,7 @@ export function ComboLab({ block }: { block: ComboBlock }) {
     scenario: block.scenario ?? 'reversal',
     seed: 1,
     bars: 1000,
+    interval: block.interval ?? '1D',
   });
   const horizon = block.horizon ?? 10;
   const chosen = block.rules.filter((_, i) => on.includes(i));

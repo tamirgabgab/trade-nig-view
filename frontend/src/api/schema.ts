@@ -882,9 +882,9 @@ export interface components {
         LabResponse: {
             /**
              * Time
-             * @description Daily bar dates ('YYYY-MM-DD')
+             * @description Bar times, as in /api/bars ('YYYY-MM-DD' daily, UTC epoch seconds for 1h)
              */
-            time: string[];
+            time: (string | number)[];
             /** Open */
             open: number[];
             /** High */
@@ -1132,6 +1132,12 @@ export interface components {
             price?: ("open" | "high" | "low" | "close") | null;
             /** Value */
             value?: number | null;
+            /**
+             * Ago
+             * @description Bars back (the series k bars earlier)
+             * @default 0
+             */
+            ago: number;
         };
         /** OutputInfo */
         OutputInfo: {
@@ -1321,7 +1327,7 @@ export interface components {
          * Scenario
          * @enum {string}
          */
-        Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime";
+        Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime" | "accumulation";
         /** StatsBlock */
         StatsBlock: {
             /** N */
@@ -1408,10 +1414,16 @@ export interface components {
             symbol: string;
             /**
              * Bars
-             * @description The last `bars` daily (adjusted) bars
+             * @description The last `bars` (adjusted) bars
              * @default 500
              */
             bars: number;
+            /**
+             * Interval
+             * @default 1D
+             * @enum {string}
+             */
+            interval: "1D" | "1h";
         };
         /** SyntheticSource */
         SyntheticSource: {
@@ -1433,6 +1445,13 @@ export interface components {
              * @default 500
              */
             bars: number;
+            /**
+             * Interval
+             * @description 1h: seven bars per session, with sessions (VWAP)
+             * @default 1D
+             * @enum {string}
+             */
+            interval: "1D" | "1h";
         };
         /**
          * Transform

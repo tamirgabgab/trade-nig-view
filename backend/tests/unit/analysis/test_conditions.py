@@ -130,3 +130,13 @@ def test_signal_has_no_lookahead(
         return evaluate(conditions, f, outputs).tolist()
 
     assert signal(frame.take(slice(0, k + 1)))[k] == signal(frame)[k]
+
+
+def test_ago_reads_the_series_k_bars_earlier() -> None:
+    frame = frame_of([1.0, 2.0, 3.0, 4.0, 5.0])
+    above = Condition.model_validate(
+        {"left": {"price": "close"}, "op": "gt", "right": {"price": "close", "ago": 2}}
+    )
+    assert evaluate([above], frame, []).tolist() == [False, False, True, True, True]
+    with pytest.raises(ValidationError):
+        Operand.model_validate({"price": "close", "ago": -1})

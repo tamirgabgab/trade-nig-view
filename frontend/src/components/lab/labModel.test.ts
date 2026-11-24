@@ -119,6 +119,24 @@ describe('lab model', () => {
     ]);
   });
 
+  it('passes a rule side’s "ago" through to the request', () => {
+    const { conditions } = buildRules([
+      {
+        label: 'OBV up over 20 bars',
+        left: { indicator: { id: 'obv', params: {} }, output: 'obv' },
+        op: 'gt',
+        right: { indicator: { id: 'obv', params: {} }, output: 'obv', ago: 20 },
+      },
+    ]);
+    expect(conditions).toEqual([
+      {
+        left: { indicator: 0, output: 'obv' },
+        op: 'gt',
+        right: { indicator: 0, output: 'obv', ago: 20 },
+      },
+    ]);
+  });
+
   it('puts a slider on the step grid and never below the current value', () => {
     const length = RSI.params[0];
     if (length === undefined) throw new Error('RSI fixture has no length');

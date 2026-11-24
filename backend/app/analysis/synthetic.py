@@ -21,6 +21,13 @@ Close path, :math:`r_t = x_t - x_{t-1}` for :math:`t \ge 1` (:math:`r_0 = 0`), w
   :math:`h`; the open of bar :math:`h` carries the jump, so it is a real gap down.
 * ``volatility_regime``: :math:`\mu = 0`, :math:`\sigma_t = 0.008` for :math:`t < h` and
   :math:`0.03` from :math:`h` on (a 3.75x volatility jump).
+* ``accumulation``: repeating 100-bar cycles of four 25-bar phases, accumulation
+  (:math:`\mu = 0`, :math:`\sigma = 0.008`), markup (:math:`\mu = +0.004`, :math:`\sigma = 0.012`),
+  distribution (:math:`\mu = 0`, :math:`\sigma = 0.008`) and markdown (:math:`\mu = -0.004`,
+  :math:`\sigma = 0.012`). Only here does volume carry direction: in accumulation up bars trade more
+  volume than down bars (:math:`k_t = +1`), in distribution less (:math:`k_t = -1`), elsewhere
+  :math:`k_t = 0`, so OBV rises before the markup while the price is flat, and falls before the
+  markdown.
 
 OHLCV from the close path, with :math:`\sigma_t` the scenario's sigma at bar t, independent
 standard normals :math:`\eta, \nu, \lambda, \xi`, :math:`C_{-1} = 100` and :math:`J_t` the jump
@@ -31,10 +38,18 @@ factor (0.85 on the shock bar, 1 elsewhere):
     O_t = C_{t-1} J_t e^{\eta_t \sigma_t / 4}, \quad
     H_t = \max(O_t, C_t) e^{|\nu_t| \sigma_t / 2}, \quad
     L_t = \min(O_t, C_t) e^{-|\lambda_t| \sigma_t / 2}, \quad
-    V_t = 10^6 e^{0.3 \xi_t + 20 |\ln(C_t / C_{t-1})|}
+    V_t = 10^6 e^{0.3 \xi_t + 20 |\ln(C_t / C_{t-1})| + 0.8\, k_t \operatorname{sign}(r_t)}
 
 so :math:`0 < L_t \le O_t, C_t \le H_t` always, and volume is lognormal around one million and
-larger on bars that move more. ``adj_close = close`` (no dividends).
+larger on bars that move more (:math:`k_t = 0` except in ``accumulation``). ``adj_close = close``
+(no dividends).
+
+**Intraday** (``intraday=True``): the same close path, one bar per hour, seven bars per business-day
+session stamped 14:30-20:30 UTC (09:30-15:30 New York in winter), with ``session`` set (so VWAP
+anchors there). The first bar of a session opens with an overnight gap four times wider,
+:math:`O_t = C_{t-1} J_t e^{\eta_t \sigma_t}`, and volume follows the intraday U shape
+(1.8, 1.1, 0.8, 0.7, 0.8, 1.0, 1.6 times the bar's daily-style volume). The daily bars are
+unchanged by this option: the extra randomness is drawn after theirs.
 """
 
 from __future__ import annotations
@@ -49,6 +64,13 @@ START_DATE = "2020-01-01"
 START_PRICE = 100.0
 SHOCK_FACTOR = 0.85
 VOLUME_BASE = 1e6
+#: accumulation: bars per cycle phase, and the four phases in order.
+PHASE = 25
+ACCUMULATE, MARKUP, DISTRIBUTE, MARKDOWN = range(4)
+#: Intraday: bars per session, the first bar's UTC time (14:30) and the U-shaped volume profile.
+SESSION_BARS = 7
+SESSION_OPEN_SECONDS = 14 * 3600 + 30 * 60
+VOLUME_PROFILE = np.array([1.8, 1.1, 0.8, 0.7, 0.8, 1.0, 1.6])
 
 
 class Scenario(StrEnum):
@@ -58,11 +80,25 @@ class Scenario(StrEnum):
     REVERSAL = "reversal"
     SHOCK = "shock"
     VOLATILITY_REGIME = "volatility_regime"
+    ACCUMULATION = "accumulation"
 
 
 def _business_day_times(n: int) -> IntArray:
     days = np.busday_offset(np.datetime64(START_DATE, "D"), np.arange(n), roll="forward")
     return days.astype(np.int64) * SECONDS_PER_DAY
+
+
+def _phase(n: int) -> IntArray:
+    """The accumulation cycle's phase of each bar."""
+    return (np.arange(n, dtype=np.int64) // PHASE) % 4
+
+
+def _volume_skew(scenario: Scenario, n: int) -> FloatArray:
+    """k_t: +1 in accumulation phases, -1 in distribution, 0 elsewhere."""
+    if scenario is not Scenario.ACCUMULATION:
+        return np.zeros(n)
+    phase = _phase(n)
+    return np.select([phase == ACCUMULATE, phase == DISTRIBUTE], [1.0, -1.0], 0.0)
 
 
 def _log_path(
@@ -73,6 +109,10 @@ def _log_path(
     first = np.arange(n) < half
     jump = np.zeros(n)
     match scenario:
+        case Scenario.ACCUMULATION:
+            phase = _phase(n)
+            mu = np.select([phase == MARKUP, phase == MARKDOWN], [0.004, -0.004], 0.0)
+            sigma = np.where((phase == ACCUMULATE) | (phase == DISTRIBUTE), 0.008, 0.012)
         case Scenario.RANDOM_WALK | Scenario.SHOCK:
             mu, sigma = np.full(n, 0.0003), np.full(n, 0.015)
             if scenario is Scenario.SHOCK:
@@ -94,22 +134,39 @@ def _log_path(
     return np.cumsum(r), sigma, jump
 
 
-def synthetic_bars(scenario: Scenario, seed: int, n: int = 500) -> BarFrame:
-    """``n`` daily bars of ``scenario``; the same ``(scenario, seed, n)`` gives the same bars."""
+def synthetic_bars(
+    scenario: Scenario, seed: int, n: int = 500, *, intraday: bool = False
+) -> BarFrame:
+    """``n`` daily (or hourly) bars of ``scenario``; the same arguments give the same bars."""
     rng = np.random.default_rng(seed)
     eps, eta, nu, lam, xi = rng.standard_normal((5, n))
     d, sigma, jump = _log_path(scenario, eps, n)
     close = START_PRICE * np.exp(d)
     prev_close = np.concatenate(([START_PRICE], close[:-1]))
-    open_ = prev_close * np.exp(jump + eta * sigma / 4)
+    log_move = np.log(close / prev_close)
+    gap: FloatArray = eta * sigma / 4
+    volume = VOLUME_BASE * np.exp(
+        0.3 * xi + 20 * np.abs(log_move) + 0.8 * _volume_skew(scenario, n) * np.sign(log_move)
+    )
+    session: IntArray | None = None
+    if intraday:
+        slot = np.arange(n) % SESSION_BARS
+        gap = np.where(slot == 0, eta * sigma, gap)
+        volume = volume * VOLUME_PROFILE[slot]
+        days = _business_day_times(n // SESSION_BARS + 1)[np.arange(n) // SESSION_BARS]
+        time = days + SESSION_OPEN_SECONDS + slot * 3600
+        session = days // SECONDS_PER_DAY
+    else:
+        time = _business_day_times(n)
+    open_ = prev_close * np.exp(jump + gap)
     high = np.maximum(open_, close) * np.exp(np.abs(nu) * sigma / 2)
     low = np.minimum(open_, close) * np.exp(-np.abs(lam) * sigma / 2)
-    volume = VOLUME_BASE * np.exp(0.3 * xi + 20 * np.abs(np.log(close / prev_close)))
-    return BarFrame.from_columns(
-        time=_business_day_times(n),
+    frame = BarFrame.from_columns(
+        time=time,
         open=open_,
         high=high,
         low=low,
         close=close,
         volume=volume,
     )
+    return frame.with_session(session)

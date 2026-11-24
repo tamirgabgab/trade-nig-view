@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useIndicatorList, type Params } from '../../api/indicators.ts';
-import { useLab, type LabSource, type Scenario } from '../../api/lab.ts';
+import { useLab, type LabSource, type LabInterval, type Scenario } from '../../api/lab.ts';
 import { formatPrice } from '../formatNumber.ts';
 import styles from './Lab.module.css';
 import { chartLines, missingIndicator, sliderRange, withDefaults } from './labModel.ts';
@@ -20,6 +20,8 @@ export interface ParamBlock {
   min?: number;
   max?: number;
   scenario?: Scenario;
+  /** '1h' starts the widget on hourly bars in sessions (VWAP). */
+  interval?: LabInterval;
   caption?: string;
 }
 
@@ -35,6 +37,7 @@ export function ParamLab({ block }: { block: ParamBlock }) {
     scenario: block.scenario ?? 'random_walk',
     seed: 1,
     bars: 300,
+    interval: block.interval ?? '1D',
   });
   // Only the reader's choice is debounced: the default applies at once, once the registry is in.
   const fallback = typeof base[block.vary] === 'number' ? (base[block.vary] as number) : 0;

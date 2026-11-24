@@ -107,3 +107,50 @@ def test_volatility_regime_jumps_by_375_percent(seed: int) -> None:
     calm, wild = r[: half - 1], r[half:]  # r[i] is the return of bar i + 1
     assert calm.std() == pytest.approx(0.008, rel=0.1)
     assert wild.std() / calm.std() == pytest.approx(3.75, rel=0.12)
+
+
+@pytest.mark.parametrize("scenario", list(Scenario))
+def test_intraday_keeps_the_daily_close_path(scenario: Scenario) -> None:
+    """The 1h option adds sessions, wider opening gaps and the U-shaped volume; the close path
+    and the daily bars themselves are unchanged (the pages' measured numbers stay valid)."""
+    daily = synthetic_bars(scenario, 3, 300)
+    hourly = synthetic_bars(scenario, 3, 300, intraday=True)
+    assert np.array_equal(daily.close, hourly.close)
+    assert daily.session is None
+    assert hourly.session is not None
+    # Seven bars per session, 14:30-20:30 UTC, sessions on consecutive business days.
+    _, per_session = np.unique(hourly.session, return_counts=True)
+    assert np.all(per_session[:-1] == 7)
+    hours = (hourly.time % 86_400) / 3600
+    assert np.array_equal(hours[:7], [14.5, 15.5, 16.5, 17.5, 18.5, 19.5, 20.5])
+    assert np.array_equal(hourly.session, hourly.time // 86_400)
+    assert hourly.volume[0] / daily.volume[0] == pytest.approx(1.8)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_intraday_session_opens_gap_more(seed: int) -> None:
+    f = synthetic_bars(Scenario.RANDOM_WALK, seed, 2100, intraday=True)
+    gaps = np.abs(np.log(f.open[1:] / f.close[:-1]))
+    first = (np.arange(1, len(f)) % 7) == 0
+    assert gaps[first].mean() > 3 * gaps[~first].mean()
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_accumulation_volume_leads_price(seed: int) -> None:
+    """Up bars trade more volume than down bars in accumulation phases, less in distribution, and
+    the same elsewhere; the price is flat in accumulation and rises in the markup after it."""
+    f = synthetic_bars(Scenario.ACCUMULATION, seed, 2000)
+    r = np.concatenate(([0.0], log_returns(f.close)))
+    phase = (np.arange(len(f)) // 25) % 4
+    log_v = np.log(f.volume)
+
+    def skew(p: int) -> float:
+        up, down = (phase == p) & (r > 0), (phase == p) & (r < 0)
+        return float(log_v[up].mean() - log_v[down].mean())
+
+    assert skew(0) > 1.2  # 1.6 by construction, minus the |r| term's noise
+    assert skew(2) < -1.2
+    assert abs(skew(1)) < 0.4
+    assert abs(r[phase == 0].mean()) < 0.001
+    assert r[phase == 1].mean() > 0.003
+    assert r[phase == 3].mean() < -0.003

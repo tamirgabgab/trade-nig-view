@@ -127,17 +127,24 @@ def learn_page(slug: str, settings: Annotated[Settings, Depends(get_settings)]) 
 LabBars = Annotated[int, Field(ge=100, le=2000, description="Number of bars")]
 
 
+LabInterval = Literal["1D", "1h"]
+
+
 class SyntheticSource(BaseModel):
     kind: Literal["synthetic"]
     scenario: Scenario = Scenario.RANDOM_WALK
     seed: Annotated[int, Field(ge=0, le=1_000_000)] = 1
     bars: LabBars = 500
+    interval: LabInterval = Field(
+        default="1D", description="1h: seven bars per session, with sessions (VWAP)"
+    )
 
 
 class SymbolSource(BaseModel):
     kind: Literal["symbol"]
     symbol: Annotated[str, Field(min_length=1, max_length=20)]
-    bars: LabBars = Field(default=500, description="The last `bars` daily (adjusted) bars")
+    bars: LabBars = Field(default=500, description="The last `bars` (adjusted) bars")
+    interval: LabInterval = "1D"
 
 
 class LabIndicator(BaseModel):
@@ -194,7 +201,9 @@ class LabStudy(BaseModel):
 
 
 class LabResponse(BaseModel):
-    time: list[str] = Field(description="Daily bar dates ('YYYY-MM-DD')")
+    time: list[str | int] = Field(
+        description="Bar times, as in /api/bars ('YYYY-MM-DD' daily, UTC epoch seconds for 1h)"
+    )
     open: list[float]
     high: list[float]
     low: list[float]
@@ -238,8 +247,10 @@ def _check_operands(conditions: Iterable[Condition], specs: list[IndicatorSpec])
 
 def _lab_frame(source: SyntheticSource | SymbolSource, service: BarService) -> BarFrame:
     if isinstance(source, SyntheticSource):
-        return synthetic_bars(source.scenario, source.seed, source.bars)
-    return service.get_bars(source.symbol, Interval.D1, limit=source.bars).frame
+        return synthetic_bars(
+            source.scenario, source.seed, source.bars, intraday=source.interval == "1h"
+        )
+    return service.get_bars(source.symbol, Interval(source.interval), limit=source.bars).frame
 
 
 @router.post("/learn/lab", response_model=LabResponse)
@@ -276,7 +287,9 @@ def learn_lab(
             event_index=es.event_index.tolist(),
         )
     return LabResponse(
-        time=ts_to_iso_dates(frame.time),
+        time=[int(t) for t in frame.time]
+        if request.source.interval == "1h"
+        else list(ts_to_iso_dates(frame.time)),
         open=frame.open.tolist(),
         high=frame.high.tolist(),
         low=frame.low.tolist(),

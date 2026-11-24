@@ -2171,11 +2171,18 @@
         "properties": {
           "time": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
             },
             "type": "array",
             "title": "Time",
-            "description": "Daily bar dates ('YYYY-MM-DD')"
+            "description": "Bar times, as in /api/bars ('YYYY-MM-DD' daily, UTC epoch seconds for 1h)"
           },
           "open": {
             "items": {
@@ -2794,6 +2801,14 @@
               }
             ],
             "title": "Value"
+          },
+          "ago": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Ago",
+            "description": "Bars back (the series k bars earlier)",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -3346,7 +3361,8 @@
           "range",
           "reversal",
           "shock",
-          "volatility_regime"
+          "volatility_regime",
+          "accumulation"
         ],
         "title": "Scenario"
       },
@@ -3515,8 +3531,17 @@
             "maximum": 2000.0,
             "minimum": 100.0,
             "title": "Bars",
-            "description": "The last `bars` daily (adjusted) bars",
+            "description": "The last `bars` (adjusted) bars",
             "default": 500
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "1D",
+              "1h"
+            ],
+            "title": "Interval",
+            "default": "1D"
           }
         },
         "type": "object",
@@ -3551,6 +3576,16 @@
             "title": "Bars",
             "description": "Number of bars",
             "default": 500
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "1D",
+              "1h"
+            ],
+            "title": "Interval",
+            "description": "1h: seven bars per session, with sessions (VWAP)",
+            "default": "1D"
           }
         },
         "type": "object",

@@ -23,7 +23,7 @@ export interface MiniPane {
 
 interface MiniChartProps {
   title: string;
-  time: readonly string[];
+  time: readonly (string | number)[];
   close: readonly number[];
   /** Lines over the price (averages, bands). */
   overlays?: readonly MiniLine[];
@@ -59,6 +59,12 @@ function path(
   return d;
 }
 
+/** A daily bar's date as it is, an hourly bar's UTC epoch seconds as 'YYYY-MM-DD HH:MM UTC'. */
+const timeLabel = (t: string | number | undefined) =>
+  typeof t === 'number'
+    ? `${new Date(t * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC`
+    : (t ?? '');
+
 /**
  * A small SVG chart for the learn pages: close price (with overlays and event markers) and an
  * optional indicator pane, with a crosshair readout on hover and arrow keys.
@@ -85,7 +91,7 @@ export function MiniChart({
 
   const at = active ?? n - 1;
   const readout = [
-    `${time[at] ?? ''}  close ${formatValue(close[at] ?? Number.NaN)}`,
+    `${timeLabel(time[at])}  close ${formatValue(close[at] ?? Number.NaN)}`,
     ...[...overlays, ...(pane?.lines ?? [])].map((l) => {
       const v = l.values[at + (l.shift ?? 0)];
       return `${l.label} ${v === null || v === undefined ? '—' : formatValue(v)}`;
@@ -195,10 +201,10 @@ export function MiniChart({
           />
         )}
         <text className={styles.axis} x={M.left} y={height - 6}>
-          {time[0]}
+          {timeLabel(time[0])}
         </text>
         <text className={styles.axisEnd} x={W - M.right} y={height - 6}>
-          {time[n - 1]}
+          {timeLabel(time[n - 1])}
         </text>
       </svg>
     </figure>
