@@ -290,9 +290,15 @@ Phase-2 plan.
   every page; links between pages; guided Replay exercises. **Phase 2 is complete.**
 - Backlog: calendar-gap warnings (need an exchange holiday calendar).
 
-### Phase 3 — Custom indicators (Python plugin API)
-- `plugins/` folder, `IndicatorSpec` entry point, hot reload (watchfiles), sandboxing level appropriate for a local
-  single-user app, same golden-test harness (`chartlab test-indicator <id>` CLI), learn-page template.
+### Phase 3 — Custom indicators and tools (designed with the user)
+- Reframed (user, 2026-11-24): instead of a plugin API the user writes in, each new indicator or tool is specified in a
+  discussion with the user (written spec: formulas, params, edge cases, a hand example), then implemented as a built-in
+  with the full test harness, a learn page where it fits, and a demo.
+- [x] Return tool: two points, the change and the equivalent compound return per year (default), month, week, day or
+  bar.
+- [x] Statistics tool: a dragged range; the Statistics tab shows the histograms of the bar returns and of their change
+  (curvature) with the normal curve, mean, standard deviation, annualised mean and volatility.
+- Deferred: the Python plugin API (`plugins/` folder, hot reload, `chartlab test-indicator`), if ever needed.
 
 ### Phase 4 — Strategies & backtesting
 - Strategy API (on_bar with only past data), event-driven backtester sharing the replay clock, fills at next open by

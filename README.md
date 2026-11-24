@@ -47,7 +47,8 @@ The screenshot above still shows the empty R0 shell; a screenshot of the current
 | Learn pages for the oscillators (P2b): RSI (Wilder's RMA as an IIR filter, why 70/30 from its distribution on a random walk), Stochastic (fast vs slow, pinned in a trend), MACD (a band-pass filter: its measured frequency response drawn inside the page), and "Combining indicators" (filter, trigger, confirmation; the mathematics of AND; redundant rules; multiple testing) | ✅ Done |
 | Learn pages for bands, volatility and volume (P2c): Bollinger Bands, ATR, OBV, VWAP, Volume SMA, with hourly lab data in sessions and an accumulation scenario where volume leads price | ✅ Done |
 | Structure, concepts and exercises (P2d): pivots, previous-period levels, gaps; concept pages (bars and sessions, adjusted prices, warm-up, lookahead and replay, lag and noise); a glossary whose terms show their definition on hover in every page; links between pages; guided Replay exercises with steps and a hidden answer | ✅ Done |
-| Custom indicators, backtesting, paper agent (Phases 3–5) | 🗺️ Roadmap |
+| Custom tools (P3): **Return** (two points: the change and the equivalent compound return per year, month, week, day or bar) and **Statistics** (a range: histograms of the returns and of their change with the normal curve, mean, standard deviation, annualised mean and volatility, in a Statistics side-panel tab) | ✅ Done |
+| More custom indicators (designed with the user), backtesting, paper agent (Phases 3–5) | 🗺️ Roadmap |
 
 ## Quick start
 

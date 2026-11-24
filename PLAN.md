@@ -81,6 +81,14 @@ study) · Combine with · Differences vs TradingView · Pitfalls · Exercise.
 Each round ends with the cleanup pipeline (CLAUDE.md §9), a demo checklist in Hebrew, and a stop for approval.
 Phases 3–5 (plugins, backtesting, paper-only agent) are planned at the end of Phase 2.
 
+#### P3 — Custom tools, designed with the user (2026-11-24)
+Phase 3 is reframed: no plugin API for now; each indicator or tool is specified with the user, then built in with the
+full harness.
+- [x] Return tool (`return_range`): the change and the equivalent compound return per year (default), month, week, day
+  or bar
+- [x] Statistics tool (`stats_range` + the Statistics side-panel tab): histograms of the bar returns (log/simple,
+  close-to-close/open-to-close) and of their change, normal curve, mean, std, annualised mean and volatility
+
 ---
 
 ## 1. Where we are (done)

@@ -301,14 +301,18 @@ its Bollinger Bands). VWAP needs the bar's `session` (`BarFrame.session`, intrad
 Rules: anchors store the **UTC epoch second of the bar open**; when rendered on another interval the anchor maps to the
 bar containing that instant (logical index), with fractional interpolation inside the bar and linear extrapolation beyond
 the last bar using the bar spacing. `props` is one pydantic model, `DrawingProps` (`extra="forbid"`: `text`, `font_size`,
-`fill`, `levels`); `ALLOWED_PROPS` lists the ones each tool may set, checked in `Drawing` (`app/models/drawings.py`).
+`fill`, `levels`, `unit`, `returns`, `basis`); `ALLOWED_PROPS` lists the ones each tool may set, checked in `Drawing` (`app/models/drawings.py`).
 Migrations: `schema_version` bump + a pure migration function `v1 → v2`, tested.
 
 R4a implementation: `GET/PUT /api/drawings/{symbol}` (PUT body `{revision, drawings}`; a stale revision is 409
 `revision_conflict`), SQLite `app.db` (`storage/drawings.py`), `props` per tool: `text` {text, font_size}, `rectangle`
 {fill}; R4b adds `fib_retracement` / `fib_extension` {levels: [{value, color, visible}], at most 24} and the
 `parallel_channel` (3 anchors: base line A–B, C on the parallel line), `price_range`, `date_range` and
-`date_price_range` tools (no props). Fib levels are prices placed through the price scale (correct on log scale);
+`date_price_range` tools (no props). P3 adds `return_range` {unit: year|month|week|day|bar: the equivalent compound
+return $(P_2/P_1)^{1/m} - 1$ per unit, $m$ = the span in calendar days / days per unit, or in bars} and `stats_range`
+{returns: log|simple, basis: close|open}, whose statistics (histograms of the bar returns and of their change, normal
+curve, mean, std, annualised with the range's own bars per year) the Statistics side-panel tab computes from the
+chart's bars (`drawings/returnStats.ts`). Fib levels are prices placed through the price scale (correct on log scale);
 retracement $p(r) = p_1 - r(p_1 - p_0)$, extension $p(r) = C + r(B - A)$. Lightweight Charts maps only whole logical
 indexes to x (a fraction returns 0), so `anchors.logicalToX` interpolates between the two neighbouring bars. Frontend: `drawings/` holds the pure parts (geometry, anchor mapping, magnet, `shapes.ts` shared by the hit test and
 the canvas renderer, `DrawingManager` for pointer/keyboard interaction); `chart/drawingLayer.ts` is one series
