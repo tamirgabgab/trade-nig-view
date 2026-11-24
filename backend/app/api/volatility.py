@@ -24,7 +24,6 @@ router = APIRouter(tags=["volatility"])
 
 Estimator = Literal["yang_zhang", "close", "parkinson", "garman_klass", "rogers_satchell"]
 SqueezeHorizon = Literal["week", "month", "quarter"]
-HorizonLabel = vol.Label
 
 
 class NotEnoughHistoryError(ChartLabError):
@@ -42,7 +41,7 @@ class VolForecast(BaseModel):
 
 
 class VolHorizon(BaseModel):
-    label: HorizonLabel
+    label: vol.Label
     bars: int
     current: float = Field(description="Per-bar volatility of the last h bars (a fraction)")
     ci: list[float | None] = Field(description="Approximate 95 % interval of `current`")
@@ -52,7 +51,7 @@ class VolHorizon(BaseModel):
 
 
 class VolSqueeze(BaseModel):
-    horizon: HorizonLabel
+    horizon: vol.Label
     bars: int
     threshold: float = Field(description="Squeeze: rank among the last year at or below this")
     factor: float = Field(description="Expansion: the next h bars' volatility >= factor x today's")
@@ -90,7 +89,7 @@ class VolatilityResponse(BaseModel):
     bars_per_year: float = Field(description="Annualise a per-bar volatility by its square root")
     levels: list[float] = Field(description="Percentile levels of the cone")
     horizons: list[VolHorizon]
-    main: HorizonLabel = Field(description="The horizon of the squeeze, shares and scores")
+    main: vol.Label = Field(description="The horizon of the squeeze, shares and scores")
     squeeze: VolSqueeze | None
     overnight: VolShares = Field(description="Share of the variance from the gaps")
     downside: VolShares = Field(description="Share of the squared returns from falling bars")

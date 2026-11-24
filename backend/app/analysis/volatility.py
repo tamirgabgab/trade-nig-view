@@ -490,10 +490,8 @@ def cone(
     forecasts["har"] = walk_forward(
         har_features(frame, h), har_target(frame, estimator, h), h, n - 1
     )[:, 2]
-    if realised_1h is not None and np.isfinite(realised_1h).sum() >= MIN_WINDOWS:
+    if realised_1h is not None:  # dropped in _scores when too few days have 1h bars
         forecasts["realized"] = trailing_mean(realised_1h, main.bars)
-    else:
-        realised_1h = None
     return Cone(
         estimator=estimator,
         bars_per_year=per_year,
