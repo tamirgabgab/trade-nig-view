@@ -41,6 +41,7 @@ CONCEPT_PAGES: dict[str, str] = {
     "lag-and-noise": "Lag and noise",
     "guided-exercises": "Guided exercises",
     "glossary": "Glossary",
+    "forecasting": "Forecasting OHLC",
 }
 _HEADING_ID = re.compile(r"\s*\(`[^`]*`\)\s*$")
 _CATEGORY_ORDER: dict[str | None, int] = {c: i for i, c in enumerate(get_args(Category))}

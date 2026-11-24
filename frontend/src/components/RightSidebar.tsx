@@ -3,6 +3,7 @@ import {
   BookOpen,
   CalendarRange,
   ChartColumnBig,
+  ChartSpline,
   List,
   ListTree,
   Sigma,
@@ -19,6 +20,7 @@ import { IconButton } from './IconButton.tsx';
 import styles from './RightSidebar.module.css';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery.ts';
 import { usePresence } from './usePresence.ts';
+import { ForecastPanel } from './ForecastPanel.tsx';
 import { StatisticsPanel } from './StatisticsPanel.tsx';
 import { SymbolCard } from './SymbolCard.tsx';
 import { Watchlist } from './Watchlist.tsx';
@@ -33,6 +35,7 @@ const TABS: { tab: SidebarTab; title: string; icon: typeof List }[] = [
   { tab: 'data', title: 'Data window', icon: TableProperties },
   { tab: 'gaps', title: 'Gaps', icon: ChartColumnBig },
   { tab: 'stats', title: 'Statistics', icon: Sigma },
+  { tab: 'forecast', title: 'Forecast', icon: ChartSpline },
 ];
 
 /**
@@ -92,6 +95,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
             {panel.shown === 'data' && <DataWindow />}
             {panel.shown === 'gaps' && <GapsPanel />}
             {panel.shown === 'stats' && <StatisticsPanel />}
+            {panel.shown === 'forecast' && <ForecastPanel />}
           </div>
           {panel.shown === 'watchlist' && <SymbolCard />}
         </section>

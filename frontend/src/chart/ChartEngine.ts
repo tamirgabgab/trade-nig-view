@@ -56,6 +56,7 @@ import { logicalToTime, logicalToX, timeToLogical } from '../drawings/anchors.ts
 import { spanBetween, type Span } from '../drawings/measure.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 import { DrawingLayer } from './drawingLayer.ts';
+import { ForecastLayer, type ForecastView } from './forecastLayer.ts';
 import { GapLayer, type GapZone } from './gapLayer.ts';
 import { ReplayLayer } from './replayLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
@@ -210,6 +211,9 @@ function toLineWidth(width: number): LineWidth {
 export type CrosshairListener = (index: number | null) => void;
 export type VisibleRangeListener = (range: LogicalRange | null) => void;
 
+/** Empty bars right of the last one (more while a forecast shows). */
+const RIGHT_OFFSET = 5;
+
 export class ChartEngine {
   private readonly chart: IChartApi;
   private main: ISeriesApi<SeriesType>;
@@ -238,6 +242,11 @@ export class ChartEngine {
     (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),
     (price) => this.priceToY(price),
     () => ({ up: this.theme.up, down: this.theme.down, filled: this.theme.textMuted }),
+  );
+  private readonly forecastLayer = new ForecastLayer(
+    (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),
+    (price) => this.priceToY(price),
+    () => ({ up: this.theme.up, down: this.theme.down, fan: this.theme.line }),
   );
   private readonly replayLayer = new ReplayLayer(
     (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),
@@ -283,7 +292,7 @@ export class ChartEngine {
       localization: { locale: 'en-US' },
       crosshair: { ...colors.crosshair, mode: CrosshairMode.Normal },
       rightPriceScale: { ...colors.rightPriceScale, scaleMargins: MAIN_MARGINS },
-      timeScale: { ...colors.timeScale, rightOffset: 5, secondsVisible: false },
+      timeScale: { ...colors.timeScale, rightOffset: RIGHT_OFFSET, secondsVisible: false },
     });
 
     this.volume = this.chart.addSeries(HistogramSeries, {
@@ -296,6 +305,7 @@ export class ChartEngine {
     this.main = this.createMainSeries(this.chartType);
     this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
+    this.main.attachPrimitive(this.forecastLayer);
     this.main.attachPrimitive(this.replayLayer);
 
     this.hover = rafLatest((index) => {
@@ -635,6 +645,7 @@ export class ChartEngine {
     this.main = this.createMainSeries(this.chartType);
     this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
+    this.main.attachPrimitive(this.forecastLayer);
     this.main.attachPrimitive(this.replayLayer);
     this.renderMain();
     this.renderMarkers();
@@ -705,6 +716,17 @@ export class ChartEngine {
   /** Replay start picking: mark this bar and shade the bars after it (null: none). */
   setReplayPick(index: number | null): void {
     this.replayLayer.set(index);
+  }
+
+  /** Show the forecast past its origin bar (null: none); the right margin makes room for it. */
+  setForecast(view: ForecastView | null): void {
+    this.forecastLayer.set(view);
+    const ahead = view === null ? 0 : (view.bars.at(-1)?.index ?? view.origin) - view.origin;
+    const offset = Math.max(RIGHT_OFFSET, ahead + 3);
+    // Only a change: applying the option scrolls the chart (a restored view would be lost).
+    if (offset !== this.chart.timeScale().options().rightOffset) {
+      this.chart.timeScale().applyOptions({ rightOffset: offset });
+    }
   }
 
   /** Show these gap zones (bar indexes of the current bars) under the bars. */

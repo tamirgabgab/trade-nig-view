@@ -1,11 +1,12 @@
 import { ComboLab, type ComboBlock } from './ComboLab.tsx';
 import { EventLab, type EventBlock } from './EventLab.tsx';
 import { FilterLab, type FilterBlock } from './FilterLab.tsx';
+import { ForecastLab, type ForecastBlock } from './ForecastLab.tsx';
 import styles from './Lab.module.css';
 import { ParamLab, type ParamBlock } from './ParamLab.tsx';
 import { ReplayLab, type ReplayBlock } from './ReplayLab.tsx';
 
-type Block = ParamBlock | EventBlock | ComboBlock | ReplayBlock | FilterBlock;
+type Block = ParamBlock | EventBlock | ComboBlock | ReplayBlock | FilterBlock | ForecastBlock;
 type Json = Record<string, unknown>;
 
 const isText = (v: unknown) => typeof v === 'string';
@@ -53,6 +54,10 @@ const SHAPES: Record<Block['kind'], (b: Json) => boolean> = {
     (b['reveal'] === undefined || isText(b['reveal'])) &&
     INTERVALS.includes(b['interval']),
   filter: (b) => isText(b['indicator']),
+  forecast: (b) =>
+    INTERVALS.includes(b['interval']) &&
+    (b['k'] === undefined ||
+      (Number.isInteger(b['k']) && (b['k'] as number) >= 1 && (b['k'] as number) <= 20)),
 };
 
 function parse(source: string): Block | null {
@@ -92,5 +97,7 @@ export function LabBlock({ source }: { source: string }) {
       return <ReplayLab block={block} />;
     case 'filter':
       return <FilterLab block={block} />;
+    case 'forecast':
+      return <ForecastLab block={block} />;
   }
 }

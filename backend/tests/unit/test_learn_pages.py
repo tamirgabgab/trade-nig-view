@@ -67,6 +67,7 @@ LAB_REQUIRED: dict[str, set[str]] = {
     "combo": {"rules"},
     "replay": {"symbol", "date"},
     "filter": {"indicator"},
+    "forecast": set(),
 }
 MAX_AGO = 500  # app.analysis.conditions.Operand.ago's bound
 RULE_REQUIRED = {"label", "left", "op", "right"}
@@ -242,7 +243,7 @@ def test_lab_blocks_are_valid(slug: str) -> None:
         if kind == "combo":
             assert len(rules) > 0, f"{where}: no rules"
         # The same checks as the frontend's LabBlock SHAPES (a failing block shows an error line).
-        if kind != "filter":
+        if kind not in {"filter"}:
             assert fields.get("interval", "1D") in {"1D", "1h"}, f"{where}: interval is 1D or 1h"
         steps: Any = fields.get("steps", [])
         assert isinstance(steps, list), f"{where}: steps is a list of strings"

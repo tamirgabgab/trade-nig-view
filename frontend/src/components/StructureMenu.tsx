@@ -17,16 +17,20 @@ const LEVELS: { label: string; id: string; params: Params }[] = [
   { label: 'Pivot points high/low', id: 'pivots', params: {} },
 ];
 
-/** Top-toolbar "Structure" menu: gap zones, previous-period levels and pivot points, on or off. */
+/** Top-toolbar "Structure" menu: gap zones, the forecast, previous-period levels and pivot points,
+ *  on or off. */
 export function StructureMenu() {
   const { open, setOpen, menu, wrapperRef, menuId, close } = useMenuButton();
   const gaps = useStructureStore((s) => s.gaps);
   const toggleGaps = useStructureStore((s) => s.toggleGaps);
+  const forecast = useStructureStore((s) => s.forecast);
+  const toggleForecast = useStructureStore((s) => s.toggleForecast);
   const instances = useIndicatorStore((s) => s.instances);
   const specs = useIndicatorList().data;
 
   const items: MenuItem[] = [
     { label: 'Gaps', checked: gaps, onSelect: toggleGaps },
+    { label: 'Forecast (next bars)', checked: forecast, divider: true, onSelect: toggleForecast },
     ...LEVELS.flatMap(({ label, id, params }) => {
       const spec = specs?.find((s) => s.id === id);
       if (spec === undefined) return [];

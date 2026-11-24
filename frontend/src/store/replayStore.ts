@@ -19,6 +19,10 @@ export interface ReplayState {
   jumps: number;
   /** A start date ('YYYY-MM-DD') still to apply once the symbol's bars are in (an exercise card). */
   startDay: string | null;
+  /** The bar the forecast is made at while replaying: the start bar (a new start resets it),
+   *  until "Forecast from here" moves it to the cursor. */
+  forecastFrom: Bar['time'] | null;
+  forecastFromHere: () => void;
   /** Pick the start bar on `symbol`; with `day`, the chart starts at its last bar on or before it. */
   start: (symbol: string, day?: string) => void;
   /** Show the bars up to and including this one; `jump`: a new start, bring it into view. */
@@ -40,11 +44,22 @@ export const useReplayStore = create<ReplayState>()((set) => ({
   speed: 1,
   jumps: 0,
   startDay: null,
+  forecastFrom: null,
+  forecastFromHere: () => {
+    set((s) => ({ forecastFrom: s.cursor }));
+  },
   start: (symbol, day) => {
     set({ mode: 'picking', symbol, cursor: null, playing: false, startDay: day ?? null });
   },
   setCursor: (cursor, jump = false) => {
-    set((s) => ({ mode: 'on', cursor, jumps: jump ? s.jumps + 1 : s.jumps, startDay: null }));
+    set((s) => ({
+      mode: 'on',
+      cursor,
+      jumps: jump ? s.jumps + 1 : s.jumps,
+      startDay: null,
+      // A new start (a jump) is a new forecast origin; a step forward keeps the frozen one.
+      forecastFrom: jump || s.forecastFrom === null ? cursor : s.forecastFrom,
+    }));
   },
   setPlaying: (playing) => {
     set({ playing });
@@ -53,6 +68,13 @@ export const useReplayStore = create<ReplayState>()((set) => ({
     set({ speed });
   },
   exit: () => {
-    set({ mode: 'off', symbol: null, cursor: null, playing: false, startDay: null });
+    set({
+      mode: 'off',
+      symbol: null,
+      cursor: null,
+      playing: false,
+      startDay: null,
+      forecastFrom: null,
+    });
   },
 }));

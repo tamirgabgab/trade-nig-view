@@ -229,3 +229,27 @@
   margin: var(--space-1) 0 0;
   color: var(--color-text);
 }
+
+.fan {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fanBand {
+  fill: var(--color-accent);
+  opacity: 0.12;
+}
+
+.fanHistory {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 1.2;
+}
+
+.fanMedian {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}

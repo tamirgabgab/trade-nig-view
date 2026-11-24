@@ -6,6 +6,7 @@ import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
 import type { ChartEngine, PaneLayout } from '../chart/ChartEngine.ts';
+import type { ForecastView } from '../chart/forecastLayer.ts';
 import type { GapZone } from '../chart/gapLayer.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
@@ -28,6 +29,8 @@ import { ChartContextMenu } from './ChartContextMenu.tsx';
 import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
 import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
 import { localDate } from './formatClock.ts';
+import { forecastView } from './forecastView.ts';
+import { useChartForecast } from './useChartForecast.ts';
 import { RemoveConfirm } from './RemoveConfirm.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
@@ -82,11 +85,13 @@ export function ChartArea({ className }: ChartAreaProps) {
   const engineRef = useRef<ChartEngine | null>(null);
   const attachDrawings = useDrawingManager();
   const gapZonesRef = useRef<readonly GapZone[]>([]);
+  const forecastRef = useRef<ForecastView | null>(null);
   const onEngine = useCallback(
     (engine: ChartEngine | null) => {
       engineRef.current = engine;
       attachDrawings(engine);
       engine?.setGaps(gapZonesRef.current);
+      engine?.setForecast(forecastRef.current);
     },
     [attachDrawings],
   );
@@ -302,6 +307,16 @@ export function ChartArea({ className }: ChartAreaProps) {
     }));
     engineRef.current?.setGaps(gapZonesRef.current);
   }, [gaps, barIndex]);
+
+  // The forecast (Structure menu), one query shared with the Forecast tab; drawn from its origin
+  // bar (the last one, or the frozen replay origin), so a stale symbol's forecast is not drawn.
+  const forecast = useChartForecast(structure.forecast);
+  useEffect(() => {
+    const f = structure.forecast ? forecast.data : undefined;
+    const origin = f === undefined ? undefined : barIndex.get(f.lastTime);
+    forecastRef.current = f === undefined || origin === undefined ? null : forecastView(f, origin);
+    engineRef.current?.setForecast(forecastRef.current);
+  }, [structure.forecast, forecast.data, barIndex]);
 
   // What the side panels (Data window, Gaps) show.
   const setChartData = useChartDataStore((s) => s.setData);

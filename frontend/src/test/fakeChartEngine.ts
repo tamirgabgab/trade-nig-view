@@ -1,3 +1,4 @@
+import type { ForecastView } from '../chart/forecastLayer.ts';
 import type { GapZone } from '../chart/gapLayer.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 /**
@@ -167,6 +168,12 @@ export class FakeChartEngine {
 
   setGaps(zones: readonly GapZone[]): void {
     this.gapZones = zones;
+  }
+
+  forecast: ForecastView | null = null;
+
+  setForecast(view: ForecastView | null): void {
+    this.forecast = view;
   }
 
   showBar(index: number): void {

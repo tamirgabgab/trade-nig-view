@@ -1,0 +1,101 @@
+.panel {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.field,
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text);
+}
+
+.select,
+.input {
+  height: 28px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.input {
+  width: 72px;
+}
+
+.button {
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.section {
+  padding: var(--space-2) var(--space-3);
+}
+
+.heading {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-strong);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.summary,
+.note,
+.empty {
+  margin: var(--space-1) 0;
+  color: var(--color-text-muted);
+}
+
+.empty {
+  padding: var(--space-2) var(--space-3);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  margin: var(--space-1) 0;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 2px var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table th:first-child {
+  text-align: left;
+}
+
+.table thead th {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.table tr[aria-current='true'] th,
+.table tr[aria-current='true'] td {
+  color: var(--color-accent);
+}
