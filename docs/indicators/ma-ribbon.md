@@ -5,11 +5,11 @@ direction and strength at several time scales at once: an ordered, widening fan 
 trend.
 
 ## What it measures
-Trend direction (order of the lines) and trend strength (spacing of the lines) at four horizons at once: "is the trend
+Trend direction (order of the lines) and trend strength (spacing of the lines) at four [horizons](glossary:horizon) at once: "is the trend
 up at 20 bars, at 50, at 100 and at 200, and how steep?" When all four agree the trend is the same at every scale; a
 tangle means the horizons disagree.
 
-Move the shortest length on a steady uptrend: the gap between price and MA 1 shrinks as MA 1 gets shorter (less lag),
+Move the shortest length on a steady uptrend: the gap between price and MA 1 shrinks as MA 1 gets shorter (less [lag](glossary:lag)),
 and MA 1 joins MA 2 as the lengths meet.
 
 ```lab
@@ -88,7 +88,7 @@ collapse onto price and only curvature separates them, so the fan loses its lag-
 | Source | close | TradingView default |
 
 ## Warm-up
-First valid bar index: the longest average's warm-up (199 for EMA 200). The chart loads the longest line's extra
+First valid bar index: the longest average's [warm-up](glossary:warm-up) (199 for EMA 200). The chart loads the longest line's extra
 history, $25 \cdot 200 = 5{,}000$ bars, after which the EMA 200 seed weight is $(1-\alpha_4)^{5000} \approx e^{-50}$.
 
 ## Filter view
@@ -99,7 +99,7 @@ delay:
 - **Step**: $1 - (1 - \alpha_i)^{k+1}$. The plot stops at 500 bars, where MA 4 has only reached 0.993.
 - **Magnitude**: four nested low-pass curves; the $-3$ dB points of MA 3 and MA 4 lie beyond the 200-bar end of the
   axis (table above).
-- **Group delay**: tends to each line's lag at long periods (MA 1 is 8.60 at $P = 200$, MA 4 only 8.70, still far
+- **[Group delay](glossary:group-delay)**: tends to each line's lag at long periods (MA 1 is 8.60 at $P = 200$, MA 4 only 8.70, still far
   from its 99.5) and turns slightly negative at short periods, about $-0.5$ bars near $P = 2$.
 
 ## How to read it
@@ -117,7 +117,7 @@ delay:
 
 ## Why it works
 For each line, $x_t - y^{(i)}_t = \sum_j w^{(i)}_j r_{t-j}$ with $\sum_j w^{(i)}_j = L_i$ (the identity on the Moving
-Average page). For an EMA the return weights are the kernel's tail,
+Average page). For an EMA the return weights are the [kernel](glossary:kernel)'s tail,
 $w^{(i)}_j = \sum_{k > j} \alpha_i \beta_i^k = \beta_i^{\,j+1}$, so the gap between two lines is
 
 $$
@@ -132,12 +132,12 @@ $$
 | $L_2 - L_1$ | the total weight of past returns in the gap | 15 bars |
 
 Every weight $\beta_2^{j+1} - \beta_1^{j+1}$ is positive (MA 2 decays more slowly), so **MA 1 above MA 2 means a
-positively weighted sum of the last roughly 50 returns is positive**: an estimate of the recent drift. A fully ordered
+positively weighted sum of the last roughly 50 returns is positive**: an estimate of the recent [drift](glossary:drift). A fully ordered
 fan says the same estimate is positive over four horizons.
 
-On a random walk the next returns are independent of that estimate: no edge. In the reversal scenario (drift
+On a [random walk](glossary:random-walk) the next returns are independent of that estimate: no [edge](glossary:edge). In the reversal scenario (drift
 $+0.25$ % per bar, then $-0.25$ %) the order of the fan tells the rising half from the falling half; in the
-mean-reverting range a rising short line means price is above its mean, so the sign flips.
+[mean-reverting](glossary:mean-reversion) range a rising short line means price is above its mean, so the sign flips.
 
 ```lab
 {"kind": "combo", "scenario": "reversal", "horizon": 10, "on": [0],
@@ -162,7 +162,7 @@ $+2.76$ %). One rule on one synthetic sample: not a backtest (no costs), sensiti
 investment advice.
 
 ## Combine with
-The ribbon is a **trend filter** at several horizons. Add a **momentum confirmation** (RSI above 50) and a **trigger**
+The ribbon is a **[trend filter](glossary:trend-filter)** at several horizons. Add a **[momentum](glossary:momentum) confirmation** (RSI above 50) and a **[trigger](glossary:trigger)**
 (the MACD histogram turning positive, i.e. a short-term slope turning up):
 
 ```lab

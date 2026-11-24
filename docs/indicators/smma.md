@@ -7,8 +7,8 @@ what those indicators smooth with, or a slow, very smooth trend line.
 ## What it measures
 The question it answers: "where is the trend level, if each new bar moves the average by only $\frac1n$ of its
 distance?" It is Wilder's running average. It is the smoothing step inside RSI (average gain and loss), ATR (average
-true range) and ADX, so plotting it on price shows how sluggish those internal averages are. As a trend line it is
-twice as slow as the EMA of the same length: lag $n - 1$ instead of $\frac{n-1}{2}$.
+[true range](glossary:true-range)) and ADX, so plotting it on price shows how sluggish those internal averages are. As a trend line it is
+twice as slow as the EMA of the same length: [lag](glossary:lag) $n - 1$ instead of $\frac{n-1}{2}$.
 
 Move the length on `volatility_regime` (calm, then much wilder): a long SMMA stays smooth through the wild half, at
 the cost of a large lag.
@@ -41,7 +41,7 @@ $$
 A single real pole at $z = p$ ($p = 6/7 \approx 0.857$ at the default $n = 7$).
 
 ## Kernel, lag and noise
-Impulse response $h_k = \frac1n\left(1 - \frac1n\right)^k$ for $k \ge 0$, DC gain 1. The EMA results apply with
+[Impulse response](glossary:impulse-response) $h_k = \frac1n\left(1 - \frac1n\right)^k$ for $k \ge 0$, DC gain 1. The EMA results apply with
 $\alpha = \frac1n$:
 
 $$
@@ -52,15 +52,15 @@ $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $\bar k$ | lag: the kernel's centre of mass | bars, $n - 1$ |
-| $\mathrm{NRF}$ | noise reduction factor: output / input variance for white noise | — , $\frac{1}{2n-1}$ |
+| $\bar k$ | lag: the [kernel](glossary:kernel)'s centre of mass | bars, $n - 1$ |
+| $\mathrm{NRF}$ | [noise reduction factor](glossary:noise-reduction-factor): output / input variance for white noise | — , $\frac{1}{2n-1}$ |
 
 **$\mathrm{RMA}_n \equiv \mathrm{EMA}_{2n-1}$.** Solve $\frac{2}{m+1} = \frac1n$: $m = 2n - 1$. The RMA of length $n$
 is the same filter as the EMA of length $2n-1$, so (by the EMA page's result) it also has the lag and the noise
 reduction of an SMA of length $2n - 1$: lag $\frac{(2n-1)-1}{2} = n-1$ and NRF $\frac{1}{2n-1}$, as above. The
 equivalence is of the recursion, not of the first bars: the RMA seeds with the SMA of $n$ values at bar $n-1$, the
 EMA with the SMA of $2n-1$ values at bar $2n-2$. The two lines converge as the seeds fade. Measured: `smma` length 14
-and `ema` length 27 give identical impulse, step and frequency responses (lag 13.00, NRF 0.03704).
+and `ema` length 27 give identical impulse, step and [frequency responses](glossary:frequency-response) (lag 13.00, NRF 0.03704).
 
 **Frequency response.** As for any one-pole average,
 
@@ -104,7 +104,7 @@ First valid bar index: $n - 1$ (6 at the default), the bar of the SMA seed; plus
 - **Step:** $1 - (6/7)^{k+1}$: 0.143, 0.265, 0.370, ... It passes 90% only on the 15th bar; no overshoot.
 - **Magnitude:** monotone roll-off: −0.66 dB at 100 bars, −3.09 dB at 40, −7.09 dB at 20, −12.3 dB at 10,
   −22.28 dB at 2. Identical in shape to the EMA(13) curve.
-- **Group delay:** 5.74 bars at 200 (tending to 6), 0.77 at 20, zero at 11.6 bars and −0.462 at 2. As for every
+- **[Group delay](glossary:group-delay):** 5.74 bars at 200 (tending to 6), 0.77 at 20, zero at 11.6 bars and −0.462 at 2. As for every
   EMA, slow trends are delayed by about $n - 1$ bars and faster swings by less.
 
 ## How to read it
@@ -118,7 +118,7 @@ First valid bar index: $n - 1$ (6 at the default), the bar of the SMA seed; plus
   the true range; their 14 is this filter's 14, with lag 13 bars.
 
 ## Why it works
-**The gap to price is a slow exponentially weighted momentum.** As on the EMA page, with $p = 1 - \frac1n$,
+**The gap to price is a slow exponentially weighted [momentum](glossary:momentum).** As on the EMA page, with $p = 1 - \frac1n$,
 $x_t - R_t = \sum_{j \ge 0} p^{\,j+1}\,\Delta x_{t-j}$, and the weights add up to $\frac{p}{1-p} = n - 1$, the lag.
 
 **RSI above 50 is the same as close above the SMMA of the same length.** RSI uses
@@ -143,7 +143,7 @@ So $\mathrm{RSI}_{14} > 50$ exactly when the SMMA 14 of the close is rising, whi
 the close is above the SMMA 14. Measured on 1000 bars (seed 1): the sign of RSI 14 − 50 equals the sign of close −
 SMMA 14 on every bar from bar 62 on, in all six scenarios; the few mismatches before that come from the two different
 seeds. The 50 line of RSI is a trend filter with lag 13 bars, not a separate piece of information. As for any
-average, the edge is zero on a random walk and appears only when the drift persists (`reversal`); on `range` it flips.
+average, the [edge](glossary:edge) is zero on a [random walk](glossary:random-walk) and appears only when the drift persists (`reversal`); on `range` it flips.
 
 ```lab
 {"kind": "combo", "scenario": "reversal", "horizon": 10, "on": [0],
@@ -159,7 +159,7 @@ Measured with seed 1 (1000 bars, 10-bar look-ahead):
 
 | Scenario | Close above SMMA 14 | RSI 14 above 50 |
 |---|---|---|
-| `reversal` | +1.55 % (95 % interval +0.47 % to +2.63 %, n = 51) | +1.57 % (+0.48 % to +2.66 %, n = 51) |
+| `reversal` | +1.55 % ([95 % interval](glossary:confidence-interval) +0.47 % to +2.63 %, n = 51) | +1.57 % (+0.48 % to +2.66 %, n = 51) |
 | `random_walk` | +0.24 % (−1.05 % to +1.53 %, n = 54) | +0.18 % (−1.11 % to +1.47 %, n = 54) |
 | `uptrend` | +0.03 % (−0.88 % to +0.95 %, n = 71) | −0.04 % (−0.96 % to +0.87 %, n = 71) |
 | `range` | −0.51 % (−1.25 % to +0.23 %, n = 66) | −0.49 % (−1.21 % to +0.24 %, n = 66) |
@@ -202,7 +202,7 @@ TA-Lib has no RMA, so the reference is the golden scalar model only; the manual 
 ## Pitfalls
 - "Length 14" in RSI or ATR means an RMA that behaves like an EMA(27) or SMA(27), not like an EMA(14).
 - SMMA is not the SMA, despite the name.
-- The seed fades slowly ($e^{-k/n}$): on a symbol with little history, the first $5n$ or so bars after the warm-up
+- The seed fades slowly ($e^{-k/n}$): on a symbol with little history, the first $5n$ or so bars after the [warm-up](glossary:warm-up)
   (residual weight above $e^{-5} \approx 0.7\%$) still depend on where the data starts.
 - With a long length (RMA(50) has lag 49 bars), the line is mainly a long-term reference, not a timing tool.
 - Combining "RSI above 50" with "close above SMMA 14" adds nothing: they are the same rule.

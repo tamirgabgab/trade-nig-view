@@ -1,7 +1,7 @@
 # MACD (`macd`)
 
 Gerald Appel's Moving Average Convergence Divergence: the distance between a fast and a slow average, a signal line
-that smooths it, and the histogram between the two. People use it as a momentum gauge: above or below zero for the
+that smooths it, and the histogram between the two. People use it as a [momentum](glossary:momentum) gauge: above or below zero for the
 trend's direction, the signal-line crosses for turns in momentum.
 
 ## What it measures
@@ -31,7 +31,7 @@ $$
 | $\textcolor{#FF6D00}{S_t}$ | the signal line (orange) | price, around 0 |
 | $\textcolor{#26A69A}{\mathrm{Hist}_t}$ | the histogram (green above 0, red below) | price, around 0 |
 | $x_t$ | the source (close by default) | price |
-| $\mathrm{MA}_f,\ \mathrm{MA}_s$ | the oscillator averages, fast and slow length (EMA by default) | price |
+| $\mathrm{MA}_f,\ \mathrm{MA}_s$ | the [oscillator](glossary:oscillator) averages, fast and slow length (EMA by default) | price |
 | $\mathrm{MA}^{\text{sig}}_g$ | the signal average of length $g$ (EMA by default) | price |
 | $f,\ s,\ g$ | fast, slow and signal lengths | bars, 12 / 26 / 9 |
 
@@ -72,10 +72,10 @@ The signal is "MACD × EMA 9"; the histogram is "MACD × (1 − EMA 9)", a high-
 second zero at DC.
 
 ## Kernel, lag and noise
-With linear averages (EMA, SMA, ...) the MACD line is a linear filter with kernel $h^{(f)}_k - h^{(s)}_k$: its DC gain is
+With linear averages (EMA, SMA, ...) the MACD line is a linear filter with [kernel](glossary:kernel) $h^{(f)}_k - h^{(s)}_k$: its DC gain is
 $1 - 1 = 0$, so it removes the price level and keeps the trend's slope. On a straight line of slope $b$ it settles at
 $b\,(\bar k_s - \bar k_f)$ (for EMAs $\bar k = (n-1)/2$: $b\,(12.5 - 5.5) = 7\,b$ at 12/26). It is a band-pass-like
-filter, so "lag" in the moving-average sense does not apply.
+filter, so "[lag](glossary:lag)" in the moving-average sense does not apply.
 
 **MACD is a smoothed price change.** Divide the transfer function by the two EMAs' own gains:
 $\frac{\alpha_f - \alpha_s}{\alpha_f \alpha_s} = \frac{1}{\alpha_s} - \frac{1}{\alpha_f} = \frac{s - f}{2}$, so
@@ -97,7 +97,7 @@ The MACD line is 7 times a weighted average of the recent price changes, with po
 back. On a ramp $\Delta x = b$ and the average is $b$, which is the $7\,b$ above. Checked against the implementation
 on 1000 bars of each scenario: after bar 400 the two sides agree to $10^{-13}$ of the MACD's standard deviation.
 
-**Frequency response.** For a cycle of period $P$ ($\omega = 2\pi/P$),
+**[Frequency response](glossary:frequency-response).** For a cycle of period $P$ ($\omega = 2\pi/P$),
 
 $$
 \lvert G_M(e^{j\omega})\rvert^2
@@ -187,7 +187,7 @@ $s + g - 2$.
 
 ## Filter view
 The MACD, its signal line and the histogram are linear with zero DC gain, so the drawer measures them as band-pass
-filters: impulse, a step response that returns to 0, and the magnitude against the period (no lag: the centre of
+filters: impulse, a [step response](glossary:step-response) that returns to 0, and the magnitude against the period (no lag: the centre of
 mass of a kernel that sums to 0 is undefined). These figures are computed by running the real implementation.
 
 ```lab
@@ -228,10 +228,10 @@ drawer's grid: 41.5) at −2.47 dB, the signal to about 50 bars at −2.94 dB an
   $s/f$ lets more of them through.
 
 ## Why it works
-**MACD > 0 is a momentum rule.** It says the weighted mean of recent price changes is positive. On a random walk the
+**MACD > 0 is a momentum rule.** It says the weighted mean of recent price changes is positive. On a [random walk](glossary:random-walk) the
 future changes are independent of the past, so the expected forward return after any bar, and after MACD > 0, is the
-same $\mu h$: no edge. A momentum rule pays only when the drift itself persists, as in `reversal`; in the
-mean-reverting `range` a rise predicts a fall, so the sign flips.
+same $\mu h$: no [edge](glossary:edge). A momentum rule pays only when the drift itself persists, as in `reversal`; in the
+[mean-reverting](glossary:mean-reversion) `range` a rise predicts a fall, so the sign flips.
 
 **The histogram cross is an acceleration rule.** It says a smoothed second difference of price has turned
 positive. That predicts something only if acceleration persists, and none of the synthetic scenarios has that (their
@@ -249,7 +249,7 @@ Measured with seed 1 (1000 bars, 10-bar look-ahead):
 
 | Scenario | MACD above 0 | Histogram crosses above 0 |
 |---|---|---|
-| `reversal` | +2.02 % (95 % interval +0.94 % to +3.10 %, n = 45) | −0.28 % (−1.79 % to +1.23 %, n = 34) |
+| `reversal` | +2.02 % ([95 % interval](glossary:confidence-interval) +0.94 % to +3.10 %, n = 45) | −0.28 % (−1.79 % to +1.23 %, n = 34) |
 | `random_walk` | +0.35 % (−1.32 % to +2.02 %, n = 36) | −0.45 % (−1.77 % to +0.86 %, n = 34) |
 | `uptrend` | +0.11 % (−0.93 % to +1.15 %, n = 64) | −0.33 % (−1.34 % to +0.68 %, n = 35) |
 | `range` | −1.55 % (−2.38 % to −0.71 %, n = 57) | −0.62 % (−1.81 % to +0.56 %, n = 38) |
@@ -286,7 +286,7 @@ together +2.85 % (+1.71 % to +3.98 %, n = 16), positive with the interval above 
 momentum turns up again, and it cuts n from 45 to 16. With the SMA 200 filter as well, +3.43 % (+1.68 % to +5.19 %,
 n = 9): a higher mean on nine episodes, which is not evidence of anything. On `range` the pair is −2.04 % (−4.08 %
 to +0.00 %, n = 14), negative for four seeds out of five: a trend rule in a market without a trend. More rules
-mean fewer episodes and more chances to fit noise (multiple testing). Not a backtest, not advice.
+mean fewer episodes and more chances to fit noise ([multiple testing](glossary:multiple-testing)). Not a backtest, not advice.
 
 ## Differences vs TradingView
 - Same formula and defaults; TradingView offers SMA or EMA for both averages, here any of the 15 types.
@@ -295,7 +295,7 @@ mean fewer episodes and more chances to fit noise (multiple testing). Not a back
 
 ## Pitfalls
 - The MACD is in price units: values are not comparable across symbols or across a big price change of one symbol.
-- Crossings of the signal line lag; on choppy prices they whipsaw.
+- Crossings of the signal line lag; on choppy prices they [whipsaw](glossary:whipsaw).
 - It is a band-pass, not a trend line: after a one-off jump it returns to 0, and on a steady trend it reports the
   slope, not the level.
 - The signal cross and the histogram's zero cross are the same event; do not count them as two confirmations.

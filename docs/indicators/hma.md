@@ -1,7 +1,7 @@
 # Hull Moving Average (`hma`)
 
-Alan Hull's average (2005) cancels most of a WMA's lag with a difference of two WMAs, then smooths the result with a
-short WMA of about $\sqrt n$ bars. It is a finite (FIR) filter, smooth and fast. Its lag is exactly zero only for some
+Alan Hull's average (2005) cancels most of a WMA's [lag](glossary:lag) with a difference of two WMAs, then smooths the result with a
+short WMA of about $\sqrt n$ bars. It is a finite ([FIR](glossary:fir-filter)) filter, smooth and fast. Its lag is exactly zero only for some
 lengths.
 
 ## What it measures
@@ -9,7 +9,7 @@ The question it answers: "where is the trend level right now, smoothed, with alm
 line that turns almost as soon as price does. Its slope (rising or falling) is the usual signal. Cycles of about
 $1.4n$ to $1.5n$ bars are exaggerated by 25 to 30% (2.0 to 2.3 dB), so swings look larger on the HMA than in price.
 
-Move the length on `range`: the HMA follows the swings of the mean-reverting price closely, and swings of about
+Move the length on `range`: the HMA follows the swings of the [mean-reverting](glossary:mean-reversion) price closely, and swings of about
 $1.4n$ to $1.5n$ bars can come out wider on the HMA than in the price itself.
 
 ```lab
@@ -21,7 +21,7 @@ $$
 \textcolor{#F9A825}{H_t} = \mathrm{WMA}_s\big(2\,\mathrm{WMA}_m(x) - \mathrm{WMA}_n(x)\big)_t, \qquad m = \lfloor n/2 \rfloor, \quad s = \lfloor \sqrt n \rfloor
 $$
 
-with $\mathrm{WMA}_\ell$ the linear-weighted average, kernel $\frac{2(\ell-k)}{\ell(\ell+1)}$ for $k = 0\ldots\ell-1$.
+with $\mathrm{WMA}_\ell$ the linear-weighted average, [kernel](glossary:kernel) $\frac{2(\ell-k)}{\ell(\ell+1)}$ for $k = 0\ldots\ell-1$.
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
@@ -104,7 +104,7 @@ $\mathrm{WMA}_s$ needs $s - 1$ more bars. Length must be $\ge 2$.
 - **Magnitude:** about 0 dB at long periods, a bump of +2.27 dB (gain 1.30) near $P \approx 13.5$ bars, 0 dB again
   near 7.8 bars and $-3$ dB near 6.3 bars. At $P = 2$ it is $-20.3$ dB: the outer WMA gives good attenuation of
   bar-to-bar noise.
-- **Group delay:** about 0 at long periods (0.035 bars at $P = 200$). It rises to 2.1 bars near $P \approx 11$ and is
+- **[Group delay](glossary:group-delay):** about 0 at long periods (0.035 bars at $P = 200$). It rises to 2.1 bars near $P \approx 11$ and is
   negative below about 4.5 bars (down to $-2.0$ near $P \approx 3.5$, where the gain is already $-17$ dB).
 
 ## How to read it
@@ -139,8 +139,8 @@ $$
 At $n = 20$ the HMA's lag is $\frac23$ bar, so "close above HMA 20" is a trend reading with a weight of only
 $\frac23$ of a bar of slope; the rest is the newest bars' noise. "HMA 20 above WMA 20" is
 $b\,(6.33 - 0.67) = 5.67\,b$: a slope estimate with a real lever. So the zero-lag line is good for the *slope* of the
-HMA and for HMA vs a slower line, and useless for price vs HMA. The edge itself still needs persistent drift
-(`reversal`); on a random walk future increments are independent of the past and every rule has zero edge.
+HMA and for HMA vs a slower line, and useless for price vs HMA. The [edge](glossary:edge) itself still needs persistent drift
+(`reversal`); on a [random walk](glossary:random-walk) future increments are independent of the past and every rule has zero edge.
 
 ```lab
 {"kind": "combo", "scenario": "reversal", "horizon": 10, "on": [0],
@@ -197,8 +197,8 @@ is in question ($4$ vs $4.5$), since $\sqrt 9 = 3$ exactly.
 ## Pitfalls
 - "Zero lag" depends on the length: 0 at 9 but $+\frac13$ at 10 and $+\frac23$ at 20. Small lengths lead the trend.
 - The 27% step overshoot means the HMA can sit well beyond the highest (or lowest) recent close after a gap. Do not use
-  it as a support or resistance level the way an SMA is used.
-- About 4 times the SMA's noise variance at the same length. A slope-change signal on a short HMA whipsaws in ranges.
+  it as a [support](glossary:support) or [resistance](glossary:resistance) level the way an SMA is used.
+- About 4 times the SMA's noise variance at the same length. A slope-change signal on a short HMA [whipsaws](glossary:whipsaw) in ranges.
 - Price crossing the HMA is not a trend signal: with (almost) zero lag the gap holds almost no trend information.
 
 ## Exercise
@@ -207,9 +207,9 @@ is in question ($4$ vs $4.5$), since $\sqrt 9 = 3$ exactly.
    cleaner edge, and why is it still not a forecast on `random_walk`?
 2. In the param lab on `range`, find a length where the HMA's swings look larger than the price's. Is the typical
    swing length of the path near $1.4n$ to $1.5n$ there?
-3. Start Replay on META on 2 February 2022, the evening of its quarterly report; the next bar is the large gap down
+3. Start Replay on META on 2 February 2022, the evening of its quarterly report; the next bar is the large [gap down](glossary:gap)
    of 3 February. With HMA 9 and SMA 9 on, step forward bar by bar: on which bar after the gap is the HMA furthest
-   below the new price level, and when does it turn back? Compare with the step response (peak 1.267 at bar 4,
+   below the new price level, and when does it turn back? Compare with the [step response](glossary:step-response) (peak 1.267 at bar 4,
    settled at bar 10) and with the SMA 9, which never overshoots.
 
 ```lab

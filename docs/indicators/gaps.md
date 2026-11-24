@@ -1,7 +1,7 @@
 # Gaps
 
 A gap is a price range the market skipped: a bar that opens, or trades entirely, away from the previous bar. Stocks gap
-when news arrives while the exchange is closed (earnings, guidance, a takeover, a macro shock); the next session opens
+when news arrives while the exchange is closed (earnings, guidance, a takeover, a macro shock); the next [session](glossary:session) opens
 where the new information puts it, not where the last one closed. This page gives the app's exact definitions, what
 "filling" a gap means, why some markets hardly gap at all, and how often gaps fill when nothing but chance is at work.
 
@@ -69,7 +69,7 @@ high" is exactly a full gap up (`ago: 1` reads the bar before). The dots mark th
  ]}
 ```
 
-The synthetic daily bars open at $C_{t-1} e^{\eta_t \sigma / 4}$ (a quarter of a bar's volatility), so their full gaps
+The synthetic daily bars open at $C_{t-1} e^{\eta_t \sigma / 4}$ (a quarter of a bar's [volatility](glossary:volatility)), so their full gaps
 are small and rare: about 16 per 1000 bars, median size 0.14 %, and almost none of 1 % or more. Hourly bars (`1h`)
 open each session with a gap four times wider, which gives about 1.8 full gaps of at least 1 % per 1000 bars on
 `random_walk`. Real stocks gap by more, and on news.
@@ -117,7 +117,7 @@ replay test checks the gap finder like every indicator.
   continuous futures add roll gaps when the front contract changes (see [Bars and sessions](learn:bars-and-sessions)).
 - **Weekly and monthly bars** are resampled from the daily ones, and a week's bar overlaps the previous week's range
   far more often, so their gaps are rarer.
-- **Adjusted prices:** splits are always adjusted (a 2-for-1 split would otherwise be a fake 50 % gap down). With ADJ
+- **[Adjusted prices](glossary:adjusted-price):** splits are always adjusted (a 2-for-1 split would otherwise be a fake 50 % gap down). With ADJ
   off, an ex-dividend morning opens lower by about the dividend, a small gap that ADJ on removes (see
   [Adjusted prices](learn:adjusted-prices)).
 
@@ -135,13 +135,13 @@ the cursor shows as open, and the stored deepest fill is dropped (it may come fr
 
 The [Previous Period High/Low/Close](learn:previous-hlc) lines are the other half of the picture: the previous close is
 the reference of the opening gap, and an open above the previous high is a gap-up open even when the bar later trades
-back into yesterday's range. The [ATR](learn:atr#formula) counts gaps in every bar's true range.
+back into yesterday's range. The [ATR](learn:atr#formula) counts gaps in every bar's [true range](glossary:true-range).
 
 ## How often gaps fill
-"Gaps always get filled" is an old saying. On a random walk it is true and means nothing: a driftless random walk
+"Gaps always get filled" is an old saying. On a [random walk](glossary:random-walk) it is true and means nothing: a driftless random walk
 returns to every level eventually, so every gap fills, given enough time, without any force pulling it back. What
 matters is how soon. For a driftless walk with bar volatility $\sigma$ the reflection principle gives the chance of
-reaching a level $d$ away within $k$ bars, and with a drift $\mu$ away from the level the chance of ever reaching it
+reaching a level $d$ away within $k$ bars, and with a [drift](glossary:drift) $\mu$ away from the level the chance of ever reaching it
 is below one:
 
 $$
@@ -153,7 +153,7 @@ $$
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
 | $d$ | log distance from the current close to the level (for a gap up: to the zone's bottom) | 0.01 = about 1 % |
-| $\sigma$ | standard deviation of one bar's log return | 0.015 on `random_walk`, 0.012 on `uptrend` |
+| $\sigma$ | [standard deviation](glossary:standard-deviation) of one bar's [log return](glossary:log-return) | 0.015 on `random_walk`, 0.012 on `uptrend` |
 | $k$ | bars allowed | bars |
 | $\Phi$ | standard normal distribution function | 0–1 |
 | $\mu$ | drift per bar away from the level | 0.0015 on `uptrend` |
@@ -168,7 +168,7 @@ within $k$ bars (the fill of a gap up whose bottom is $d$ away), with the reflec
 | 10 % | 0.01 (0.00) | 0.14 (0.16) | 0.48 (0.53) |
 | 15 % | 0.00 (0.00) | 0.03 (0.04) | 0.30 (0.35) |
 
-The measured values fall a little short at long horizons because `random_walk` drifts up by 0.03 % a bar, away from
+The measured values fall a little short at long [horizons](glossary:horizon) because `random_walk` drifts up by 0.03 % a bar, away from
 levels below. The rule of thumb is $d / \sigma\sqrt{k}$: a gap one bar-volatility deep is likely filled within days,
 a gap ten volatilities deep (a −15 % earnings gap on a stock that moves 1.5 % a day) needs months, if it ever fills.
 
@@ -188,7 +188,7 @@ These synthetic gaps are tiny (median 0.14 %), so most fill within days whatever
 shows the drift at work, and the drift formula predicts the `uptrend` gaps up well (0.82 predicted from their
 distances, 0.85 filled by the end of the path).
 
-**Range.** In a mean-reverting market the answer depends on where the gap points. With the price more than 3 % below
+**Range.** In a [mean-reverting](glossary:mean-reversion) market the answer depends on where the gap points. With the price more than 3 % below
 the centre of `range`, a level 5 % above it (towards the centre) was reached within 20 bars 81 % of the time, a level
 5 % below it (away from the centre) 15 %, against 46 %–50 % either way on `random_walk`. A gap that pushes the price
 away from fair value fills fast; one that pushes it back towards fair value may never fill. That is the honest version
@@ -200,11 +200,11 @@ the end of the data, the highest high since having reached 86.56 against a top o
 four within the 500 bars left, out of five: about what the table gives for a level 15 % away (0.30 within 100 bars,
 0.57 within 500).
 
-**What follows a gap.** With seed 1 the combo lab's full gap down on `shock` gives −0.63 % over 10 bars (95 %
-interval −4.33 % to +3.06 %, n = 12), a full gap up on `random_walk` +0.51 % (−3.63 % to +4.65 %, n = 10), and an
+**What follows a gap.** With seed 1 the combo lab's full gap down on `shock` gives −0.63 % over 10 bars ([95 %
+interval](glossary:confidence-interval) −4.33 % to +3.06 %, n = 12), a full gap up on `random_walk` +0.51 % (−3.63 % to +4.65 %, n = 10), and an
 open above the previous high on `random_walk` +0.51 % (−0.89 % to +1.90 %, n = 48; every interval contains zero for
 seeds 1–5, also on `range`). On synthetic data a gap is a random draw, so it predicts nothing; on real stocks a gap
-carries news, which is a different and much harder question. One rule on one sample: not a backtest, not investment
+carries news, which is a different and much harder question. One rule on one sample: not a [backtest](glossary:backtest), not investment
 advice.
 
 ## Pitfalls

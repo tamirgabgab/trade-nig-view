@@ -9,7 +9,7 @@ warm-up, and why the chart therefore loads bars you never see.
 During warm-up every output is `NaN` (sent to the frontend as `null`), and the chart draws nothing there. ChartLab never
 fills the gap with a shorter window, the first price, a zero or an extrapolation: a value on the chart is always the
 indicator's own formula applied to enough real bars. In the labs a rule that reads a `NaN` is false on that bar, so an
-event study starts only where every indicator it uses has a value.
+[event study](glossary:event-study) starts only where every indicator it uses has a value.
 
 The API reports the warm-up as `warmup`: the index of the first bar with a value in the output that starts **last**
 (a composite's faster outputs start earlier; the MACD line starts 8 bars before its signal).
@@ -27,13 +27,13 @@ At the registry defaults, plus a few common settings:
 | [TEMA](learn:tema) | 9 | 24 | $3(n-1)$: three nested EMAs |
 | [T3](learn:t3) | 5 | 24 | $6(n-1)$: six nested EMAs |
 | [HMA](learn:hma) | 9 | 10 | $n + \lfloor\sqrt n\rfloor - 2$: a WMA of WMAs |
-| [ZLEMA](learn:zlema) | 20 | 28 | $n - 1 + \lfloor (n-1)/2 \rfloor$: the lag term reads $\lfloor (n-1)/2 \rfloor$ bars back |
+| [ZLEMA](learn:zlema) | 20 | 28 | $n - 1 + \lfloor (n-1)/2 \rfloor$: the [lag](glossary:lag) term reads $\lfloor (n-1)/2 \rfloor$ bars back |
 | [KAMA](learn:kama) | 10 | 10 | $n$: the efficiency ratio needs $n$ price changes |
 | [RSI](learn:rsi) | 14 | 14 | $n$: the first change needs a previous bar |
 | RSI with an SMA 14 of RSI | 14, 14 | 27 | $n + m - 1$ |
 | [MACD](learn:macd) | 12, 26, 9 | line 25, signal and histogram 33 | $s - 1$, then $s + g - 2$ |
 | [Stochastic](learn:stochastic) | 14, 1, 3 | %K 13, %D 15 | $n + s_k - 2$, then $n + s_k + s_d - 3$ |
-| [ATR](learn:atr) | 14 | 13 | $n - 1$: the first true range is the first bar's range |
+| [ATR](learn:atr) | 14 | 13 | $n - 1$: the first [true range](glossary:true-range) is the first bar's range |
 | [MA Cross](learn:ma-cross) | 9 / 21 | 20 | the slower average |
 | [MA Ribbon](learn:ma-ribbon) | 20 … 200 | 199 | the slowest average |
 | [OBV](learn:obv) | — | 0 | a running sum from the first bar |
@@ -49,7 +49,7 @@ Chains add up. MACD shows the rule: the slow EMA ($s = 26$) is first defined at 
 length $g = 9$ of the MACD line, seeded on its first 9 values, so it starts at $25 + 8 = 33 = s + g - 2$.
 
 ## Warm-up is not convergence: IIR seeds
-An FIR average (SMA, WMA, ...) is exact from its first value: it uses exactly its window. A recursive (IIR) average
+An [FIR](glossary:fir-filter) average (SMA, WMA, ...) is exact from its first value: it uses exactly its window. A recursive ([IIR](glossary:iir-filter)) average
 is not. The EMA starts from a **seed**, the SMA of its first $n$ inputs, and then recurses:
 
 $$
@@ -63,7 +63,7 @@ $$
 | $E_t$ | the EMA at bar $t$ | price |
 | $x_t$ | input (the close by default) | price |
 | $n$ | length | bars |
-| $\alpha$ | smoothing factor: $\frac{2}{n+1}$ for the EMA, $\frac{1}{n}$ for the SMMA (RMA) | 0–1 |
+| $\alpha$ | [smoothing factor](glossary:smoothing-factor): $\frac{2}{n+1}$ for the EMA, $\frac{1}{n}$ for the SMMA (RMA) | 0–1 |
 | $p$ | pole, $1 - \alpha$ | 0–1 |
 | $p^{\,t-n+1}$ | weight the seed still has at bar $t$ | 1 at the seed, then falling |
 
@@ -142,7 +142,7 @@ length 12, which would otherwise set the start) and watch both starts move toget
 {"kind": "param", "indicator": "macd", "vary": "slow_length", "min": 13, "max": 100, "scenario": "uptrend"}
 ```
 
-The impulse response of the RMA inside RSI 14 is the seed's memory drawn as a picture: weights $\alpha p^k$ with
+The [impulse response](glossary:impulse-response) of the [RMA](glossary:rma) inside RSI 14 is the seed's memory drawn as a picture: weights $\alpha p^k$ with
 $\alpha = 1/14$, which the Filter view cuts at $10^{-4}$ of the first weight, more than 100 bars on. That tail is why
 RSI needs 350 bars of lookback but only 14 bars of warm-up:
 
@@ -156,7 +156,7 @@ symbol on the main chart.
 
 ## Pitfalls
 - **Long lengths on short histories.** An EMA 200 on monthly bars needs 200 months, more than 16 years, before its
-  first value, and decades before the seed is forgotten. On `4h` bars of a stock (two a session) an SMA 200 needs
+  first value, and decades before the seed is forgotten. On `4h` bars of a stock (two a [session](glossary:session)) an SMA 200 needs
   about 100 sessions.
 - **Different platforms, different starts.** Two charts that loaded different amounts of history give different EMA,
   RSI and MACD values near the start, both "correct". ChartLab's lookback makes its values match a full-history
@@ -168,11 +168,11 @@ symbol on the main chart.
 
 ## Exercise
 1. In the SMA lab, set the length to 250. How many bars are left for a `combo` or `event` study on the same 300-bar
-   sample, and what does that do to the 95 % interval of any edge measured there? (Compare with
+   sample, and what does that do to the [95 % interval](glossary:confidence-interval) of any [edge](glossary:edge) measured there? (Compare with
    [Combining indicators](learn:combinations).)
 2. A 300-bar lab with EMA 200: the seed is the SMA of bars 0 to 199. Using $p^k$, how much weight does the seed still
    have on bar 299? How long would the sample have to be for the seed's weight to drop below 1 %?
-3. Replay a symbol with indicators that need long histories and check that their values exist from the first bar you
+3. [Replay](glossary:replay) a symbol with indicators that need long histories and check that their values exist from the first bar you
    see:
 
 ```lab

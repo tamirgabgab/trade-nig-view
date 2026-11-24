@@ -1,7 +1,7 @@
 # Exponential Moving Average (`ema`)
 
 A first-order recursive (IIR) low-pass filter: each new bar moves the average a fixed fraction $\alpha$ of the way to
-the price. With $\alpha = \frac{2}{n+1}$ it has the same lag and the same noise reduction as an $n$-bar SMA, but no
+the price. With $\alpha = \frac{2}{n+1}$ it has the same [lag](glossary:lag) and the same [noise reduction](glossary:noise-reduction-factor) as an $n$-bar SMA, but no
 spectral nulls and an infinite memory. Use it when you want a smooth trend line that reacts to the newest bar at once.
 
 ## What it measures
@@ -53,7 +53,7 @@ $$
 | $p^{\,t-n+1}$ | weight left on the seed | — , decays to 0 |
 
 ## Kernel, lag and noise
-Impulse response $h_k = \alpha\,p^k$ for $k \ge 0$; DC gain $\sum_k \alpha p^k = \frac{\alpha}{1-p} = 1$.
+[Impulse response](glossary:impulse-response) $h_k = \alpha\,p^k$ for $k \ge 0$; DC gain $\sum_k \alpha p^k = \frac{\alpha}{1-p} = 1$.
 
 **Lag.** Using $\sum_{k\ge0} k\,p^k = \frac{p}{(1-p)^2}$:
 
@@ -79,11 +79,11 @@ reduction: $\frac{\alpha}{2-\alpha} = \frac1n$ gives $\alpha = \frac{2}{n+1}$ ag
 $\alpha$, so each condition has exactly one solution, and it is the same one. $\mathrm{EMA}_n$ is therefore the unique
 exponential average that is indistinguishable from $\mathrm{SMA}_n$ both on a straight trend and on white noise.
 Equivalently, eliminating $\alpha$: every EMA satisfies $\mathrm{NRF} = \frac{1}{2\bar k + 1}$, exactly the SMA's
-lag–noise curve. The two differ only in the shape of the kernel: a finite box with nulls versus an infinite
+lag–noise curve. The two differ only in the shape of the [kernel](glossary:kernel): a finite box with nulls versus an infinite
 geometric tail without them. (Wilder's smoothing, $\alpha = \frac1n$, is the same filter as $\mathrm{EMA}_{2n-1}$; see
 the SMMA page.)
 
-**Frequency response.**
+**[Frequency response](glossary:frequency-response).**
 
 $$
 \lvert H(e^{j\omega})\rvert^2 = \frac{\alpha^2}{1 - 2p\cos\omega + p^2},
@@ -98,7 +98,7 @@ $$
 | $\tau(\omega)$ | group delay: how late that cycle comes out | bars |
 
 The denominator grows as $\cos\omega$ falls, so $\lvert H\rvert$ decreases monotonically from 1 at DC to
-$\frac{\alpha}{1+p} = \frac{\alpha}{2-\alpha} = \frac1n$ at $P = 2$: no nulls, no ripple. The group delay is
+$\frac{\alpha}{1+p} = \frac{\alpha}{2-\alpha} = \frac1n$ at $P = 2$: no nulls, no ripple. The [group delay](glossary:group-delay) is
 $\frac{p}{1-p} = \bar k$ at DC, crosses zero where $\cos\omega = p$, and ends at $-\frac{p}{1+p}$ at $P = 2$.
 
 | At the default $n = 9$ ($\alpha = 0.2$) | Value |
@@ -153,7 +153,7 @@ starts with `NaN` (an EMA of another indicator), the seed is the SMA of its firs
   tiny weight $\alpha p^k$.
 
 ## Why it works
-**The gap to price is an exponentially weighted momentum.** Write $\Delta x_t = x_t - x_{t-1}$ and
+**The gap to price is an exponentially weighted [momentum](glossary:momentum).** Write $\Delta x_t = x_t - x_{t-1}$ and
 $e_t = x_t - E_t$. From the recursion, $e_t = p\,(\Delta x_t + e_{t-1})$, so
 
 $$
@@ -173,10 +173,10 @@ up to the lag, so on a trend of slope $b$ the gap is $b\,\frac{n-1}{2}$. For two
 ramp, $\mathrm{EMA}_{20} - \mathrm{EMA}_{50} = b\,(24.5 - 9.5) = 15\,b$: "EMA 20 above EMA 50" is a smoothed slope
 estimate being positive, and a cross is its sign change.
 
-**When it has an edge.** If price changes are independent of the past with a constant mean (a random walk, with or
+**When it has an [edge](glossary:edge).** If price changes are independent of the past with a constant mean (a [random walk](glossary:random-walk), with or
 without drift), the expected forward return is the same after any bar, so no EMA rule has an edge (the SMA page
 writes this out). Momentum only predicts when the drift itself persists and changes rarely, as in `reversal`; in the
-mean-reverting `range` the sign flips.
+[mean-reverting](glossary:mean-reversion) `range` the sign flips.
 
 ```lab
 {"kind": "combo", "scenario": "reversal", "horizon": 10, "on": [0],
@@ -225,7 +225,7 @@ roughly the change of a smoothed slope (an acceleration), and `reversal` has no 
 nothing here; the filter carries the edge. RSI 14 below 50 alone is −1.26 % (−2.35 % to −0.18 %, n = 58), and all
 three together leave n = 2: a dip below 50 while the histogram is positive is rare in a clean trend. On `range` the
 EMA pair and the histogram together give −1.63 % (−2.70 % to −0.57 %, n = 37), negative for seeds 1–5. More rules
-mean fewer episodes and more chances to fit noise (multiple testing). Not a backtest, not advice.
+mean fewer episodes and more chances to fit noise ([multiple testing](glossary:multiple-testing)). Not a backtest, not advice.
 
 ## Differences vs TradingView
 The seed is the SMA of the first $n$ values (TA-Lib convention, also the seed Pine uses for `ta.rma`). ChartLab
@@ -238,7 +238,7 @@ TradingView's own seed is still to be confirmed in the manual cross-check (`tv_c
 ## Pitfalls
 - "Length" is not a window: the EMA uses the whole history; $n$ only sets $\alpha$.
 - Its value depends, very weakly, on where the history starts. On a recent listing with less history than the
-  lookback, the first bars after the warm-up still carry the seed.
+  lookback, the first bars after the [warm-up](glossary:warm-up) still carry the seed.
 - Not linear phase: cycles of different length are delayed by different amounts (see Filter view).
 - RSI and ATR use Wilder's $\alpha = \frac1n$, not $\frac{2}{n+1}$; a "14" there behaves like an EMA(27).
 

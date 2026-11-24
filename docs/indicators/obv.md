@@ -27,7 +27,7 @@ flat stretches before each markup.
  ]}
 ```
 
-With seed 1 (1000 bars, 25-bar look-ahead): OBV above its value 20 bars ago +3.73 % (95 % interval +1.80 % to
+With seed 1 (1000 bars, 25-bar [look-ahead](glossary:horizon)): OBV above its value 20 bars ago +3.73 % ([95 % interval](glossary:confidence-interval) +1.80 % to
 +5.65 %, n = 23); the same rule on the close +2.20 % (−1.28 % to +5.68 %, n = 24). For seeds 1–5 the OBV rule gives
 +1.65 % to +3.79 % with the interval above zero for four of them, the close rule +0.76 % to +2.20 % with no interval
 above zero: here the volume knows something the price does not.
@@ -73,7 +73,7 @@ compares OBV with its own past. In the labs the sum starts at the first bar of t
 symbol), so the lab's OBV and the chart's differ by a constant.
 
 ## Kernel, lag and noise
-Not a filter of the price: a cumulative sum (an integrator) of signed volume. It has no lag and no warm-up, and it
+Not a filter of the price: a cumulative sum (an integrator) of signed volume. It has no [lag](glossary:lag) and no [warm-up](glossary:warm-up), and it
 never forgets: every bar since the start of the history is in it. As a filter of $u$ its transfer function is
 $H(z) = \frac{1}{1 - z^{-1}}$, a pole at $z = 1$ (infinite gain at zero frequency, which is why the level drifts
 without bound). The $k$-bar difference used by the rules cancels that pole:
@@ -91,7 +91,7 @@ $$
 | $\sum_{j<k} z^{-j}$ | a flat box of $k$ taps: $k$ times the SMA $k$ of $u$ | — |
 
 So "OBV above its value $k$ bars ago" is "the SMA $k$ of signed volume is positive": a box filter with lag
-$\frac{k-1}{2}$ bars (9.5 at $k = 20$), the same kernel as the [SMA](learn:sma#kernel-lag-and-noise).
+$\frac{k-1}{2}$ bars (9.5 at $k = 20$), the same [kernel](glossary:kernel) as the [SMA](learn:sma#kernel-lag-and-noise).
 
 ## Defaults
 No inputs.
@@ -109,7 +109,7 @@ Not offered (not a moving average).
 - **Confirmation:** OBV and price rising together (or falling together) is the normal case: up closes move OBV up by
   definition. On a `random_walk` the 20-bar change of OBV and the 20-bar log return correlate at 0.86 (200 000 bars,
   seed 1; `uptrend` 0.84): mostly, OBV just retells the price.
-- **Bullish divergence ("accumulation"):** OBV rises over $k$ bars while the close is flat or lower. The volume of the
+- **Bullish [divergence](glossary:divergence) ("accumulation"):** OBV rises over $k$ bars while the close is flat or lower. The volume of the
   up bars outweighs the down bars although the up and down moves cancel: buyers absorb the supply without lifting
   the price, the reading goes.
 - **Bearish divergence ("distribution"):** OBV falls while the close is flat or higher.
@@ -135,9 +135,9 @@ $$
 
 *Volume without direction ($k_t = 0$, every scenario but `accumulation`).* Then
 $u_t = \operatorname{sign}(r_t)\,10^6 e^{0.3\xi_t + 20\lvert r_t\rvert}$ is a function of the bar's own return and of
-noise independent of everything else: OBV's whole history is a function of past returns plus noise. On a random walk
+noise independent of everything else: OBV's whole history is a function of past returns plus noise. On a [random walk](glossary:random-walk)
 the future returns are independent of both, so for every OBV rule
-$\mathbb E[x_{t+h} - x_t \mid \textcolor{#2962FF}{OBV}_{\le t}] = h\mu$, the same as after any bar: no edge, exactly.
+$\mathbb E[x_{t+h} - x_t \mid \textcolor{#2962FF}{OBV}_{\le t}] = h\mu$, the same as after any bar: no [edge](glossary:edge), exactly.
 In a market whose price path has structure (a trend that flips, a range), an OBV rule can only pick up what the price
 path already shows, because OBV is built from it; a price rule gets the same information directly.
 
@@ -184,7 +184,7 @@ markup (when the close is still below its level of 20 bars before), none in dist
  ]}
 ```
 
-With seed 1 on `accumulation` (25-bar look-ahead): both rules together +3.34 % (+1.37 % to +5.31 %, n = 12, hit rate
+With seed 1 on `accumulation` (25-bar look-ahead): both rules together +3.34 % (+1.37 % to +5.31 %, n = 12, [hit rate](glossary:hit-rate)
 0.83 vs 0.44 for any bar); the close rule alone −1.60 % (−4.63 % to +1.42 %, n = 27). For seeds 1–5 the divergence
 gives +2.58 % to +4.64 %, the interval above zero for four of them: a markup follows. The same pair on the other
 scenarios, seed 1:
@@ -213,7 +213,7 @@ seeds 4 and 5: a weaker result on this sample size.
 Do real markets have a $k_t$? The model assumes informed buyers who trade more on up bars before a rise; whether a
 given stock has such a phase is exactly what the chart cannot tell you in advance. The labs on a real symbol give one
 sample each; judge the interval, not the point estimate. One rule on one sample: not a backtest (no costs, no
-position sizing), sensitive to multiple testing (every window, horizon and scenario you try is another test), and not
+position sizing), sensitive to [multiple testing](glossary:multiple-testing) (every window, horizon and scenario you try is another test), and not
 investment advice.
 
 ## Combine with
@@ -258,8 +258,8 @@ advice.
 - Never compare OBV with a fixed number or with another symbol's OBV; compare it with its own past.
 - A bar's whole volume counts with the sign of a close-to-close change, however small: a +0.01 % bar adds as much as
   a +5 % bar of the same volume, and an unchanged close adds nothing.
-- On hourly bars the first and last bar of a session carry most of the volume (43 % in the synthetic U shape; 42 % on
-  SPY's hourly bars, January 2024 to November 2026), so OBV moves mostly at the open, where the overnight gap decides
+- On hourly bars the first and last bar of a [session](glossary:session) carry most of the volume (43 % in the synthetic U shape; 42 % on
+  SPY's hourly bars, January 2024 to November 2026), so OBV moves mostly at the open, where the [overnight gap](glossary:gap) decides
   the sign, and at the close.
 - In most markets OBV mostly retells the price (correlation 0.86 with the 20-bar return on a random walk). A
   "confirmation" by OBV is rarely independent evidence.

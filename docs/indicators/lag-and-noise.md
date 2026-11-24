@@ -2,13 +2,13 @@
 
 Every moving average answers the same question, "where is the price, without the noise?", and every one of them
 answers it late. Making it less late makes it noisier. This page makes both words exact, **lag** as the centre of mass
-of the weights and **noise** as the noise reduction factor, proves the trade-off for ordinary averages, and shows how
+of the weights and **noise** as the [noise reduction factor](glossary:noise-reduction-factor), proves the trade-off for ordinary averages, and shows how
 DEMA, TEMA, HMA, ZLEMA and LSMA escape it with negative weights and what they pay for that. Every number is measured
-from the app's implementation (the Filter view); the individual pages derive each kernel in detail.
+from the app's implementation (the Filter view); the individual pages derive each [kernel](glossary:kernel) in detail.
 
 ## Lag: the centre of mass
 A linear average is a weighted sum of past prices, $y_t = \sum_{k \ge 0} h_k\,x_{t-k}$, with weights $h_k$ (the
-**kernel**, or impulse response) that sum to 1. Feed it a straight trend $x_t = a + bt$:
+**kernel**, or [impulse response](glossary:impulse-response)) that sum to 1. Feed it a straight trend $x_t = a + bt$:
 
 $$
 y_t = \sum_k h_k\,\bigl(a + b(t-k)\bigr) = a + b\,(t - \bar k),
@@ -25,7 +25,7 @@ $$
 | $\bar k$ | **lag**: the kernel's centre of mass | bars |
 
 On any straight trend the average is the trend itself, $\bar k$ bars late, and it sits $b\,\bar k$ below the price in
-an uptrend. That is the lag the Filter view reports, and it equals the group delay at zero frequency. For the
+an uptrend. That is the lag the Filter view reports, and it equals the [group delay](glossary:group-delay) at zero frequency. For the
 $n$-bar [SMA](learn:sma) $\bar k = \frac{n-1}{2}$, for the [EMA](learn:ema) $\bar k = \frac{1-\alpha}{\alpha}$, for the
 [WMA](learn:wma) $\frac{n-1}{3}$.
 
@@ -138,7 +138,7 @@ $3 - 6 + 3 = 0$ times $\bar k_E$; [HMA](learn:hma) feeds $2\,\mathrm{WMA}_{n/2} 
 so its lag is $0$ at $n = 9$ and $0.67$ at $n = 20$ (where the integer half-lengths do not cancel exactly);
 [ZLEMA](learn:zlema) feeds the EMA with $2x_t - x_{t-d}$, whose lag $-d$ cancels the EMA's $\frac{n-1}{2}$ (exactly
 for odd $n$, to within half a bar for even $n$); [LSMA](learn:lsma) fits a straight line to the window and reads its
-end, which has lag 0 by construction. Nesting also lengthens the warm-up: DEMA 9 has its first value at bar 16, TEMA 9
+end, which has lag 0 by construction. Nesting also lengthens the [warm-up](glossary:warm-up): DEMA 9 has its first value at bar 16, TEMA 9
 at bar 24 (see [Warm-up](learn:warm-up)).
 
 **The price, part 1: noise.** For an $n$-bar window, the zero-lag kernel with the lowest noise solves the same
@@ -158,7 +158,7 @@ $$
 Removing the lag of an $n$-bar window costs at least about four times the noise variance (twice the standard
 deviation) of the plain $n$-bar average.
 
-**The price, part 2: overshoot.** Split the weights into their positive and negative parts. The step response, the
+**The price, part 2: overshoot.** Split the weights into their positive and negative parts. The [step response](glossary:step-response), the
 running sum of the weights, can never exceed the sum of the positive ones, and the gain at any frequency can never
 exceed the sum of the absolute values:
 
@@ -174,7 +174,7 @@ $$
 |---|---|---|
 | $s_k$ | step response: the output $k$ bars after the price jumps from 0 to 1 | settles at 1 |
 | $N$ | total negative weight | 0 for ordinary averages, 0.1–0.3 for the zero-lag ones |
-| $H(e^{j\omega})$ | frequency response: gain and phase for a cycle of period $2\pi/\omega$ | — |
+| $H(e^{j\omega})$ | [frequency response](glossary:frequency-response): gain and phase for a cycle of period $2\pi/\omega$ | — |
 | $\omega$ | angular frequency | rad per bar, $0$ to $\pi$ |
 
 With $N = 0$ an ordinary average never overshoots a step and never amplifies a cycle. With $N > 0$ it can do both,
@@ -219,9 +219,9 @@ Same length, very different filters: lag 4 against 0, NRF 0.111 against 0.442, a
 bump near 13.5 bars.
 
 ## Lag and noise on a chart
-Noise shows up on a chart as **whipsaws**: the price crossing the line back and forth. A line that hugs the price
+Noise shows up on a chart as **[whipsaws](glossary:whipsaw)**: the price crossing the line back and forth. A line that hugs the price
 (little lag) leaves a small, rapidly changing gap between the two, so the sign of the gap flips often. Count the
-crosses on the same random walk, one rule at a time:
+crosses on the same [random walk](glossary:random-walk), one rule at a time:
 
 ```lab
 {"kind": "combo", "scenario": "random_walk", "horizon": 1, "on": [0],
@@ -236,8 +236,8 @@ crosses on the same random walk, one rule at a time:
 ```
 
 With seed 1 (1000 bars) the close crosses above the SMA 20 60 times, the DEMA 20 90 times and the HMA 20 114 times
-(with a 1-bar horizon no cross is skipped). For seeds 1–5 the counts are 58–76, 85–105 and 104–114: the lower the
-lag, the more crosses, on every sample. None of the three has an edge on a random walk (no interval excludes zero
+(with a 1-bar [horizon](glossary:horizon) no cross is skipped). For seeds 1–5 the counts are 58–76, 85–105 and 104–114: the lower the
+lag, the more crosses, on every sample. None of the three has an [edge](glossary:edge) on a random walk (no interval excludes zero
 with seed 1): more crosses are not more information, only more trades.
 
 The overshoot is easiest to see at a reversal. Move the HMA's length and watch the line run past the top before it
@@ -263,7 +263,7 @@ turns:
 
 ## Exercise
 1. In the combo lab, switch the scenario to `uptrend`. Do the cross counts keep their order? Then raise the horizon
-   to 10: why do the counts drop (see the event-study note in [Combining indicators](learn:combinations))?
+   to 10: why do the counts drop (see the [event-study](glossary:event-study) note in [Combining indicators](learn:combinations))?
 2. In the HMA lab, find the length at which the overshoot after the top of `reversal` looks largest compared with the
    noise. Then open the HMA's filter lab above with that length in mind: which period does its gain bump sit at,
    relative to the length?

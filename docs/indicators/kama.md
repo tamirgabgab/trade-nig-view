@@ -2,7 +2,7 @@
 
 An exponential average whose gain is set bar by bar by Kaufman's efficiency ratio: fast when price moves in a
 straight line, very slow when it chops. Use it as a trend line that flattens in sideways markets instead of
-whipsawing.
+[whipsawing](glossary:whipsaw).
 
 ## What it measures
 Whether price is trending efficiently. It answers "how much of the recent movement was net progress, and where is the
@@ -10,7 +10,7 @@ trend if I only follow the progress?". A rising or falling KAMA follows a clean 
 recent path was mostly noise.
 
 Move the efficiency length on the `range` scenario: the line stays almost flat through the chop, because a short
-window of a mean-reverting path is rarely efficient.
+window of a [mean-reverting](glossary:mean-reversion) path is rarely efficient.
 
 ```lab
 {"kind": "param", "indicator": "kama", "vary": "length", "min": 2, "max": 50, "scenario": "range"}
@@ -42,12 +42,12 @@ change (equality, up to rounding).
 
 ## Kernel, lag and noise
 
-**No impulse response.** $c_t$ is a function of the input, so superposition fails and there is no fixed kernel or
+**No [impulse response](glossary:impulse-response).** $c_t$ is a function of the input, so superposition fails and there is no fixed [kernel](glossary:kernel) or
 transfer function. Two exact properties survive: $c_t \in [s^2, f^2] \subset (0, 1]$, so $K_t$ always lies between
 $K_{t-1}$ and $x_t$ (no overshoot); and $ER$ is invariant under any affine map of the prices, so
 $f(ax + b) = a\,f(x) + b$.
 
-**Local behaviour.** Freeze $c$ and the recursion is an EMA with $\alpha = c$: lag $(1-c)/c$, NRF $c/(2-c)$,
+**Local behaviour.** Freeze $c$ and the recursion is an EMA with $\alpha = c$: [lag](glossary:lag) $(1-c)/c$, NRF $c/(2-c)$,
 equivalent EMA length $m = 2/c - 1$. The squared mapping matters: $c$ is quadratic in $ER$, so a moderately noisy
 trend already slows the filter a lot. At the defaults ($f = 2/3$, $s = 2/31$):
 
@@ -63,7 +63,7 @@ trend already slows the filter a lot. At the defaults ($f = 2/3$, $s = 2/31$):
   window does this). Then $c = f^2$ and the lag behind the line is $(1 - f^2)/f^2 = \left(\frac{F+1}{2}\right)^2 - 1$,
   which is 1.25 bars for $F = 2$. Note the square: even at full efficiency KAMA is an EMA of length 3.5, not 2.
 - **Chop**: $ER \to 0$, $c \to s^2$, an EMA of length $2/s^2 - 1 = 479.5$ for $S = 30$, not 30.
-- **Rough guide**: for a random walk, the ratio of expectations gives $ER \approx 1/\sqrt n \approx 0.32$ at $n = 10$
+- **Rough guide**: for a [random walk](glossary:random-walk), the ratio of expectations gives $ER \approx 1/\sqrt n \approx 0.32$ at $n = 10$
   ($c \approx 0.065$, EMA length about 30); for white noise around a constant, $ER \approx 1/n = 0.1$ (EMA length
   about 128). These are heuristics, not exact expectations of the ratio.
 
@@ -84,7 +84,7 @@ $\max(25n,\ \lfloor 25/s^2 \rfloor + n)$ bars of extra history: 6,016 at the def
 
 ## Filter view
 Only the **step** and **ramp** responses are shown, with the reason: the smoothing depends on the input
-(superposition fails), so there is no single impulse or frequency response.
+(superposition fails), so there is no single impulse or [frequency response](glossary:frequency-response).
 
 Both test inputs are perfectly efficient. A step has change = noise while the jump is in the window, and a flat
 window afterwards (ER = 1 rule); a ramp is monotone. So both plots show KAMA's **fastest** regime only:
@@ -126,13 +126,13 @@ $$
 | $h$ | horizon | bars; at $h = 10$ the factor is 0.57 |
 
 In chop $ER$ stays low, $c$ is near $s^2$ and KAMA is a slow line close to $\mu$; then "close above KAMA" means
-$d_t > 0$, and the formula predicts a *negative* edge: a trend rule loses money in a range. A fast line (EMA 10, lag
+$d_t > 0$, and the formula predicts a *negative* [edge](glossary:edge): a trend rule loses money in a range. A fast line (EMA 10, lag
 4.5 bars) sits close to price whatever the level, so its side says little about $d_t$. In a trend the same KAMA turns
 into a short EMA, and "close above" becomes a weak trend test (trend-detection ratio $\rho = 1.87$ at $ER = 1$, LSMA
 page). On a random walk neither reading has an edge: there is no mean to return to, and the increments after bar $t$
 are independent of the past.
 
-The lab, seed 1, 1000 bars, horizon 10, `range`: close above KAMA −0.61 % (95 % interval −1.49 % to +0.26 %,
+The lab, seed 1, 1000 bars, [horizon](glossary:horizon) 10, `range`: close above KAMA −0.61 % ([95 % interval](glossary:confidence-interval) −1.49 % to +0.26 %,
 n = 71), close above EMA 10 −0.31 % (−1.19 % to +0.57 %, n = 74), close above SMA 200 −1.30 % (−2.35 % to −0.25 %,
 n = 51). Over seeds 1 to 5 the KAMA rule is negative every time (−0.47 % to −1.05 %, interval below 0 in two seeds),
 the EMA 10 rule is always smaller in size (−0.31 % to −0.41 %) and never outside the noise, and the SMA 200 rule is below 0
@@ -152,8 +152,8 @@ to +1.96 %, n = 62 with seed 1). One rule on one sample: not a backtest and not 
 ```
 
 ## Combine with
-- **SMA 200 as the trend filter**: it decides whether there is a long trend to follow at all ($\rho = 12.2$).
-- **Close above KAMA as the trigger**: fast in an efficient move, so it joins the trend early.
+- **SMA 200 as the [trend filter](glossary:trend-filter)**: it decides whether there is a long trend to follow at all ($\rho = 12.2$).
+- **Close above KAMA as the [trigger](glossary:trigger)**: fast in an efficient move, so it joins the trend early.
 - **RSI 14 above 50 as a confirmation**: recent gains outweigh losses; on a trending random walk it repeats the
   trigger's information.
 

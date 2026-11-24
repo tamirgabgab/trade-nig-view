@@ -1,8 +1,8 @@
 # Relative Strength Index (`rsi`)
 
-Wilder's momentum oscillator: the share of recent average gains in average gains plus losses, from 0 to 100. Optional
+Wilder's [momentum](glossary:momentum) [oscillator](glossary:oscillator): the share of recent average gains in average gains plus losses, from 0 to 100. Optional
 smoothing average and Bollinger Bands on the RSI. People use it to judge whether the recent movement was mostly up or
-mostly down, as a trend filter (above or below 50) and as a pullback or "oversold" trigger (below 30 or 40).
+mostly down, as a trend filter (above or below 50) and as a pullback or "[oversold](glossary:oversold)" trigger (below 30 or 40).
 
 ## What it measures
 The question it answers: "of all the recent price movement, what share went up?" It smooths the up moves and the down
@@ -10,7 +10,7 @@ moves separately with Wilder's average and reports the up share in percent. 50 m
 balance; 70 means 70 % of the smoothed movement was up. It ignores the price level and the size of the moves; only
 their direction and relative size count, so an RSI of 70 on a quiet stock and on a wild one mean the same thing.
 
-Move the length on a random walk: a short RSI swings across the whole 0–100 range, a long one stays near 50. Why
+Move the length on a [random walk](glossary:random-walk): a short RSI swings across the whole 0–100 range, a long one stays near 50. Why
 Wilder's 70 and 30 suit exactly the length 14 is worked out in Why it works.
 
 ```lab
@@ -80,7 +80,7 @@ $$
 
 ## Kernel, lag and noise
 The RSI is not a linear filter, but it is one linear filter divided by another. Since $U_t - D_t = \Delta x_t$ and
-$U_t + D_t = \lvert\Delta x_t\rvert$, and the RMA (seed included) is linear,
+$U_t + D_t = \lvert\Delta x_t\rvert$, and the [RMA](glossary:rma) (seed included) is linear,
 $\textcolor{#2962FF}{\bar U} - \textcolor{#F23645}{\bar D} = \mathrm{RMA}_n(\Delta x)$ and
 $\textcolor{#2962FF}{\bar U} + \textcolor{#F23645}{\bar D} = \mathrm{RMA}_n(\lvert\Delta x\rvert)$. Hence, exactly:
 
@@ -96,7 +96,7 @@ $$
 
 So $\mathrm{RSI} - 50$ is a smoothed slope divided by a smoothed volatility, scaled to $\pm 50$: an "efficiency" of
 the recent move (net movement per unit of total movement). Measured: the identity holds to $3\times10^{-14}$ on every
-bar of a $10^6$-bar random walk. Both averages are the RMA $n$ filter: lag $n - 1$ bars (13 at the default) and noise
+bar of a $10^6$-bar random walk. Both averages are the RMA $n$ filter: [lag](glossary:lag) $n - 1$ bars (13 at the default) and noise
 reduction $\frac{1}{2n-1}$, the same filter as an EMA of length $2n - 1$ (see the SMMA page). The denominator moves
 slowly, so in practice the RSI behaves like that low-pass filter applied to the price changes and normalised by
 volatility: on a random walk, RSI 14 and $50 + 50\sqrt{\pi/2}\,\mathrm{RMA}_{14}(\Delta x)/\sigma$ correlate at
@@ -152,7 +152,7 @@ of length $n$, i.e. `smma` with the same length. This is the filter inside RSI 1
 - **Lag and noise:** lag 13.00 bars, NRF 0.03704 ($= 1/27$), as for EMA 27 or SMA 27.
 - **Magnitude:** monotone, no nulls: −0.72 dB at 200 bars, −2.34 dB at 100, −5.85 dB at 50, −12.75 dB at 20,
   −18.46 dB at 10, −28.63 dB at 2; the half-power (−3 dB) period is 84.7 bars.
-- **Group delay:** 10.9 bars at 200 (tending to 13), zero at 16.5 bars, −0.481 at 2.
+- **[Group delay](glossary:group-delay):** 10.9 bars at 200 (tending to 13), zero at 16.5 bars, −0.481 at 2.
 
 Applied to price changes, this low-pass is the same as a first-order high-pass on the price itself
 ($\frac{\alpha(1 - z^{-1})}{1 - p z^{-1}}$, zero gain at DC): a constant price level is invisible to the RSI, only the
@@ -163,14 +163,14 @@ changes count.
   $\mathrm{RSI}_{n} > 50 \iff \mathrm{RMA}_n(\Delta x) > 0 \iff$ the SMMA $n$ of the close is rising $\iff$ the
   close is above the SMMA $n$ (SMMA page). The 50 line is a Wilder trend filter with lag $n - 1$, not extra
   information.
-- **70 / 30 (overbought / oversold):** the recent move was unusually one-sided: at 70, 70 % of the smoothed movement
+- **70 / 30 ([overbought](glossary:overbought) / oversold):** the recent move was unusually one-sided: at 70, 70 % of the smoothed movement
   was up. For length 14 these levels are about the 5 % tails of a random walk (Why it works); for other lengths the
   same rarity sits at other levels.
 - **Trend vs range:** in a trend the RSI lives on one side of 50 and can stay above 70 (or below 30) for weeks; in a
   range it oscillates around 50 and, because the moves cancel, rarely reaches the outer levels at all.
 - **Slope and turns:** the RSI moves in the direction of the bar's close (one bar at a time, above), so its peaks
   and troughs sit on the close's own turning bars. What the RSI adds is the height of a peak: how one-sided the
-  move into it was. Failure swings and divergences compare those heights (Why it works).
+  move into it was. Failure swings and [divergences](glossary:divergence) compare those heights (Why it works).
 - **Length:** a shorter RSI is jumpier and reaches the levels more often; a longer one is smoother, later and nearer
   50. Levels must move with the length.
 - **Smoothing and bands:** the RSI crossing its MA is a change of sign of $\mathrm{RSI} - M$, a momentum of the
@@ -227,7 +227,7 @@ $50 \pm 1.645\,s_n \approx 50 \pm 103/\sqrt{2n-1}$: about 73 / 27 at length 10, 
 fixed 70 / 30, RSI 2 is "overbought" a third of the time and RSI 50 almost never, which is why short-RSI systems use
 levels such as 90 / 10.
 
-**Drift and mean reversion move the distribution.** A drift shifts the centre by $50\sqrt{\pi/2}\,\mu/\sigma$: +1.25
+**Drift and [mean reversion](glossary:mean-reversion) move the distribution.** A drift shifts the centre by $50\sqrt{\pi/2}\,\mu/\sigma$: +1.25
 points for `random_walk` ($\mu = 0.0003$, $\sigma = 0.015$; measured 51.2 on 200 000 bars) and +7.8 for `uptrend`
 ($\mu = 0.0015$, $\sigma = 0.012$), where RSI 14 is above 70 on 6 %–22 % of the bars (seeds 1–5). On `range` (an
 Ornstein–Uhlenbeck process, AR coefficient 0.92) the changes are negatively autocorrelated, so the numerator's
@@ -236,7 +236,7 @@ smoothed sum partly cancels: its variance at $n = 14$ is 0.51 of the random-walk
 9.5 %–14.2 % (seeds 1–5). The paradox: the market where oversold signals should work is the one where the classic
 level is almost never reached.
 
-**When an oversold signal can have an edge.** On a random walk the future changes are independent of everything
+**When an oversold signal can have an [edge](glossary:edge).** On a random walk the future changes are independent of everything
 known at $t$, RSI included, so $\mathbb{E}[x_{t+h} - x_t \mid \mathrm{RSI}_t] = h\mu$, the same as after any bar: the
 edge is zero at every level and length. On `range` the expected move is towards the centre,
 $\mathbb{E}[x_{t+h} - x_t \mid x_t] = -\bigl(1 - 0.92^h\bigr)(x_t - \ln 100)$ (57 % of the gap closes within 10 bars),
@@ -289,7 +289,7 @@ at the earlier high, so about 30 "bearish divergences" per 1000 bars with, by in
 labs compare values on the same bar, so they cannot test these patterns; this page makes no claim that they predict.
 Study them in Replay (Exercise) and count the misses as well as the hits.
 
-One rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing (every level
+One rule on one sample: not a backtest (no costs, no position sizing), sensitive to [multiple testing](glossary:multiple-testing) (every level
 and scenario you try is another test), and not investment advice.
 
 ## Combine with

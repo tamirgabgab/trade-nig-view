@@ -1,13 +1,13 @@
 # Envelope (`envelope`)
 
 A moving average (the basis) with two bands a fixed percentage above and below it. Use it to mark how far price has
-stretched from its trend in relative terms; the bands do not adapt to volatility.
+stretched from its trend in relative terms; the bands do not adapt to [volatility](glossary:volatility).
 
 ## What it measures
 How far price is from its trend in percent. A close outside a band is a move larger than $p$ % from the average: "is
 price unusually far from where it has been lately?", with "unusually" fixed in advance as $p$ %.
 
-Move the percent on a mean-reverting series: at 10 % (the default) the bands are far outside every swing, near 2–3 %
+Move the percent on a [mean-reverting](glossary:mean-reversion) series: at 10 % (the default) the bands are far outside every swing, near 2–3 %
 price touches them at the extremes of each swing.
 
 ```lab
@@ -30,12 +30,12 @@ $$
 
 ## Kernel, lag and noise
 
-Each band is the basis scaled by a constant, so for a linear basis with kernel $h_k$ the bands are linear filters
+Each band is the basis scaled by a constant, so for a linear basis with [kernel](glossary:kernel) $h_k$ the bands are linear filters
 with kernels $(1 \pm p/100)\,h_k$:
 
 - **DC gain** $1 \pm p/100$ (1.1 and 0.9 at the default): on a flat price the upper band sits 10 % above it.
-- **Lag**: scaling a kernel does not move its centre of mass, so all three lines have the basis's lag
-  $\bar k = \sum_k k\,h_k / \sum_k h_k$ (9.5 bars for SMA 20) and the same group delay at every period.
+- **[Lag](glossary:lag)**: scaling a kernel does not move its centre of mass, so all three lines have the basis's lag
+  $\bar k = \sum_k k\,h_k / \sum_k h_k$ (9.5 bars for SMA 20) and the same [group delay](glossary:group-delay) at every period.
 - **NRF**: $(1 \pm p/100)^2 \sum_k h_k^2$ (0.0605, 0.05, 0.0405 for SMA 20). The band-to-basis distance
   $(p/100)\,B_t$ inherits the basis's noise, scaled by $p/100$.
 - **Magnitude**: $\lvert H_U\rvert$ is $\lvert H_B\rvert$ shifted by $20\log_{10}(1.1) = +0.83$ dB, and
@@ -98,8 +98,8 @@ group delay. At the defaults:
   sets the basis's lag and therefore how much of a trend shows as distance.
 
 ## Why it works
-How often should price leave the bands at all? On a random walk with volatility $\sigma$ per bar, the distance from
-an SMA basis is a weighted sum of recent returns (identity on the Moving Average page) with standard deviation
+How often should price leave the bands at all? On a [random walk](glossary:random-walk) with volatility $\sigma$ per bar, the distance from
+an SMA basis is a weighted sum of recent returns (identity on the Moving Average page) with [standard deviation](glossary:standard-deviation)
 
 $$
 \operatorname{sd}\!\left(\ln \frac{x_t}{\textcolor{#FF6D00}{B_t}}\right) \approx \sigma \sqrt{\frac{(n-1)(2n-1)}{6n}} = 2.49\,\sigma \quad (n = 20)
@@ -112,12 +112,12 @@ $$
 | $\ln(x_t / B_t)$ | the relative distance from the basis | about $\pm 4$ % |
 
 At $\sigma = 1.5$ % that is 3.7 %: the default 10 % band is 2.7 standard deviations away (a close below it on fewer
-than 1 % of bars), a 3 % band only 0.8. That is why the labs below use 3 %; at 10 % the range scenario gives no lower
+than 1 % of bars), a 3 % band only 0.8. That is why the labs below use 3 %; at 10 % the range [scenario](glossary:scenario) gives no lower
 band cross at all on seeds 1–5 (n = 0).
 
 What happens after a band cross depends on the market.
 
-**Random walk.** The future returns are independent of the distance, so there is no edge.
+**Random walk.** The future returns are independent of the distance, so there is no [edge](glossary:edge).
 
 **Range** (mean reversion around a level $m$). With $d_t = x_t - m$:
 
@@ -135,7 +135,7 @@ $$
 A close below the lower band (a large negative deviation) therefore predicts a rise of about half the deviation:
 **fade the band**.
 
-**Reversal** (persistent drift $\pm 0.25$ % per bar). A close above the upper band happens when the drift is up, and
+**Reversal** (persistent [drift](glossary:drift) $\pm 0.25$ % per bar). A close above the upper band happens when the drift is up, and
 the drift persists: **follow the band**.
 
 ```lab
@@ -148,7 +148,7 @@ the drift persists: **follow the band**.
  ]}
 ```
 
-With seed 1 (1000 bars, 10-bar horizon, SMA 20 basis, 3 %):
+With seed 1 (1000 bars, 10-bar [horizon](glossary:horizon), SMA 20 basis, 3 %):
 
 | Scenario | Crosses below the lower band | Crosses above the upper band |
 |---|---|---|
@@ -158,7 +158,7 @@ With seed 1 (1000 bars, 10-bar horizon, SMA 20 basis, 3 %):
 
 The same band gives opposite edges in the range and the reversal. On the range the upper-band rule is negative on all
 of seeds 1–5 ($-1.21$ to $-2.26$ %) and the lower-band rule positive on all of them ($+0.88$ to $+2.13$ %). One rule on
-one synthetic sample: not a backtest (no costs), sensitive to how many rules you try, and not investment advice.
+one synthetic sample: not a [backtest](glossary:backtest) (no costs), sensitive to how many rules you try, and not investment advice.
 
 ## Combine with
 - **Bollinger Bands** measure the same distance from an SMA 20, in standard deviations instead of percent. With a

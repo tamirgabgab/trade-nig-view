@@ -1,7 +1,7 @@
 # Stochastic (`stoch`)
 
-George Lane's oscillator: where the close sits inside the high-low range of the last $n$ bars, from 0 (at the low)
-to 100 (at the high). People use it to spot stretched moves in a range ("oversold" below 20, "overbought" above 80)
+George Lane's [oscillator](glossary:oscillator): where the close sits inside the high-low range of the last $n$ bars, from 0 (at the low)
+to 100 (at the high). People use it to spot stretched moves in a range ("[oversold](glossary:oversold)" below 20, "[overbought](glossary:overbought)" above 80)
 and, with its signal line %D, to time turns.
 
 ## What it measures
@@ -11,7 +11,7 @@ nothing about how big the range is, only where the close lies in it. %D is a sho
 signal line.
 
 Move the %K length on `range` (a market that swings around 100): a short window makes %K jump between the extremes
-on every wiggle, a long one only reaches 0 or 100 at the real swing lows and highs.
+on every wiggle, a long one only reaches 0 or 100 at the real [swing lows](glossary:pivot-point) and highs.
 
 ```lab
 {"kind": "param", "indicator": "stoch", "vary": "k_length", "min": 3, "max": 100, "scenario": "range"}
@@ -68,7 +68,7 @@ the slow %K is exactly the fast %D, bar for bar.
 
 ## Kernel, lag and noise
 Not a linear filter: a ratio of order statistics (a running max and min), so there is no impulse or frequency
-response. The two SMAs smooth it with lags $(s_k - 1)/2$ and $(s_d - 1)/2$ bars: 0 and 1 at the defaults, 1 and 1
+response. The two SMAs smooth it with [lags](glossary:lag) $(s_k - 1)/2$ and $(s_d - 1)/2$ bars: 0 and 1 at the defaults, 1 and 1
 for the slow version. An SMA of length 3 divides the variance of white noise by 3.
 
 ## Defaults
@@ -86,7 +86,7 @@ bars (index $n - 1$), and each SMA of length $m$ adds $m - 1$. The slow version 
 
 ## Filter view
 Not offered: the Stochastic is non-linear (superposition fails for a running max and min), so it has no single
-impulse or frequency response.
+impulse or [frequency response](glossary:frequency-response).
 
 ## How to read it
 - **Levels:** above 80 the close is in the top fifth of the $n$-bar range, below 20 in the bottom fifth; 50 is the
@@ -123,11 +123,11 @@ $$
 
 At $n = 14$: as soon as the 13-bar rise exceeds three wicks, %K never leaves the 80–100 band. "Overbought" is the
 normal state of a strong uptrend, not a sell signal (and "oversold" of a strong downtrend). The synthetic `uptrend`
-is much noisier than that (drift 0.15 % per bar against 1.2 % noise per bar), so it only shifts %K up: its mean %K
+is much noisier than that ([drift](glossary:drift) 0.15 % per bar against 1.2 % noise per bar), so it only shifts %K up: its mean %K
 is 55.9–63.1 over seeds 1–5, against 45.0–53.7 on `random_walk`.
 
 ## Why it works
-**On a random walk %K carries no information about the future.** %K at bar $t$ is a function of bars $\le t$
+**On a [random walk](glossary:random-walk) %K carries no information about the future.** %K at bar $t$ is a function of bars $\le t$
 only. On a random walk the next increments are independent of everything up to $t$, so
 
 $$
@@ -140,7 +140,7 @@ $$
 | $h$ | look-ahead | bars, 1–60 |
 | $\mu$ | drift per bar | log return per bar |
 
-and the edge (the mean after the signal minus the mean after any bar) is 0, at any level and any length.
+and the [edge](glossary:edge) (the mean after the signal minus the mean after any bar) is 0, at any level and any length.
 
 **Its distribution on a random walk is U-shaped, not uniform.** With zero drift, reflecting the path
 ($x \to -x$, which swaps highs and lows) maps %K to $100 - \%K$, so the distribution is symmetric around 50. It is
@@ -152,7 +152,7 @@ the ten 10-point bins hold 11.3, 10.5, 9.2, 8.8, 8.6, 8.7, 9.2, 10.0, 11.4 and 1
 20 and 23.6 % above 80 (the small upward drift tilts it). "Oversold" happens on about one bar in five of a pure
 random walk, so on its own it is not a rare event.
 
-**In a mean-reverting market low %K points to a rise.** `range` is an AR(1) around $\ln 100$ with coefficient
+**In a [mean-reverting](glossary:mean-reversion) market low %K points to a rise.** `range` is an AR(1) around $\ln 100$ with coefficient
 $\phi = 0.92$ per bar, for which
 
 $$
@@ -180,11 +180,11 @@ $1/(1-\phi) = 12.5$ bars, so a 14-bar window often lies entirely above or below 
 {"kind": "event", "indicator": "stoch", "params": {"k_length": 50}, "output": "k", "op": "lt", "value": 20, "range": [5, 50], "horizon": 10, "scenario": "range"}
 ```
 
-Measured with seed 1 (1000 bars, 10-bar look-ahead, %K below 20):
+Measured with seed 1 (1000 bars, 10-bar [look-ahead](glossary:horizon), %K below 20):
 
 | Scenario | %K length 14 | %K length 50 |
 |---|---|---|
-| `range` | +0.96 % (95 % interval −0.13 % to +2.06 %, n = 42) | +1.32 % (+0.16 % to +2.48 %, n = 26) |
+| `range` | +0.96 % ([95 % interval](glossary:confidence-interval) −0.13 % to +2.06 %, n = 42) | +1.32 % (+0.16 % to +2.48 %, n = 26) |
 | `random_walk` | −0.08 % (−1.38 % to +1.22 %, n = 47) | −0.21 % (−1.53 % to +1.11 %, n = 44) |
 | `uptrend` | −0.19 % (−1.62 % to +1.23 %, n = 34) | −0.96 % (−2.65 % to +0.74 %, n = 20) |
 | `reversal` | −1.06 % (−2.34 % to +0.21 %, n = 49) | −2.57 % (−3.81 % to −1.32 %, n = 38) |

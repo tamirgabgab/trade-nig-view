@@ -1,8 +1,8 @@
 # Symmetrically Weighted Moving Average (`swma`)
 
-A fixed four-tap FIR filter with weights $\frac16, \frac26, \frac26, \frac16$ (Pine `ta.swma`). It has no length
+A fixed four-tap [FIR filter](glossary:fir-filter) with weights $\frac16, \frac26, \frac26, \frac16$ (Pine `ta.swma`). It has no length
 input. Its purpose is not heavy smoothing but removing the two fastest possible oscillations, the 2-bar and 3-bar
-zig-zags, with only 1.5 bars of lag. Pine uses it inside other indicators, for example the Relative Vigor Index.
+zig-zags, with only 1.5 bars of [lag](glossary:lag). Pine uses it inside other indicators, for example the Relative Vigor Index.
 
 ## What it measures
 A de-zig-zagged copy of price, 1.5 bars late: "what is price doing once the bar-to-bar alternation is removed?"
@@ -32,10 +32,10 @@ $$
 | $z^{-1}$ | one-bar delay | |
 
 The factorisation shows that the SWMA is a cascade of an SMA(2) and an SMA(3): $S = \mathrm{SMA}_2(\mathrm{SMA}_3(x))$.
-The kernel is trapezoidal (the convolution of a 2-box and a 3-box), symmetric about $k = 1.5$.
+The [kernel](glossary:kernel) is trapezoidal (the convolution of a 2-box and a 3-box), symmetric about $k = 1.5$.
 
 ## Kernel, lag and noise
-Impulse response $h = \left(\frac16, \frac13, \frac13, \frac16\right)$ for $k = 0..3$, DC gain 1.
+[Impulse response](glossary:impulse-response) $h = \left(\frac16, \frac13, \frac13, \frac16\right)$ for $k = 0..3$, DC gain 1.
 
 **Lag.** $\bar k = \frac{0\cdot1 + 1\cdot2 + 2\cdot2 + 3\cdot1}{6} = \frac96 = 1.5$ bars. Equivalently, centres of
 mass add under convolution: $\frac{2-1}{2} + \frac{3-1}{2} = 0.5 + 1 = 1.5$.
@@ -44,7 +44,7 @@ mass add under convolution: $\frac{2-1}{2} + \frac{3-1}{2} = 0.5 + 1 = 1.5$.
 the same lag but $\mathrm{NRF} = \frac14$: as a white-noise smoother the SWMA is slightly worse. What it buys is in the
 frequency domain.
 
-**Frequency response.** Factor out the centre and use $\cos 3\theta = 4\cos^3\theta - 3\cos\theta$ with
+**[Frequency response](glossary:frequency-response).** Factor out the centre and use $\cos 3\theta = 4\cos^3\theta - 3\cos\theta$ with
 $\theta = \omega/2$, $c = \cos(\omega/2)$:
 
 $$
@@ -89,7 +89,7 @@ First valid bar index: $3$ (the fixed 4-bar window), plus the offset.
   bars, −12.6 dB at 4, then the null at 3 (the nearest sample, at 3.05 bars, reads −39.7 dB) and the null at exactly
   2, which is a sample point and sits on the −120 dB floor. Both show as dips to the plot's lower edge. The small
   bump between 2 and 3 bars is the −23.9 dB sidelobe.
-- **Group delay:** flat at 1.500 bars, because the kernel is symmetric (linear phase). The sign change of the
+- **[Group delay](glossary:group-delay):** flat at 1.500 bars, because the kernel is symmetric (linear phase). The sign change of the
   amplitude between 2 and 3 bars adds a phase jump of $\pi$, not a change of slope. At $P = 2$ the gain is zero and
   the group delay is undefined, so the curve has a gap there.
 
@@ -97,7 +97,7 @@ First valid bar index: $3$ (the fixed 4-bar window), plus the offset.
 - **Price above or below the line.** The SWMA is only 1.5 bars behind, so the side of price mostly reflects the last
   bar or two. It is not a trend test.
 - **Slope.** The SWMA's one-bar change is the SWMA of the price increments (see "Why it works"): a smoothed 4-bar
-  momentum. Its sign flips less often than the sign of the raw one-bar change.
+  [momentum](glossary:momentum). Its sign flips less often than the sign of the raw one-bar change.
 - **Crossings.** Its main use: compare the SWMA, not the raw close, with another line. A 2-bar zig-zag around a
   slower average produces a crossing on every other bar for the close and none for the SWMA.
 - **Distance from price.** Small; a large gap means one or two bars moved far, which the SWMA spreads over four bars.
@@ -116,11 +116,11 @@ $$
 | $\textcolor{#8D6E63}{S_t} - \textcolor{#8D6E63}{S_{t-1}}$ | one-bar change of the SWMA | price per bar |
 | $r_t$ | one-bar price increment | price per bar |
 
-On a random walk with drift $b$ and increment noise $\sigma$ this has mean $b$ and standard deviation
+On a [random walk](glossary:random-walk) with drift $b$ and increment noise $\sigma$ this has mean $b$ and standard deviation
 $\sigma\sqrt{10}/6 = 0.53\,\sigma$, so "SWMA rising" is right about the trend's sign with probability
 $\Phi(1.90\,b/\sigma)$, and "close above SWMA" with $\Phi(1.52\,b/\sigma)$ (trend-detection ratio $\rho = 1.52$, see
 the LSMA page). Both are weak: an SMA 50 has $\rho = 6.09$. And on a random walk the increments after bar $t$ are
-independent of all of these, so no rule built on them has an edge.
+independent of all of these, so no rule built on them has an [edge](glossary:edge).
 
 **What it does buy is fewer crossings.** Let $d_t$ be the gap between a line and a slower average, e.g. SMA 20. On a
 random walk $d_t$ is a stationary Gaussian sequence (a fixed weighted sum of increments), and the chance of an upward
@@ -137,10 +137,10 @@ $$
 | $\rho_1$ | lag-1 autocorrelation of the gap | 0.923 for the close, 0.974 for the SWMA |
 
 Removing the 2- and 3-bar components raises $\rho_1$ from 0.923 to 0.974 and cuts the predicted up-crossings in
-980 bars from 61.6 to 35.6, about 40 % fewer. The lab, with seed 1 on `random_walk` and a 1-bar horizon (so that
+980 bars from 61.6 to 35.6, about 40 % fewer. The lab, with seed 1 on `random_walk` and a 1-bar [horizon](glossary:horizon) (so that
 nearly every crossing counts): close crosses above SMA 20 n = 60, SWMA crosses above SMA 20 n = 37; over seeds 1 to 5
-the counts are 58–76 and 30–43. The edges are noise (seed 1: +0.34 %, 95 % interval −0.02 % to +0.71 %, and −0.43 %,
-−0.95 % to +0.09 %). The SWMA does not predict; it removes whipsaws. One sample; not a backtest, not investment
+the counts are 58–76 and 30–43. The edges are noise (seed 1: +0.34 %, [95 % interval](glossary:confidence-interval) −0.02 % to +0.71 %, and −0.43 %,
+−0.95 % to +0.09 %). The SWMA does not predict; it removes [whipsaws](glossary:whipsaw). One sample; not a backtest, not investment
 advice.
 
 ```lab

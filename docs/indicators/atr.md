@@ -1,12 +1,12 @@
 # Average True Range (`atr`)
 
-Wilder's volatility measure: the average size of a bar, counting overnight gaps. People use it as a unit: for stop
+Wilder's volatility measure: the average size of a bar, counting [overnight gaps](glossary:gap). People use it as a unit: for stop
 distances ("two ATRs below the entry"), for position sizes that risk the same amount on a calm and a wild asset, and
 to see whether the market is getting quieter or wilder. It says nothing about direction.
 
 ## What it measures
 The question it answers: "how far does price typically travel in one bar, gaps included?" Each bar contributes its
-true range (its high–low range, stretched to include the previous close if the bar gapped away from it); the ATR is
+[true range](glossary:true-range) (its high–low range, stretched to include the previous close if the bar gapped away from it); the ATR is
 the smoothed average of the last few weeks of those ranges, in price units.
 
 Move the length on the volatility regime: the ATR steps up about fourfold when the second, wilder half begins. A short
@@ -47,7 +47,7 @@ and then trades quietly would count as a quiet bar. On the `shock` scenario (a �
 high–low range is 1.3 to 3.8 price units for seeds 1–5, its true range 12 to 26, i.e. 6.0 to 8.3 times the ATR
 before it.
 
-The ATR is the chosen average of the true range, Wilder's RMA by default:
+The ATR is the chosen average of the true range, Wilder's [RMA](glossary:rma) by default:
 
 $$
 \textcolor{#B71C1C}{\mathrm{ATR}_t} = \mathrm{MA}^{\text{type}}_n(TR)_t, \qquad
@@ -72,7 +72,7 @@ to see how long the gap keeps weighing on it:
 ```
 
 ## Kernel, lag and noise
-The average is a linear filter of the true range (RMA: lag $n - 1$, NRF $1/(2n-1)$), but the true range itself is a
+The average is a linear filter of the true range (RMA: [lag](glossary:lag) $n - 1$, NRF $1/(2n-1)$), but the true range itself is a
 nonlinear function of the bars, so the ATR as a whole is not a linear filter of the price. After a one-bar spike in
 the true range, the excess decays like $(1 - \frac1n)^k$: about a third of it is left 14 bars later and an eighth
 after 28.
@@ -89,7 +89,7 @@ First valid bar index: $n - 1$ (13) for RMA, SMA, EMA and WMA; the true range ex
 ## Filter view
 The drawer's Filter view tab is not offered (a volatility measure, not a moving average of the price). The filter
 that smooths the true range is the RMA, measured here on the real code (`smma`, length 14): lag 13 bars, NRF
-$1/27$; its step response is the ATR's response to a lasting change in bar size.
+$1/27$; its [step response](glossary:step-response) is the ATR's response to a lasting change in bar size.
 
 ```lab
 {"kind": "filter", "indicator": "smma", "params": {"length": 14}}
@@ -107,13 +107,13 @@ $1/27$; its step response is the ATR's response to a lasting change in bar size.
 - **Length:** a short ATR follows the current bars closely (good for intraday stops), a long one gives a stable unit
   for sizing. **Smoothing:** SMA forgets a spike exactly $n$ bars later, the RMA slowly; EMA and WMA react faster than
   the RMA of the same length.
-- **Intraday bars:** the first bar of a session carries the overnight gap. On the synthetic hourly data (gaps four
+- **Intraday bars:** the first bar of a [session](glossary:session) carries the overnight gap. On the synthetic hourly data (gaps four
   times wider at the open) the first bar's true range averages 2.02 $\sigma$ against 1.64 $\sigma$ for the others,
   and exceeds its high–low range on 27 % of sessions (13 % for the other bars).
 
 ## Why it works
 **A bound.** The close $C_t$ lies in $[L_t, H_t]$, so by the one-line form $TR_t \ge \lvert C_t - C_{t-1}\rvert$ on
-every bar. The RMA has only positive weights, hence exactly, on every bar after the warm-up:
+every bar. The RMA has only positive weights, hence exactly, on every bar after the [warm-up](glossary:warm-up):
 
 $$
 \textcolor{#B71C1C}{\mathrm{ATR}_t} \ \ge\ \mathrm{RMA}_n\bigl(\lvert \Delta C\rvert\bigr)_t
@@ -126,7 +126,7 @@ $$
 
 The ATR is the RSI's volatility scale plus everything that happens between the closes.
 
-**ATR on a random walk.** Let the log price move by independent normal returns with standard deviation $\sigma_r$ per
+**ATR on a [random walk](glossary:random-walk).** Let the log price move by independent normal returns with standard deviation $\sigma_r$ per
 bar. Then $\mathbb{E}\lvert\Delta C\rvert \approx \sigma_r C\sqrt{2/\pi}$, and the bar's high and low add the moves
 within the bar. Because the average is linear, the expected ATR is the expected true range:
 
@@ -169,7 +169,7 @@ $$
 | $h = 20$, measured / formula | 70.8 % / 71.4 % | 44.3 % / 46.3 % | 24.5 % / 27.1 % |
 
 The probability depends on $k$ and $h$ only, not on the asset or its price: a 2-ATR stop is hit with the same
-probability on a calm utility and on a wild growth stock, which a fixed 5 % stop is not. Even with no edge at all,
+probability on a calm utility and on a wild growth stock, which a fixed 5 % stop is not. Even with no [edge](glossary:edge) at all,
 a 2-ATR stop is hit within 10 bars almost a third of the time.
 
 **A volatility unit for size.** Risk $R$ (money) per trade with a stop $k$ ATRs away; buy $q$ shares:
@@ -206,7 +206,7 @@ the wild one, ratios 3.63–4.04). Averaged over 400 samples, measured bars afte
 For the RMA 14 the formula gives exactly 9 and 31. The default ATR needs about six weeks of daily bars to show a new
 regime in full: a stop set at 2 ATRs on the first wild days is far too tight.
 
-**Volatility is not direction.** An event study on the ATR measures the mean return after a high reading, and there is
+**Volatility is not direction.** An [event study](glossary:event-study) on the ATR measures the mean return after a high reading, and there is
 no reason for it to differ from any bar's. What changes is the spread of what follows:
 
 ```lab
@@ -214,7 +214,7 @@ no reason for it to differ from any bar's. What changes is the spread of what fo
  "horizon": 10, "scenario": "volatility_regime"}
 ```
 
-With seed 1, ATR 14 above 2: −1.24 % (95 % interval −6.03 % to +3.55 %, n = 23). For seeds 1–5 every counted signal
+With seed 1, ATR 14 above 2: −1.24 % ([95 % interval](glossary:confidence-interval) −6.03 % to +3.55 %, n = 23). For seeds 1–5 every counted signal
 falls in the wild half, every interval contains zero, and the standard deviation of the 10-bar returns after the
 signal is 7.1 %–11.7 % against 6.3 %–7.6 % after any bar: the histogram is wider, the mean is not shifted.
 
@@ -224,7 +224,7 @@ level as much as with volatility. On `random_walk` the volatility never changes,
 tuned on one symbol means something else on another, and on the same symbol after it doubles. Portable forms compare
 like with like: ATR / close, or the ATR with its own past ("ATR above its value 20 bars ago", Combine with).
 
-One rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing, and not
+One rule on one sample: not a backtest (no costs, no position sizing), sensitive to [multiple testing](glossary:multiple-testing), and not
 investment advice.
 
 ## Combine with

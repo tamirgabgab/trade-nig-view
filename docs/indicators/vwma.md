@@ -7,9 +7,9 @@ traded.
 
 ## What it measures
 The volume-weighted average price of the last $n$ bars (with `close` standing in for the trade price), a rolling
-cousin of the session VWAP. It answers "at what price did most of the recent trading happen?". Its distance from the
+cousin of the [session](glossary:session) VWAP. It answers "at what price did most of the recent trading happen?". Its distance from the
 SMA says whether buying and selling were heaviest near the window's highs (VWMA above SMA) or near its lows (below).
-Moves on heavy volume shift it more than quiet drifts do.
+Moves on heavy volume shift it more than quiet [drifts](glossary:drift) do.
 
 Move the length on the `volatility_regime` scenario, where volume grows with the size of the bar's move: after the
 switch to wild markets the big bars pull the line towards themselves.
@@ -36,7 +36,7 @@ $$
 `NaN` where the window's total volume is 0.
 
 ## Kernel, lag and noise
-**No fixed kernel.** Write the output as a weighted sum,
+**No fixed [kernel](glossary:kernel).** Write the output as a weighted sum,
 
 $$
 \textcolor{#43A047}{V_t} = \sum_{k=0}^{n-1} w_{t,k}\,x_{t-k},
@@ -52,11 +52,11 @@ $$
 
 For a fixed volume series this is linear in the price, but the weights depend on $t$: it is a linear
 **time-varying** filter. Shifting the prices by one bar while the volumes stay put does not simply shift the output, so
-there is no single impulse response $h_k$, no transfer function $H(z)$, and no magnitude or group-delay curve. Viewed
+there is no single [impulse response](glossary:impulse-response) $h_k$, no transfer function $H(z)$, and no magnitude or group-delay curve. Viewed
 as a function of price and volume together it is not even linear (a ratio of sums). Scaling every volume by the same
 constant changes nothing; only relative volume inside the window matters.
 
-**What replaces lag and NRF.** Each bar has its own kernel, hence its own instantaneous lag and noise factor:
+**What replaces [lag](glossary:lag) and NRF.** Each bar has its own kernel, hence its own instantaneous lag and noise factor:
 
 $$
 \bar k_t = \sum_k k\,w_{t,k} \in [0,\, n-1],
@@ -67,7 +67,7 @@ $$
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
 | $\bar k_t$ | instantaneous lag: the volume-weighted mean age of the window | 0 to $n-1$ bars |
-| $\mathrm{NRF}_t$ | instantaneous noise reduction factor | $\frac1n$ to 1 |
+| $\mathrm{NRF}_t$ | instantaneous [noise reduction factor](glossary:noise-reduction-factor) | $\frac1n$ to 1 |
 
 The inequality is Cauchy–Schwarz, with equality only for constant volume in the window. A heavy-volume bar pulls
 $\bar k_t$ towards its own position: towards 0 (less lag) when it is the newest bar, towards $n-1$ as it ages. Against
@@ -114,7 +114,7 @@ changes. For the VWMA it does, so the drawer shows only the **step** and **ramp*
 weights are the bars' volumes, so the filter changes from bar to bar; the step and ramp responses are for constant
 volume". No impulse, magnitude or group-delay plot is shown, because none would be valid for real volume.
 
-With constant volume the VWMA reduces to SMA(20): the step response is a straight ramp of 0.05 per bar that reaches
+With constant volume the VWMA reduces to SMA(20): the [step response](glossary:step-response) is a straight ramp of 0.05 per bar that reaches
 1 on the 20th bar, and the ramp lag is 9.5 bars. On a real chart the response to the same price step depends on the
 volume of the bars around it: a step on heavy volume is followed faster.
 
@@ -134,7 +134,7 @@ volume of the bars around it: a step on heavy volume is followed faster.
   ($n_{\text{eff}}$ can fall far below $n$).
 
 ## Why it works
-**Price above the line** works as for any lagging average: on a random walk with drift $b$ and increment noise
+**Price above the line** works as for any lagging average: on a [random walk](glossary:random-walk) with drift $b$ and increment noise
 $\sigma$, $P(x_t > \text{line}) = \Phi(\rho\, b/\sigma)$ with the trend-detection ratio $\rho$ (derivation on the LSMA
 page). With constant volume the VWMA is the SMA 20, $\rho = 3.82$.
 
@@ -146,11 +146,11 @@ synthetic scenarios are built exactly like that: their volume is $10^6 e^{0.3\xi
 bigger moves of either sign). On real data the question is open, and the data picker lets you test it on a real
 symbol.
 
-The lab on `reversal` with seed 1 (1000 bars, horizon 10): VWMA 20 above SMA 20 −0.08 % (95 % interval −1.10 % to
+The lab on `reversal` with seed 1 (1000 bars, [horizon](glossary:horizon) 10): VWMA 20 above SMA 20 −0.08 % ([95 % interval](glossary:confidence-interval) −1.10 % to
 +0.95 %, n = 67), close above VWMA 20 +0.97 % (−0.07 % to +2.00 %, n = 58), close above SMA 20 +1.07 % (+0.03 % to
 +2.10 %, n = 58). The two "close above" rules agree almost exactly, as they must when volume carries no direction; the
 gap rule stays inside the noise for seeds 1 to 5 and on `random_walk` and `volatility_regime` too. On a random walk
-no rule built on past prices or volumes can have an edge, because the future increments are independent of them. One
+no rule built on past prices or volumes can have an [edge](glossary:edge), because the future increments are independent of them. One
 rule on one sample: not a backtest and not investment advice.
 
 ```lab
@@ -211,7 +211,7 @@ identical volume, so expect larger differences from TradingView than for price-o
 2. In the first lab on `volatility_regime`, move the length from 50 to 10. Where does the VWMA differ most from what
    an SMA of the same length would show, the calm half or the wild half, and why ($n_{\text{eff}}$)?
 3. Start the replay on NVDA on 24 May 2023, the evening of its earnings report, with VWMA 20 and SMA 20. The next bar
-   gaps up on very heavy volume: how far does each line move on that bar, and what happens to the VWMA 20 bars
+   [gaps up](glossary:gap) on very heavy volume: how far does each line move on that bar, and what happens to the VWMA 20 bars
    later when the bar leaves the window?
 
 ```lab

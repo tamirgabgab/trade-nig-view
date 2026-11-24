@@ -7,7 +7,7 @@ last month's.
 ## What it measures
 The question it answers: "where does the price trade relative to the last completed period's range?" Above the
 previous high, the market has gone further up than at any time in the last period: a breakout. Back inside the range,
-the breakout failed. The previous close is the reference for the day's change and for the opening gap (see
+the breakout failed. The previous close is the reference for the day's change and for the [opening gap](glossary:gap) (see
 [Gaps](learn:gaps)). The lines do not smooth or predict anything; they are three numbers per period, held flat until
 the next period starts.
 
@@ -44,7 +44,7 @@ $$
 | $P_k$ | the period (day, ISO week, calendar month) that contains bar $t$ | a set of bars |
 | $P_{k-1}$ | the last earlier period that has bars | a set of bars |
 
-Periods are days, ISO weeks (Monday to Sunday) or calendar months of each bar's **session date**. On intraday bars
+Periods are days, ISO weeks (Monday to Sunday) or calendar months of each bar's **[session](glossary:session) date**. On intraday bars
 that is the exchange's session (a futures session that opens at 18:00 New York belongs to the next day, as its daily
 bar does); daily and longer bars are stamped with their session date already. Once a bar of $P_k$ exists, $P_{k-1}$
 is complete, so the value at bar $t$ uses only bars $\le t$.
@@ -71,7 +71,7 @@ Not offered (not a moving average).
 - **Inside the range:** between the two lines the market is still "within last period's opinion". A whole period
   inside the previous one is an inside day (week, month): the range contracted.
 - **Back inside after a break:** a failed breakout. Many traders treat the old high as support after a breakout (a
-  retest) and as resistance again once price falls back below it.
+  retest) and as [resistance](glossary:resistance) again once price falls back below it.
 - **The previous close:** the line the day's change is measured from. The first bar of a period opening away from
   it is the gap.
 - **The period sets the scale:** day levels on hourly bars, week or month levels on daily bars. On daily bars with
@@ -81,11 +81,11 @@ Not offered (not a moving average).
 
 ## Why it works
 **A breakout is a statement about a maximum.** "Close above last month's high" means the close beat the highest of
-about 21 bars. On a random walk such events carry no information about the next step, so the edge is zero; what they
+about 21 bars. On a [random walk](glossary:random-walk) such events carry no information about the next step, so the [edge](glossary:edge) is zero; what they
 detect depends on the market. In a trend, new highs come almost only in the rising part, so the rule is a trend
-detector: on `reversal` (drift $\mu = +0.25$ % per bar in the first half, $-0.25$ % in the second) a breakout above
+detector: on `reversal` ([drift](glossary:drift) $\mu = +0.25$ % per bar in the first half, $-0.25$ % in the second) a breakout above
 last month's high happens in the rising half, and the next 10 bars there carry about
-$10\mu \approx +2.5$ % against an average bar of about zero. In a mean-reverting range the same breakout marks a
+$10\mu \approx +2.5$ % against an average bar of about zero. In a [mean-reverting](glossary:mean-reversion) range the same breakout marks a
 price far above the centre, and the Ornstein–Uhlenbeck pull predicts the opposite:
 
 $$
@@ -115,7 +115,7 @@ centre, where the formula predicts a 10-bar move of about −1.9 % to −2.3 %.
  ]}
 ```
 
-Measured with seed 1 (1000 daily bars, 10-bar look-ahead), close crossing above the previous period's high:
+Measured with seed 1 (1000 daily bars, 10-bar [look-ahead](glossary:horizon)), close crossing above the previous period's high:
 
 | Scenario | Month | Week | Day |
 |---|---|---|---|
@@ -128,7 +128,7 @@ Over seeds 1–5 the monthly breakout is positive on `reversal` every time (+1.9
 zero) and negative on `range` every time (−1.41 % to −4.20 %, four intervals below zero). The same rule, opposite
 signs: the level does not "work", the market type decides. The longer the period, the rarer and more extreme the
 break, so the effect grows from day to month while $n$ shrinks. On `random_walk` the intervals contain zero for
-seeds 1–4; seed 5 gives +1.74 % (+0.16 % to +3.33 %) by chance, which a 95 % interval allows once in twenty tries.
+seeds 1–4; seed 5 gives +1.74 % (+0.16 % to +3.33 %) by chance, which a [95 % interval](glossary:confidence-interval) allows once in twenty tries.
 On `uptrend` (a constant drift) every interval contains zero: with nothing to switch on, a breakout says nothing that
 the drift did not already say.
 
@@ -150,11 +150,11 @@ seeds 1–5, four intervals below zero); on `random_walk` −0.23 % to +0.36 % (
 zero. The synthetic hourly bars move as much per bar as the daily ones, so read this as "a break of the
 last session's range, in bar units", not as a model of a real trading day.
 
-One rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing (three periods,
+One rule on one sample: not a backtest (no costs, no position sizing), sensitive to [multiple testing](glossary:multiple-testing) (three periods,
 two directions and several scenarios are many tests), and not investment advice.
 
 ## Combine with
-A breakout is a trigger; it needs a filter that says whether the market is trending. The textbook pair is "close
+A breakout is a [trigger](glossary:trigger); it needs a filter that says whether the market is trending. The textbook pair is "close
 above SMA 200" with a break of last week's high:
 
 ```lab
@@ -171,7 +171,7 @@ With seed 1 on `reversal`: the weekly breakout alone +0.74 % (−0.69 % to +2.17
 (−0.05 % to +3.01 %, n = 36), both +2.22 % (+0.42 % to +4.03 %, n = 17). Over seeds 1–5 the AND gives +1.54 % to
 +2.40 %, the interval above zero for two seeds. On `range` the filter does not rescue the breakout: the AND gives
 −0.57 % to −2.25 % (seeds 1–5), because the SMA 200 filter there selects prices above the centre, the same bias as the
-breakout. A filter helps only if it measures something the trigger does not. Swing points are the other family of
+breakout. A filter helps only if it measures something the trigger does not. [Swing points](glossary:pivot-point) are the other family of
 levels: see [Pivot Points High/Low](learn:pivots); and the
 [ATR](learn:atr) gives the distance scale for "how far above the old high is far".
 

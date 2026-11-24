@@ -23,14 +23,14 @@ $$
 
 The right-hand form is what can be tested: computing over the whole history and computing over the history cut at
 bar $k$ must give the same value at bar $k$. If a later bar could change $y_k$, the two would differ. A filter that
-satisfies it is **causal**; in signal-processing terms its impulse response is zero for negative delays.
+satisfies it is **causal**; in signal-processing terms its [impulse response](glossary:impulse-response) is zero for negative delays.
 
 ## How the app tests it
 `backend/tests/golden/test_replay_no_lookahead.py` checks the right-hand form for **every registered indicator**, at
-its default parameters, on a daily fixture and on an hourly fixture with sessions (so VWAP and the session-anchored
+its default parameters, on a daily fixture and on an hourly fixture with [sessions](glossary:session) (so VWAP and the session-anchored
 indicators are covered too):
 
-- cursors $k$ at the first bars (0, 1, 5, 30: inside the warm-up), at a quarter, half and three quarters of the
+- cursors $k$ at the first bars (0, 1, 5, 30: inside the [warm-up](glossary:warm-up)), at a quarter, half and three quarters of the
   history, and at the last two bars;
 - for each, `compute(bars)[k] == compute(bars[:k+1])[k]` for every output, within $10^{-12}$, `NaN` included.
 
@@ -67,10 +67,10 @@ $$
 
 The value is causal (it sits at bar $p + R$ and uses bars up to $p + R$); only the *drawing* moves it $R$ bars left,
 onto the high itself, so that it looks right on a finished chart. In replay the marker appears $R$ bars after the
-top. Pivot lows work the same way ($\textcolor{#089981}{\mathrm{low}_t}$).
+top. [Pivot lows](glossary:pivot-point) work the same way ($\textcolor{#089981}{\mathrm{low}_t}$).
 
-How much the difference matters is easy to measure. Below, an event study of "a pivot low was confirmed on this bar"
-on a random walk, where no rule can have an edge:
+How much the difference matters is easy to measure. Below, an [event study](glossary:event-study) of "a pivot low was confirmed on this bar"
+on a [random walk](glossary:random-walk), where no rule can have an [edge](glossary:edge):
 
 ```lab
 {"kind": "combo", "scenario": "random_walk", "horizon": 10, "on": [0],
@@ -82,8 +82,8 @@ on a random walk, where no rule can have an edge:
  ]}
 ```
 
-With seed 1 (1000 bars, 10-bar look-ahead) the honest rule, measured from the confirmation bar, gives −0.28 % (95 %
-interval −1.92 % to +1.36 %, n = 47): no edge, as it must be. The lab cannot measure the dishonest version, but the
+With seed 1 (1000 bars, 10-bar [look-ahead](glossary:horizon)) the honest rule, measured from the confirmation bar, gives −0.28 % ([95 %
+interval](glossary:confidence-interval) −1.92 % to +1.36 %, n = 47): no edge, as it must be. The lab cannot measure the dishonest version, but the
 same event study run offline from the **pivot bar itself**, as if the low were known when it happened, gives +3.08 %
 (+1.86 % to +4.31 %, n = 47). Over seeds 1–5 the honest edge stays between −0.71 % and +0.26 % with every interval
 including zero, while the lookahead version gives +2.64 % to +3.32 % with every interval above zero; on `range` and
@@ -138,10 +138,10 @@ and scale-free indicators (RSI, Stochastic) are unaffected; switch ADJ off when 
 - **Trading the close you computed from.** A rule on today's close can only be acted on at that close if you decide
   in the last seconds of the session. A study that enters at the signal bar's close should be read with that in mind;
   a stricter one enters at the next open.
-- **Adjusted prices as levels.** Adjusted history embeds later dividends. A rule such as "buy below 100" on adjusted
+- **[Adjusted prices](glossary:adjusted-price) as levels.** Adjusted history embeds later dividends. A rule such as "buy below 100" on adjusted
   prices triggers at raw prices that were higher.
 - **Centred averages.** A moving average drawn at the centre of its window (shifted left by $\frac{n-1}{2}$) has no
-  lag on a finished chart and is the smoothest-looking line there is, because half of its window is in the future. Its
+  [lag](glossary:lag) on a finished chart and is the smoothest-looking line there is, because half of its window is in the future. Its
   last $\frac{n-1}{2}$ values cannot exist. ChartLab only allows shifts to the right.
 - **Indicators that repaint.** Pivots, zig-zags and anything that redraws past values when new bars arrive look
   perfect in hindsight. Check where the value *becomes known*, not where it is drawn.
@@ -170,6 +170,6 @@ A guided replay of the February 2020 top in SPY, with pivots and a 50-bar averag
 Afterwards, in the lab above, set the scenario to `range` and then `uptrend` and press the new-sample button a few
 times. Does the honest pivot-low rule ever show an edge that survives several samples? (Measured for seeds 1–5 on
 `range`: −1.28 % to −0.45 %, two of the five intervals below zero. By the time a low is confirmed the price has
-already bounced for five bars, and a mean-reverting market tends to give some of that back.)
+already bounced for five bars, and a [mean-reverting](glossary:mean-reversion) market tends to give some of that back.)
 
 More exercises: [Guided exercises](learn:guided-exercises).

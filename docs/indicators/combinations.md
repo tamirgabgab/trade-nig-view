@@ -27,7 +27,7 @@ $$
 | $\mathbb{E}[r_t]$ | mean forward return after any bar (the baseline) | log return |
 | $\mathrm{edge}(A)$ | what the rule adds over an average bar | log return, 0 = no information |
 
-A rule has an edge only if the past says something about the future. On a random walk the increments are independent
+A rule has an [edge](glossary:edge) only if the past says something about the future. On a [random walk](glossary:random-walk) the increments are independent
 of the past, so $\mathbb{E}[r_t \mid \text{anything known at } t] = h\mu$ for every rule and every combination of
 rules: no indicator, and no AND of indicators, can create information that is not in the price process. On a market
 with structure the right question decides which indicator helps: *which regime are we in* (a trend filter), *when
@@ -35,7 +35,7 @@ does a move start* (a trigger), *do other measurements agree* (a confirmation). 
 questions; a strategy needs several, and combining indicators is conditioning on more than one of them.
 
 Tightening a single rule is already a kind of AND. Move the threshold of this event lab on `range` (a
-mean-reverting market around 100): the lower the threshold, the deeper the dip that is required, the fewer the cases.
+[mean-reverting](glossary:mean-reversion) market around 100): the lower the threshold, the deeper the dip that is required, the fewer the cases.
 
 ```lab
 {"kind": "event", "indicator": "rsi", "output": "rsi", "op": "lt", "value": 40, "range": [20, 60],
@@ -66,20 +66,20 @@ A combination works best when each part has a different job:
 | Trigger | a one-bar event | RSI 14 crosses above 30; MACD histogram crosses above 0; close crosses above EMA 20 | 0.028; 0.037; 0.043 |
 | Confirmation | a state checked on the trigger bar | MACD above 0; Stochastic %K above %D | 0.370; 0.505 |
 
-(Shares over bars 200 to 989 of the 1000-bar sample, after the 200-bar warm-up of the slowest rule.)
+(Shares over bars 200 to 989 of the 1000-bar sample, after the 200-bar [warm-up](glossary:warm-up) of the slowest rule.)
 
 - The **filter** chooses the regime in which the rest of the rule is meant to work. It is true for long stretches,
   so it removes about half of the bars, not most of them.
 - The **trigger** times the entry. It is rare by construction: a cross is true on one bar.
 - The **confirmation** asks a second, different measurement whether it agrees at that moment. Here
   $\textcolor{#2962FF}{\mathrm{MACD}} = \mathrm{EMA}_{12} - \mathrm{EMA}_{26}$, so "MACD above 0" is the state
-  "EMA 12 above EMA 26", a faster trend test than the SMA 200 (lag 5.5 and 12.5 bars against 99.5). The histogram
+  "EMA 12 above EMA 26", a faster trend test than the SMA 200 ([lag](glossary:lag) 5.5 and 12.5 bars against 99.5). The histogram
   $\textcolor{#26A69A}{\mathrm{hist}} = \textcolor{#2962FF}{\mathrm{MACD}} - \textcolor{#FF6D00}{\mathrm{signal}}$
-  crossing above 0 is the MACD line crossing above its signal line: momentum turning up.
+  crossing above 0 is the MACD line crossing above its signal line: [momentum](glossary:momentum) turning up.
 
 Roles can fight each other. "Close above SMA 200" AND "RSI 14 crosses above 30" has $n = 0$ on `reversal`, `range`
 and `random_walk` (seed 1): in a market that holds above its 200-bar average, RSI rarely falls to 30 at all. A filter
-and a deep-oversold trigger ask for opposite things.
+and a deep-[oversold](glossary:oversold) trigger ask for opposite things.
 
 This lab starts with the filter and the trigger on; switch the confirmation on, then try other scenarios:
 
@@ -168,7 +168,7 @@ better $A$ cases from the worse ones. Three cases follow:
   trigger, +2.05 % with the confirmation instead of the trigger and +2.27 % with all three (the trigger alone −0.07 %). The AND climbs
   towards the ceiling.
 
-**What the AND costs.** The lab's interval is the edge $\pm 1.96$ standard errors:
+**What the AND costs.** The lab's interval is the edge $\pm 1.96$ [standard errors](glossary:standard-error):
 
 $$
 \mathrm{se} = \frac{s}{\sqrt n},
@@ -386,7 +386,7 @@ require a mechanism (a regime that persists, a mean that pulls) and check it on 
 symbols you did not use to find the rule; distrust the best of many, because it is the one most inflated by luck.
 
 ## Recipes
-Each recipe states the market it assumes. None of them is a strategy: the labs are event studies, not backtests
+Each recipe states the market it assumes. None of them is a strategy: the labs are [event studies](glossary:event-study), not backtests
 (no costs, no exits, no position sizing); a per-sample number is one rule on one sample, and the pooled numbers come
 from synthetic markets built to have the property the recipe needs. Real prices may have it or not. Nothing here is
 investment advice.
@@ -399,13 +399,13 @@ investment advice.
 
 Rules of thumb:
 
-- One indicator per role, from different families: a slow average for the regime, an oscillator or a cross for the
+- One indicator per role, from different families: a slow average for the regime, an [oscillator](glossary:oscillator) or a cross for the
   timing, a different measurement (MACD sign, volume, volatility) for the confirmation.
 - Check redundancy before you add a rule: the identities above, or simply the AND's $n$ in a combo lab. If $n$ barely
   falls, the new rule repeats an old one; if it falls to almost nothing, the roles fight (close above SMA 200 with
   RSI crossing above 30).
 - Check $n$ before the edge. Below about 20 cases the interval is wide and its normal approximation poor.
-- Every rule must lose its edge on `random_walk`. If it keeps one, something is wrong (a bug, look-ahead or luck).
+- Every rule must lose its edge on `random_walk`. If it keeps one, something is wrong (a bug, [look-ahead](glossary:lookahead) or luck).
 - Count your tests, and take the scenario that should not work as seriously as the one that should.
 
 ## Exercise
@@ -414,7 +414,7 @@ Rules of thumb:
    why can no combination have an edge there, even though most of its signals are followed by gains?
 2. In the Try it lab, switch on the third rule and watch $n$. Then estimate $P(B \mid A)$ for "close below SMA 50"
    given the first two rules from the counts the lab shows, and explain why the third rule is not a filter here.
-3. In the Overfitting lab, press the new-sample button ten times with both rules on. Count the samples whose interval
+3. In the [Overfitting](glossary:overfitting) lab, press the new-sample button ten times with both rules on. Count the samples whose interval
    excludes zero, and compare with $1 - 0.95^{10}$ for ten independent tests of one rule.
 4. Start Replay on SPY on 19 February 2020, the last record close before the COVID crash, with SMA 200, MACD and RSI.
    Step forward and note every MACD histogram cross above 0 while the close is below the SMA 200 (the filter blocks

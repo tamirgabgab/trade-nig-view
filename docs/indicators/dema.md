@@ -4,7 +4,7 @@ Patrick Mulloy's DEMA (1994): twice an EMA minus the EMA of that EMA. It follows
 at the price of more noise and a small overshoot after sudden moves. Use it when an EMA reacts too late.
 
 ## What it measures
-The question it answers: "where is the trend level now, with the EMA's lag corrected away?" It is the trend level
+The question it answers: "where is the trend level now, with the EMA's [lag](glossary:lag) corrected away?" It is the trend level
 with the EMA's lag removed. It turns earlier than an EMA of the same length but is choppier, and it briefly runs past
 price after a gap or a sharp reversal.
 
@@ -28,12 +28,12 @@ $$
 | $E^{(2)}$ | EMA of that EMA (not plotted) | price |
 | $x$ | the source (close by default) | price |
 | $n$ | length of both EMAs | bars, 1–5000 (default 9) |
-| $\alpha$ | EMA smoothing factor | 0–1 (0.2 at $n = 9$) |
+| $\alpha$ | EMA [smoothing factor](glossary:smoothing-factor) | 0–1 (0.2 at $n = 9$) |
 
 Not to be confused with a "double-smoothed" EMA, which is $E^{(2)}$ alone (twice the lag of one EMA).
 
 ## Kernel, lag and noise
-Write $\beta = 1-\alpha$ and $L = \frac{1-\alpha}{\alpha} = \frac{n-1}{2}$ (the EMA's lag). The EMA kernel is
+Write $\beta = 1-\alpha$ and $L = \frac{1-\alpha}{\alpha} = \frac{n-1}{2}$ (the EMA's lag). The EMA [kernel](glossary:kernel) is
 $e_k = \alpha\beta^k$; the cascade $E^{(2)}$ has kernel $\alpha^2(k+1)\beta^k$, so
 
 $$
@@ -90,18 +90,18 @@ $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $\mathrm{NRF}$ | noise reduction factor, $\sum_k h_k^2$ | — , 0.2538 at $n = 9$ |
+| $\mathrm{NRF}$ | [noise reduction factor](glossary:noise-reduction-factor), $\sum_k h_k^2$ | — , 0.2538 at $n = 9$ |
 
 At $n = 9$ this is $185/729 = 0.2538$, which is 2.28 times the EMA's $1/n = 0.111$. Removing the lag costs about 2.5
 times the noise variance.
 
-**Overshoot.** The step response is $s_k = 1 + \beta^{k+1}\big((k+1)\alpha - 1\big)$. It peaks at $k = n-1$, where
+**Overshoot.** The [step response](glossary:step-response) is $s_k = 1 + \beta^{k+1}\big((k+1)\alpha - 1\big)$. It peaks at $k = n-1$, where
 it equals $1 + \beta^{n+1}$: **1.1074** at $n = 9$, tending to $1 + e^{-2} = 1.135$ for long lengths. The overshoot is
 exactly the total negative weight $\sum_{k>n} \lvert h_k \rvert$.
 
 **Low-frequency view.** Treat $h_k$ as a signed distribution with cumulants $\kappa_r$. Then
 $\ln H(e^{j\omega}) = \sum_r \kappa_r (-j\omega)^r / r!$, so
-$\ln\lvert H \rvert \approx -\kappa_2\omega^2/2$ and the group delay is $\tau(\omega) \approx \kappa_1 - \kappa_3\omega^2/2$.
+$\ln\lvert H \rvert \approx -\kappa_2\omega^2/2$ and the [group delay](glossary:group-delay) is $\tau(\omega) \approx \kappa_1 - \kappa_3\omega^2/2$.
 DEMA has $\kappa_1 = 0$ and $\kappa_2 = -2L^2 < 0$, so **its gain rises above 1** at low frequencies. A
 non-negative kernel can never do that: its $\kappa_2$ is a true variance and $\lvert H \rvert \le \sum_k h_k = 1$.
 
@@ -148,7 +148,7 @@ the inner EMA, and the inner EMA's first valid index is $n-1$.
 - **Length:** a longer DEMA is smoother, but cycles near $4n$ to $5n$ bars are exaggerated by about 12 %.
 
 ## Why it works
-**The lag correction is a smoothed momentum.** The EMA is linear, so (seeds aside)
+**The lag correction is a smoothed [momentum](glossary:momentum).** The EMA is linear, so (seeds aside)
 
 $$
 \textcolor{#26A69A}{D_t} - \textcolor{#FF6D00}{E^{(1)}_t} = \textcolor{#FF6D00}{E^{(1)}_t} - E^{(2)}_t
@@ -167,7 +167,7 @@ The EMA trails a trend by $bL$ and the EMA of the EMA by $2bL$, so their differe
 it back: that is the zero lag. "DEMA above EMA" is therefore the sign of a smoothed momentum, a trend state. "Close
 crosses above DEMA" is something else: since the DEMA tracks a trend with zero lag, the gap $x_t - D_t$ has no trend
 component left (its kernel $\delta_k - h_k$ has zero sum and zero first moment). It is mostly the newest bars' noise,
-and should carry no edge even where trends persist.
+and should carry no [edge](glossary:edge) even where trends persist.
 
 ```lab
 {"kind": "combo", "scenario": "reversal", "horizon": 10, "on": [0],
@@ -180,21 +180,21 @@ and should carry no edge even where trends persist.
  ]}
 ```
 
-Measured with seed 1 (1000 bars, 10-bar look-ahead):
+Measured with seed 1 (1000 bars, 10-bar [look-ahead](glossary:horizon)):
 
 | Scenario | DEMA 20 above EMA 20 | Close crosses above DEMA 20 |
 |---|---|---|
-| `reversal` | +2.19 % (95 % interval +1.17 % to +3.21 %, n = 43) | +0.70 % (−0.46 % to +1.87 %, n = 48) |
+| `reversal` | +2.19 % ([95 % interval](glossary:confidence-interval) +1.17 % to +3.21 %, n = 43) | +0.70 % (−0.46 % to +1.87 %, n = 48) |
 | `random_walk` | +0.67 % (−1.00 % to +2.34 %, n = 35) | +0.75 % (−0.42 % to +1.92 %, n = 50) |
 | `range` | −1.33 % (−2.20 % to −0.46 %, n = 55) | −0.51 % (−1.46 % to +0.44 %, n = 57) |
 
 "DEMA above EMA" is positive with the interval above zero for seeds 1–5 on `reversal` (+1.51 % to +2.61 %) and
 negative on `range` for all five (−0.73 % to −1.91 %). The crossing's interval contains zero for every seed on every
-one of these scenarios. On a random walk no rule has an edge: future increments are independent of anything known
+one of these scenarios. On a [random walk](glossary:random-walk) no rule has an edge: future increments are independent of anything known
 now (the SMA page writes this out). One rule on one sample: not a backtest, not investment advice.
 
 ## Combine with
-DEMA is a fast trend line, so it pairs with a slow trend filter (SMA 200: "the long trend is up") and serves as the
+DEMA is a fast trend line, so it pairs with a slow [trend filter](glossary:trend-filter) (SMA 200: "the long trend is up") and serves as the
 faster confirmation ("the short-term slope is up as well"):
 
 ```lab

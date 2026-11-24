@@ -25,7 +25,7 @@ consequences run through every page: an indicator at bar $t$ may use the close o
 touched before or after the bar's other extreme.
 
 Every provider answer passes the same gate before it is cached (`validate.py`): bars sorted by time, duplicates
-resolved (the last value wins), all prices finite and positive, $H \ge \max(O, C)$ and $L \le \min(O, C)$, volume
+resolved (the last value wins), all prices finite and positive, $H \ge \max(O, C)$ and $L \le \min(O, C)$, [volume](glossary:volume)
 finite and non-negative (indices and forex have no traded volume: their volume is 0). A bar that breaks a rule is
 dropped and the response carries a warning.
 
@@ -137,7 +137,7 @@ The bar is keyed by the **first trading day** in the period, not the calendar st
 week of Martin Luther King Day 2025 (Monday 2025-01-20, markets closed) is the bar `2025-01-21`; September 2025, whose
 first Monday was Labor Day, is the bar `2025-09-02`.
 
-A period that is not over yet (the current week, or a week cut by the replay cursor) is emitted with the days that
+A period that is not over yet (the current week, or a week cut by the [replay](glossary:replay) cursor) is emitted with the days that
 exist: a Wednesday cursor shows a weekly bar of Monday to Wednesday. Resampling therefore never looks ahead, and a
 weekly bar keeps changing until its last day closes, exactly like the live bar on the right edge of any chart.
 
@@ -156,10 +156,10 @@ weekly bar keeps changing until its last day closes, exactly like the live bar o
 
 ## The lab's hourly sessions
 Every lab can run on hourly bars (`1h` in the data picker, or `"interval": "1h"` in the block). On a real symbol these
-are the cached hourly bars with their sessions. On a synthetic scenario they are built from the same random close
+are the cached hourly bars with their sessions. On a synthetic [scenario](glossary:scenario) they are built from the same random close
 path as the daily scenario, one bar per hour, **seven bars per business-day session stamped 14:30 to 20:30 UTC**
 (09:30 to 15:30 New York in winter), with the session set so that VWAP and Previous High/Low/Close restart every
-morning. The first bar of each session opens with an overnight gap four times wider than the other bars' open
+morning. The first bar of each session opens with an [overnight gap](glossary:gap) four times wider than the other bars' open
 noise, and volume follows the intraday U shape: 1.8, 1.1, 0.8, 0.7, 0.8, 1.0 and 1.6 times the bar's base volume.
 
 Honest caveat: the hourly sample is the daily path re-stamped, so each synthetic hour moves as much as a synthetic
@@ -180,7 +180,7 @@ average that starts again at every session's first bar (see the hourly labs on t
 - **"Daily" is the provider's session, not 24 hours.** Comparing the daily ranges of a stock and a future compares
   6.5 hours with 23.
 - **Hourly history is short.** About two years of `1h` bars exist (more if the local cache kept older ones); a
-  200-bar average on a stock's `4h` bars (two a session) needs about 100 sessions of warm-up before the first value (see
+  200-bar average on a stock's `4h` bars (two a session) needs about 100 sessions of [warm-up](glossary:warm-up) before the first value (see
   [Warm-up](learn:warm-up)).
 - **The last bar is still forming.** The newest daily, weekly or monthly bar can change until its period closes; the
   cache re-downloads the last days on every refresh for that reason.

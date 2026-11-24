@@ -1,7 +1,7 @@
 # McGinley Dynamic (`mcginley`)
 
 An exponential average whose gain is set by the ratio of price to the average itself: it slows down when price runs
-above it and speeds up when price falls below it. Use it as a trend line that hugs falling prices and lags rising ones
+above it and speeds up when price falls below it. Use it as a trend line that hugs falling prices and [lags](glossary:lag) rising ones
 less nervously than a fixed EMA.
 
 ## What it measures
@@ -9,7 +9,7 @@ A trend line that keeps close to price on sell-offs and gives rising prices more
 "where is the trend, if declines deserve a faster reaction than rallies?". Price crossing it, and its slope, are read
 like an EMA's.
 
-Move the length on the `shock` scenario: at the −15 % gap the line follows faster than an EMA at rest would,
+Move the length on the `shock` scenario: at the −15 % [gap](glossary:gap) the line follows faster than an EMA at rest would,
 because price below the line raises its gain.
 
 ```lab
@@ -38,10 +38,10 @@ $M_{t-1}$ is undefined the value is $\mathrm{EMA}_n(x)_t$ (Pine's `na(mg[1]) ? t
 
 ## Kernel, lag and noise
 
-**No impulse response.** The gain $c_t$ depends on the input, so superposition fails:
+**No [impulse response](glossary:impulse-response).** The gain $c_t$ depends on the input, so superposition fails:
 $f(x_1 + 2x_2) \ne f(x_1) + 2f(x_2)$, and a unit impulse on a zero baseline is not even defined ($r = x/M$ needs
 $M > 0$). The filter is scale-equivariant, $f(ax) = a\,f(x)$ for $a > 0$ (only the ratio enters), but not
-shift-equivariant: adding a constant to every price changes every $r_t$. What replaces the kernel is the **local
+shift-equivariant: adding a constant to every price changes every $r_t$. What replaces the [kernel](glossary:kernel) is the **local
 behaviour**: freeze $r$ and the recursion is a first-order EMA.
 
 **Local EMA.** With $r$ fixed, $c = 1/N$ where
@@ -55,7 +55,7 @@ $$
 | $N(r)$ | the equivalent Wilder (RMA) length at a frozen ratio $r$ | bars; $n$ at rest |
 | $r$, $n$ | ratio and length as above | |
 
-That is a Wilder (RMA) length $N$, i.e. an EMA in the $\alpha = 2/(m+1)$ convention with $m = 2N - 1$, lag
+That is a Wilder ([RMA](glossary:rma)) length $N$, i.e. an EMA in the $\alpha = 2/(m+1)$ convention with $m = 2N - 1$, lag
 $(1-c)/c = N - 1$ and $\mathrm{NRF} = c/(2-c) = 1/(2N-1)$.
 
 - **At rest** ($x \approx M$, $r = 1$): $c = 1/n$. A length-14 McGinley is an $\mathrm{RMA}_{14} \equiv \mathrm{EMA}_{27}$,
@@ -102,7 +102,7 @@ $\max(25n, 250)$ bars of extra history (350 at $n = 14$).
 
 ## Filter view
 Only the **step** and **ramp** responses are shown, with the reason: the smoothing depends on the input
-(superposition fails), so there is no single impulse or frequency response. Both inputs sit at price-like levels
+(superposition fails), so there is no single impulse or [frequency response](glossary:frequency-response). Both inputs sit at price-like levels
 because the ratio $x/M$ matters.
 
 - **Step** 100 to 110 (+10 %): 4.88 % of the step on the first bar, 50 % after 12 bars, 90 % after 36, 99 % after
@@ -141,14 +141,14 @@ $$
 While $0 < c_t < 1$ both have the sign of $x_t - M_{t-1}$, so "close above McGinley" and "McGinley rising" fire on
 the same bars. The same holds for every EMA and for KAMA.
 
-**How sharp the test is.** On a random walk with drift $b$ and increment noise $\sigma$, an EMA of length $m$ has the
+**How sharp the test is.** On a [random walk](glossary:random-walk) with [drift](glossary:drift) $b$ and increment noise $\sigma$, an EMA of length $m$ has the
 trend-detection ratio (LSMA page) $\rho = \sqrt{(2-c)/c} = \sqrt m$, so $P(x_t > \text{EMA}) = \Phi(\sqrt m\,b/\sigma)$.
 McGinley 14 at rest is an EMA 27: $\rho = 5.20$, against 3.74 for an EMA 14; on a rally its gain falls and $\rho$
 rises further. On `reversal` ($b/\sigma = 0.21$) that predicts $P = 0.86$ for EMA 27 and $0.78$ for EMA 14, and 10-bar
-edges of about $10\,b\,(2P - 1)$ = 1.8 % and 1.4 %. On a random walk without a turn there is no edge at all: the
+[edges](glossary:edge) of about $10\,b\,(2P - 1)$ = 1.8 % and 1.4 %. On a random walk without a turn there is no edge at all: the
 future increments are independent of everything the line has seen.
 
-The lab, seed 1, 1000 bars, horizon 10, `reversal`: close above McGinley 14 +1.65 % (95 % interval +0.61 % to
+The lab, seed 1, 1000 bars, [horizon](glossary:horizon) 10, `reversal`: close above McGinley 14 +1.65 % ([95 % interval](glossary:confidence-interval) +0.61 % to
 +2.69 %, n = 55), close above EMA 27 +1.85 % (+0.69 % to +3.01 %, n = 49), close above EMA 14 +0.60 % (−0.49 % to
 +1.68 %, n = 64). McGinley 14 behaves like the EMA 27, not like the EMA 14. Over seeds 1 to 5 the McGinley rule is
 positive in four (+0.86 % to +1.65 %, interval above 0 in three) and near 0 in seed 2, where none of the three rules
@@ -168,7 +168,7 @@ investment advice.
 ```
 
 ## Combine with
-- **SMA 200 as the trend filter**: a slow, sharp test of the long trend ($\rho = 12.2$).
+- **SMA 200 as the [trend filter](glossary:trend-filter)**: a slow, sharp test of the long trend ($\rho = 12.2$).
 - **Close above McGinley 14 as the trigger**: a medium-term trend that drops out quickly on sell-offs.
 - **RSI 14 above 50 as a confirmation**: the balance of recent gains and losses; on a trending random walk it repeats
   the trigger's information, so expect little.

@@ -1,6 +1,6 @@
 # Zero-Lag Exponential Moving Average (`zlema`)
 
-An EMA applied to a "de-lagged" price, $x_t + (x_t - x_{t-d})$. The momentum term adds back roughly the lag the EMA is
+An EMA applied to a "de-lagged" price, $x_t + (x_t - x_{t-d})$. The [momentum](glossary:momentum) term adds back roughly the [lag](glossary:lag) the EMA is
 about to introduce. The idea is attributed to Ehlers and Way (2010). It is not a TradingView built-in; it is included
 to compare lag-cancelling designs.
 
@@ -28,7 +28,7 @@ $$
 | $x_t$ | the source (close by default) | price |
 | $n$ | the EMA length | bars, default 20 |
 | $d$ | the de-lag shift, about half the EMA's lag | bars, 9 at $n = 20$ |
-| $\alpha$ | the EMA smoothing constant | 0.095 at $n = 20$ |
+| $\alpha$ | the EMA [smoothing constant](glossary:smoothing-factor) | 0.095 at $n = 20$ |
 
 ## Kernel, lag and noise
 The de-lagging prefilter $g = 2\delta_0 - \delta_d$, i.e. $G(z) = 2 - z^{-d}$, has DC gain 1 and first moment
@@ -45,7 +45,7 @@ $$
 
 and the default $n = 20$ ($d = 9$) keeps half a bar of lag.
 
-With $\beta = 1 - \alpha = \frac{n-1}{n+1}$, the kernel is a geometric decay with one jump at $k = d$:
+With $\beta = 1 - \alpha = \frac{n-1}{n+1}$, the [kernel](glossary:kernel) is a geometric decay with one jump at $k = d$:
 
 $$
 \textcolor{#AFB42B}{h_k} = \begin{cases} 2\alpha\beta^k & k < d \\ \big(2 - \beta^{-d}\big)\,\alpha\beta^k & k \ge d \end{cases}
@@ -74,7 +74,7 @@ $$
 
 At $n = 20$: $\beta^9 = 0.4064$, so $\mathrm{NRF} = 0.1687$, which is 3.37 times the EMA's $0.05$.
 
-**Overshoot.** The step response is the running sum of the kernel. It peaks at the last positive tap, $k = d - 1$:
+**Overshoot.** The [step response](glossary:step-response) is the running sum of the kernel. It peaks at the last positive tap, $k = d - 1$:
 
 $$
 \max_k s_k = \sum_{k<d} 2\alpha\beta^k = 2\big(1 - \beta^d\big) \;\to\; 2(1 - e^{-1}) = 1.264.
@@ -119,7 +119,7 @@ At $n = 20$:
   $P = d/k$: 9, 4.5, 3, 2.25) and 3 (+9.5 dB, at $P = 2d/(2k+1)$: 18, 6, 3.6, ...). Multiplied by the EMA's low-pass,
   this gives a bump of +1.08 dB (gain 1.13) near $P \approx 48$, 0 dB near 24 bars and $-3$ dB near 15.6 bars. At
   short periods it ripples, with a dip of $-25.9$ dB near $P = 2.25$.
-- **Group delay:** 1.45 bars at $P = 200$ (tending to 0.5 at DC), with a maximum of 3.8 bars near $P \approx 43$. At
+- **[Group delay](glossary:group-delay):** 1.45 bars at $P = 200$ (tending to 0.5 at DC), with a maximum of 3.8 bars near $P \approx 43$. At
   the prefilter's unit-gain periods its own delay is exactly $-d$. That shows as sharp negative spikes, e.g. $-9.3$ bars
   at $P = 9$.
 
@@ -157,9 +157,9 @@ So **ZLEMA above EMA is exactly "the EMA-smoothed 9-bar momentum is positive"**,
 past returns with a total weight of only $\bar k = 0.5$ bars (the identity on the Moving Average page): it is almost
 pure noise and carries no information about the regime.
 
-On a random walk neither sum predicts anything (future returns are independent of the past). In the reversal
+On a [random walk](glossary:random-walk) neither sum predicts anything (future returns are independent of the past). In the reversal
 scenario the momentum sign tells the rising half from the falling half; in the range scenario, positive momentum
-means price is above its mean and about to revert, so the sign of the edge flips.
+means price is above its mean and about to revert, so the sign of the [edge](glossary:edge) flips.
 
 ```lab
 {"kind": "combo", "scenario": "reversal", "horizon": 10, "on": [0],
@@ -171,7 +171,7 @@ means price is above its mean and about to revert, so the sign of the edge flips
  ]}
 ```
 
-With seed 1 (1000 bars, 10-bar horizon):
+With seed 1 (1000 bars, 10-bar [horizon](glossary:horizon)):
 
 | Scenario | ZLEMA 20 above EMA 20 | Close above ZLEMA 20 |
 |---|---|---|
@@ -184,9 +184,9 @@ in the range ($-0.66$ to $-1.61$ %). One rule on one synthetic sample: not a bac
 rules you try, and not investment advice.
 
 ## Combine with
-- **A long trend filter** (close above SMA 200) to say which regime you are in; the ZLEMA/EMA momentum sign is the
-  shorter-term trigger.
-- **RSI** above 50 as a confirmation. RSI is itself a smoothed ratio of up and down moves, so it largely repeats the
+- **A long [trend filter](glossary:trend-filter)** (close above SMA 200) to say which regime you are in; the ZLEMA/EMA momentum sign is the
+  shorter-term [trigger](glossary:trigger).
+- **RSI** above 50 as a [confirmation](glossary:confirmation). RSI is itself a smoothed ratio of up and down moves, so it largely repeats the
   momentum rule: expect little gain from it.
 - **The MACD** is the same idea with two EMAs of different lengths; the ZLEMA/EMA gap uses one length and a de-lag
   shift instead.

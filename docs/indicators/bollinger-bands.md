@@ -12,7 +12,7 @@ a running volatility estimate in price units. A close at the upper band at the d
 above the 20-bar mean", whatever the asset or its price.
 
 Move the length on the volatility regime: the bands are narrow in the calm first half and about four times wider in
-the wild second half; a longer length makes them smoother, later and (on a trending or random-walk series) wider.
+the wild second half; a longer length makes them smoother, later and (on a trending or [random-walk](glossary:random-walk) series) wider.
 
 ```lab
 {"kind": "param", "indicator": "bb", "vary": "length", "min": 5, "max": 100, "scenario": "volatility_regime"}
@@ -106,7 +106,7 @@ defaults, however violent the move (the largest $\lvert z\rvert$ on a 200 000-ba
 both moves the close and inflates its own $\sigma$.
 
 ## Kernel, lag and noise
-The basis is the chosen average with its own kernel, lag and NRF (see its page). The bands are not linear filters:
+The basis is the chosen average with its own [kernel](glossary:kernel), [lag](glossary:lag) and NRF (see its page). The bands are not linear filters:
 $\sigma$ of a sum is not the sum of the $\sigma$s. They are shift-invariant ($\sigma(x + c) = \sigma(x)$) and scale with
 the price ($\sigma(a x) = \lvert a\rvert\,\sigma(x)$), so the band width is in price units.
 
@@ -127,7 +127,7 @@ warms up later (DEMA, T3, ...) the bands start with the basis (38 for DEMA 20).
 The drawer's Filter view tab covers moving averages only. The basis is one, and this figure measures it by running the
 real code: SMA 20, a flat 20-tap kernel, lag 9.50 bars, NRF 0.05, DC gain 1. The upper and lower bands are shown too,
 but only with step and ramp responses: $\sigma$ depends on the input itself, so superposition fails and there is no
-impulse or frequency response.
+impulse or [frequency response](glossary:frequency-response).
 
 ```lab
 {"kind": "filter", "indicator": "bb", "output": "basis"}
@@ -144,7 +144,7 @@ drifting price sits away from it even when nothing unusual happens (Why it works
   **squeeze** is band width at a multi-month low; an **expansion** is the bands opening fast after a shock.
 - **Basis slope:** the trend of the SMA $n$, $(n-1)/2$ bars late, as on the SMA page.
 - **Range:** price swings between the bands and the basis is flat; a close outside a band tends to come back
-  (mean reversion).
+  ([mean reversion](glossary:mean-reversion)).
 - **Trend ("walking the band"):** price rides along one band, touching or closing beyond it again and again, and
   the basis slopes. A close above the upper band is then strength, not a sell signal.
 - **Length:** longer bands react later, and on a trending or random-walk series they are wider (the window's spread
@@ -214,7 +214,7 @@ width grows like $\sqrt n$ on a random walk, unlike the noise of an average, whi
 
 **Fade or follow the band?** What happens after a close outside depends on the market, not on the band.
 
-- On a *random walk* the future increments are independent of the past, the bands included: no edge.
+- On a *random walk* the future increments are independent of the past, the bands included: no [edge](glossary:edge).
 - On `range` (an Ornstein–Uhlenbeck process, AR coefficient 0.92) the expected move is back towards the centre,
   $-\bigl(1 - 0.92^h\bigr)$ times the current deviation (57 % of it within 10 bars, derived on the
   [Envelope page](learn:envelope#why-it-works)). A close below the lower band is far below the centre: fade it.
@@ -232,16 +232,16 @@ width grows like $\sqrt n$ on a random walk, unlike the noise of an average, whi
  ]}
 ```
 
-With seed 1 (1000 bars, 10-bar look-ahead, default bands):
+With seed 1 (1000 bars, 10-bar [look-ahead](glossary:horizon), default bands):
 
 | Scenario | Close crosses below the lower band | Close crosses above the upper band |
 |---|---|---|
-| `range` | +1.87 % (95 % interval +0.20 % to +3.54 %, n = 16) | −3.18 % (−4.63 % to −1.74 %, n = 21) |
+| `range` | +1.87 % ([95 % interval](glossary:confidence-interval) +0.20 % to +3.54 %, n = 16) | −3.18 % (−4.63 % to −1.74 %, n = 21) |
 | `random_walk` | −0.22 % (−1.90 % to +1.46 %, n = 26) | +0.71 % (−1.30 % to +2.71 %, n = 21) |
 | `uptrend` | −0.18 % (−2.15 % to +1.78 %, n = 16) | −0.42 % (−1.76 % to +0.93 %, n = 30) |
 | `reversal` | −1.43 % (−3.69 % to +0.83 %, n = 20) | +1.52 % (−0.03 % to +3.06 %, n = 22) |
 
-On `range` the lower-band cross is positive for seeds 1–5 (+1.59 % to +3.36 %, hit rate 0.56–0.76 against about
+On `range` the lower-band cross is positive for seeds 1–5 (+1.59 % to +3.36 %, [hit rate](glossary:hit-rate) 0.56–0.76 against about
 0.50 for any bar; the interval clears zero for four of them and touches it for the fifth) and the upper-band cross
 negative for all five (−1.33 % to −3.28 %, below zero for two). On `reversal` the same upper-band cross is positive
 for seeds 1–5 (+1.01 % to +3.29 %, above zero for three): the same line, the opposite trade. On `random_walk` the
@@ -285,7 +285,7 @@ on `volatility_regime` and on `random_walk`. The histograms show the size questi
 10-bar returns after the signal is 5.3 %–10.4 % against 6.3 %–7.6 % after any bar (seeds 1–5), sometimes wider and
 sometimes narrower. A contraction tells you volatility was falling, not which way price will go.
 
-One rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing (every rule,
+One rule on one sample: not a backtest (no costs, no position sizing), sensitive to [multiple testing](glossary:multiple-testing) (every rule,
 length and scenario you try is another test), and not investment advice.
 
 ## Combine with
@@ -318,12 +318,12 @@ falling half both say "stretched"); the rising basis removes most of the losing 
 `reversal` (+2.30 %, +1.18 % to +3.42 %, n = 44; above zero for seeds 1–5) and slightly negative on `range` (−0.01 %
 to −1.17 %): a trend filter, with the trend filter's cost in a range. Not a backtest, not advice.
 
-For volatility, the [ATR](learn:atr) measures bar size including gaps and reacts more slowly than the band width; it
+For volatility, the [ATR](learn:atr) measures bar size including [gaps](glossary:gap) and reacts more slowly than the band width; it
 is the unit for stops and position sizes, while the bands mark where price is.
 
 ## Differences vs TradingView
 - Same formula and defaults as TradingView's built-in (population $\sigma$, `ta.stdev`).
-- TradingView offers SMA, EMA, SMMA (RMA), WMA and VWMA as the basis; here any of the 15 types. $\sigma$ stays about
+- TradingView offers SMA, EMA, SMMA ([RMA](glossary:rma)), WMA and VWMA as the basis; here any of the 15 types. $\sigma$ stays about
   the SMA in both.
 - TradingView's separate "Bollinger Bands %B" and "Bollinger BandWidth" indicators plot the two derived quantities
   above; here they are rules on the bands (Formula).

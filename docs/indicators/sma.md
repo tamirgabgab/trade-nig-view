@@ -1,13 +1,13 @@
 # Simple Moving Average (`sma`)
 
-The equal-weight mean of the last $n$ values. It is the least noisy FIR average for a given window length and has
+The equal-weight mean of the last $n$ values. It is the least noisy [FIR](glossary:fir-filter) average for a given window length and has
 exact spectral nulls at period $n$ and its harmonics. Use it for a plain, reproducible "average price of the last
 $n$ bars", or to remove a cycle whose length you know.
 
 ## What it measures
 The question it answers: "what did the last $n$ bars cost on average, and is today's price above or below that?"
 On a straight-line trend it runs exactly $\frac{n-1}{2}$ bars behind, so the gap between price and SMA is roughly
-slope × lag. Price above a rising SMA means recent bars trade above the window's mean. Long SMAs (50, 200 on daily
+slope × [lag](glossary:lag). Price above a rising SMA means recent bars trade above the window's mean. Long SMAs (50, 200 on daily
 bars) are watched as trend references mostly because many traders watch them.
 
 Move the length: a short SMA hugs price and wiggles with it, a long one is smooth and trails the trend further.
@@ -36,7 +36,7 @@ followed by an integrator whose pole at $z = 1$ cancels the comb's zero there. C
 it computes every window exactly (see Differences vs TradingView).
 
 ## Kernel, lag and noise
-Impulse response $h_k = \frac1n$ for $0 \le k \le n-1$, zero otherwise. DC gain $\sum_k h_k = 1$.
+[Impulse response](glossary:impulse-response) $h_k = \frac1n$ for $0 \le k \le n-1$, zero otherwise. DC gain $\sum_k h_k = 1$.
 
 **Lag.** Feed a straight line $x_t = a + bt$:
 
@@ -53,17 +53,17 @@ $$
 | $a,\ b$ | level and slope of the test line | price, price per bar |
 | $\bar k$ | lag: the kernel's centre of mass | bars, $\frac{n-1}{2}$ |
 
-The SMA reproduces any trend exactly, shifted $\frac{n-1}{2}$ bars to the right. $\bar k$ is also the group delay at
+The SMA reproduces any trend exactly, shifted $\frac{n-1}{2}$ bars to the right. $\bar k$ is also the [group delay](glossary:group-delay) at
 $\omega = 0$.
 
 **Noise.** For white noise of variance $\sigma^2$, $\operatorname{Var}(y_t) = \sigma^2\sum_k h_k^2 = \sigma^2/n$, so
 $\mathrm{NRF} = \frac1n$: the standard deviation shrinks by $\sqrt n$.
 
-**Optimality.** Among all $n$-tap kernels with unit DC gain, Cauchy–Schwarz gives
+**Optimality.** Among all $n$-tap [kernels](glossary:kernel) with unit DC gain, Cauchy–Schwarz gives
 $1 = \left(\sum_{k<n} h_k\right)^2 \le n\sum_{k<n} h_k^2$, with equality only for $h_k = \frac1n$. For a fixed window
 the SMA is the best white-noise smoother there is; what it pays is lag, not noise.
 
-**Frequency response.** Sum the geometric series and factor out the centre of the window:
+**[Frequency response](glossary:frequency-response).** Sum the geometric series and factor out the centre of the window:
 
 $$
 H(e^{j\omega}) = e^{-j\omega\frac{n-1}{2}}\;\frac{\sin(n\omega/2)}{n\,\sin(\omega/2)}.
@@ -105,7 +105,7 @@ that bar.
 ## Filter view
 - **Impulse:** nine equal stems of $1/9 = 0.1111$, then zero. The kernel is finite, so the plot ends there.
 - **Step:** a straight ramp $\frac{k+1}{n}$ that reaches exactly 1 on the 9th bar. No overshoot: with $h_k \ge 0$
-  the step response is a cumulative sum of non-negative taps and can only rise. Settling is finite ($n$ bars), unlike
+  the [step response](glossary:step-response) is a cumulative sum of non-negative taps and can only rise. Settling is finite ($n$ bars), unlike
   any IIR average.
 - **Magnitude (dB vs period, 2–200 bars):** flat near 0 dB for long cycles (−0.11 dB at 100 bars, −0.73 dB at 40,
   −3.08 dB at 20), then the main lobe ends in the null at $P = 9$, followed by sidelobes and the nulls at 4.5, 3 and
@@ -144,11 +144,11 @@ $$
 | $\Delta x_{t-j}$ | price change of the bar $j$ bars ago | price per bar |
 | $\frac{n-1-j}{n}$ | weight of that change: newest $\frac{n-1}{n}$, falling linearly to $\frac1n$ | — |
 
-So "close above SMA" means: the linearly weighted sum of the last $n-1$ price changes is positive, a momentum
+So "close above SMA" means: the linearly weighted sum of the last $n-1$ price changes is positive, a [momentum](glossary:momentum)
 measure. Its weights add up to $\frac{n-1}{2}$, the lag, which is why the gap on a trend of slope $b$ is
 $b\,\frac{n-1}{2}$. A crossing is a change of sign of this weighted momentum.
 
-**When that can predict anything.** The event study compares the forward return $x_{t+h} - x_t$ after a signal with
+**When that can predict anything.** The [event study](glossary:event-study) compares the forward return $x_{t+h} - x_t$ after a signal with
 the forward return after any bar. If price changes are independent of the past with a constant mean $\mu$ (a random
 walk, with or without drift),
 
@@ -161,12 +161,12 @@ $$
 | $h$ | look-ahead (horizon) | bars, 10 in the labs |
 | $\mu$ | mean change per bar (drift) | price per bar (log price in the synthetic scenarios) |
 
-the same number after a signal as after any bar: the edge is zero for every MA rule. That includes `uptrend`: price
+the same number after a signal as after any bar: the [edge](glossary:edge) is zero for every MA rule. That includes `uptrend`: price
 above the SMA wins often there, but so does any bar, because the drift is constant. An edge needs dependence:
 
 - `reversal` has a drift that flips sign once. The sign of the weighted momentum tells, with lag, which half you are
   in, so "close above SMA" has a positive edge.
-- `range` is mean-reverting: in log price, $\mathbb{E}[x_{t+h} - x_t \mid x_t] = -\bigl(1 - (1-\theta)^h\bigr)(x_t - \ln 100)$
+- `range` is [mean-reverting](glossary:mean-reversion): in log price, $\mathbb{E}[x_{t+h} - x_t \mid x_t] = -\bigl(1 - (1-\theta)^h\bigr)(x_t - \ln 100)$
   with $\theta = 0.08$, so after 10 bars 57 % of the deviation from the centre is expected to be gone. Above a long
   SMA (close to the centre) the expected return is negative: the sign of the edge flips.
 
@@ -196,7 +196,7 @@ moment of the cross. This is one rule on one sample, not a backtest (no costs, n
 
 ## Combine with
 An SMA answers "which regime?", not "when?". The usual split is a slow SMA as the trend filter and a faster tool as
-the trigger: an oscillator (`rsi`) or the gap to a short SMA, which both measure a pullback. Whether the pullback rule
+the trigger: an [oscillator](glossary:oscillator) (`rsi`) or the gap to a short SMA, which both measure a pullback. Whether the pullback rule
 helps depends on the regime, and the lab shows it with the signs:
 
 ```lab

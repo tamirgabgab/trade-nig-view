@@ -7,11 +7,11 @@ the history so that the series measures what a holder actually earned. This page
 
 ## Splits and dividends
 - **Split.** In a 4-for-1 split each share becomes four shares worth a quarter as much. The price falls to a quarter
-  overnight; nothing happened to the company. Providers deliver split-adjusted bars: every price before the split is
-  divided by 4 and every volume multiplied by 4. ChartLab always uses these; there is no "unsplit" mode.
+  overnight; nothing happened to the company. Providers deliver split-adjusted [bars](glossary:bar): every price before the split is
+  divided by 4 and every [volume](glossary:volume) multiplied by 4. ChartLab always uses these; there is no "unsplit" mode.
 - **Dividend.** On the **ex-dividend date** the share starts trading without the right to the next dividend $D$, so
   its price drops by about $D$ at the open. The holder lost $D$ in price and gained $D$ in cash: no change in wealth.
-  On a raw chart the drop looks like a small gap down, and on a long chart the raw price understates the total return
+  On a raw chart the drop looks like a small [gap down](glossary:gap), and on a long chart the raw price understates the total return
   by the dividend yield every year.
 
 Splits are always adjusted; dividends are adjusted only when **ADJ** is on (the default).
@@ -88,7 +88,7 @@ What the two series say about Thursday:
 
 | Measurement | Raw | Adjusted |
 |---|---|---|
-| Thursday's close-to-close log return | −1.58 % | 0.00 % |
+| Thursday's close-to-close [log return](glossary:log-return) | −1.58 % | 0.00 % |
 | Thursday's opening gap from Wednesday's close | −1.47 % | +0.10 % |
 | SMA 3 on Wednesday | 50.5000 | 49.7078 |
 | SMA 3 on Thursday | 50.5667 | 50.0359 |
@@ -130,15 +130,15 @@ constant, so:
   [ATR](learn:atr)) are scaled by $f$ when the whole window is inside one segment (they are scale-equivariant:
   $\mathrm{SMA}(f x) = f\,\mathrm{SMA}(x)$); windows across an ex-date differ by more. Recursive averages such as the
   EMA remember older segments for a long time.
-- **On raw prices, every ex-date is a fake down-move.** RSI counts a loss of $D$, a moving average bends down, MACD
-  ticks lower, a gap detector reports a gap, an event study counts a return of about $-D/C$. For a quarterly payer
+- **On raw prices, every ex-date is a fake down-move.** RSI counts a loss of $D$, a [moving average](glossary:moving-average) bends down, MACD
+  ticks lower, a gap detector reports a gap, an [event study](glossary:event-study) counts a return of about $-D/C$. For a quarterly payer
   that is four small negative shocks a year, all on known dates.
 - **Volume indicators** ([OBV](learn:obv), [Volume SMA](learn:volume-sma)) do not change: volume is not adjusted for
   dividends. OBV does read the *sign* of each close-to-close change, so on raw prices an ex-date day that was flat in
   wealth counts as a down day.
 
 ## Intraday bars
-An hourly bar has no adjusted close of its own. ChartLab gives it the factor of its session's daily bar (see
+An hourly bar has no adjusted close of its own. ChartLab gives it the factor of its [session](glossary:session)'s daily bar (see
 [Bars and sessions](learn:bars-and-sessions)): every hour of a session is scaled like that session's daily bar, so
 with ADJ on the last hourly close of a session equals the session's adjusted daily close. A session that has no daily
 bar yet (today, before the daily refresh) takes the nearest earlier daily bar's factor. Only stocks and ETFs are
@@ -167,7 +167,7 @@ loaded, hourly bars are shown unadjusted with a warning.
 ## Exercise
 1. In the worked example, compute the raw and adjusted RSI change on Thursday by hand (up and down moves only): which
    one records a loss?
-2. Replay SPY (a quarterly dividend payer) and switch ADJ while the replay runs:
+2. [Replay](glossary:replay) SPY (a quarterly dividend payer) and switch ADJ while the replay runs:
 
 ```lab
 {"kind": "replay", "symbol": "SPY", "date": "2020-02-19", "indicators": [{"id": "sma", "params": {"length": 50}}],

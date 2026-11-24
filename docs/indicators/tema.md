@@ -1,15 +1,15 @@
 # Triple Exponential Moving Average (`tema`)
 
-Mulloy's TEMA (1994) combines three cascaded EMAs so that the first and second moments of the kernel both cancel. It
+Mulloy's TEMA (1994) combines three cascaded EMAs so that the first and second moments of the [kernel](glossary:kernel) both cancel. It
 tracks straight lines and parabolas with zero error. It is the fastest member of the EMA family here and also the
 noisiest.
 
 ## What it measures
-The question it answers: "where is the trend level now, correcting for both the EMA's lag and the bend of the
+The question it answers: "where is the trend level now, correcting for both the EMA's [lag](glossary:lag) and the bend of the
 trend?" It is the trend level, tracking both slope and curvature with no steady-state error. It reacts to turns
 fastest of the EMA family. It also chases noise most and overshoots after sharp moves.
 
-Move the length on `shock`: after the −15 % gap the TEMA dives past the new level, swings back above it and only
+Move the length on `shock`: after the −15 % [gap](glossary:gap) the TEMA dives past the new level, swings back above it and only
 then settles; the longer the length, the slower and wider the swing.
 
 ```lab
@@ -29,7 +29,7 @@ $$
 | $E^{(2)},\ E^{(3)}$ | EMA of the EMA, and EMA of that (not plotted) | price |
 | $x$ | the source (close by default) | price |
 | $n$ | length of all three EMAs | bars, 1–5000 (default 9) |
-| $\alpha$ | EMA smoothing factor | 0–1 (0.2 at $n = 9$) |
+| $\alpha$ | EMA [smoothing factor](glossary:smoothing-factor) | 0–1 (0.2 at $n = 9$) |
 
 Not to be confused with a triple-smoothed EMA ($E^{(3)}$ alone, the basis of TRIX).
 
@@ -75,7 +75,7 @@ $$
 The bracket is a quadratic in $r = k+1$, whose roots solve $r^2 - (3n+2)\,r + \tfrac32(n+1)^2 = 0$. The kernel therefore
 changes sign **twice**: positive, then negative, then positive again. At $n = 9$ the roots are $r = 6.74$ and $22.26$,
 so taps $k = 6\ldots21$ are negative (total $-0.164$) and the tail from $k = 22$ on is positive again ($+0.017$). This
-double sign change is why the step response rings: it overshoots, then undershoots, then settles.
+double sign change is why the [step response](glossary:step-response) rings: it overshoots, then undershoots, then settles.
 
 **Noise.** Summing $h_k^2$ in closed form:
 
@@ -85,13 +85,13 @@ $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $\mathrm{NRF}$ | noise reduction factor, $\sum_k h_k^2$ | — , 0.3822 at $n = 9$ |
+| $\mathrm{NRF}$ | [noise reduction factor](glossary:noise-reduction-factor), $\sum_k h_k^2$ | — , 0.3822 at $n = 9$ |
 
 At $n = 9$ this is $7523/19683 = 0.3822$, which is 3.44 times the EMA's 0.111 and 1.5 times DEMA's 0.254. Each
 extra moment you cancel costs more noise variance.
 
 **Low-frequency view.** With the cumulant expansion from the DEMA page, TEMA has $\kappa_1 = \kappa_2 = 0$ and
-$\kappa_3 = 6L^3 > 0$. The group delay is therefore $\tau(\omega) \approx -3L^3\omega^2$. That is **negative**: TEMA leads
+$\kappa_3 = 6L^3 > 0$. The [group delay](glossary:group-delay) is therefore $\tau(\omega) \approx -3L^3\omega^2$. That is **negative**: TEMA leads
 slow cycles slightly, by $-0.15$ bars at $P = 200$ ($-0.19$ predicted to leading order). The gain bump comes from the
 positive $\omega^4$ term.
 
@@ -156,7 +156,7 @@ On a ramp $x_t = a + bt$ each stage lags $L$ more, so both brackets on the left 
 $T - E^{(1)} = bL$: TEMA above EMA is the sign of a slope estimate, like DEMA above EMA. The second difference is 0 on
 a ramp, and on a parabola $ct^2$ it is $2cL^2$ (TEMA is exact there, DEMA falls short by $2cL^2$): TEMA above DEMA is
 the sign of a curvature (acceleration) estimate. A slope predicts only where slopes persist; none of the synthetic
-scenarios has a persistent curvature, so the second rule should have no stable edge anywhere. On a random walk
+scenarios has a persistent curvature, so the second rule should have no stable [edge](glossary:edge) anywhere. On a [random walk](glossary:random-walk)
 neither has an edge: future increments are independent of the past.
 
 ```lab
@@ -171,11 +171,11 @@ neither has an edge: future increments are independent of the past.
  ]}
 ```
 
-Measured with seed 1 (1000 bars, 10-bar look-ahead):
+Measured with seed 1 (1000 bars, 10-bar [look-ahead](glossary:horizon)):
 
 | Scenario | TEMA 20 above EMA 20 (slope) | TEMA 20 above DEMA 20 (curvature) |
 |---|---|---|
-| `reversal` | +1.86 % (95 % interval +0.62 % to +3.10 %, n = 43) | −0.21 % (−1.40 % to +0.98 %, n = 57) |
+| `reversal` | +1.86 % ([95 % interval](glossary:confidence-interval) +0.62 % to +3.10 %, n = 43) | −0.21 % (−1.40 % to +0.98 %, n = 57) |
 | `random_walk` | +0.45 % (−0.95 % to +1.86 %, n = 43) | −0.33 % (−1.40 % to +0.74 %, n = 58) |
 | `range` | −1.11 % (−1.95 % to −0.27 %, n = 57) | −0.37 % (−1.13 % to +0.40 %, n = 58) |
 
@@ -206,7 +206,7 @@ With seed 1, on `reversal`: Close above EMA 100 alone +2.05 % (+0.99 % to +3.10 
 zero for seeds 1–5 (+1.48 % to +3.11 %). RSI 14 below 60 alone is −0.37 % (−1.44 % to +0.71 %, n = 76); all three
 together +2.30 % (+0.73 % to +3.87 %, n = 24), so the RSI condition costs episodes without adding edge here. On
 `range` the pair gives −1.35 % (−2.35 % to −0.35 %, n = 52), on `random_walk` −0.12 % (−2.12 % to +1.87 %, n = 30).
-More rules, fewer episodes and more room for chance (multiple testing). Not a backtest, not advice.
+More rules, fewer episodes and more room for chance ([multiple testing](glossary:multiple-testing)). Not a backtest, not advice.
 
 ## Differences vs TradingView
 All three EMAs are SMA-seeded (TA-Lib convention). The output is identical to TA-Lib `TEMA` on every bar. Pine's

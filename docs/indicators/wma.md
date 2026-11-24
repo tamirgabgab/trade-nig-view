@@ -1,6 +1,6 @@
 # Weighted Moving Average (`wma`)
 
-A linearly weighted FIR average: the newest bar weighs $n$, the oldest $1$. At the same length it lags less than the
+A linearly weighted [FIR](glossary:fir-filter) average: the newest bar weighs $n$, the oldest $1$. At the same length it [lags](glossary:lag) less than the
 SMA and is a little noisier; at the same lag it is the least noisy average with non-negative weights. It is also the
 building block of the Hull MA and the LSMA.
 
@@ -10,7 +10,7 @@ that trusts recent bars more. On a steady trend it trails by $\frac{n-1}{3}$ bar
 SMA of the same length and turns sooner; old bars fade out linearly, so the drop-off effect of the SMA is much weaker
 (the leaving bar weighs only $\frac{2}{n(n+1)}$).
 
-Move the length on the `shock` scenario: after the −15 % gap the WMA bends down quickly, then flattens smoothly, with
+Move the length on the `shock` scenario: after the −15 % [gap](glossary:gap) the WMA bends down quickly, then flattens smoothly, with
 no second jolt when the gap bar leaves the window.
 
 ```lab
@@ -34,7 +34,7 @@ $$
 | $H(z)$ | transfer function, $z^{-1}$ = one-bar delay | — |
 
 ## Kernel, lag and noise
-Impulse response $h_k = \frac{2(n-k)}{n(n+1)}$ for $0 \le k \le n-1$: a ramp from $\frac{2}{n+1}$ (newest) down to
+[Impulse response](glossary:impulse-response) $h_k = \frac{2(n-k)}{n(n+1)}$ for $0 \le k \le n-1$: a ramp from $\frac{2}{n+1}$ (newest) down to
 $\frac{2}{n(n+1)}$ (oldest). The normaliser is $\sum_{k<n}(n-k) = \frac{n(n+1)}{2}$, so the DC gain is 1.
 
 **Lag.** With $\sum_{k<n} k(n-k) = n\cdot\frac{n(n-1)}{2} - \frac{(n-1)n(2n-1)}{6} = \frac{n(n-1)(n+1)}{6}$,
@@ -56,7 +56,7 @@ which is $\frac{2(2n+1)}{3(n+1)}$ times the SMA's $\frac1n$ (1.27 at $n = 9$, te
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
 | $\bar k$ | lag: the kernel's centre of mass | bars, $\frac{n-1}{3}$ |
-| $\mathrm{NRF}$ | noise reduction factor: output / input variance for white noise | — , about $\frac{4}{3n}$ |
+| $\mathrm{NRF}$ | [noise reduction factor](glossary:noise-reduction-factor): output / input variance for white noise | — , about $\frac{4}{3n}$ |
 | $n$ | length | bars |
 
 **Equal lag instead of equal length.** A WMA with lag $L$ has $n = 3L + 1$ and
@@ -66,7 +66,7 @@ EMA(9) have 0.1111.
 
 **Why: the WMA is the minimum-noise average for its lag.** Minimise $\sum_k h_k^2$ subject to $\sum_k h_k = 1$,
 $\sum_k k\,h_k = L$ and $h_k \ge 0$. The problem is strictly convex, and its KKT conditions give
-$h_k = \max(\lambda + \mu k,\,0)$: a straight line clipped at zero. The WMA kernel is exactly such a clipped ramp
+$h_k = \max(\lambda + \mu k,\,0)$: a straight line clipped at zero. The WMA [kernel](glossary:kernel) is exactly such a clipped ramp
 (it would reach zero at $k = n$), so for every lag of the form $\frac{n-1}{3}$ no non-negative kernel (SMA, EMA, ALMA,
 any other) is smoother than $\mathrm{WMA}_n$.
 
@@ -99,7 +99,7 @@ First valid bar index: $n - 1$ (8 at the default), plus the offset.
   SMA's straight ramp at first and then bends over; no overshoot, finite settling.
 - **Magnitude:** −0.08 dB at 100 bars, −0.53 dB at 40, −2.15 dB at 20, then a stopband without notches: the
   Dirichlet nulls of the SMA are replaced by gentle ripples whose peaks and troughs differ by less than 1 dB.
-- **Group delay:** the kernel is not symmetric, so the phase is not linear. The delay is 2.66 bars at 200 bars
+- **[Group delay](glossary:group-delay):** the kernel is not symmetric, so the phase is not linear. The delay is 2.66 bars at 200 bars
   (2.667 at DC) and falls steadily through the passband (2.59 at 40 bars, 2.30 at 20), so faster swings are delayed
   less than a trend. In the stopband it dips to about −1.78 bars near $P \approx 8$ and then wanders.
 - **Compare:** set the WMA to length 13 and compare it with EMA 9 or SMA 9: equal lag (4.00), lower NRF (0.099 vs
@@ -146,8 +146,8 @@ $$
 So "WMA above SMA" is exactly "the regression line over the window slopes up", and a cross of the two is a sign
 change of the fitted slope. (The same identity gives the LSMA end point, $\mathrm{SMA} + \frac{n-1}{2}\hat b =
 3\,\mathrm{WMA} - 2\,\mathrm{SMA}$; see the `lsma` page.) A fitted slope predicts only if slopes persist: on a random
-walk the next increments are independent of it and the edge is zero; on `reversal` the slope is positive mostly in
-the rising half; on the mean-reverting `range` an upward slope means price has moved away from the centre and the
+walk the next increments are independent of it and the [edge](glossary:edge) is zero; on `reversal` the slope is positive mostly in
+the rising half; on the [mean-reverting](glossary:mean-reversion) `range` an upward slope means price has moved away from the centre and the
 sign flips.
 
 ```lab
@@ -162,11 +162,11 @@ sign flips.
  ]}
 ```
 
-Measured with seed 1 (1000 bars, 10-bar look-ahead):
+Measured with seed 1 (1000 bars, 10-bar [look-ahead](glossary:horizon)):
 
 | Scenario | WMA 50 above SMA 50 | WMA 20 above SMA 20 |
 |---|---|---|
-| `reversal` | +1.97 % (95 % interval +0.81 % to +3.14 %, n = 44) | +1.86 % (+0.75 % to +2.96 %, n = 48) |
+| `reversal` | +1.97 % ([95 % interval](glossary:confidence-interval) +0.81 % to +3.14 %, n = 44) | +1.86 % (+0.75 % to +2.96 %, n = 48) |
 | `random_walk` | −0.31 % (−1.87 % to +1.25 %, n = 36) | −0.13 % (−1.43 % to +1.16 %, n = 47) |
 | `range` | −0.69 % (−1.71 % to +0.32 %, n = 47) | −0.62 % (−1.60 % to +0.36 %, n = 60) |
 
@@ -193,7 +193,7 @@ With seed 1, on `reversal`: the slope filter alone +1.97 % (n = 44); "Close belo
 +0.76 %, n = 74); together +1.86 % (+0.39 % to +3.33 %, n = 32). The pullback rule alone has no edge, and inside the
 filter it does not improve on the filter: the filter carries the information, the trigger only picks the entry bar.
 On `range` the pair gives +0.00 % (−1.15 % to +1.16 %, n = 41). Not a backtest (an entry on a dip may still get a
-better price, which an event study of close-to-close returns does not measure), and not advice.
+better price, which an [event study](glossary:event-study) of close-to-close returns does not measure), and not advice.
 
 ## Differences vs TradingView
 None expected; same formula as Pine `ta.wma` (called LWMA on some other platforms). Verified equal to TA-Lib `WMA`.

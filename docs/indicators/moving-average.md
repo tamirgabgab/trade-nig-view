@@ -4,7 +4,7 @@ One entry that computes any of ChartLab's 15 moving averages, picked by the MA t
 on the same chart by switching the type, without adding a new indicator each time.
 
 ## What it measures
-The trend of the source over roughly the chosen length: a weighted mean of the last bars, with the lag and
+The trend of the source over roughly the chosen length: a weighted mean of the last bars, with the [lag](glossary:lag) and
 smoothness of the chosen type. Every average answers the same question, "where has price been lately?", and they
 differ only in how they weigh the recent against the older bars.
 
@@ -37,14 +37,14 @@ the efficiency length), T3 volume factor 0.7, LSMA offset 0. SWMA ignores the le
 
 The types fall into three classes (the verification classes of the harness):
 
-- **Non-negative kernels** (SMA, EMA, WMA, SMMA, ALMA, SWMA): $h_k \ge 0$, so the output stays inside the window's
+- **Non-negative [kernels](glossary:kernel)** (SMA, EMA, WMA, SMMA, ALMA, SWMA): $h_k \ge 0$, so the output stays inside the window's
   range, never overshoots, and lag and NRF cannot both be small.
 - **Lag-compensated** (DEMA, TEMA, HMA, LSMA, ZLEMA, T3): negative weights cancel the first moment (lag 0 for all but
   T3), paying with a larger NRF and overshoot at turns.
 - **Data-dependent** (VWMA, McGinley, KAMA): no fixed kernel; the weights depend on volume or on the price itself.
 
 For a linear type the lag is the kernel's centre of mass $\bar k = \sum_k k\,h_k$ (exact on any straight line:
-$x_t = a + bt \Rightarrow y_t = a + b(t - \bar k)$) and the noise reduction factor is $\mathrm{NRF} = \sum_k h_k^2$.
+$x_t = a + bt \Rightarrow y_t = a + b(t - \bar k)$) and the [noise reduction factor](glossary:noise-reduction-factor) is $\mathrm{NRF} = \sum_k h_k^2$.
 Measured with this indicator at the default length $n = 9$:
 
 | Type | Warm-up | Lag (bars) | NRF | Step peak |
@@ -52,7 +52,7 @@ Measured with this indicator at the default length $n = 9$:
 | SMA | 8 | 4.000 | 0.1111 | 1 |
 | EMA | 8 | 4.000 | 0.1111 | 1 |
 | WMA | 8 | 2.667 | 0.1407 | 1 |
-| SMMA (RMA) | 8 | 8.000 | 0.0588 | 1 |
+| SMMA ([RMA](glossary:rma)) | 8 | 8.000 | 0.0588 | 1 |
 | DEMA | 16 | 0 | 0.2538 | 1.107 |
 | TEMA | 24 | 0 | 0.3822 | 1.147 |
 | HMA | 10 | 0 | 0.4418 | 1.267 |
@@ -86,15 +86,15 @@ peak 1.267 at $n = 9$). Compare with the SMA lab above.
 | Offset | 0 | Display shift, $\ge 0$ |
 
 ## Warm-up
-First valid bar index: that of the chosen type, plus the offset (column "Warm-up" above for $n = 9$). Extra history:
+First valid bar index: that of the chosen type, plus the offset (column "[Warm-up](glossary:warm-up)" above for $n = 9$). Extra history:
 $\max(25n, 250)$ bars for most types, $\max(50n, 250)$ for T3, and $\lfloor 25/s^2 \rfloor + n$ for KAMA (6,015 at
 $n = 9$). HMA needs $n \ge 2$.
 
 ## Filter view
 The drawer follows the chosen type:
 
-- **Linear types**: impulse response (stems), step response, $\lvert H\rvert$ in dB vs period on a log axis from 2 to
-  200 bars, and group delay. FIR types show their exact spectral zeros as deep notches (SMA 9 has zeros at periods
+- **Linear types**: [impulse response](glossary:impulse-response) (stems), [step response](glossary:step-response), $\lvert H\rvert$ in dB vs period on a log axis from 2 to
+  200 bars, and [group delay](glossary:group-delay). [FIR](glossary:fir-filter) types show their exact spectral zeros as deep notches (SMA 9 has zeros at periods
   $9/j$: 9, 4.5, 3, 2.25; the plot floors at $-120$ dB where a grid point lands on one); lag-compensated types show overshoot in the step and a magnitude bump above
   0 dB.
 - **VWMA, McGinley, KAMA**: step and ramp responses only, with the reason (volume weights change from bar to bar, or
@@ -109,7 +109,7 @@ The drawer follows the chosen type:
   crossing it back and forth is a range.
 - **Crossings.** A price cross means the weighted sum of recent returns changed sign. Short or zero-lag types cross
   often (little memory); long non-negative types cross rarely and late.
-- **Distance from price.** The gap grows with the slope ($\bar k\,b$) and, on a random walk, has a typical size of
+- **Distance from price.** The gap grows with the slope ($\bar k\,b$) and, on a [random walk](glossary:random-walk), has a typical size of
   $\sigma\sqrt{\sum_j w_j^2}$ (next section): about 6 % for SMA 50 at 1.5 % daily volatility. A gap of that size is
   ordinary, not "stretched".
 - **Trend vs range.** In a trend the line is sloped and stays on one side of price; in a range it is flat and price
@@ -155,7 +155,7 @@ $$
 | $\sum_j w_j^2$ | variance gain of the return weights | 16.2 for SMA 50 (sd $\approx 4.0\sigma \approx 6$ %) |
 
 Does the sign tell anything about the next $h$ bars? On a random walk the future returns are independent of the past,
-so the expected next $h$ returns are $h\mu$ after every bar and **no average, of any type or length, has an edge**. A
+so the expected next $h$ returns are $h\mu$ after every bar and **no average, of any type or length, has an [edge](glossary:edge)**. A
 steady uptrend is no different: every bar has the same expected return. An edge needs a market whose expected return
 changes and whose past reveals the change: in the **reversal** scenario (drift $+0.25$ % per bar, then $-0.25$ %) a
 long weighted sum of returns says which half you are in; a zero-lag type does not accumulate returns and so cannot.
@@ -178,7 +178,7 @@ With seed 1 (1000 bars, 10-bar horizon):
 | Random walk | $+0.17$ % ($-1.18$ to $+1.53$, n = 42) | |
 | Range | $-0.94$ % ($-1.76$ to $-0.11$, n = 63) | |
 
-The SMA 50 rule is positive on all of seeds 1–5 in the reversal ($+1.24$ to $+2.14$ %); in the mean-reverting range
+The SMA 50 rule is positive on all of seeds 1–5 in the reversal ($+1.24$ to $+2.14$ %); in the [mean-reverting](glossary:mean-reversion) range
 it turns negative (above the average means above the mean, which pulls price back). Same length, different type, no
 edge: the lag is the memory. One rule on one synthetic sample: not a backtest (no costs), sensitive to how many rules
 you try, and not investment advice.

@@ -2,7 +2,7 @@
 
 The simple moving average of volume, drawn on the volume histogram's scale so you can see which bars trade more than
 usual. People use it to spot unusual activity: a bar with twice the typical volume, a breakout "on volume", a quiet
-drift.
+[drift](glossary:drift).
 
 ## What it measures
 The question it answers: "how much does a typical bar of the last $n$ trade, and is this bar more or less than that?"
@@ -53,8 +53,8 @@ So $\mathrm{RV}$ can never exceed $n$, and a bar "at twice the line" (length 20)
 19 bars before it.
 
 ## Kernel, lag and noise
-An SMA of the volume: flat kernel $h_k = 1/n$ for $k < n$, lag $(n-1)/2$ (9.5 bars at 20), NRF $1/n$. After a jump
-in the volume level the line ramps linearly and reaches the new level after $n$ bars (the step response of a flat
+An SMA of the volume: flat [kernel](glossary:kernel) $h_k = 1/n$ for $k < n$, [lag](glossary:lag) $(n-1)/2$ (9.5 bars at 20), NRF $1/n$. After a jump
+in the volume level the line ramps linearly and reaches the new level after $n$ bars (the [step response](glossary:step-response) of a flat
 box). Volume is roughly lognormal, so a few spikes pull the mean up: the typical bar sits below its own average
 (median relative volume 0.94 on the synthetic `random_walk`, 0.94 on SPY and 0.92 on AAPL daily bars, 2007–2026;
 Why it works shows where 0.94 comes from).
@@ -73,7 +73,7 @@ Not offered here (the same response as SMA; see the [SMA page](learn:sma#filter-
 ## How to read it
 - **Bar above / below the line:** above-average or below-average activity. Most bars sit a little below the line
   (median 0.94); that is the skew of volume, not a quiet market.
-- **Unusual volume:** a bar at twice the line or more. On the synthetic random walk that is about 1.6 % of the bars,
+- **Unusual volume:** a bar at twice the line or more. On the synthetic [random walk](glossary:random-walk) that is about 1.6 % of the bars,
   on SPY's daily bars 1.9 %: roughly one day a month. It marks a bar that moved a lot or a day with news (an
   earnings report, an index rebalance, an options expiry).
 - **Rising line:** activity is building, usually because the moves are getting bigger (volume and volatility rise
@@ -81,7 +81,7 @@ Not offered here (the same response as SMA; see the [SMA page](learn:sma#filter-
 - **Direction:** none. A heavy bar can be a rally or a sell-off; read the direction from the price, or from
   [OBV](learn:obv), which signs each bar's volume.
 - **Length:** a short line follows each burst (lag $(n-1)/2$ bars) and makes fewer bars look unusual; a long one is a
-  steadier baseline but takes $n$ bars to accept a new normal.
+  steadier [baseline](glossary:baseline) but takes $n$ bars to accept a new normal.
 - **Hourly bars:** the line ripples with the time of day, and the open and close bars look unusual every day. See
   Hourly bars and the intraday profile.
 
@@ -99,7 +99,7 @@ $$
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
 | $\xi_t$ | independent standard normal noise | — |
-| $r_t$ | the bar's log return $\ln(C_t / C_{t-1})$, standard deviation $\sigma$ | about $\pm 0.015$ |
+| $r_t$ | the bar's [log return](glossary:log-return) $\ln(C_t / C_{t-1})$, standard deviation $\sigma$ | about $\pm 0.015$ |
 | $20\lvert r_t\rvert$ | bigger moves trade more: $e^{20\lvert r\rvert}$ is 1.22 times at a 1 % move, 1.49 at 2 %, 2.72 at 5 % | — |
 | $s$ | standard deviation of $\ln V$ | 0.350 on `random_walk` ($\sigma = 0.015$) |
 | $1 - \frac{2}{\pi}$ | variance of $\lvert Z\rvert$ for a standard normal $Z$ | 0.363 |
@@ -187,12 +187,12 @@ the accumulation phases, "heavy and up" gives +0.07 % to +0.85 % and "heavy and 
 a tilt in the expected direction, but no interval excludes zero. One bar's vote is weak; OBV adds up twenty of them,
 and there the same effect becomes visible (see the [OBV page](learn:obv#why-it-works)).
 
-One rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing, and not
+One rule on one sample: not a backtest (no costs, no position sizing), sensitive to [multiple testing](glossary:multiple-testing), and not
 investment advice.
 
 ## Hourly bars and the intraday profile
 On hourly bars volume follows the time of day: heavy at the open, light at midday, heavy again into the close. The
-synthetic hourly data uses the profile $p = (1.8, 1.1, 0.8, 0.7, 0.8, 1.0, 1.6)$ for the seven bars of a session
+synthetic hourly data uses the profile $p = (1.8, 1.1, 0.8, 0.7, 0.8, 1.0, 1.6)$ for the seven bars of a [session](glossary:session)
 (New York 09:30 to 15:30); SPY's hourly bars (January 2024 to November 2026, 5000 bars) measure
 $(1.57, 0.96, 0.75, 0.68, 0.76, 0.92, 1.35)$ times the overall mean, against the model's
 $(1.62, 0.99, 0.72, 0.63, 0.72, 0.90, 1.44)$. Two consequences for a 20-bar average.
@@ -255,7 +255,7 @@ open and the close against their own usual size, not against the line.
 
 ## Combine with
 The textbook pairing is "a breakout on volume": a price signal, confirmed by above-average volume. Since volume
-carries no direction, the confirmation can only tell big signal bars from small ones. Switch between rules 2 and 3:
+carries no direction, the [confirmation](glossary:confirmation) can only tell big signal bars from small ones. Switch between rules 2 and 3:
 
 ```lab
 {"kind": "combo", "scenario": "random_walk", "horizon": 10, "on": [0, 1],
@@ -276,9 +276,9 @@ With seed 1 on `random_walk`: the cross alone +0.01 % (−1.81 % to +1.82 %, n =
 interval below zero, which on a random walk can only be chance: seeds 2–5 give −0.96 %, +2.07 %, +1.81 % and −1.12 %,
 every interval containing zero. Over `random_walk`, `uptrend`, `range`, `reversal` and `accumulation` with seeds 1–5,
 the volume-confirmed cross clears zero 3 times in 25, always downwards, never upwards. Volume confirmation adds no
-edge in these markets; it only cuts the number of signals.
+[edge](glossary:edge) in these markets; it only cuts the number of signals.
 
-Better partners: [OBV](learn:obv) for the direction of the volume, a trend filter such as the
+Better partners: [OBV](learn:obv) for the direction of the volume, a [trend filter](glossary:trend-filter) such as the
 [SMA](learn:sma) for the direction of the price, and a volatility measure such as ATR, which tracks the same
 "activity" from the price side (volume and the size of the moves rise together). See
 [Combining indicators](learn:combinations) for why every extra rule costs episodes. Not a backtest, not advice.

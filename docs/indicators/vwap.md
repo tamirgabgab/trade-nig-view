@@ -1,6 +1,6 @@
 # VWAP (`vwap`)
 
-The Volume Weighted Average Price of the current trading session: the average price paid per share since the
+The Volume Weighted Average Price of the current trading [session](glossary:session): the average price paid per share since the
 session opened. Intraday only: it restarts every morning and is hidden on daily and longer bars.
 
 ## What it measures
@@ -25,9 +25,9 @@ session's volume piles up.
 ```
 
 The hourly scenarios reuse the daily close path one bar per hour: seven bars per session (14:30–20:30 UTC), an
-opening gap four times wider than the gap between hours, and the U-shaped intraday volume of real markets (the first
+[opening gap](glossary:gap) four times wider than the gap between hours, and the U-shaped intraday volume of real markets (the first
 and last hour trade most). A 1000-bar sample is about 143 sessions. Switch the data picker to daily bars and the line
-disappears (see Warm-up).
+disappears (see [Warm-up](glossary:warm-up)).
 
 ## Formula
 
@@ -105,8 +105,8 @@ The heavy opening hour anchors the line: at the close the first bar still carrie
 the 14 % an equal-volume average would give it (measured on the lab's `random_walk` hourly data, seed 1: the first bar
 traded 22.2 % of its session's volume on average, slightly less than 23.1 % because volume also grows with the size
 of a bar's move). The gain is not monotone: the heavy last hour pulls the line again (0.205 against 0.154 at mid-day).
-The lag grows through the session like that of a growing SMA, and ends near 3 bars for both volume shapes because
-both ends of the U are heavy. Not time-invariant, so there is no fixed kernel and no frequency response.
+The [lag](glossary:lag) grows through the session like that of a growing SMA, and ends near 3 bars for both volume shapes because
+both ends of the U are heavy. Not time-invariant, so there is no fixed [kernel](glossary:kernel) and no [frequency response](glossary:frequency-response).
 
 ## Defaults
 | Param | Default | Why |
@@ -123,7 +123,7 @@ far is 0.
 **Empty on daily and longer intervals.** A daily bar is a whole session: the sum has one term, so the VWAP of a daily
 bar would just be that bar's own hlc3, with nothing averaged. ChartLab returns `NaN` on every daily, weekly and monthly
 bar (daily bars carry no session), so the line is hidden there; TradingView hides its VWAP on 1D and above by default
-for the same reason. Every widget on this page therefore starts on hourly bars; an event study on daily bars finds no
+for the same reason. Every widget on this page therefore starts on hourly bars; an [event study](glossary:event-study) on daily bars finds no
 signal at all ($n = 0$).
 
 ## Filter view
@@ -185,14 +185,14 @@ $$
 | $\frac{S_{j-1}}{S_t}$ | weight of that change: the share of today's volume (so far) that traded before bar $j$ | $0$ to $1$ |
 
 Each change since the open counts with the share of the day's volume that traded before it, i.e. that it moved into
-profit or loss. "Close above VWAP" is therefore a momentum measure, like "close above SMA", but over a window cut at
+profit or loss. "Close above VWAP" is therefore a [momentum](glossary:momentum) measure, like "close above SMA", but over a window cut at
 the open: at most six changes on hourly bars. (With hlc3 as source, add $\sum_i \frac{V_i}{S_t}(C_i - p_i)$: where
 each bar closed inside its own range.)
 
 **When that can predict anything.** The argument of the SMA page applies unchanged: if price changes are independent
 of the past with a constant mean $\mu$ (`random_walk`, `uptrend`), the expected $h$-bar return after any signal is
-$h\mu$, the same as after any bar, and the edge is zero. An edge needs dependence: a drift that flips (`reversal`),
-mean reversion (`range`), or volume-led phases (`accumulation`). With a window this short, theory expects the signs of
+$h\mu$, the same as after any bar, and the [edge](glossary:edge) is zero. An edge needs dependence: a drift that flips (`reversal`),
+[mean reversion](glossary:mean-reversion) (`range`), or volume-led phases (`accumulation`). With a window this short, theory expects the signs of
 the SMA page, much weaker. The lab uses a look-ahead of 7 bars, one session:
 
 ```lab
@@ -211,7 +211,7 @@ Measured with seed 1 (1000 hourly bars, 7-bar look-ahead):
 
 | Scenario | Close above VWAP | Close below VWAP |
 |---|---|---|
-| `random_walk` | +0.11 % (95 % interval −0.59 % to +0.81 %, n = 98) | +0.09 % (−0.63 % to +0.80 %, n = 104) |
+| `random_walk` | +0.11 % ([95 % interval](glossary:confidence-interval) −0.59 % to +0.81 %, n = 98) | +0.09 % (−0.63 % to +0.80 %, n = 104) |
 | `uptrend` | +0.08 % (−0.45 % to +0.60 %, n = 105) | +0.16 % (−0.43 % to +0.75 %, n = 99) |
 | `reversal` | +0.20 % (−0.50 % to +0.91 %, n = 100) | +0.08 % (−0.58 % to +0.75 %, n = 104) |
 | `range` | −0.32 % (−1.00 % to +0.36 %, n = 105) | +0.60 % (−0.05 % to +1.25 %, n = 107) |
@@ -285,7 +285,7 @@ depends only on the size of a move, not its direction. Same caveat: one sample, 
   VWAP can sit near a price the market left early. After a big gap, the price can stay on one side of VWAP all day.
 - **A late big-volume bar still moves it.** The gain is $V_t/S_t$, not a function of the time of day: a news bar with
   three times the usual volume can pull a late-session VWAP as much as a morning bar does.
-- **Above VWAP is not a buy signal by itself.** The labs find no stable edge for either side alone; a high hit rate
+- **Above VWAP is not a buy signal by itself.** The labs find no stable edge for either side alone; a high [hit rate](glossary:hit-rate)
   in an uptrend is the trend's, not the VWAP's (compare with the baseline, as the labs do).
 - The synthetic hourly bars move as much per hour as the daily scenarios move per day (the same close path), so their
   numbers show the logic, not realistic intraday sizes.

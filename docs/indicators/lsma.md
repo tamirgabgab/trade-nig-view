@@ -1,8 +1,8 @@
 # Least Squares Moving Average (`lsma`)
 
 The LSMA fits an ordinary-least-squares line through the last $n$ prices and plots its value at the newest bar. That
-makes it a fixed FIR filter that reproduces any straight line exactly. It is the cleanest example of the "price of zero
-lag": at long lengths its noise variance is four times the SMA's.
+makes it a fixed [FIR filter](glossary:fir-filter) that reproduces any straight line exactly. It is the cleanest example of the "price of zero
+[lag](glossary:lag)": at long lengths its noise variance is four times the SMA's.
 
 ## What it measures
 Where the recent linear trend "is now". Fit the best straight line through the last $n$ closes and read off its value
@@ -59,7 +59,7 @@ $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $h_k$ | weight of the bar $k$ bars ago (impulse response) | from $\frac{4n-2}{n(n+1)}$ down to $\frac{4-2n}{n(n+1)}$ |
+| $h_k$ | weight of the bar $k$ bars ago ([impulse response](glossary:impulse-response)) | from $\frac{4n-2}{n(n+1)}$ down to $\frac{4-2n}{n(n+1)}$ |
 | $k$ | bars ago | $0\ldots n-1$ |
 | $\textcolor{#00BCD4}{\mathrm{WMA}_n}$, $\textcolor{#2962FF}{\mathrm{SMA}_n}$ | linearly weighted and simple averages of the same length | price |
 
@@ -80,7 +80,7 @@ $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $\mathrm{NRF}$ | noise reduction factor: output variance / input variance for white noise | 0.1508 at $n = 25$ |
+| $\mathrm{NRF}$ | [noise reduction factor](glossary:noise-reduction-factor): output variance / input variance for white noise | 0.1508 at $n = 25$ |
 | $h_k$, $h_0$, $n$ | the kernel above and its newest weight | |
 
 NRF equals the newest weight. This is the OLS leverage: the variance of a fitted value is $\sigma^2$ times the weight
@@ -89,10 +89,10 @@ the fit gives the observation at which it is evaluated (the hat-matrix diagonal)
 lag of $\frac{n-1}{2}$ bars costs four times the noise variance at the same length.
 
 **Overshoot.** The negative weights total $\int_{2/3}^{1}(6u-4)\,du = \frac13$ as $n \to \infty$, and $0.3077$ at
-$n = 25$. Because they all sit at the old end of the window, the step response is $1 + 0.308 = 1.308$ at its peak
+$n = 25$. Because they all sit at the old end of the window, the [step response](glossary:step-response) is $1 + 0.308 = 1.308$ at its peak
 (bar 16). It then falls back to 1, reached exactly at bar 24.
 
-**What the offset does.** The kernel is linear in $p$, and the fitted line is exact on ramps, so the lag is exactly
+**What the offset does.** The [kernel](glossary:kernel) is linear in $p$, and the fitted line is exact on ramps, so the lag is exactly
 $o$ bars. The noise is
 
 $$
@@ -134,7 +134,7 @@ At $n = 25$, offset 0:
 - **Magnitude:** +0.36 dB already at $P = 200$, a peak of +2.57 dB (gain 1.345) near $P \approx 43$ bars, 0 dB near
   26 bars and $-3$ dB near 22.5 bars. Below that comes a rippling stopband ($-28$ dB at $P = 2$). For comparison,
   the SMA of the same length is $-3$ dB at 56 bars: the LSMA passes much shorter cycles.
-- **Group delay:** 1.2 bars at $P = 200$, rising to 8.4 bars near $P \approx 31$. In the stopband it swings wildly
+- **[Group delay](glossary:group-delay):** 1.2 bars at $P = 200$, rising to 8.4 bars near $P \approx 31$. In the stopband it swings wildly
   (down to $-24$ near $P \approx 17.6$, where the gain has a dip of $-13$ dB). Read the group delay only where the
   gain is near 0 dB.
 
@@ -172,7 +172,7 @@ $$
 | $H_j$ | tail sum of the kernel: the weight increment $r_{t-j+1}$ gets in the gap | dimensionless |
 | $h_k$ | the average's kernel | |
 
-On a random walk with drift, $r_t = b + \sigma\varepsilon_t$ with independent standard normal $\varepsilon_t$, so the
+On a [random walk](glossary:random-walk) with [drift](glossary:drift), $r_t = b + \sigma\varepsilon_t$ with independent standard normal $\varepsilon_t$, so the
 gap is normal with
 
 $$
@@ -215,10 +215,10 @@ So "LSMA 50 slope up" is right with probability $\Phi(0.208 \cdot 6.45) = 0.91$ 
 sign half-way, the expected $h$-bar return after a signal that is right with probability $P$ is about
 $h\,b\,(2P - 1)$: $10 \cdot 0.25\,\% \cdot 0.82 = 2.0\,\%$ for the slope rule and $0$ for price above the LSMA. On a
 random walk without a turn none of this helps: the increments after bar $t$ are independent of everything before
-it, so every rule built from past prices has an expected edge of zero.
+it, so every rule built from past prices has an expected [edge](glossary:edge) of zero.
 
-The lab checks it. With seed 1, 1000 bars and a 10-bar horizon on `reversal`: "LSMA 50 slope up" has an edge of
-+1.97 % (95 % interval +0.81 % to +3.14 %, n = 44), "close above LSMA 50" −0.08 % (−1.22 % to +1.06 %, n = 65), and
+The lab checks it. With seed 1, 1000 bars and a 10-bar [horizon](glossary:horizon) on `reversal`: "LSMA 50 slope up" has an edge of
++1.97 % ([95 % interval](glossary:confidence-interval) +0.81 % to +3.14 %, n = 44), "close above LSMA 50" −0.08 % (−1.22 % to +1.06 %, n = 65), and
 "close above SMA 50" +1.73 % (+0.50 % to +2.95 %, n = 47). The pattern holds for seeds 1 to 5 (slope rule +1.41 % to
 +2.34 %, every interval above 0; close above LSMA always inside the noise). On `random_walk` the slope rule shows
 nothing (seed 1: −0.31 %, −1.87 % to +1.25 %, n = 36). The slope is tested as "LSMA above the same LSMA with offset

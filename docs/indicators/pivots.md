@@ -2,7 +2,7 @@
 
 Swing highs and lows (fractals): a bar whose high is above the $L$ bars before it and the $R$ bars after it (a pivot
 high), or whose low is below them (a pivot low). People use them to read the market's swing structure (higher highs
-and higher lows, or lower ones) and as anchors for support and resistance lines, trend lines and Fibonacci tools.
+and higher lows, or lower ones) and as anchors for [support](glossary:support) and [resistance](glossary:resistance) lines, trend lines and Fibonacci tools.
 
 ## What it measures
 The question it answers: "where did the market turn, on the scale of $L$ bars back and $R$ bars forward?" A pivot high
@@ -10,8 +10,8 @@ is a local top: no bar in the window around it reached as high. It says nothing 
 the turns that have happened, and it can only mark a turn once $R$ bars have passed without a higher high. That
 delay is the whole story of this indicator (Why it works).
 
-The labs on these pages draw lines, not markers, so the dots below come from an event study: each dot sits on the bar
-where a pivot high was **confirmed**, $R = 5$ bars after the top itself. Set the look-ahead to 1 bar to see every
+The labs on these pages draw lines, not markers, so the dots below come from an [event study](glossary:event-study): each dot sits on the bar
+where a pivot high was **confirmed**, $R = 5$ bars after the top itself. Set the [look-ahead](glossary:horizon) to 1 bar to see every
 confirmed pivot high (two pivot highs are always more than $\min(L, R)$ bars apart, so none is skipped); leave the
 threshold at 0 (it only filters the pivots by price). To see the circles on the pivot bars themselves, add "Pivot
 points high/low" from the chart's Structure menu.
@@ -99,7 +99,7 @@ Not offered (not a moving average).
 ## Why it works
 **How many pivots chance alone makes.** If the highs were independent draws, each of the $L + R + 1$ bars of a window
 would be the highest with equal probability, so a fraction $\frac{1}{L+R+1}$ of the bars would be pivot highs. Prices
-are not independent draws: they are close to a random walk. For a random walk with symmetric, continuous steps the
+are not independent draws: they are close to a [random walk](glossary:random-walk). For a random walk with symmetric, continuous steps the
 Sparre Andersen theorem gives the probability that a walk of $k$ steps stays below its starting point; the left and
 right sides of the window are two independent such walks:
 
@@ -125,14 +125,14 @@ the top of its window than a random draw would be. Measured on 200 000 `random_w
 | 10 / 10 | 30.5 | 31.0 | 47.6 | 36.4 | 28.1 |
 | 5 / 2 | 91.6 | 92.3 | 125.0 | 95.0 | 98.3 |
 
-The highs of real bars add a little wick noise to the walk, hence 58.8 instead of 60.6. A mean-reverting `range` turns
+The highs of real bars add a little wick noise to the walk, hence 58.8 instead of 60.6. A [mean-reverting](glossary:mean-reversion) `range` turns
 more often, an `uptrend` less (and with 5 / 2 in an uptrend there are 98 pivot highs but only 77 pivot lows: the
-short right side confirms tops quickly while the drift erases the lows). At 5 / 5 a random walk makes a pivot high
+short right side confirms tops quickly while the [drift](glossary:drift) erases the lows). At 5 / 5 a random walk makes a pivot high
 about every 17 bars: a chart full of swing points is what noise looks like.
 
-**Drawn in hindsight, stored without lookahead.** The dot is drawn on bar $p$ but known only at $p + R$. On the
+**Drawn in hindsight, stored without [lookahead](glossary:lookahead).** The dot is drawn on bar $p$ but known only at $p + R$. On the
 pivot bar itself the next $R$ bars are lower by definition, so a "signal" read on the pivot bar has a huge, fake
-edge. Measured on the same 200 000 `random_walk` bars (pivots 5 / 5, 11 760 pivot highs), the 10-bar log return
+[edge](glossary:edge). Measured on the same 200 000 `random_walk` bars (pivots 5 / 5, 11 760 pivot highs), the 10-bar log return
 compared with the average bar:
 
 | Reading the pivot high on | 10-bar edge | Share of 10-bar returns below zero |
@@ -152,7 +152,7 @@ look-ahead), pivot high just confirmed:
 
 | Scenario | Pivot high confirmed | Pivot low confirmed |
 |---|---|---|
-| `random_walk` | +0.52 % (95 % interval −0.79 % to +1.83 %, n = 48) | −0.28 % (−1.92 % to +1.36 %, n = 47) |
+| `random_walk` | +0.52 % ([95 % interval](glossary:confidence-interval) −0.79 % to +1.83 %, n = 48) | −0.28 % (−1.92 % to +1.36 %, n = 47) |
 | `range` | +0.67 % (−0.35 % to +1.70 %, n = 51) | −0.54 % (−1.83 % to +0.75 %, n = 49) |
 | `uptrend` | +0.04 % (−0.99 % to +1.06 %, n = 49) | −0.46 % (−1.82 % to +0.91 %, n = 46) |
 | `reversal` | +0.37 % (−1.00 % to +1.74 %, n = 42) | +0.20 % (−1.12 % to +1.51 %, n = 40) |
@@ -165,14 +165,14 @@ the reversion then pulls it back. The mirror rule (pivot high on `range`) does n
 
 **Support from pivots, tested.** The labs cannot carry a pivot level forward, so this was measured in Python with the
 indicator's own code: the first bar whose low reaches the last confirmed pivot low (a "test of support"), 200 000
-bars, 10-bar edge. `random_walk` +0.02 % (standard error 0.05 %; seed 2: −0.09 %), `uptrend` +0.02 % (seed 2:
+bars, 10-bar edge. `random_walk` +0.02 % ([standard error](glossary:standard-error) 0.05 %; seed 2: −0.09 %), `uptrend` +0.02 % (seed 2:
 −0.13 %): no reaction. On `range` +1.39 % (standard error 0.04 %), but the Ornstein–Uhlenbeck reversion from the
 price's distance to the centre alone predicts +1.43 % at the same bars: the level adds nothing beyond "price is low in
 its range". After a touch the next ten closes all stayed above the level only 22 %–30 % of the time. Levels matter
 on real charts when many traders act on them (orders cluster at obvious highs and lows); the synthetic markets have
 no traders, which is exactly what makes them the null hypothesis.
 
-One rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing, and not
+One rule on one sample: not a backtest (no costs, no position sizing), sensitive to [multiple testing](glossary:multiple-testing), and not
 investment advice.
 
 ## Combine with

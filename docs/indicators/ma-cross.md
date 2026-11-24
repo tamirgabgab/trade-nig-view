@@ -1,7 +1,7 @@
 # Moving Average Cross (`ma_cross`)
 
 A fast and a slow moving average, with a marker on every bar where the fast one crosses the slow one: up (golden
-cross) or down (death cross). Use it as a simple trend-change signal, knowing that it is late by construction.
+cross) or down ([death cross](glossary:death-cross)). Use it as a simple trend-change signal, knowing that it is late by construction.
 
 ## What it measures
 Whether the short-term average is above or below the long-term one, i.e. the sign of the recent slope. A marker says
@@ -45,7 +45,7 @@ $$
 
 The current bar compares strictly, the previous bar non-strictly: the same rule as Pine's `ta.crossover` /
 `ta.crossunder`. Both averages must be valid at $t-1$ and $t$, so the first possible marker is one bar after the
-warm-up, and a cross is known at the close of bar $t$ (no lookahead).
+[warm-up](glossary:warm-up), and a cross is known at the close of bar $t$ (no [lookahead](glossary:lookahead)).
 
 **Ties.** A bar with $D = 0$ never carries a marker; the marker goes on the bar that leaves zero. So $+,0,-$ gives a
 down marker on the third bar, and a touch from above that bounces, $+,0,+$, gives an **up** marker on the third bar
@@ -67,7 +67,7 @@ $$
 | $L_F, L_S$ | the lags of the fast and slow lines | bars (4 and 10 at the defaults) |
 | $g_k$ | the kernel of $D$: fast kernel minus slow kernel | weights summing to 0 |
 
-so $\operatorname{sign} D$ is the sign of a smoothed slope, and a cross is a slope sign change seen through two lags.
+so $\operatorname{sign} D$ is the sign of a smoothed slope, and a cross is a slope sign change seen through two [lags](glossary:lag).
 
 **Delay of a cross after a turn.** Let price rise with slope $b$ until bar 0 and fall with slope $b'$ after it:
 $x_t = x_0 + bt - (b + b')\,(t)_+$. By linearity, with $\rho_h(t) = \sum_k h_k\,(t - k)_+$,
@@ -93,7 +93,7 @@ $$
 |---|---|---|
 | $t^*$ | bars from the turn to the cross, for pure-delay lines | bars (7 for 9/21 on a symmetric turn) |
 
-the **average** of the two lags for a symmetric turn, nearer $L_F$ when the new move is steeper. Real kernels round
+the **average** of the two lags for a symmetric turn, nearer $L_F$ when the new move is steeper. Real [kernels](glossary:kernel) round
 the corner: $\rho_h(t) \ge (t - L_h)_+$ for $h_k \ge 0$ (Jensen, $(\cdot)_+$ is convex). The wider slow kernel
 typically rounds it more, which holds $D_t$ positive longer; measured (first marker bar after a turn at bar 0):
 
@@ -126,7 +126,7 @@ The drawer measures the two lines (the markers are not a filter output):
 - **Fast** (SMA 9): lag 4, NRF 0.1111, $-3$ dB at $P \approx 20.2$ bars, zeros at periods 9, 4.5, 3, 2.25.
 - **Slow** (SMA 21): lag 10, NRF 0.0476, $-3$ dB at $P \approx 47.4$ bars, zeros at periods $21/j$ down to 2.1.
 
-Both are symmetric FIR kernels, so the group delay is constant at the lag (undefined at the zeros). The gap between
+Both are symmetric [FIR](glossary:fir-filter) kernels, so the [group delay](glossary:group-delay) is constant at the lag (undefined at the zeros). The gap between
 the two group delays, 6 bars here, is what the slope estimate $D_t$ is built from.
 
 ## How to read it
@@ -137,7 +137,7 @@ the two group delays, 6 bars here, is what the slope estimate $D_t$ is built fro
 - **Price vs the lines.** Price above both lines in an uptrend is normal (each line lags by its $L$); price falling
   between the lines is the first sign of a turn, before any marker.
 - **Trend vs range.** In a trend the lines are apart and markers are rare. In a range $D_t$ hovers near 0 and the
-  markers whipsaw.
+  markers [whipsaw](glossary:whipsaw).
 - **The lengths.** A larger slow-to-fast ratio gives a larger gap (stronger signal) but a later cross; equal
   lengths give no gap at all.
 
@@ -156,13 +156,13 @@ $$
 | $L_S - L_F$ | total weight of past returns in $D$ | 6 bars at 9 / 21 |
 
 For two SMAs the weights $w^S_j - w^F_j$ are non-negative and spread over the slow window, so **fast above slow means
-a long weighted sum of returns is positive**: an estimate of the drift over the last $n_s$ bars. A golden cross is the
+a long weighted sum of returns is positive**: an estimate of the drift over the last $n_s$ bars. A [golden cross](glossary:golden-cross) is the
 bar where that estimate turns positive.
 
-On a random walk the next returns do not depend on that estimate, so neither the state nor the cross has an edge.
+On a [random walk](glossary:random-walk) the next returns do not depend on that estimate, so neither the state nor the cross has an [edge](glossary:edge).
 Where the drift changes and persists (the reversal scenario), the **state** classifies the regime and has an edge; the
 **cross** comes late (about 10 bars after a turn at 9 / 21, table above) and also fires on every whipsaw, so the cross
-bar itself carries little. In a mean-reverting range, a golden cross happens after price rose above its mean, and
+bar itself carries little. In a [mean-reverting](glossary:mean-reversion) range, a golden cross happens after price rose above its mean, and
 price then tends to fall back: the cross becomes a contrarian signal.
 
 The event lab studies the markers (op "greater than" 0 = golden crosses; switch to "less than" for death crosses):
