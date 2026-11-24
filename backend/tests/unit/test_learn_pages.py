@@ -36,6 +36,7 @@ V2_PAGES: set[str] = {
     "swma",
     "t3",
     "tema",
+    "vwap",
     "vwma",
     "wma",
     "zlema",
