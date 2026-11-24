@@ -99,7 +99,7 @@ def _num(x: float) -> float | None:
 
 
 def compute(
-    frame: BarFrame, k: int, model: Literal["a", "c"], params: fc.Params | None
+    frame: BarFrame, model: Literal["a", "c"], params: fc.Params | None
 ) -> tuple[fc.Params, dict[fc.Model, fc.Params], list[tuple[fc.Params, float]]]:
     """The parameters of every model: tuned (``params`` None) or as given."""
     if params is not None:
@@ -123,7 +123,7 @@ def _forecast(
     params: fc.Params | None,
 ) -> ForecastResponse:
     horizons = list(range(1, k + 1))
-    best, per_model, tried = compute(frame, k, model, params)
+    best, per_model, tried = compute(frame, model, params)
     origin = len(frame) - 1
     validation: list[Validation] = []
     for m in MODELS:
