@@ -7,6 +7,7 @@ import { ForecastLab, type ForecastBlock } from './ForecastLab.tsx';
 import styles from './Lab.module.css';
 import { ParamLab, type ParamBlock } from './ParamLab.tsx';
 import { ReplayLab, type ReplayBlock } from './ReplayLab.tsx';
+import { RiskLab, type RiskBlock } from './RiskLab.tsx';
 import { VolatilityLab, type VolatilityBlock } from './VolatilityLab.tsx';
 
 type Block =
@@ -16,7 +17,8 @@ type Block =
   | ReplayBlock
   | FilterBlock
   | ForecastBlock
-  | VolatilityBlock;
+  | VolatilityBlock
+  | RiskBlock;
 type Json = Record<string, unknown>;
 
 const isText = (v: unknown) => typeof v === 'string';
@@ -76,6 +78,9 @@ const SHAPES: Record<Block['kind'], (b: Json) => boolean> = {
     INTERVALS.includes(b['interval']) &&
     (b['scenario'] === undefined || SCENARIO_IDS.includes(b['scenario'])) &&
     (b['estimator'] === undefined || ESTIMATOR_IDS.includes(b['estimator'])),
+  risk: (b) =>
+    INTERVALS.includes(b['interval']) &&
+    (b['scenario'] === undefined || SCENARIO_IDS.includes(b['scenario'])),
 };
 
 function parse(source: string): Block | null {
@@ -119,5 +124,7 @@ export function LabBlock({ source }: { source: string }) {
       return <ForecastLab block={block} />;
     case 'volatility':
       return <VolatilityLab block={block} />;
+    case 'risk':
+      return <RiskLab block={block} />;
   }
 }

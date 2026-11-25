@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { apiGet, apiPost, fieldsOf, isRecord, type Schemas } from './client.ts';
 import type { LabSource } from './lab.ts';
+import { keepsPrevious } from './replayPlaceholder.ts';
 
 /**
  * The volatility cone (P3 V1, ADR 0011): per calendar horizon, today's per-bar volatility against
@@ -186,17 +187,6 @@ export interface VolatilityQuery extends VolatilitySettings {
   adjusted: boolean;
   /** The cone at this bar (its open, UTC epoch seconds): the replay cursor; null = last bar. */
   origin: number | null;
-}
-
-/** The previous cone may stay on screen while the next loads only if it is the same request at an
- *  earlier (or the same) origin: a replay step forward. Another symbol's cone, or a later one (a
- *  step back would show the future), must never show. */
-export function keepsPrevious(previous: VolatilityQuery | null, next: VolatilityQuery): boolean {
-  if (previous === null) return false;
-  const { origin: a, ...rest } = previous;
-  const { origin: b, ...nextRest } = next;
-  const same = (Object.keys(rest) as (keyof typeof rest)[]).every((k) => rest[k] === nextRest[k]);
-  return same && a !== null && (b === null || a <= b);
 }
 
 /** The chart's cone; during a replay the last cone stays while the cursor's loads (see

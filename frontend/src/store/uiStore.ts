@@ -17,7 +17,15 @@ export const PAGE_PREFIX = 'page:';
 
 /** What the right side panel shows. */
 export type SidebarTab =
-  'watchlist' | 'objects' | 'data' | 'gaps' | 'stats' | 'forecast' | 'volatility' | 'tradeplan';
+  | 'watchlist'
+  | 'objects'
+  | 'data'
+  | 'gaps'
+  | 'stats'
+  | 'forecast'
+  | 'volatility'
+  | 'tradeplan'
+  | 'risk';
 
 /** The modal dialogs; at most one is open, so they can never stack. */
 export type Modal =

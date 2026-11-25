@@ -7,6 +7,7 @@ import {
   ChartSpline,
   List,
   ListTree,
+  ShieldAlert,
   Sigma,
   Target,
   TableProperties,
@@ -25,6 +26,7 @@ import { usePresence } from './usePresence.ts';
 import { ForecastPanel } from './ForecastPanel.tsx';
 import { StatisticsPanel } from './StatisticsPanel.tsx';
 import { SymbolCard } from './SymbolCard.tsx';
+import { RiskPanel } from './RiskPanel.tsx';
 import { TradePlanPanel } from './TradePlanPanel.tsx';
 import { VolatilityPanel } from './VolatilityPanel.tsx';
 import { Watchlist } from './Watchlist.tsx';
@@ -42,6 +44,7 @@ const TABS: { tab: SidebarTab; title: string; icon: typeof List }[] = [
   { tab: 'forecast', title: 'Forecast', icon: ChartSpline },
   { tab: 'volatility', title: 'Volatility', icon: Activity },
   { tab: 'tradeplan', title: 'Trade plan', icon: Target },
+  { tab: 'risk', title: 'Risk', icon: ShieldAlert },
 ];
 
 /**
@@ -104,6 +107,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
             {panel.shown === 'forecast' && <ForecastPanel />}
             {panel.shown === 'volatility' && <VolatilityPanel />}
             {panel.shown === 'tradeplan' && <TradePlanPanel />}
+            {panel.shown === 'risk' && <RiskPanel />}
           </div>
           {panel.shown === 'watchlist' && <SymbolCard />}
         </section>

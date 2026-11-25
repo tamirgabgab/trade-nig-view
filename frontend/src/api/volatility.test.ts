@@ -1,5 +1,6 @@
 import { BODY } from '../test/volatilityBody.ts';
-import { keepsPrevious, parseVolatility, type VolatilityQuery } from './volatility.ts';
+import { keepsPrevious } from './replayPlaceholder.ts';
+import { parseVolatility, type VolatilityQuery } from './volatility.ts';
 
 describe('parseVolatility', () => {
   it('reads every field, keeping nulls where the API has no value', () => {

@@ -118,3 +118,32 @@ test('the Historical Volatility page runs the cone on a random stock', async ({ 
   });
   await expect(lab.getByRole('table', { name: 'Squeeze statistics' })).toBeVisible();
 });
+
+test('risk: VaR and ES by method with the backtests in the Risk tab', async ({ page }) => {
+  await page.getByRole('button', { name: 'Show risk' }).click();
+  const table = page.getByRole('table', { name: 'VaR and ES by method' });
+  await expect(table.getByRole('row', { name: /Historical \(FHS\)/ })).toContainText('%', {
+    timeout: 30_000,
+  });
+  await expect(table.getByRole('columnheader', { name: 'ES', exact: true })).toBeVisible();
+  const backtests = page.getByRole('table', { name: 'VaR backtests' });
+  await expect(backtests.getByRole('row', { name: /Extreme value/ })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: 'test-results/risk.png' });
+  // The short side and another level: the same table, other numbers.
+  const before = await table.textContent();
+  const panel = page.getByRole('region', { name: 'Risk', exact: true });
+  await panel.getByRole('combobox', { name: 'Side' }).selectOption('short');
+  await panel.getByRole('combobox', { name: 'Confidence' }).selectOption('0.9');
+  await expect(table).not.toHaveText(before ?? '');
+});
+
+test('the Value at Risk page backtests the methods on a random stock', async ({ page }) => {
+  await page.getByRole('button', { name: 'Learn pages' }).click();
+  await page.keyboard.type('Value at Risk');
+  await page.keyboard.press('Enter');
+  const drawer = page.getByRole('complementary', { name: /VaR Bands/ });
+  const lab = drawer.getByRole('region', { name: 'Risk lab' });
+  await lab.scrollIntoViewIfNeeded();
+  await expect(lab.getByRole('table', { name: 'VaR backtests' })).toBeVisible({ timeout: 60_000 });
+});
