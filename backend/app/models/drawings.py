@@ -31,6 +31,7 @@ DrawingType = Literal[
     "date_price_range",
     "return_range",
     "stats_range",
+    "trade_plan",
 ]
 
 #: Number of anchors each tool needs.
@@ -51,6 +52,7 @@ POINTS: dict[str, int] = {
     "date_price_range": 2,
     "return_range": 2,
     "stats_range": 2,
+    "trade_plan": 3,
 }
 
 MAX_FIB_LEVELS = 24
@@ -111,6 +113,12 @@ class DrawingProps(BaseModel):
         default=None,
         description="statistics range: close-to-close returns, or open-to-close (within the bar)",
     )
+    account: float | None = Field(
+        default=None, gt=0, le=1e12, description="trade plan: account size for the position size"
+    )
+    risk_pct: float | None = Field(
+        default=None, gt=0, le=100, description="trade plan: % of the account risked"
+    )
 
 
 #: Props each tool may set.
@@ -121,6 +129,7 @@ ALLOWED_PROPS: dict[str, frozenset[str]] = {
     "fib_extension": frozenset({"levels"}),
     "return_range": frozenset({"unit"}),
     "stats_range": frozenset({"returns", "basis"}),
+    "trade_plan": frozenset({"account", "risk_pct"}),
 }
 
 

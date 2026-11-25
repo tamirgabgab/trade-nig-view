@@ -435,6 +435,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trade-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trade Plan
+         * @description The plan made at the bar of ``time`` from the history up to it; long when the target is
+         *     above the entry, short when below; the stop must be on the other side.
+         */
+        get: operations["get_trade_plan_api_trade_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -493,6 +514,33 @@ export interface components {
             warnings: string[];
             /** Bars */
             bars: components["schemas"]["Bar"][];
+        };
+        /** Calibration */
+        Calibration: {
+            /**
+             * N
+             * @description Scored forecasts (36 plans x the last origins)
+             */
+            n: number;
+            /**
+             * Forecast
+             * @description Per 10 % bin: the mean forecast P(target)
+             */
+            forecast: (number | null)[];
+            /**
+             * Observed
+             * @description Per bin: the share that hit the target
+             */
+            observed: (number | null)[];
+            /** Count */
+            count: number[];
+            /** Brier */
+            brier: number;
+            /**
+             * Brier Base
+             * @description Brier score of the base rate (no model)
+             */
+            brier_base: number;
         };
         /** Coefficient */
         Coefficient: {
@@ -604,7 +652,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text" | "fib_retracement" | "fib_extension" | "parallel_channel" | "price_range" | "date_range" | "date_price_range" | "return_range" | "stats_range";
+            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text" | "fib_retracement" | "fib_extension" | "parallel_channel" | "price_range" | "date_range" | "date_price_range" | "return_range" | "stats_range" | "trade_plan";
             /** Points */
             points: components["schemas"]["DrawingPoint"][];
             /**
@@ -693,6 +741,16 @@ export interface components {
              * @description statistics range: close-to-close returns, or open-to-close (within the bar)
              */
             basis?: ("close" | "open") | null;
+            /**
+             * Account
+             * @description trade plan: account size for the position size
+             */
+            account?: number | null;
+            /**
+             * Risk Pct
+             * @description trade plan: % of the account risked
+             */
+            risk_pct?: number | null;
         };
         /** DrawingStyle */
         DrawingStyle: {
@@ -1474,6 +1532,64 @@ export interface components {
              */
             requires?: string | null;
         };
+        /** PlanSummary */
+        PlanSummary: {
+            /**
+             * Paths
+             * @description Historical paths simulated
+             */
+            paths: number;
+            /**
+             * P Fill
+             * @description P(the entry is reached within h bars); 1 at the close
+             */
+            p_fill: number;
+            /**
+             * P Target
+             * @description P(target first | filled)
+             */
+            p_target: number;
+            /**
+             * P Stop
+             * @description P(stop first | filled)
+             */
+            p_stop: number;
+            /**
+             * P Neither
+             * @description P(neither by the h-th bar | filled)
+             */
+            p_neither: number;
+            /**
+             * P Target Bounds
+             * @description P(target) with every two-level bar given to the stop / to the target
+             */
+            p_target_bounds: number[];
+            /**
+             * Bars
+             * @description Mean bars from the origin to the exit
+             */
+            bars: number;
+            /**
+             * Ev R
+             * @description Expected result in R (planned risk) given the fill
+             */
+            ev_r: number;
+            /**
+             * Ev Return
+             * @description Expected result as a fraction of the entry price
+             */
+            ev_return: number;
+            /**
+             * Loss R
+             * @description Mean R when stopped (gaps make it below -1)
+             */
+            loss_r: number | null;
+            /**
+             * Kelly
+             * @description E[R] / E[R^2]: Kelly's fraction of capital at risk
+             */
+            kelly: number | null;
+        };
         /**
          * ProviderStatus
          * @description One market-data provider in the active chain (in priority order).
@@ -1680,6 +1796,56 @@ export interface components {
              * @enum {string}
              */
             interval: "1D" | "1h";
+        };
+        /** TradePlanResponse */
+        TradePlanResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "long" | "short";
+            /** H */
+            h: number;
+            /**
+             * Origin Time
+             * @description The bar the plan is made at, as in /api/bars
+             */
+            origin_time: string | number;
+            /** Origin Close */
+            origin_close: number;
+            /**
+             * Sigma
+             * @description Today's per-bar volatility (Yang-Zhang, a month)
+             */
+            sigma: number;
+            /** @description Null if no path reached the entry */
+            summary: components["schemas"]["PlanSummary"] | null;
+            /**
+             * Multiples
+             * @description Heat map distances in sigma x sqrt(h)
+             */
+            multiples: number[];
+            /**
+             * Heat
+             * @description EV in R: rows = stop distance, columns = target distance (multiples)
+             */
+            heat: (number | null)[][];
+            /**
+             * Reference
+             * @description Brownian P(target first), drift from the history, no horizon
+             */
+            reference: number | null;
+            calibration: components["schemas"]["Calibration"] | null;
+            /**
+             * Actual
+             * @description What the bars after the origin did (null if there are none)
+             */
+            actual: ("target" | "stop" | "neither" | "open" | "not_filled") | null;
+            /** Actual R */
+            actual_r: number | null;
         };
         /**
          * Transform
@@ -2826,6 +2992,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VolatilityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trade_plan_api_trade_plan_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                /** @description The entry anchor (UTC epoch seconds) */
+                time: number;
+                entry: number;
+                target: number;
+                stop: number;
+                /** @description Bars to hold at most */
+                h: number;
+                interval?: components["schemas"]["Interval"];
+                adjusted?: boolean;
+                /** @description Replay cursor: no bar after it */
+                until?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradePlanResponse"];
                 };
             };
             /** @description Validation Error */

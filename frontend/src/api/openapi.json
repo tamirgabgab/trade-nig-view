@@ -1468,6 +1468,143 @@
           }
         }
       }
+    },
+    "/api/trade-plan": {
+      "get": {
+        "tags": [
+          "trade-plan"
+        ],
+        "summary": "Get Trade Plan",
+        "description": "The plan made at the bar of ``time`` from the history up to it; long when the target is\nabove the entry, short when below; the stop must be on the other side.",
+        "operationId": "get_trade_plan_api_trade_plan_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "time",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "The entry anchor (UTC epoch seconds)",
+              "title": "Time"
+            },
+            "description": "The entry anchor (UTC epoch seconds)"
+          },
+          {
+            "name": "entry",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "title": "Entry"
+            }
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "title": "Target"
+            }
+          },
+          {
+            "name": "stop",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "title": "Stop"
+            }
+          },
+          {
+            "name": "h",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 250,
+              "minimum": 1,
+              "description": "Bars to hold at most",
+              "title": "H"
+            },
+            "description": "Bars to hold at most"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Interval",
+              "default": "1D"
+            }
+          },
+          {
+            "name": "adjusted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjusted"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Replay cursor: no bar after it",
+              "title": "Until"
+            },
+            "description": "Replay cursor: no bar after it"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradePlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1585,6 +1722,71 @@
           "bars"
         ],
         "title": "BarsResponse"
+      },
+      "Calibration": {
+        "properties": {
+          "n": {
+            "type": "integer",
+            "title": "N",
+            "description": "Scored forecasts (36 plans x the last origins)"
+          },
+          "forecast": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Forecast",
+            "description": "Per 10 % bin: the mean forecast P(target)"
+          },
+          "observed": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Observed",
+            "description": "Per bin: the share that hit the target"
+          },
+          "count": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Count"
+          },
+          "brier": {
+            "type": "number",
+            "title": "Brier"
+          },
+          "brier_base": {
+            "type": "number",
+            "title": "Brier Base",
+            "description": "Brier score of the base rate (no model)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "n",
+          "forecast",
+          "observed",
+          "count",
+          "brier",
+          "brier_base"
+        ],
+        "title": "Calibration"
       },
       "Coefficient": {
         "properties": {
@@ -1848,7 +2050,8 @@
               "date_range",
               "date_price_range",
               "return_range",
-              "stats_range"
+              "stats_range",
+              "trade_plan"
             ],
             "title": "Type"
           },
@@ -2033,6 +2236,34 @@
             ],
             "title": "Basis",
             "description": "statistics range: close-to-close returns, or open-to-close (within the bar)"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000000.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account",
+            "description": "trade plan: account size for the position size"
+          },
+          "risk_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Pct",
+            "description": "trade plan: % of the account risked"
           }
         },
         "additionalProperties": false,
@@ -3891,6 +4122,97 @@
         ],
         "title": "ParamInfo"
       },
+      "PlanSummary": {
+        "properties": {
+          "paths": {
+            "type": "integer",
+            "title": "Paths",
+            "description": "Historical paths simulated"
+          },
+          "p_fill": {
+            "type": "number",
+            "title": "P Fill",
+            "description": "P(the entry is reached within h bars); 1 at the close"
+          },
+          "p_target": {
+            "type": "number",
+            "title": "P Target",
+            "description": "P(target first | filled)"
+          },
+          "p_stop": {
+            "type": "number",
+            "title": "P Stop",
+            "description": "P(stop first | filled)"
+          },
+          "p_neither": {
+            "type": "number",
+            "title": "P Neither",
+            "description": "P(neither by the h-th bar | filled)"
+          },
+          "p_target_bounds": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "P Target Bounds",
+            "description": "P(target) with every two-level bar given to the stop / to the target"
+          },
+          "bars": {
+            "type": "number",
+            "title": "Bars",
+            "description": "Mean bars from the origin to the exit"
+          },
+          "ev_r": {
+            "type": "number",
+            "title": "Ev R",
+            "description": "Expected result in R (planned risk) given the fill"
+          },
+          "ev_return": {
+            "type": "number",
+            "title": "Ev Return",
+            "description": "Expected result as a fraction of the entry price"
+          },
+          "loss_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss R",
+            "description": "Mean R when stopped (gaps make it below -1)"
+          },
+          "kelly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kelly",
+            "description": "E[R] / E[R^2]: Kelly's fraction of capital at risk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paths",
+          "p_fill",
+          "p_target",
+          "p_stop",
+          "p_neither",
+          "p_target_bounds",
+          "bars",
+          "ev_r",
+          "ev_return",
+          "loss_r",
+          "kelly"
+        ],
+        "title": "PlanSummary"
+      },
       "ProviderStatus": {
         "properties": {
           "id": {
@@ -4372,6 +4694,157 @@
           "kind"
         ],
         "title": "SyntheticSource"
+      },
+      "TradePlanResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Side"
+          },
+          "h": {
+            "type": "integer",
+            "title": "H"
+          },
+          "origin_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Origin Time",
+            "description": "The bar the plan is made at, as in /api/bars"
+          },
+          "origin_close": {
+            "type": "number",
+            "title": "Origin Close"
+          },
+          "sigma": {
+            "type": "number",
+            "title": "Sigma",
+            "description": "Today's per-bar volatility (Yang-Zhang, a month)"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null if no path reached the entry"
+          },
+          "multiples": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Multiples",
+            "description": "Heat map distances in sigma x sqrt(h)"
+          },
+          "heat": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Heat",
+            "description": "EV in R: rows = stop distance, columns = target distance (multiples)"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference",
+            "description": "Brownian P(target first), drift from the history, no horizon"
+          },
+          "calibration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Calibration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actual": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "target",
+                  "stop",
+                  "neither",
+                  "open",
+                  "not_filled"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual",
+            "description": "What the bars after the origin did (null if there are none)"
+          },
+          "actual_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual R"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "side",
+          "h",
+          "origin_time",
+          "origin_close",
+          "sigma",
+          "summary",
+          "multiples",
+          "heat",
+          "reference",
+          "calibration",
+          "actual",
+          "actual_r"
+        ],
+        "title": "TradePlanResponse"
       },
       "Transform": {
         "type": "string",
