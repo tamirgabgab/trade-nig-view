@@ -54,6 +54,26 @@ afterEach(() => {
 });
 
 describe('DrawingManager', () => {
+  it('places the picked icon with one click, and draws an XABCD with five', () => {
+    const el = chart.element();
+    store.getState().setIconName('flag');
+    store.getState().setTool('icon', 'icons');
+    click(el, 100, 100);
+    expect(store.getState().drawings[0]).toMatchObject({ type: 'icon', props: { icon: 'flag' } });
+    store.getState().setTool('xabcd', 'patterns');
+    for (const [x, y] of [
+      [100, 150],
+      [200, 50],
+      [300, 120],
+      [400, 80],
+      [500, 160],
+    ] as const)
+      click(el, x, y);
+    const xabcd = store.getState().drawings[1];
+    expect(xabcd?.type).toBe('xabcd');
+    expect(xabcd?.points.map((p) => p.price)).toEqual([50, 150, 80, 120, 40]);
+  });
+
   it('erases the clicked drawing with Undo and stays on; Esc turns it off', () => {
     const el = chart.element();
     store.getState().setTool('horizontal_line', 'lines');

@@ -32,6 +32,28 @@ DrawingType = Literal[
     "return_range",
     "stats_range",
     "trade_plan",
+    "icon",
+    "xabcd",
+    "abcd",
+    "head_shoulders",
+]
+
+#: The icons an icon drawing can show (Lucide names; the frontend holds their paths).
+IconName = Literal[
+    "arrow-up",
+    "arrow-down",
+    "arrow-left",
+    "arrow-right",
+    "trending-up",
+    "trending-down",
+    "circle-check",
+    "circle-x",
+    "alert",
+    "info",
+    "flag",
+    "star",
+    "bell",
+    "zap",
 ]
 
 #: Number of anchors each tool needs.
@@ -53,6 +75,10 @@ POINTS: dict[str, int] = {
     "return_range": 2,
     "stats_range": 2,
     "trade_plan": 3,
+    "icon": 1,
+    "xabcd": 5,
+    "abcd": 4,
+    "head_shoulders": 7,
 }
 
 MAX_FIB_LEVELS = 24
@@ -119,6 +145,8 @@ class DrawingProps(BaseModel):
     risk_pct: float | None = Field(
         default=None, gt=0, le=100, description="trade plan: % of the account risked"
     )
+    icon: IconName | None = Field(default=None, description="icon: which icon")
+    icon_size: int | None = Field(default=None, ge=12, le=96, description="icon: size in px")
 
 
 #: Props each tool may set.
@@ -130,6 +158,7 @@ ALLOWED_PROPS: dict[str, frozenset[str]] = {
     "return_range": frozenset({"unit"}),
     "stats_range": frozenset({"returns", "basis"}),
     "trade_plan": frozenset({"account", "risk_pct"}),
+    "icon": frozenset({"icon", "icon_size"}),
 }
 
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { isRecord } from '../api/client.ts';
+import { ICON_NAMES, type IconName } from '../drawings/iconPaths.ts';
 import type { MagnetMode } from '../drawings/snap.ts';
 import type { Drawing, DrawingType } from '../drawings/types.ts';
 
@@ -20,6 +21,9 @@ export interface DrawingState {
 
   /** Tool being drawn with, or null for the cursor. */
   tool: DrawingType | null;
+  /** The icon the Icon tool places (the last one picked in the Icons flyout). */
+  iconName: IconName;
+  setIconName: (name: IconName) => void;
   /** A toolbar tool that is not a drawing: the eraser (stays on) or Zoom in (one box). */
   pointerTool: 'eraser' | 'zoom' | null;
   setPointerTool: (tool: 'eraser' | 'zoom' | null) => void;
@@ -66,7 +70,7 @@ export interface Removed {
   symbol: string | null;
 }
 
-type Persisted = Pick<DrawingState, 'lastTool' | 'magnet' | 'stayInDrawing'>;
+type Persisted = Pick<DrawingState, 'lastTool' | 'magnet' | 'stayInDrawing' | 'iconName'>;
 
 const MAGNETS: readonly MagnetMode[] = ['off', 'weak', 'strong'];
 
@@ -80,6 +84,7 @@ export function sanitizePersisted(persisted: unknown): Persisted {
     ),
     magnet: MAGNETS.find((m) => m === r['magnet']) ?? 'off',
     stayInDrawing: r['stayInDrawing'] === true,
+    iconName: ICON_NAMES.find((n) => n === r['iconName']) ?? 'arrow-up',
   };
 }
 
@@ -94,6 +99,10 @@ export const useDrawingStore = create<DrawingState>()(
       edits: 0,
       tool: null,
       pointerTool: null,
+      iconName: 'arrow-up',
+      setIconName: (iconName) => {
+        set({ iconName });
+      },
       lastTool: {},
       magnet: 'off',
       stayInDrawing: false,
@@ -203,6 +212,7 @@ export const useDrawingStore = create<DrawingState>()(
         lastTool: s.lastTool,
         magnet: s.magnet,
         stayInDrawing: s.stayInDrawing,
+        iconName: s.iconName,
       }),
       migrate: (persisted) => sanitizePersisted(persisted),
       merge: (persisted, current) => ({ ...current, ...sanitizePersisted(persisted) }),

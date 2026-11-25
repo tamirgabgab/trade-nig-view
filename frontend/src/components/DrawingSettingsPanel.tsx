@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { DEFAULT_FIB_LEVELS } from '../drawings/fib.ts';
 import { TOOL_LABELS } from '../drawings/manager.ts';
 import { RETURN_UNITS } from '../drawings/measure.ts';
+import { ICON_NAMES } from '../drawings/iconPaths.ts';
 import type { Drawing, LineStyle, ReturnUnit } from '../drawings/types.ts';
 import { useDrawingStore } from '../store/drawingStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
@@ -205,6 +206,50 @@ export function DrawingSettingsPanel() {
             </label>
           )}
         </section>
+        {shown.type === 'icon' && (
+          <section aria-label="Icon">
+            <div className={styles.field}>
+              <label htmlFor={`${titleId}-icon`} className={styles.label}>
+                Icon
+              </label>
+              <select
+                id={`${titleId}-icon`}
+                className={styles.control}
+                value={shown.props.icon ?? 'arrow-up'}
+                onChange={(event) => {
+                  const icon = ICON_NAMES.find((n) => n === event.target.value);
+                  if (icon !== undefined) change((d) => ({ ...d, props: { ...d.props, icon } }));
+                }}
+              >
+                {ICON_NAMES.map((name) => (
+                  <option key={name} value={name}>
+                    {name.replace('-', ' ')}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label htmlFor={`${titleId}-icon-size`} className={styles.label}>
+                Size
+              </label>
+              <select
+                id={`${titleId}-icon-size`}
+                className={styles.control}
+                value={shown.props.icon_size ?? 28}
+                onChange={(event) => {
+                  const iconSize = Number(event.target.value);
+                  change((d) => ({ ...d, props: { ...d.props, icon_size: iconSize } }));
+                }}
+              >
+                {[20, 28, 40, 56, 72].map((px) => (
+                  <option key={px} value={px}>
+                    {px} px
+                  </option>
+                ))}
+              </select>
+            </div>
+          </section>
+        )}
         {shown.type === 'return_range' && (
           <section aria-label="Equivalent return">
             <div className={styles.field}>

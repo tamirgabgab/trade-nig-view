@@ -17,6 +17,15 @@ export function ToolGroupButton({ group }: { group: ToolGroup }) {
   const activeTool = useDrawingStore((s) => s.tool);
   const last = useDrawingStore((s) => s.lastTool[group.id]);
   const setTool = useDrawingStore((s) => s.setTool);
+  const iconName = useDrawingStore((s) => s.iconName);
+  const setIconName = useDrawingStore((s) => s.setIconName);
+  // The Icons group's entries share a type; the picked icon tells them apart.
+  const isTool = (t: ToolGroup['tools'][number], type: string | null | undefined) =>
+    t.type === type && (t.iconName === undefined || t.iconName === iconName);
+  const pick = (t: ToolGroup['tools'][number]) => {
+    if (t.iconName !== undefined) setIconName(t.iconName);
+    setTool(t.type, group.id);
+  };
   const { open, setOpen, menu, wrapperRef, close } = useMenuButton();
 
   if (group.comingIn !== undefined) {
@@ -30,7 +39,7 @@ export function ToolGroupButton({ group }: { group: ToolGroup }) {
     );
   }
 
-  const current = group.tools.find((t) => t.type === last) ?? group.tools[0];
+  const current = group.tools.find((t) => isTool(t, last)) ?? group.tools[0];
   if (current === undefined) return null;
   const active = group.tools.some((t) => t.type === activeTool);
 
@@ -43,7 +52,8 @@ export function ToolGroupButton({ group }: { group: ToolGroup }) {
         pressed={active}
         tooltipSide="right"
         onClick={() => {
-          setTool(activeTool === current.type ? null : current.type, group.id);
+          if (activeTool === current.type) setTool(null);
+          else pick(current);
         }}
       />
       {group.tools.length > 1 && (
@@ -72,11 +82,11 @@ export function ToolGroupButton({ group }: { group: ToolGroup }) {
           items={group.tools.map((t) => ({
             label: t.label,
             radio: true,
-            checked: t.type === activeTool,
+            checked: isTool(t, activeTool),
             icon: <t.icon size={16} strokeWidth={1.5} aria-hidden="true" />,
             ...(t.shortcut === undefined ? {} : { shortcut: t.shortcut }),
             onSelect: () => {
-              setTool(t.type, group.id);
+              pick(t);
             },
           }))}
         />

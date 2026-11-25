@@ -732,7 +732,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text" | "fib_retracement" | "fib_extension" | "parallel_channel" | "price_range" | "date_range" | "date_price_range" | "return_range" | "stats_range" | "trade_plan";
+            type: "trend_line" | "ray" | "extended_line" | "horizontal_line" | "horizontal_ray" | "vertical_line" | "rectangle" | "text" | "fib_retracement" | "fib_extension" | "parallel_channel" | "price_range" | "date_range" | "date_price_range" | "return_range" | "stats_range" | "trade_plan" | "icon" | "xabcd" | "abcd" | "head_shoulders";
             /** Points */
             points: components["schemas"]["DrawingPoint"][];
             /**
@@ -831,6 +831,16 @@ export interface components {
              * @description trade plan: % of the account risked
              */
             risk_pct?: number | null;
+            /**
+             * Icon
+             * @description icon: which icon
+             */
+            icon?: ("arrow-up" | "arrow-down" | "arrow-left" | "arrow-right" | "trending-up" | "trending-down" | "circle-check" | "circle-x" | "alert" | "info" | "flag" | "star" | "bell" | "zap") | null;
+            /**
+             * Icon Size
+             * @description icon: size in px
+             */
+            icon_size?: number | null;
         };
         /** DrawingStyle */
         DrawingStyle: {

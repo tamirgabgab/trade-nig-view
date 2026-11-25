@@ -1,3 +1,5 @@
+import type { IconName } from './iconPaths.ts';
+
 /**
  * The drawing model, as stored by the backend (ARCHITECTURE §5.2). Anchors are in data space:
  * `time` = UTC epoch seconds of the anchor bar's open, so a drawing maps onto any interval.
@@ -19,7 +21,11 @@ export type DrawingType =
   | 'date_price_range'
   | 'return_range'
   | 'stats_range'
-  | 'trade_plan';
+  | 'trade_plan'
+  | 'icon'
+  | 'xabcd'
+  | 'abcd'
+  | 'head_shoulders';
 
 /** The unit T of a return range's equivalent return. */
 export type ReturnUnit = 'year' | 'month' | 'week' | 'day' | 'bar';
@@ -58,6 +64,9 @@ export interface DrawingProps {
   /** Trade plan: account size and the % of it risked (the position size). */
   account?: number;
   risk_pct?: number;
+  /** Icon drawing: which icon (drawings/iconPaths.ts) and its size in px. */
+  icon?: IconName;
+  icon_size?: number;
 }
 
 export interface Drawing {
@@ -92,6 +101,10 @@ export const POINT_COUNT: Record<DrawingType, number> = {
   return_range: 2,
   stats_range: 2,
   trade_plan: 3,
+  icon: 1,
+  xabcd: 5,
+  abcd: 4,
+  head_shoulders: 7,
 };
 
 export const DEFAULT_STYLE: DrawingStyle = {

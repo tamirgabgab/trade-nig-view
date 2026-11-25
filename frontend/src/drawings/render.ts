@@ -1,12 +1,15 @@
 import { withAlpha } from '../chart/theme.ts';
 import { formatPrice } from '../components/formatNumber.ts';
+import { ICON_PATHS } from './iconPaths.ts';
 import { rangeLabel, type Span } from './measure.ts';
+import { isPattern, PATTERN_LABELS, patternRatios, type PatternType } from './patterns.ts';
 import {
   channelOffset,
   fibLines,
   HANDLE_RADIUS,
   handles,
   isRange,
+  neckline,
   strokes,
   textBox,
   type PriceToY,
@@ -166,6 +169,76 @@ function drawTradePlan(
   );
 }
 
+/** Start a path through `pts`. */
+function polyline(ctx: CanvasRenderingContext2D, pts: readonly Point[]): void {
+  ctx.beginPath();
+  pts.forEach((q, i) => {
+    if (i === 0) ctx.moveTo(q.x, q.y);
+    else ctx.lineTo(q.x, q.y);
+  });
+}
+
+/** A Lucide icon centred on `at`, stroked in the drawing's colour like the library (2 px on 24). */
+function drawIcon(ctx: CanvasRenderingContext2D, drawing: Drawing, at: Point): void {
+  if (typeof Path2D === 'undefined') return;
+  const size = drawing.props.icon_size ?? 28;
+  const k = size / 24;
+  ctx.save();
+  ctx.translate(at.x - size / 2, at.y - size / 2);
+  ctx.scale(k, k);
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.setLineDash([]);
+  for (const d of ICON_PATHS[drawing.props.icon ?? 'arrow-up']) ctx.stroke(new Path2D(d));
+  ctx.restore();
+}
+
+/**
+ * A pattern: its zigzag, the XABCD's two triangles shaded, the ratios on dashed lines between
+ * the points they compare, the point labels (above a peak, below a trough) and the head and
+ * shoulders' neckline.
+ */
+function drawPattern(
+  ctx: CanvasRenderingContext2D,
+  drawing: Drawing,
+  type: PatternType,
+  pts: readonly Point[],
+): void {
+  const color = drawing.style.line_color;
+  if (type === 'xabcd') {
+    ctx.fillStyle = withAlpha(color, FILL_ALPHA);
+    for (const tri of [pts.slice(0, 3), pts.slice(2, 5)]) {
+      if (tri.length < 3) continue;
+      polyline(ctx, tri);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  polyline(ctx, pts);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+  ctx.setLineDash(DASHES.dashed);
+  if (type === 'head_shoulders') {
+    const neck = neckline(pts);
+    if (neck !== null) segment(ctx, neck[0], neck[1]);
+  }
+  for (const { from, to, value } of patternRatios(type, drawing.points)) {
+    const a = pts[from];
+    const b = pts[to];
+    if (a === undefined || b === undefined || !Number.isFinite(value)) continue;
+    segment(ctx, a, b);
+    tag(ctx, value.toFixed(3), (a.x + b.x) / 2, (a.y + b.y) / 2, color);
+  }
+  ctx.setLineDash([]);
+  PATTERN_LABELS[type].forEach((label, i) => {
+    const q = pts[i];
+    if (q === undefined || label === '') return;
+    const neighbours = [pts[i - 1], pts[i + 1]].filter((n) => n !== undefined);
+    const peak = neighbours.every((n) => n.y >= q.y);
+    tag(ctx, label, q.x, q.y + (peak ? -14 : 14), color);
+  });
+}
+
 function drawRange(
   ctx: CanvasRenderingContext2D,
   drawing: Drawing,
@@ -262,6 +335,10 @@ export function drawDrawing(
     drawChannel(ctx, pts, color);
   } else if (drawing.type === 'trade_plan') {
     drawTradePlan(ctx, drawing, pts, state);
+  } else if (drawing.type === 'icon' && a !== undefined) {
+    drawIcon(ctx, drawing, a);
+  } else if (isPattern(drawing.type)) {
+    drawPattern(ctx, drawing, drawing.type, pts);
   } else if (isRange(drawing)) {
     drawRange(ctx, drawing, pts, state);
   } else {

@@ -1,5 +1,21 @@
 import {
+  Activity,
   AlignVerticalSpaceAround,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Bell,
+  CircleCheck,
+  CircleX,
+  Flag,
+  Info,
+  Mountain,
+  Star,
+  TrendingDown,
+  TrendingUp,
+  TriangleAlert,
+  Zap,
   ChartNoAxesColumn,
   ArrowRightFromLine,
   BetweenHorizontalStart,
@@ -24,6 +40,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import type { IconName } from '../drawings/iconPaths.ts';
 import { TOOL_LABELS } from '../drawings/manager.ts';
 import type { DrawingType } from '../drawings/types.ts';
 
@@ -32,6 +49,8 @@ interface ToolDef {
   label: string;
   icon: LucideIcon;
   shortcut?: string;
+  /** The Icons group: which icon this entry places. */
+  iconName?: IconName;
 }
 
 /** A button of the left toolbar: its tools open in a flyout; the button repeats the last one. */
@@ -76,7 +95,12 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       tool('fib_extension', AlignVerticalSpaceAround),
     ],
   },
-  { id: 'patterns', label: 'Patterns', icon: Spline, tools: [], comingIn: 'a later round' },
+  {
+    id: 'patterns',
+    label: 'Patterns',
+    icon: Spline,
+    tools: [tool('xabcd', Activity), tool('abcd', Spline), tool('head_shoulders', Mountain)],
+  },
   {
     id: 'measure-tools',
     label: 'Forecasting and measurement tools',
@@ -97,7 +121,29 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
     tools: [tool('rectangle', RectangleHorizontal)],
   },
   { id: 'annotations', label: 'Annotation tools', icon: Type, tools: [tool('text', Type)] },
-  { id: 'icons', label: 'Icons', icon: Smile, tools: [], comingIn: 'a later round' },
+  {
+    id: 'icons',
+    label: 'Icons',
+    icon: Smile,
+    tools: (
+      [
+        ['arrow-up', 'Arrow up', ArrowUp],
+        ['arrow-down', 'Arrow down', ArrowDown],
+        ['arrow-left', 'Arrow left', ArrowLeft],
+        ['arrow-right', 'Arrow right', ArrowRight],
+        ['trending-up', 'Trending up', TrendingUp],
+        ['trending-down', 'Trending down', TrendingDown],
+        ['circle-check', 'Check', CircleCheck],
+        ['circle-x', 'Cross', CircleX],
+        ['alert', 'Alert', TriangleAlert],
+        ['info', 'Info', Info],
+        ['flag', 'Flag', Flag],
+        ['star', 'Star', Star],
+        ['bell', 'Bell', Bell],
+        ['zap', 'Lightning', Zap],
+      ] as const
+    ).map(([iconName, label, icon]) => ({ type: 'icon' as const, label, icon, iconName })),
+  },
 ];
 
 /** Every tool with a keyboard shortcut (the ? dialog and the hotkeys use it). */

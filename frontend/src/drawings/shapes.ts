@@ -126,6 +126,12 @@ export function strokes(
         ...line({ x: a.x, y: a.y + dy }, { x: b.x, y: b.y + dy }, 'segment'),
       ];
     }
+    case 'xabcd':
+    case 'abcd':
+    case 'head_shoulders':
+      // The zigzag through the points (the head and shoulders' neckline is drawn separately).
+      return pts.slice(1).flatMap((q, i) => line(pts[i] ?? q, q, 'segment'));
+    case 'icon':
     case 'rectangle':
     case 'text':
     case 'price_range':
@@ -171,6 +177,10 @@ export function hitTest(
     const box = textBox(drawing, a);
     return insideRect(p, box.a, box.b) ? { kind: 'body' } : null;
   }
+  if (drawing.type === 'icon') {
+    const half = (drawing.props.icon_size ?? 28) / 2;
+    return Math.abs(p.x - a.x) <= half && Math.abs(p.y - a.y) <= half ? { kind: 'body' } : null;
+  }
   if (drawing.type === 'trade_plan' && b !== undefined) {
     // The target box, and the stop box once there is a stop.
     const c = pts[2];
@@ -200,6 +210,15 @@ export function hitTest(
     ([s, e]) => distanceToLine(p, s, e, 'segment') <= HIT_PX,
   );
   return near ? { kind: 'body' } : null;
+}
+
+/** The head and shoulders' neckline through its two neck points (indexes 2 and 4), carried on to
+ *  the right edge of the pattern's last point. */
+export function neckline(pts: readonly Point[]): [Point, Point] | null {
+  const [a, b, end] = [pts[2], pts[4], pts[6]];
+  if (a === undefined || b === undefined || end === undefined || a.x === b.x) return null;
+  const slope = (b.y - a.y) / (b.x - a.x);
+  return [a, { x: end.x, y: a.y + slope * (end.x - a.x) }];
 }
 
 /** Points where a selected drawing shows its handles (one per anchor). */

@@ -71,6 +71,10 @@ export const TOOL_LABELS: Record<DrawingType, string> = {
   return_range: 'Return',
   stats_range: 'Statistics',
   trade_plan: 'Trade plan',
+  icon: 'Icon',
+  xabcd: 'XABCD pattern',
+  abcd: 'ABCD pattern',
+  head_shoulders: 'Head and shoulders',
 };
 
 /** Thin lines for the tools whose look comes from fills and labels. */
@@ -101,19 +105,27 @@ function defaultProps(type: DrawingType): Drawing['props'] {
       return { returns: 'log', basis: 'close' };
     case 'trade_plan':
       return { account: 10_000, risk_pct: 1 };
+    case 'icon':
+      return { icon: 'arrow-up', icon_size: 28 };
     default:
       return {};
   }
 }
 
-/** A new drawing of `type` at `points`, with the tool's default style and props. */
-export function newDrawing(type: DrawingType, points: Anchor[], id: string): Drawing {
+/** A new drawing of `type` at `points`, with the tool's default style and props (`props` on top:
+ *  the icon picked in the toolbar). */
+export function newDrawing(
+  type: DrawingType,
+  points: Anchor[],
+  id: string,
+  props: Drawing['props'] = {},
+): Drawing {
   return {
     id,
     type,
     points,
     style: { ...DEFAULT_STYLE, ...(THIN.has(type) ? { line_width: 1 } : {}) },
-    props: defaultProps(type),
+    props: { ...defaultProps(type), ...props },
     locked: false,
     hidden: false,
     z: 0,
@@ -286,7 +298,7 @@ export class DrawingManager {
         const id = crypto.randomUUID();
         const points = Array.from({ length: POINT_COUNT[s.tool] }, () => anchor);
         this.creating = {
-          drawing: newDrawing(s.tool, points, id),
+          drawing: newDrawing(s.tool, points, id, s.tool === 'icon' ? { icon: s.iconName } : {}),
           placed: 1,
           down: p,
           dragged: false,
