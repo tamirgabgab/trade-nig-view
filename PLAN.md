@@ -97,7 +97,9 @@ full harness.
   year from the counted bars per year) and `hv_percentile`; the Volatility tab: the cone per calendar horizon, the
   HAR forecast with walk-forward coverage, the squeeze probability against its base rate, overnight and downside
   shares, QLIKE scores of the estimators (with the 1h realised variance); the Historical Volatility learn page
-- [ ] T1: the Trade plan tool (entry, target, stop: probabilities, EV, heat map, calibration) on the V1 engine
+- [x] T1: the Trade plan tool (ADR 0012): entry, target and stop drawn in three clicks; chances from normalised
+  historical paths (limit fills, gaps, the exact Brownian bridge for two-level bars), EV in R, loss when stopped,
+  Kelly, position size, an EV heat map, a walk-forward calibration and the actual outcome; the Trade plan learn page
 
 ---
 

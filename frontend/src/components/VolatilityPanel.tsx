@@ -10,6 +10,7 @@ import {
 } from '../store/volatilityStore.ts';
 import { formatBarTime } from './formatClock.ts';
 import styles from './ForecastPanel.module.css';
+import { LearnLink } from './LearnLink.tsx';
 import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 import { VolatilityDetails } from './VolatilityDetails.tsx';
 import { HORIZON_LABELS } from './volatilityFormat.ts';
@@ -136,7 +137,9 @@ export function VolatilityPanel() {
           </h3>
           <VolatilityDetails v={v} annual={prefs.annual} />
           <p className={`${styles.note} ${styles.section}`}>
-            From past bars only. A research tool, not investment advice.
+            From past bars only (
+            <LearnLink target="historical-volatility">how it is measured</LearnLink>
+            ). A research tool, not investment advice.
           </p>
         </>
       )}

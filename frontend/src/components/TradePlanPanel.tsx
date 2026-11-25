@@ -6,6 +6,7 @@ import { useChartStore } from '../store/chartStore.ts';
 import { useDrawingStore } from '../store/drawingStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { useDebounced } from './lab/useDebounced.ts';
+import { LearnLink } from './LearnLink.tsx';
 import styles from './ForecastPanel.module.css';
 import { ReliabilityChart } from './ReliabilityChart.tsx';
 import { TradePlanHeat } from './TradePlanHeat.tsx';
@@ -235,7 +236,8 @@ export function TradePlanPanel() {
             </section>
           )}
           <p className={styles.note}>
-            From past bars only. A research tool, not investment advice.
+            From past bars only (<LearnLink target="trade-plan">how it is measured</LearnLink>). A
+            research tool, not investment advice.
           </p>
         </>
       )}

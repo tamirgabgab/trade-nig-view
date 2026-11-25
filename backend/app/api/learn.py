@@ -43,6 +43,7 @@ CONCEPT_PAGES: dict[str, str] = {
     "guided-exercises": "Guided exercises",
     "glossary": "Glossary",
     "forecasting": "Forecasting OHLC",
+    "trade-plan": "Trade plan",
 }
 _HEADING_ID = re.compile(r"\s*\(`[^`]*`\)\s*$")
 _CATEGORY_ORDER: dict[str | None, int] = {c: i for i, c in enumerate(get_args(Category))}

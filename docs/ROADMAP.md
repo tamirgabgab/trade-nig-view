@@ -304,7 +304,8 @@ Phase-2 plan.
 - [x] V1: volatility engine (ADR 0011): Historical Volatility (OHLC) with five estimators and Volatility Percentile;
   the Volatility tab (cone per calendar horizon, HAR forecast, squeeze probability, overnight and downside shares,
   estimator scores); the Historical Volatility learn page with a live widget.
-- [ ] T1: Trade plan tool (target / stop probabilities, EV, heat map, calibration).
+- [x] T1: Trade plan tool (ADR 0012): target / stop / fill probabilities from normalised historical paths with the
+  Brownian bridge, EV and position size, EV heat map, walk-forward calibration; the Trade plan learn page.
 - Deferred: the Python plugin API (`plugins/` folder, hot reload, `chartlab test-indicator`), if ever needed.
 
 ### Phase 4 — Strategies & backtesting
