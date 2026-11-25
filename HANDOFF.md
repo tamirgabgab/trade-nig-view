@@ -1143,3 +1143,23 @@
 - ‏token חדש: `--color-on-accent`.
 - צינור הניקוי: ponytail (שני קיצוצים קטנים); ‏code-review high (שבעה ממצאים, כולם תוקנו: פוקוס שאבד בכפתור חודש מושבת, ביצועים ב-intraday, אות מוקלדת שפתחה את חיפוש הסימבולים, שנים בלי נתונים, סגירה ב-Tab, צבע קשיח, שורת JSDoc ארוכה); ‏simplify לא הורץ (שינוי קטן, בלי כפילות).
 - בדיקות: ‏Vitest ‏433, ‏E2E ‏32, כולן עוברות.
+
+### 2026-11-25 — ‏Forecast מול המציאות, כיול, ופאנלים רחבים
+- ההחלטות של המשתמש: השוואה גם בגרף וגם בלשונית; זמינה ב-Replay ומכל נר בעבר; המדדים הם הטווח, השגיאה מול החציון והאחוזון; גרף כיול ל-Validation.
+- ‏backend (`analysis/forecast.py`, ‏`api/forecast.py`):
+  - ‏`close_percentiles`: אחוזוני הסגירה 1..99 לכל אופק;
+  - ‏`pit`: היסטוגרמת PIT בעשרה תאים לכל מודל ואופק, מחושבת מהשאריות הממוינות;
+  - בדיקות golden מול לולאה סקלרית, ו-PIT שטוח על random walk.
+- ‏frontend:
+  - ‏`forecastOutcome.ts` (טהור): טווח, שגיאה, אחוזון, סיכום ו-`pitVerdict`;
+  - נקודות צבעוניות על הסגירות בפועל ב-`forecastLayer`;
+  - ‏`ForecastVsActual.tsx`: סיכום, מקרא, מניפה עם המסלול בפועל (`ForecastFanChart` הורחב), וטבלה;
+  - ‏`ForecastCalibration.tsx`: עמודות כיסוי מול יעד, והיסטוגרמת PIT עם פסק דין;
+  - "Forecast from this bar" ו-"Forecast from the last bar" בקליק הימני (`store/forecastOriginStore.ts`, ‏`usePastOrigin`).
+- ‏`ResizeHandle.tsx` ו-`store/panelWidthStore.ts`:
+  - גרירת הקצה השמאלי של לוח הלשוניות ושל דפי ההסבר, ‏←/→, ולחיצה כפולה לברירת המחדל;
+  - נשמר ב-localStorage, והגרף שומר לפחות 360px;
+  - משוואות display גדולות פי 1.3.
+- הערה: הקובץ `ForecastOutcome.tsx` שונה ל-`ForecastVsActual.tsx`, כי הוא התנגש באותיות עם `forecastOutcome.ts` (כלל ה-Windows).
+- בדיקות: ‏backend ‏2653, ‏Vitest ‏442, ‏E2E ‏34, כולן עוברות.
+

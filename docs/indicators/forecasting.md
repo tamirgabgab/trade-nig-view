@@ -118,6 +118,49 @@ $$
   expected.
 - **Hit:** the share of right directions among the forecasts that pick one.
 
+**The calibration charts** under the table draw the same check:
+- **Coverage bars:** each model's share inside the 50, 80 and 95 % intervals, against a dashed target line.
+- **The PIT histogram** of the chart's model: where each actual close fell in its own forecast distribution,
+
+$$
+u = \hat F(r) = \frac{1}{m} \#\{\text{scenarios with a return} \le r\}
+$$
+
+| Symbol | Meaning | Units / typical range |
+|---|---|---|
+| $u$ | the PIT (probability integral transform) of one outcome | 0 to 1 |
+| $r$ | the actual log return of the close | log return |
+| $m$ | the forecast's scenarios (the training residual rows) | a few hundred |
+
+A calibrated forecast gives a **flat** histogram: a tenth of the outcomes in each tenth.
+- **A U shape:** the outcomes land in the tails too often, so the intervals are too narrow.
+- **A hump in the middle:** the intervals are too wide.
+- **A tilt:** the forecast is biased. More outcomes in the low bins means it was too high.
+
+The tab says which, with two binomial standard errors as the threshold.
+
+## One forecast against what happened
+
+A forecast made in the past can be checked bar by bar:
+- **In replay:** the forecast is frozen at the start bar. Each step reveals the next actual bar.
+- **On any past bar:** right-click it and pick **Forecast from this bar**. **Back to the last bar** returns to the
+  present.
+
+The chart marks each actual close with a dot in the colour of the narrowest interval that holds it:
+- green: inside 50 %;
+- yellow: inside 80 %;
+- orange: inside 95 %;
+- red: outside.
+
+The **Forecast vs actual** section of the tab shows the same comparison:
+- **The score:** how many closes fell inside each interval, and the mean absolute error.
+- **The fan** with the actual path drawn over it.
+- **A table per bar:** the median, the actual close, the error, the band and the **percentile** of the actual close in
+  the forecast (50 = the median; under 2.5 or over 97.5 = outside the 95 % interval).
+
+One forecast is five draws, so it proves little. The validation's 500 forecasts are the real test; the single
+comparison shows what "80 %" feels like.
+
 **Auto-tune** picks the window (250, 500, 1000 bars or all), the ridge penalty and the number of past bars by the same
 loss, on the 500 forecasts **before** the validated ones, so the scores you see are out of sample for the tuning
 too.
