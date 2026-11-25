@@ -19,8 +19,15 @@ test('replay AAPL from 2024-01-02: step 5 bars, the legend shows bar 5 and nothi
 
   await page.getByRole('button', { name: 'Bar replay' }).click();
   const bar = page.getByRole('toolbar', { name: 'Bar replay' });
-  await bar.getByLabel('Start date').fill('2024-01-02');
-  await bar.getByLabel('Start date').press('Enter');
+  // The calendar: only days with bars can be picked (6 Jan 2024 was a Saturday).
+  await bar.getByRole('button', { name: /^Start date/ }).click();
+  const calendar = page.getByRole('dialog', { name: 'Start date' });
+  await calendar.getByRole('combobox', { name: 'Year' }).selectOption('2024');
+  await calendar.getByRole('combobox', { name: 'Month' }).selectOption('Jan');
+  await expect(calendar.getByRole('button', { name: '06/01/2024' })).toBeDisabled();
+  await calendar.getByRole('button', { name: '02/01/2024' }).click();
+  await expect(bar.getByRole('button', { name: 'Start date: 02/01/2024' })).toBeVisible();
+  await page.mouse.move(0, 0); // the calendar was over the chart: no crosshair
   await expect(field(page, 'C')).toHaveText(
     price(adjusted(present(rows[start], 'start bar')).close),
   );
@@ -45,6 +52,14 @@ test('replay AAPL from 2024-01-02: step 5 bars, the legend shows bar 5 and nothi
   await bar.getByRole('button', { name: 'Play', exact: true }).click();
   await bar.getByLabel('Replay speed').selectOption('10');
   await expect(field(page, 'C')).not.toHaveText(price(fifth.close));
+  // The last bar in one click: still in replay, on the last day.
+  const lastRow = present(rows.at(-1), 'last bar');
+  await bar.getByRole('button', { name: 'Go to the last bar' }).click();
+  const [y, m, d] = lastRow.date.split('-');
+  await expect(bar.getByRole('button', { name: `Start date: ${d}/${m}/${y}` })).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Interval' }).getByRole('button').first(),
+  ).toBeDisabled();
   await bar.getByRole('button', { name: 'Exit replay' }).click();
   await page.mouse.move(0, 0); // the replay bar floats over the chart: no crosshair
   const last = adjusted(present(rows.at(-1), 'last bar'));

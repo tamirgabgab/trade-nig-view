@@ -1,0 +1,139 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.opener {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.opener:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+.opener:focus-visible,
+.nav:focus-visible,
+.day:focus-visible,
+.header select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* Opens upward: the replay bar sits at the bottom of the chart. */
+.popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: var(--z-tooltip);
+  width: 248px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+  transform: translateX(-50%);
+  animation: popup-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup {
+    animation: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.header select {
+  flex: 1;
+  height: 28px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color-scheme: dark light;
+}
+
+.nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.nav:hover:not(:disabled),
+.day:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+.nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.weekday {
+  padding-bottom: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.day {
+  height: 30px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-strong);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+/* A day without bars: shown, but faint and not clickable. */
+.day:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.day[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: #ffffff;
+}

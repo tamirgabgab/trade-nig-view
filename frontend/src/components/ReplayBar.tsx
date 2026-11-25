@@ -1,8 +1,9 @@
-import { Pause, Play, Shuffle, StepForward, X } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLast, Pause, Play, Shuffle, StepForward, X } from 'lucide-react';
+import { useMemo } from 'react';
 
 import type { Bar } from '../api/bars.ts';
 import { REPLAY_SPEEDS, useReplayStore, type ReplaySpeed } from '../store/replayStore.ts';
+import { DatePicker } from './DatePicker.tsx';
 import { formatBarTime, localDate } from './formatClock.ts';
 import { IconButton } from './IconButton.tsx';
 import styles from './ReplayBar.module.css';
@@ -14,7 +15,7 @@ const RANDOM_MARGIN = 50;
 
 /**
  * Replay controls (R7), floating at the bottom of the chart. Picking: choose the start bar by a
- * click on the chart, a date or at random. Replaying: play/pause, step (Shift+→), speed, the
+ * click on the chart, a day in the calendar (only days with bars), the last bar or at random. Replaying: play/pause, step (Shift+→), speed, the
  * cursor's date, exit (back to the present).
  */
 export function ReplayBar({
@@ -28,22 +29,15 @@ export function ReplayBar({
 }) {
   const replay = useReplayStore();
   const zone = useDisplayTimeZone();
-  // The date being typed; applied on Enter or when the field is left (not on every keystroke).
-  const [draft, setDraft] = useState<string | null>(null);
-  const first = bars[0];
-  const last = bars.at(-1);
+  // The days with bars, as the chart shows them (sorted, unique: intraday bars share a day).
+  const days = useMemo(
+    () => [...new Set(bars.map((bar) => localDate(bar.time, zone)))],
+    [bars, zone],
+  );
   const cursor = bars[cursorIndex];
   const startAt = (index: number) => {
     const bar = bars[Math.min(Math.max(index, 0), bars.length - 1)];
     if (bar !== undefined) replay.setCursor(bar.time, true);
-  };
-  const applyDraft = () => {
-    const day = draft;
-    setDraft(null);
-    if (day === null || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
-    // The last bar on or before that day; a day before the loaded history is ignored.
-    const index = bars.findLastIndex((bar) => localDate(bar.time, zone) <= day);
-    if (index >= 0) startAt(index);
   };
 
   return (
@@ -87,23 +81,23 @@ export function ReplayBar({
           </span>
         </>
       )}
-      <label className={styles.date}>
-        <span className="visually-hidden">Start date</span>
-        <input
-          type="date"
-          aria-label="Start date"
-          min={first === undefined ? undefined : localDate(first.time, zone)}
-          max={last === undefined ? undefined : localDate(last.time, zone)}
-          value={draft ?? (cursor === undefined ? '' : localDate(cursor.time, zone))}
-          onChange={(event) => {
-            setDraft(event.target.value);
-          }}
-          onBlur={applyDraft}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') applyDraft();
-          }}
-        />
-      </label>
+      <DatePicker
+        label="Start date"
+        days={days}
+        value={cursor === undefined ? undefined : localDate(cursor.time, zone)}
+        onPick={(day) => {
+          // The last bar of that day.
+          startAt(bars.findLastIndex((bar) => localDate(bar.time, zone) <= day));
+        }}
+      />
+      <IconButton
+        label="Go to the last bar"
+        icon={<ChevronLast size={ICON} />}
+        tooltipSide="top"
+        onClick={() => {
+          startAt(bars.length - 1);
+        }}
+      />
       <IconButton
         label="Start at a random bar"
         icon={<Shuffle size={ICON} />}
