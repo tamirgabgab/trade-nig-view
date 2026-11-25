@@ -62,9 +62,10 @@ export function DatePicker({
     };
   }, [open]);
 
-  const pick = (day: string) => {
-    close(true);
-    onPick(day);
+  // A month button that reaches the first or last month is disabled: it hands the focus to the day.
+  const showMonth = (day: string | undefined) => {
+    const edge = day?.slice(0, 7);
+    show(day, edge !== undefined && (edge === first?.slice(0, 7) || edge === last?.slice(0, 7)));
   };
 
   // The last day of the months before the active one, the first of the months after it (a month
@@ -84,18 +85,16 @@ export function DatePicker({
       PageDown: () => nextMonth(active),
     };
     const move = moves[event.key];
+    if (event.key.length === 1) event.stopPropagation(); // a typed letter is not a global hotkey
     if (move === undefined) return;
     event.preventDefault();
     show(move(), true);
   };
 
   const [year = 0, month = 1] = (active ?? '').split('-').map(Number);
-  const years: number[] = [];
-  if (first !== undefined && last !== undefined) {
-    for (let y = Number(first.slice(0, 4)); y <= Number(last.slice(0, 4)); y += 1) years.push(y);
-  }
+  const years = [...new Set(days.map((day) => Number(day.slice(0, 4))))];
   const goTo = (y: number, m: number) => {
-    const target = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-01`;
+    const target = `${String(y)}-${String(m).padStart(2, '0')}-01`;
     show(snapDay(days, target, 1), false);
   };
 
@@ -103,6 +102,10 @@ export function DatePicker({
     <div
       ref={wrapperRef}
       className={styles.wrapper}
+      onBlur={(event) => {
+        const next = event.relatedTarget;
+        if (next !== null && !event.currentTarget.contains(next)) setActive(null);
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && open) {
           event.preventDefault();
@@ -136,7 +139,7 @@ export function DatePicker({
               aria-label="Previous month"
               disabled={first === undefined || active.slice(0, 7) <= first.slice(0, 7)}
               onClick={() => {
-                show(previousMonth(active), false);
+                showMonth(previousMonth(active));
               }}
             >
               <ChevronLeft size={16} aria-hidden="true" />
@@ -173,7 +176,7 @@ export function DatePicker({
               aria-label="Next month"
               disabled={last === undefined || active.slice(0, 7) >= last.slice(0, 7)}
               onClick={() => {
-                show(nextMonth(active), false);
+                showMonth(nextMonth(active));
               }}
             >
               <ChevronRight size={16} aria-hidden="true" />
@@ -205,7 +208,8 @@ export function DatePicker({
                   disabled={!available.has(day)}
                   tabIndex={day === active ? 0 : -1}
                   onClick={() => {
-                    pick(day);
+                    close(true);
+                    onPick(day);
                   }}
                 >
                   {Number(day.slice(8))}

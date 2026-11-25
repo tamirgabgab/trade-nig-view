@@ -62,3 +62,47 @@ describe('DatePicker', () => {
     expect(screen.getByRole('group', { name: 'Jan 2024' })).toBeInTheDocument();
   });
 });
+
+describe('DatePicker focus and keys', () => {
+  it('hands the focus to the day when a month button reaches the edge and disables itself', () => {
+    setup('2024-01-03');
+    fireEvent.click(screen.getByRole('button', { name: /^Start date/ }));
+    const previous = screen.getByRole('button', { name: 'Previous month' });
+    previous.focus();
+    fireEvent.click(previous);
+    expect(previous).toBeDisabled();
+    expect(screen.getByRole('button', { name: '29/12/2023' })).toHaveFocus();
+  });
+
+  it('keeps typed letters from global hotkeys and closes when Tab leaves it', () => {
+    const onWindowKey = vi.fn();
+    window.addEventListener('keydown', onWindowKey);
+    render(
+      <>
+        <DatePicker label="Start date" days={DAYS} value="2024-01-03" onPick={vi.fn()} />
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Start date/ }));
+    const day = screen.getByRole('button', { name: '03/01/2024' });
+    fireEvent.keyDown(day, { key: 's' });
+    expect(onWindowKey).not.toHaveBeenCalled();
+    window.removeEventListener('keydown', onWindowKey);
+    fireEvent.blur(day, { relatedTarget: screen.getByRole('button', { name: 'Elsewhere' }) });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('lists only the years that have bars', () => {
+    render(
+      <DatePicker
+        label="Start date"
+        days={['2019-12-30', '2022-01-03']}
+        value={undefined}
+        onPick={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Start date/ }));
+    const years = within(screen.getByRole('combobox', { name: 'Year' })).getAllByRole('option');
+    expect(years.map((option) => option.textContent)).toEqual(['2019', '2022']);
+  });
+});
