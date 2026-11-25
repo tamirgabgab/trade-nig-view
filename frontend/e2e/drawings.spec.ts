@@ -188,6 +188,7 @@ test('Trade plan tool: entry, target and stop open the tab with the chances', as
 
   // The risk % is saved on the drawing.
   await page.getByLabel('Risk %').fill('2');
+  await page.getByLabel('Risk %').press('Enter'); // committed on Enter or blur
   await expect
     .poll(async () => {
       const doc = (await saved(page)) as { drawings: { props?: { risk_pct?: number } }[] };
