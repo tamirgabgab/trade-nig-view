@@ -57,6 +57,7 @@ import { spanBetween, type Span } from '../drawings/measure.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 import { DrawingLayer } from './drawingLayer.ts';
 import { ForecastLayer, type ForecastView } from './forecastLayer.ts';
+import { BackgroundLayer, backgroundRuns } from './backgroundLayer.ts';
 import { GapLayer, type GapZone } from './gapLayer.ts';
 import { ReplayLayer } from './replayLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
@@ -240,6 +241,10 @@ export class ChartEngine {
       down: this.theme.down,
     }),
   );
+  /** A fractional index's x (bands start and end half a bar outside their bars). */
+  private readonly backgroundLayer = new BackgroundLayer((index) =>
+    logicalToX(index, (i) => this.chart.timeScale().logicalToCoordinate(i as Logical)),
+  );
   private readonly gapLayer = new GapLayer(
     (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),
     (price) => this.priceToY(price),
@@ -305,6 +310,7 @@ export class ChartEngine {
     });
     this.chart.priceScale(VOLUME_SCALE_ID).applyOptions({ scaleMargins: VOLUME_MARGINS });
     this.main = this.createMainSeries(this.chartType);
+    this.main.attachPrimitive(this.backgroundLayer);
     this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
     this.main.attachPrimitive(this.forecastLayer);
@@ -362,7 +368,14 @@ export class ChartEngine {
    */
   setIndicatorLines(all: readonly IndicatorLine[]): void {
     this.lastLines = all;
-    const lines = all.filter((line) => line.plot !== 'markers');
+    const lines = all.filter((line) => line.plot !== 'markers' && line.plot !== 'background');
+    this.backgroundLayer.set(
+      all
+        .filter((line) => line.plot === 'background' && line.visible)
+        .flatMap((line) =>
+          backgroundRuns(line.values, line.style.up ?? line.color, line.style.down ?? line.color),
+        ),
+    );
     this.setMarkers(
       all
         .filter((line) => line.plot === 'markers' && line.visible)
@@ -645,6 +658,7 @@ export class ChartEngine {
     this.markers = null;
     this.chart.removeSeries(this.main);
     this.main = this.createMainSeries(this.chartType);
+    this.main.attachPrimitive(this.backgroundLayer);
     this.main.attachPrimitive(this.gapLayer);
     this.main.attachPrimitive(this.drawingLayer);
     this.main.attachPrimitive(this.forecastLayer);

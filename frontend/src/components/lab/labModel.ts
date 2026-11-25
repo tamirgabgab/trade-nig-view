@@ -65,7 +65,9 @@ export function chartLines(
 ): { overlays: MiniLine[]; pane: MiniPane | null } {
   if (spec === undefined || result === undefined) return { overlays: [], pane: null };
   const lines = spec.outputs
-    .filter((o) => o.plot !== 'markers' && result.outputs[o.name] !== undefined)
+    // Markers and background tints have no line (a tint's -1 / 0 / +1 is not a price).
+    .filter((o) => o.plot !== 'markers' && o.plot !== 'background')
+    .filter((o) => result.outputs[o.name] !== undefined)
     // Switched-off outputs (RSI's optional MA) have no line.
     .filter((o) => isActive(spec, o, result.params))
     .filter((o) => only === undefined || only.includes(o.name))

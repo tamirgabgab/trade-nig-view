@@ -69,7 +69,7 @@ export const CATEGORY_LABELS: Record<IndicatorCategory, string> = {
 };
 
 const PARAM_TYPES: readonly ParamType[] = ['int', 'float', 'bool', 'enum', 'source'];
-const PLOTS: readonly OutputInfo['plot'][] = ['line', 'histogram', 'area', 'markers'];
+const PLOTS: readonly OutputInfo['plot'][] = ['line', 'histogram', 'area', 'markers', 'background'];
 
 function str(value: unknown, field: string): string {
   if (typeof value !== 'string') throw new Error(`Expected string for ${field}`);

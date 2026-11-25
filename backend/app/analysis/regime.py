@@ -171,10 +171,10 @@ def signals(frame: BarFrame) -> dict[str, tuple[Family, npt.NDArray[np.bool_]]]:
     bb = CATALOG["bb"].run(frame, {})
     rsi = CATALOG["rsi"].run(frame, {})["rsi"]
     return {
-        "EMA 20 crosses above EMA 50": ("trend", _crossings(fast, slow, above=True)),
-        "Close crosses above the upper band": ("trend", _crossings(c, bb["upper"], True)),
-        "RSI crosses below 30": ("reversion", _crossings(rsi, np.full(len(c), 30.0), above=False)),
-        "Close crosses below the lower band": (
+        "EMA 20 crosses 50 up": ("trend", _crossings(fast, slow, above=True)),
+        "Close above upper BB": ("trend", _crossings(c, bb["upper"], True)),
+        "RSI below 30": ("reversion", _crossings(rsi, np.full(len(c), 30.0), above=False)),
+        "Close below lower BB": (
             "reversion",
             _crossings(c, bb["lower"], above=False),
         ),

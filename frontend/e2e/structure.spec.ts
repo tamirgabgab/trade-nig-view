@@ -147,3 +147,42 @@ test('the Value at Risk page backtests the methods on a random stock', async ({ 
   await lab.scrollIntoViewIfNeeded();
   await expect(lab.getByRole('table', { name: 'VaR backtests' })).toBeVisible({ timeout: 60_000 });
 });
+
+test('regime: the test, Hurst, the map and the rules in the Regime tab; the tint on the chart', async ({
+  page,
+}) => {
+  // The tint and the two panes from the indicators dialog.
+  for (const name of ['Market Regime', 'Variance Ratio', 'Hurst Exponent']) {
+    await page.getByTestId('chart-canvas').click();
+    await page.keyboard.press('/');
+    await page.keyboard.type(name);
+    const dialog = page.getByRole('dialog', { name: 'Indicators' });
+    await expect(dialog.getByRole('option').first()).toContainText(name);
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+  }
+  await page.getByRole('button', { name: 'Show regime' }).click();
+  const verdict = page.getByRole('region', { name: 'Verdict' });
+  await expect(verdict).toContainText(/bootstrap p = /, { timeout: 30_000 });
+  await expect(page.getByRole('table', { name: 'Variance ratios' }).getByRole('row')).toHaveCount(
+    5,
+  );
+  await expect(page.getByRole('table', { name: 'Regime map' })).toContainText('(now)');
+  await expect(
+    page.getByRole('table', { name: 'Rule edge by regime' }).getByRole('row', { name: /RSI/ }),
+  ).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: 'test-results/regime.png' });
+});
+
+test('the Market regime page tests the regimes scenario', async ({ page }) => {
+  await page.getByRole('button', { name: 'Learn pages' }).click();
+  await page.keyboard.type('Market regime');
+  await page.keyboard.press('Enter');
+  const drawer = page.getByRole('complementary', { name: /Variance Ratio/ });
+  const lab = drawer.getByRole('region', { name: 'Regime lab' });
+  await lab.scrollIntoViewIfNeeded();
+  await expect(lab.getByRole('region', { name: 'Verdict' })).toContainText('Mean-reverting', {
+    timeout: 60_000,
+  });
+});
