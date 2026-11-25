@@ -22,7 +22,7 @@ const signed = (v: number, text: string) => `${v > 0 ? '+' : ''}${text}`;
  * band's colour, a one-line score and, per bar ahead, the median, the actual close, the error,
  * the band and the actual close's percentile in the forecast.
  */
-export function ForecastOutcome({
+export function ForecastVsActual({
   forecast,
   bars,
   outcomes,

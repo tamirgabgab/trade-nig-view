@@ -6,7 +6,7 @@ import { useForecastOriginStore } from '../store/forecastOriginStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { useStructureStore } from '../store/structureStore.ts';
 import { ForecastHorizons } from './ForecastHorizons.tsx';
-import { ForecastOutcome } from './ForecastOutcome.tsx';
+import { ForecastVsActual } from './ForecastVsActual.tsx';
 import { forecastOutcomes } from './forecastOutcome.ts';
 import styles from './ForecastPanel.module.css';
 import { ForecastValidation } from './ForecastValidation.tsx';
@@ -203,7 +203,7 @@ export function ForecastPanel() {
           <section className={styles.section} aria-label="Forecast vs actual">
             <h3 className={styles.heading}>Forecast vs actual</h3>
             {outcomes.length > 0 && bars !== undefined ? (
-              <ForecastOutcome
+              <ForecastVsActual
                 forecast={f}
                 bars={bars}
                 outcomes={outcomes}
