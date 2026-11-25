@@ -51,6 +51,9 @@ class HorizonForecast(BaseModel):
     high: list[float]
     low: list[float]
     close: list[float]
+    close_percentiles: list[float] = Field(
+        description="The close's quantiles at 1, 2, ..., 99 % (where an outcome falls)"
+    )
     p_up: float = Field(description="P(close after h bars > last close)")
     expected_range: float = Field(description="Mean (high - low) / last close")
 
@@ -66,6 +69,9 @@ class Validation(BaseModel):
     r2: float | None = Field(description="Out-of-sample R^2 of the return vs a zero-mean walk")
     hit_rate: float | None = Field(
         description="Share of right directions among the forecasts whose median return is not 0"
+    )
+    pit: list[float] = Field(
+        description="Shares of the outcomes' PIT in ten equal bins (flat = calibrated)"
     )
 
 
@@ -179,6 +185,7 @@ def _forecast(
                         coverage=list(s.coverage),
                         r2=_num(s.r2),
                         hit_rate=_num(s.hit_rate),
+                        pit=list(s.pit),
                     )
                 )
     d = fc.design(frame, best.lags, horizons)
@@ -199,6 +206,7 @@ def _forecast(
                 high=q[:, 1].tolist(),
                 low=q[:, 2].tolist(),
                 close=q[:, 3].tolist(),
+                close_percentiles=hz.close_percentiles.tolist(),
                 p_up=hz.p_up,
                 expected_range=hz.expected_range,
             )

@@ -34,10 +34,12 @@ expected range are taken over those candles: an empirical, deterministic distrib
 **Walk-forward evaluation.** Origins :math:`T` over the last ``evaluate`` bars that have an
 outcome, refitted every ``refit`` bars on data up to the refit origin only. Scores: the mean
 pinball loss of the four targets at the quantile levels, the coverage of the central intervals
-of the close, the out-of-sample :math:`R^2 = 1 - \sum (r - \hat r)^2 / \sum r^2` of the return
-against a zero-mean random walk, and the direction hit rate. **Auto-tuning** picks the window,
-the ridge strength and the lags with the lowest pinball loss at :math:`h = 1` in that evaluation,
-which uses only the past of each origin.
+of the close, the PIT histogram of :math:`u = \hat F(r)` (the share of the scenarios at or below
+the outcome: uniform on [0, 1] if the forecast is calibrated), the out-of-sample
+:math:`R^2 = 1 - \sum (r - \hat r)^2 / \sum r^2` of the return against a zero-mean random walk,
+and the direction hit rate. **Auto-tuning** picks the window, the ridge strength and the lags
+with the lowest pinball loss at :math:`h = 1` in that evaluation, which uses only the past of
+each origin.
 """
 
 from __future__ import annotations
@@ -55,6 +57,10 @@ Model = Literal["a", "c", "naive"]
 #: Quantile levels of the forecast (central 50 / 80 / 95 % intervals and the median).
 LEVELS: tuple[float, ...] = (0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975)
 INTERVALS: tuple[tuple[float, float], ...] = ((0.25, 0.75), (0.1, 0.9), (0.025, 0.975))
+#: The close's percentiles 1..99 %: where an outcome falls in its forecast (forecast vs actual).
+PERCENTILES: tuple[float, ...] = tuple(i / 100 for i in range(1, 100))
+#: Bins of the PIT histogram (equal widths of 1 / PIT_BINS).
+PIT_BINS = 10
 TARGETS = ("gap", "return", "upper_wick", "lower_wick")
 #: Order-statistic quantiles (no interpolation): they commute with every monotone map, so the
 #: quantiles of scale * (loc + e), wick clip included, are the map of the residuals' quantiles.
@@ -96,6 +102,8 @@ class Horizon:
     h: int
     #: Price quantiles at ``LEVELS``: one row per level, columns open, high, low, close.
     quantiles: Matrix
+    #: The close's quantiles at ``PERCENTILES``.
+    close_percentiles: FloatArray
     p_up: float
     #: Mean (H - L) / C_t of the candles.
     expected_range: float
@@ -109,6 +117,9 @@ class Scores:
     r2: float
     #: Share of right directions among the forecasts with a non-zero median (NaN if none).
     hit_rate: float
+    #: Shares of the outcomes' PIT in PIT_BINS equal bins: flat if calibrated, U-shaped if the
+    #: forecast is too narrow, a hump if too wide, tilted if biased.
+    pit: tuple[float, ...]
 
 
 # --- data ---------------------------------------------------------------------------------------
@@ -304,6 +315,7 @@ def horizon_forecast(f: Fit, d: Design, origin: int, h: int) -> Horizon:
     return Horizon(
         h=h,
         quantiles=np.quantile(bars, LEVELS, axis=0, method=QUANTILE_METHOD),
+        close_percentiles=np.quantile(bars[:, 3], PERCENTILES, method=QUANTILE_METHOD),
         p_up=float((y[:, 1] > 0).mean()),
         expected_range=float(((bars[:, 1] - bars[:, 2]) / close).mean()),
     )
@@ -336,6 +348,7 @@ def evaluate(
     outcomes: list[Matrix] = []
     quants: list[npt.NDArray[np.float64]] = []
     means: list[FloatArray] = []
+    pits: list[FloatArray] = []
     for start in range(0, len(origins), refit):
         block = origins[start : start + refit]
         f = fit(d, h, int(block[0]), model, params)
@@ -349,6 +362,11 @@ def evaluate(
         quants.append(target_quantiles(f, loc, scale))
         outcomes.append(d.y[h][block])
         means.append(scale * loc[:, 1])
+        # PIT of the return: the share of scenarios scale * (loc + e) at or below it.
+        e = np.sort(f.residuals[:, 1])
+        z = d.y[h][block, 1] / scale - loc[:, 1]
+        pit: FloatArray = np.searchsorted(e, z, side="right") / len(e)
+        pits.append(pit)
     if not outcomes:
         return None
     out = np.concatenate(outcomes)  # n x 4
@@ -373,6 +391,9 @@ def evaluate(
         coverage=(coverage[0], coverage[1], coverage[2]),
         r2=1.0 - float(np.sum((r - pred) ** 2)) / denom if denom > 0 else float("nan"),
         hit_rate=float(np.mean(same_sign)) if called.any() else float("nan"),
+        pit=tuple(
+            float(x) for x in np.histogram(np.concatenate(pits), PIT_BINS, (0.0, 1.0))[0] / len(r)
+        ),
     )
 
 

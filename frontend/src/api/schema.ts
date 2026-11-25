@@ -1087,6 +1087,11 @@ export interface components {
             /** Close */
             close: number[];
             /**
+             * Close Percentiles
+             * @description The close's quantiles at 1, 2, ..., 99 % (where an outcome falls)
+             */
+            close_percentiles: number[];
+            /**
              * P Up
              * @description P(close after h bars > last close)
              */
@@ -2252,6 +2257,11 @@ export interface components {
              * @description Share of right directions among the forecasts whose median return is not 0
              */
             hit_rate: number | null;
+            /**
+             * Pit
+             * @description Shares of the outcomes' PIT in ten equal bins (flat = calibrated)
+             */
+            pit: number[];
         };
         /** ValidationError */
         ValidationError: {

@@ -5,6 +5,7 @@ random walk (no edge, nominal coverage) and model C's advantage when volatility 
 from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 from app.analysis import forecast as fc
@@ -148,6 +149,44 @@ def test_a_forecast_is_a_valid_candle_with_ordered_quantiles() -> None:
         assert median[2] <= min(median[0], median[3]) <= max(median[0], median[3]) <= median[1]
 
 
+def test_close_percentiles_are_the_scenario_closes_quantiles() -> None:
+    frame = synthetic_bars(Scenario.UPTREND, 1, 900)
+    d = fc.design(frame, 3, [2])
+    origin = len(frame) - 1
+    f = fc.fit(d, 2, origin, "c", fc.Params())
+    assert f is not None
+    hz = fc.horizon_forecast(f, d, origin, 2)
+    loc, scale = fc.location_and_scale(f, d, np.array([origin]))
+    closes = fc.candles(fc.samples(f, loc[0], float(scale[0])), float(d.close[origin]))[:, 3]
+    golden = [np.sort(closes)[int(np.ceil(p * len(closes))) - 1] for p in fc.PERCENTILES]
+    np.testing.assert_allclose(hz.close_percentiles, golden, rtol=1e-12)
+    assert hz.close_percentiles[49] == hz.quantiles[fc.LEVELS.index(0.5), 3]  # the median
+
+
+def test_pit_against_a_scalar_loop() -> None:
+    """Golden: each outcome's PIT is the share of its scenarios' returns at or below it."""
+    frame = synthetic_bars(Scenario.RANGE, 2, 800)
+    d = fc.design(frame, 3, [1])
+    origins = fc.eval_origins(len(frame), 1, 60)
+    s = fc.evaluate(d, 1, "c", fc.Params(), origins, 20)
+    assert s is not None
+    pits: list[float] = []
+    for start in range(0, len(origins), 20):
+        block = origins[start : start + 20]
+        f = fc.fit(d, 1, int(block[0]), "c", fc.Params())
+        assert f is not None
+        for t in block:
+            loc, scale = fc.location_and_scale(f, d, np.array([t]))
+            scenarios = fc.samples(f, loc[0], float(scale[0]))[:, 1]
+            below: npt.NDArray[np.bool_] = scenarios <= d.y[1][t, 1]
+            pits.append(float(below.mean()))
+    counts = [0] * fc.PIT_BINS
+    for u in pits:
+        counts[min(int(u * fc.PIT_BINS), fc.PIT_BINS - 1)] += 1
+    np.testing.assert_allclose(s.pit, [c / len(pits) for c in counts], atol=1e-12)
+    assert sum(s.pit) == pytest.approx(1.0)
+
+
 def test_a_horizon_past_the_data_is_all_nan() -> None:
     assert np.isnan(fc.horizon_log_range(BARS, 7)).all()
     assert np.isnan(fc.targets(BARS, 7)).all()
@@ -175,6 +214,9 @@ def test_on_a_random_walk_coverage_is_nominal_and_there_is_no_edge(seed: int) ->
     # No false edge; fitting noise costs a little (a negative R^2), the penalty keeps it small.
     assert -0.05 < s.r2 < 0.03
     assert abs(s.hit_rate - 0.5) < 0.08
+    # Calibrated: the PIT is about flat (a tenth per bin, binomial tolerance).
+    for share in s.pit:
+        assert abs(share - 0.1) < 3.5 * np.sqrt(0.1 * 0.9 / s.n)
 
 
 def test_model_c_beats_the_naive_benchmark_when_volatility_clusters() -> None:

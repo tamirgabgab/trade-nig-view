@@ -32,6 +32,8 @@ def test_quantiles_of_the_next_k_bars_and_the_validation(e2e_client: TestClient)
             assert q == sorted(q)
         median = fc.LEVELS.index(0.5)
         assert hz["low"][median] <= hz["close"][median] <= hz["high"][median]
+        assert len(hz["close_percentiles"]) == 99
+        assert hz["close_percentiles"] == sorted(hz["close_percentiles"])
         assert 0 <= hz["p_up"] <= 1
         assert hz["expected_range"] > 0
     # The 95 % interval of the close widens with the horizon.
@@ -42,6 +44,8 @@ def test_quantiles_of_the_next_k_bars_and_the_validation(e2e_client: TestClient)
     for v in body["validation"]:
         assert v["n"] == 500
         assert len(v["coverage"]) == 3
+        assert len(v["pit"]) == 10
+        assert abs(sum(v["pit"]) - 1) < 1e-9
         assert v["hit_rate"] is None or 0.3 < v["hit_rate"] < 0.7  # no model knows the way
     assert len(body["coefficients"]) == len(fc.feature_names(3))
     assert body["tuning"] == []

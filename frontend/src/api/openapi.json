@@ -3037,6 +3037,14 @@
             "type": "array",
             "title": "Close"
           },
+          "close_percentiles": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Close Percentiles",
+            "description": "The close's quantiles at 1, 2, ..., 99 % (where an outcome falls)"
+          },
           "p_up": {
             "type": "number",
             "title": "P Up",
@@ -3055,6 +3063,7 @@
           "high",
           "low",
           "close",
+          "close_percentiles",
           "p_up",
           "expected_range"
         ],
@@ -5833,6 +5842,14 @@
             ],
             "title": "Hit Rate",
             "description": "Share of right directions among the forecasts whose median return is not 0"
+          },
+          "pit": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Pit",
+            "description": "Shares of the outcomes' PIT in ten equal bins (flat = calibrated)"
           }
         },
         "type": "object",
@@ -5843,7 +5860,8 @@
           "pinball",
           "coverage",
           "r2",
-          "hit_rate"
+          "hit_rate",
+          "pit"
         ],
         "title": "Validation"
       },
