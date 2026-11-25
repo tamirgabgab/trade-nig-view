@@ -910,6 +910,20 @@ export class ChartEngine {
     this.chart.applyOptions({ handleScroll: enabled, handleScale: enabled });
   }
 
+  /** Fill the chart with the box between two points of the price pane: its bars and its prices
+   *  (the price axis leaves auto-fit; "auto" or a reset brings it back). */
+  zoomTo(a: Point, b: Point): void {
+    const ts = this.chart.timeScale();
+    const [l1, l2] = [ts.coordinateToLogical(a.x), ts.coordinateToLogical(b.x)];
+    const [p1, p2] = [this.main.coordinateToPrice(a.y), this.main.coordinateToPrice(b.y)];
+    if (l1 === null || l2 === null || p1 === null || p2 === null) return;
+    ts.setVisibleLogicalRange({ from: Math.min(l1, l2), to: Math.max(l1, l2) });
+    const scale = this.chart.priceScale('right');
+    scale.setAutoScale(false);
+    scale.setVisibleRange({ from: Math.min(p1, p2), to: Math.max(p1, p2) });
+    this.checkAutoScale();
+  }
+
   /** The element the chart draws in (drawing interaction listens on it). */
   element(): HTMLElement {
     return this.container;

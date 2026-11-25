@@ -28,6 +28,8 @@ export interface ChartSurface {
   paneSize(): Size;
   setPanZoom(enabled: boolean): void;
   setDrawings(view: DrawingView): void;
+  /** Fill the chart with the box between two pane points (the Zoom in tool). */
+  zoomTo(a: Point, b: Point): void;
 }
 
 export interface DrawingCallbacks {
@@ -128,6 +130,12 @@ interface Creating {
   dragged: boolean;
 }
 
+/** The Zoom in box being dragged: its first corner, and the box shown as a dashed rectangle. */
+interface Zooming {
+  start: Point;
+  box: Drawing | null;
+}
+
 interface Dragging {
   id: string;
   hit: Hit;
@@ -144,6 +152,7 @@ interface Dragging {
 export class DrawingManager {
   private creating: Creating | null = null;
   private dragging: Dragging | null = null;
+  private zooming: Zooming | null = null;
   private shift = false;
   /** The primary button went down on the price pane (its release is ours). */
   private down = false;
@@ -190,7 +199,7 @@ export class DrawingManager {
       drawings: s.drawings,
       selectedId: s.selectedId,
       hoverId: s.hoverId,
-      draft: this.creating?.drawing ?? null,
+      draft: this.creating?.drawing ?? this.zooming?.box ?? null,
       hideAll: s.hideAll,
     });
   }
@@ -257,6 +266,18 @@ export class DrawingManager {
     if (p === null || s.symbol === null) return;
     this.down = true;
 
+    if (s.pointerTool === 'eraser') {
+      // The eraser removes the drawing under the click (with Undo), and stays on.
+      const found = this.hitAt(p);
+      if (found !== null && !s.lockAll && !found.drawing.locked) this.erase(found.drawing.id);
+      return;
+    }
+    if (s.pointerTool === 'zoom') {
+      this.zooming = { start: p, box: null };
+      this.surface.setPanZoom(false);
+      return;
+    }
+
     if (s.tool !== null) {
       if (this.creating === null) {
         const anchor = this.anchorAt(p, null, s.tool);
@@ -315,6 +336,27 @@ export class DrawingManager {
       return;
     }
 
+    if (this.zooming !== null) {
+      if (p === null) return;
+      const a = this.surface.unproject(this.zooming.start)?.anchor;
+      const b = this.surface.unproject(p)?.anchor;
+      if (a !== undefined && b !== undefined) {
+        const box = newDrawing('rectangle', [a, b], 'zoom-box');
+        this.zooming.box = {
+          ...box,
+          style: { ...box.style, line_style: 'dashed' },
+          props: { fill: false },
+        };
+        this.render();
+      }
+      return;
+    }
+
+    if (s.pointerTool === 'zoom') {
+      el.style.cursor = p === null ? '' : 'zoom-in';
+      return;
+    }
+
     if (s.tool !== null) {
       el.style.cursor = p === null ? '' : 'crosshair';
       return;
@@ -324,11 +366,13 @@ export class DrawingManager {
     el.style.cursor =
       found === null
         ? ''
-        : found.hit.kind === 'handle'
+        : s.pointerTool === 'eraser'
           ? 'pointer'
-          : s.lockAll || found.drawing.locked
-            ? 'default'
-            : 'move';
+          : found.hit.kind === 'handle'
+            ? 'pointer'
+            : s.lockAll || found.drawing.locked
+              ? 'default'
+              : 'move';
   };
 
   /** Move the anchors not placed yet to `p`. */
@@ -372,10 +416,24 @@ export class DrawingManager {
     }
   }
 
-  private readonly onPointerUp = (): void => {
+  private readonly onPointerUp = (event: PointerEvent): void => {
     // A release whose press was not on the pane (a toolbar click) is not ours.
     if (!this.down) return;
     this.down = false;
+    if (this.zooming !== null) {
+      const { start } = this.zooming;
+      this.zooming = null;
+      this.surface.setPanZoom(true);
+      const rect = this.surface.element().getBoundingClientRect();
+      const end = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      // A click without a box zooms nothing; a box zooms once and the tool goes back to the cursor.
+      if (Math.abs(end.x - start.x) > CLICK_SLOP && Math.abs(end.y - start.y) > CLICK_SLOP) {
+        this.surface.zoomTo(start, end);
+        this.store.getState().setPointerTool(null);
+      }
+      this.render();
+      return;
+    }
     if (this.creating !== null) {
       // A drag places the second anchor on release; a three-point tool then waits for a click.
       if (this.creating.dragged) {
@@ -430,6 +488,10 @@ export class DrawingManager {
       if (this.creating !== null) {
         this.cancelCreating();
         this.render();
+      } else if (s.pointerTool !== null) {
+        this.zooming = null;
+        s.setPointerTool(null);
+        this.render();
       } else if (s.tool !== null) {
         s.setTool(null);
       } else if (s.selectedId !== null) {
@@ -440,14 +502,19 @@ export class DrawingManager {
       event.preventDefault();
     } else if ((event.key === 'Delete' || event.key === 'Backspace') && s.selectedId !== null) {
       event.preventDefault();
-      const removed = s.remove(s.selectedId);
-      if (removed !== null) {
-        this.callbacks.removed(TOOL_LABELS[removed.drawing.type], () => {
-          this.store.getState().restore(removed);
-        });
-      }
+      this.erase(s.selectedId);
     }
   };
+
+  /** Remove a drawing, offering Undo. */
+  private erase(id: string): void {
+    const removed = this.store.getState().remove(id);
+    if (removed !== null) {
+      this.callbacks.removed(TOOL_LABELS[removed.drawing.type], () => {
+        this.store.getState().restore(removed);
+      });
+    }
+  }
 
   private readonly onKeyUp = (event: KeyboardEvent): void => {
     this.shift = event.shiftKey;

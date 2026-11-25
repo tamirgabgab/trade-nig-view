@@ -20,6 +20,9 @@ export interface DrawingState {
 
   /** Tool being drawn with, or null for the cursor. */
   tool: DrawingType | null;
+  /** A toolbar tool that is not a drawing: the eraser (stays on) or Zoom in (one box). */
+  pointerTool: 'eraser' | 'zoom' | null;
+  setPointerTool: (tool: 'eraser' | 'zoom' | null) => void;
   /** Last tool picked in each toolbar group (the group button repeats it). */
   lastTool: Record<string, DrawingType>;
   magnet: MagnetMode;
@@ -90,6 +93,7 @@ export const useDrawingStore = create<DrawingState>()(
       drawings: [],
       edits: 0,
       tool: null,
+      pointerTool: null,
       lastTool: {},
       magnet: 'off',
       stayInDrawing: false,
@@ -107,9 +111,13 @@ export const useDrawingStore = create<DrawingState>()(
       unload: () => {
         set({ symbol: null, revision: 0, drawings: [], edits: 0, selectedId: null, hoverId: null });
       },
+      setPointerTool: (pointerTool) => {
+        set({ pointerTool, tool: null, hoverId: null });
+      },
       setTool: (tool, group) => {
         set((s) => ({
           tool,
+          pointerTool: tool === null ? s.pointerTool : null,
           selectedId: tool === null ? s.selectedId : null,
           lastTool:
             tool !== null && group !== undefined ? { ...s.lastTool, [group]: tool } : s.lastTool,

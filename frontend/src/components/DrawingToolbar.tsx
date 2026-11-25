@@ -78,22 +78,33 @@ export function DrawingToolbar({ className }: { className?: string | undefined }
       <IconButton
         label="Cross cursor"
         icon={icon(Crosshair)}
-        pressed={s.tool === null}
+        pressed={s.tool === null && s.pointerTool === null}
         tooltipSide="right"
         onClick={() => {
-          s.setTool(null);
+          s.setPointerTool(null);
         }}
       />
       {TOOL_GROUPS.map((group) => (
         <ToolGroupButton key={group.id} group={group} />
       ))}
-      <IconButton label="Eraser" icon={icon(Eraser)} tooltipSide="right" comingIn="a later round" />
+      <IconButton
+        label="Eraser (click a drawing to remove it)"
+        icon={icon(Eraser)}
+        tooltipSide="right"
+        pressed={s.pointerTool === 'eraser'}
+        onClick={() => {
+          s.setPointerTool(s.pointerTool === 'eraser' ? null : 'eraser');
+        }}
+      />
       <span className={styles.separator} aria-hidden="true" />
       <IconButton
-        label="Zoom in"
+        label="Zoom in (drag a box)"
         icon={icon(ZoomIn)}
         tooltipSide="right"
-        comingIn="a later round"
+        pressed={s.pointerTool === 'zoom'}
+        onClick={() => {
+          s.setPointerTool(s.pointerTool === 'zoom' ? null : 'zoom');
+        }}
       />
       <span className={styles.separator} aria-hidden="true" />
       <div ref={magnetRef} className={groupStyles.group}>

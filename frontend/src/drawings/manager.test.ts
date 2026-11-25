@@ -3,6 +3,8 @@ import { DrawingManager, type ChartSurface } from './manager.ts';
 import type { Anchor, DrawingView, Point } from './types.ts';
 
 /** A plain linear chart: x = time * 10 px, y = 200 - price. */
+const zoomTo = vi.fn();
+
 function surface(): ChartSurface & { view: DrawingView | null; panZoom: boolean } {
   const element = document.createElement('div');
   const s = {
@@ -20,6 +22,7 @@ function surface(): ChartSurface & { view: DrawingView | null; panZoom: boolean 
     setDrawings: (view: DrawingView) => {
       s.view = view;
     },
+    zoomTo,
   };
   return s;
 }
@@ -51,6 +54,48 @@ afterEach(() => {
 });
 
 describe('DrawingManager', () => {
+  it('erases the clicked drawing with Undo and stays on; Esc turns it off', () => {
+    const el = chart.element();
+    store.getState().setTool('horizontal_line', 'lines');
+    click(el, 100, 100);
+    expect(store.getState().drawings).toHaveLength(1);
+    store.getState().setPointerTool('eraser');
+    click(el, 400, 300); // nothing there
+    expect(store.getState().drawings).toHaveLength(1);
+    click(el, 400, 100);
+    expect(store.getState().drawings).toHaveLength(0);
+    expect(callbacks.removed).toHaveBeenCalledWith('Horizontal line', expect.any(Function));
+    expect(store.getState().pointerTool).toBe('eraser');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(store.getState().pointerTool).toBeNull();
+  });
+
+  it('zooms into a dragged box once, showing it dashed, then goes back to the cursor', () => {
+    const el = chart.element();
+    store.getState().setPointerTool('zoom');
+    fire(el, 'pointerdown', 100, 100);
+    expect(chart.panZoom).toBe(false);
+    fire(el, 'pointermove', 300, 250);
+    expect(chart.view?.draft).toMatchObject({
+      type: 'rectangle',
+      style: { line_style: 'dashed' },
+      points: [
+        { time: 10, price: 100 },
+        { time: 30, price: -50 },
+      ],
+    });
+    fire(window, 'pointerup', 300, 250);
+    expect(zoomTo).toHaveBeenCalledWith({ x: 100, y: 100 }, { x: 300, y: 250 });
+    expect(chart.view?.draft).toBeNull();
+    expect(store.getState().pointerTool).toBeNull();
+    expect(chart.panZoom).toBe(true);
+    // A click without a box zooms nothing and keeps the tool.
+    store.getState().setPointerTool('zoom');
+    click(el, 50, 50);
+    expect(zoomTo).toHaveBeenCalledTimes(1);
+    expect(store.getState().pointerTool).toBe('zoom');
+  });
+
   it('draws a trend line with two clicks, then selects it and goes back to the cursor', () => {
     const el = chart.element();
     store.getState().setTool('trend_line', 'lines');

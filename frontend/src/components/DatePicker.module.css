@@ -19,6 +19,33 @@
   cursor: pointer;
 }
 
+.iconOpener {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.iconOpener:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+.iconOpener:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* The bottom bar's opener sits at the left: its calendar opens from there. */
+.iconOpener + .popup {
+  left: 0;
+  transform: none;
+}
+
 .opener:hover:not(:disabled) {
   background: var(--color-hover);
 }

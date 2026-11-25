@@ -1,12 +1,10 @@
-import { CalendarRange } from 'lucide-react';
-
 import { RANGE_LABEL, RANGES } from '../chart/visibleRange.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import styles from './BottomBar.module.css';
 import { Clock } from './Clock.tsx';
+import { GoToDate } from './GoToDate.tsx';
 import { HealthBadge } from './HealthBadge.tsx';
-import { IconButton } from './IconButton.tsx';
 import { SlidingPill } from './SlidingPill.tsx';
 
 interface BottomBarProps {
@@ -48,12 +46,7 @@ export function BottomBar({ className }: BottomBarProps) {
         ))}
       </div>
       <span className={styles.separator} aria-hidden="true" />
-      <IconButton
-        label="Go to date"
-        icon={<CalendarRange size={16} />}
-        comingIn="R6"
-        tooltipSide="top"
-      />
+      <GoToDate />
       <span className={styles.spacer} />
       <Clock />
       <span className={styles.separator} aria-hidden="true" />

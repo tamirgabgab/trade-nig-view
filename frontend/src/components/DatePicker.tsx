@@ -17,11 +17,14 @@ export function DatePicker({
   days,
   value,
   onPick,
+  iconOnly = false,
 }: {
   label: string;
   days: readonly string[];
   value: string | undefined;
   onPick: (day: string) => void;
+  /** An icon-only opener (the bottom bar's Go to date); else the date as DD/MM/YYYY. */
+  iconOnly?: boolean;
 }) {
   // The highlighted day while open (its month is the one shown); null when closed.
   const [active, setActive] = useState<string | null>(null);
@@ -117,8 +120,11 @@ export function DatePicker({
       <button
         ref={openerRef}
         type="button"
-        className={styles.opener}
-        aria-label={`${label}: ${value === undefined ? 'none' : formatDay(value)}`}
+        className={iconOnly ? styles.iconOpener : styles.opener}
+        aria-label={
+          iconOnly ? label : `${label}: ${value === undefined ? 'none' : formatDay(value)}`
+        }
+        title={iconOnly ? label : undefined}
         aria-haspopup="dialog"
         aria-expanded={open}
         disabled={days.length === 0}
@@ -127,8 +133,8 @@ export function DatePicker({
           else show(value !== undefined && available.has(value) ? value : last, true);
         }}
       >
-        <CalendarDays size={14} aria-hidden="true" />
-        {value === undefined ? 'DD/MM/YYYY' : formatDay(value)}
+        <CalendarDays size={iconOnly ? 16 : 14} aria-hidden="true" />
+        {!iconOnly && (value === undefined ? 'DD/MM/YYYY' : formatDay(value))}
       </button>
       {active !== null && (
         <div role="dialog" aria-label={label} className={styles.popup}>

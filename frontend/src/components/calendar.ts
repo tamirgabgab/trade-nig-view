@@ -1,4 +1,26 @@
 /** Pure helpers for the date picker. Days are 'YYYY-MM-DD' strings, which sort as dates. */
+import type { Bar } from '../api/bars.ts';
+import { toZoneSeconds } from '../chart/timeZone.ts';
+
+/**
+ * Each day with bars, as the chart shows it (intraday bars in `zone`), and the index of its last
+ * bar, in date order. One pass with the cached zone offsets.
+ */
+export function dayEnds(bars: readonly Bar[], zone: string): Map<string, number> {
+  const seconds = toZoneSeconds(
+    bars.map((bar) => (typeof bar.time === 'number' ? bar.time : 0)),
+    zone,
+  );
+  const ends = new Map<string, number>();
+  bars.forEach((bar, i) => {
+    const day =
+      typeof bar.time === 'string'
+        ? bar.time
+        : new Date((seconds[i] ?? 0) * 1000).toISOString().slice(0, 10);
+    ends.set(day, i); // a later bar of the same day keeps the day's place, updates its index
+  });
+  return ends;
+}
 
 /** 'YYYY-MM-DD' → 'DD/MM/YYYY'. */
 export function formatDay(day: string): string {

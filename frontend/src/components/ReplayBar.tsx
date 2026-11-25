@@ -2,8 +2,8 @@ import { ChevronLast, Pause, Play, Shuffle, StepForward, X } from 'lucide-react'
 import { useMemo } from 'react';
 
 import type { Bar } from '../api/bars.ts';
-import { toZoneSeconds } from '../chart/timeZone.ts';
 import { REPLAY_SPEEDS, useReplayStore, type ReplaySpeed } from '../store/replayStore.ts';
+import { dayEnds } from './calendar.ts';
 import { DatePicker } from './DatePicker.tsx';
 import { formatBarTime, localDate } from './formatClock.ts';
 import { IconButton } from './IconButton.tsx';
@@ -31,22 +31,8 @@ export function ReplayBar({
   const replay = useReplayStore();
   const zone = useDisplayTimeZone();
   // Each day with bars, as the chart shows it, and the index of its last bar (in date order).
-  const dayEnds = useMemo(() => {
-    const seconds = toZoneSeconds(
-      bars.map((bar) => (typeof bar.time === 'number' ? bar.time : 0)),
-      zone,
-    );
-    const ends = new Map<string, number>();
-    bars.forEach((bar, i) => {
-      const day =
-        typeof bar.time === 'string'
-          ? bar.time
-          : new Date((seconds[i] ?? 0) * 1000).toISOString().slice(0, 10);
-      ends.set(day, i); // a later bar of the same day keeps the day's place, updates its index
-    });
-    return ends;
-  }, [bars, zone]);
-  const days = useMemo(() => [...dayEnds.keys()], [dayEnds]);
+  const ends = useMemo(() => dayEnds(bars, zone), [bars, zone]);
+  const days = useMemo(() => [...ends.keys()], [ends]);
   const cursor = bars[cursorIndex];
   const startAt = (index: number) => {
     const bar = bars[Math.min(Math.max(index, 0), bars.length - 1)];
@@ -99,7 +85,7 @@ export function ReplayBar({
         days={days}
         value={cursor === undefined ? undefined : localDate(cursor.time, zone)}
         onPick={(day) => {
-          const index = dayEnds.get(day);
+          const index = ends.get(day);
           if (index !== undefined) startAt(index);
         }}
       />
