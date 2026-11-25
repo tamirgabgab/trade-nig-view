@@ -58,6 +58,8 @@ MIN_SAMPLE = 250
 ES_GRID = 200
 #: Below this |xi| the GPD tail is the exponential one.
 XI_ZERO = 1e-9
+#: A fitted shape at or above this has an ES too uncertain (infinite at 1) to report.
+XI_MAX = 0.9
 _N = NormalDist()
 
 Quantile = Callable[[FloatArray], FloatArray]
@@ -137,7 +139,7 @@ def fit_gpd(losses: FloatArray) -> GPD | None:
     if d <= 0:
         return None
     xi = 2 - a0 / d
-    if xi >= 1:
+    if xi >= XI_MAX:
         return None
     return GPD(u=u, xi=xi, beta=2 * a0 * a1 / d, share=n / len(losses))
 
@@ -212,8 +214,10 @@ def var_es(x: Sample, method: Method, level: float) -> tuple[float, float] | Non
         t = x.gpd
         if t is None:
             return None
-        var = float(_gpd_var(t, np.array([1 - level]))[0])
-        return var, (var + t.beta - t.xi * t.u) / (1 - t.xi)
+        if 1 - level < t.share:  # beyond the threshold: the GPD tail
+            var = float(_gpd_var(t, np.array([1 - level]))[0])
+            return var, (var + t.beta - t.xi * t.u) / (1 - t.xi)
+        method = "fhs"  # at or below the threshold the tail model does not apply
     q = quantile_function(x, method)
     assert q is not None  # noqa: S101 - only EVT can fail
     var = float(q(np.array([level]))[0])
@@ -386,20 +390,32 @@ def standardised(frame: BarFrame, sigma: FloatArray, h: int) -> FloatArray:
     return z
 
 
-def to_price(loss: float, unit: float, tail: Tail) -> float:
-    """A loss of ``loss`` sigma-units as a fraction of the price: a fall of 1 - e^{-l u} (long)
-    or a rise of e^{l u} - 1 (short)."""
-    return 1 - math.exp(-loss * unit) if tail == "long" else math.exp(loss * unit) - 1
+def to_price(loss: FloatArray, unit: float, tail: Tail) -> FloatArray:
+    """Losses in sigma-units as fractions of the price: a fall of 1 - e^{-l u} (long) or a rise
+    of e^{l u} - 1 (short; inf when it overflows)."""
+    with np.errstate(over="ignore"):
+        x = np.asarray(loss, dtype=np.float64) * unit
+        return 1 - np.exp(-x) if tail == "long" else np.exp(x) - 1
 
 
-def _estimates(x: Sample, label: Horizon, h: int, unit: float, tail: Tail) -> list[Estimate]:
+def price_estimates(x: Sample, label: Horizon, h: int, unit: float, tail: Tail) -> list[Estimate]:
+    """Every method and level in price terms. The ES is the mean of the price losses beyond the
+    VaR (not the price of the mean loss: the exponential is convex)."""
     out: list[Estimate] = []
     for method in METHODS:
+        q = quantile_function(x, method)
         for level in LEVELS:
             got = var_es(x, method, level)
-            if got is not None:
-                v, e = (to_price(x, unit, tail) for x in got)
-                out.append(Estimate(label, h, method, level, tail, v, e))
+            if got is None or q is None:
+                continue
+            if method == "fhs":
+                beyond = x.ordered[x.ordered >= got[0]]
+            else:
+                beyond = q(level + (1 - level) * (np.arange(ES_GRID) + 0.5) / ES_GRID)
+            var = float(to_price(np.array([got[0]]), unit, tail)[0])
+            es = float(np.mean(to_price(beyond, unit, tail)))
+            if math.isfinite(var) and math.isfinite(es):
+                out.append(Estimate(label, h, method, level, tail, var, es))
     return out
 
 
@@ -437,7 +453,7 @@ def report(frame: BarFrame) -> Report | None:
             if h == 1 and x.gpd is not None:
                 g = x.gpd
                 tails.append(TailFit(tail, g.u, g.xi, g.beta, round(g.share * len(z))))
-            estimates += _estimates(x, label, h, now * math.sqrt(h), tail)
+            estimates += price_estimates(x, label, h, now * math.sqrt(h), tail)
     if not estimates:
         return None
     z1 = standardised(frame, sigma, 1)

@@ -64,7 +64,8 @@ const num = (v: unknown): number => (typeof v === 'number' ? v : Number.NaN);
 const numOrNull = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 const records = (v: unknown): Record<string, unknown>[] =>
   Array.isArray(v) ? (v as unknown[]).filter(isRecord) : [];
-const method = (v: unknown): RiskMethod => RISK_METHODS.find((m) => m.id === v)?.id ?? 'fhs';
+/** A known method id, or null (an entry of a method this client does not know is left out). */
+const method = (v: unknown): RiskMethod | null => RISK_METHODS.find((m) => m.id === v)?.id ?? null;
 const tail = (v: unknown): RiskTail => (v === 'short' ? 'short' : 'long');
 
 export function parseRisk(body: unknown): Risk {
@@ -76,12 +77,14 @@ export function parseRisk(body: unknown): Risk {
     lastTime: typeof last === 'number' ? last : String(last),
     lastClose: num(f('last_close')),
     sigma: num(f('sigma')),
-    estimates: records(f('estimates')).map((item) => {
+    estimates: records(f('estimates')).flatMap((item) => {
       const g = fieldsOf<Schemas['RiskEstimate']>(item);
+      const m = method(g('method'));
+      if (m === null) return [];
       return {
         horizon: String(g('horizon')),
         bars: num(g('bars')),
-        method: method(g('method')),
+        method: m,
         level: num(g('level')),
         tail: tail(g('tail')),
         var: num(g('var')),
@@ -98,10 +101,12 @@ export function parseRisk(body: unknown): Risk {
         exceedances: num(g('exceedances')),
       };
     }),
-    backtests: records(f('backtests')).map((item) => {
+    backtests: records(f('backtests')).flatMap((item) => {
       const g = fieldsOf<Schemas['RiskBacktest']>(item);
+      const m = method(g('method'));
+      if (m === null) return [];
       return {
-        method: method(g('method')),
+        method: m,
         level: num(g('level')),
         tail: tail(g('tail')),
         n: num(g('n')),

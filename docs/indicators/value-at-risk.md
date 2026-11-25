@@ -17,11 +17,11 @@ Two numbers per level:
 A VaR says nothing about the losses beyond it: two strategies with the same VaR can have very different crashes.
 That is why regulators moved to ES.
 
-Move the confidence on the volatility regime: the bands widen with the second, wilder half, and about $1 - L$ of
-the closes fall outside them.
+Move the history window on the volatility regime (99 %): the bands widen with the second, wilder half, and about
+1 % of the closes fall outside them. A short window adapts its tail shape faster; a long one is steadier.
 
 ```lab
-{"kind": "param", "indicator": "var_bands", "vary": "window", "min": 100, "max": 1000, "scenario": "volatility_regime"}
+{"kind": "param", "indicator": "var_bands", "vary": "window", "min": 50, "max": 250, "params": {"window": 150, "level": "99"}, "scenario": "volatility_regime"}
 ```
 
 ## Formula

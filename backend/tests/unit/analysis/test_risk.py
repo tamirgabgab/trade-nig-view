@@ -111,3 +111,27 @@ def test_one_shock_breaks_cornish_fisher_not_the_tail_methods() -> None:
 
 def test_too_short_is_none() -> None:
     assert risk.report(synthetic_bars(Scenario.RANDOM_WALK, 1, 100)) is None
+
+
+def test_evt_at_or_below_its_threshold_is_the_historical_estimate() -> None:
+    # 1,000 losses: exactly 100 beyond the 90th percentile, a share of 0.1 = 1 - 0.90.
+    x = risk.Sample.of(np.random.default_rng(4).standard_t(4, 1000))
+    assert x.gpd is not None
+    assert x.gpd.share == 0.1
+    assert risk.var_es(x, "evt", 0.90) == pytest.approx(risk.var_es(x, "fhs", 0.90), abs=1e-12)
+    assert risk.var_es(x, "evt", 0.99) != risk.var_es(x, "fhs", 0.99)
+
+
+def test_price_losses_overflow_to_inf_and_the_es_is_the_mean_price_loss() -> None:
+    assert risk.to_price(np.array([1e6]), 1.0, "short")[0] == math.inf
+    assert risk.to_price(np.array([1e6]), 1.0, "long")[0] == 1.0
+    x = risk.Sample.of(np.random.default_rng(5).standard_t(3, 5000))
+    (e,) = [
+        e
+        for e in risk.price_estimates(x, "month", 21, 0.3, "short")
+        if e.method == "fhs" and e.level == 0.99
+    ]
+    got = risk.var_es(x, "fhs", 0.99)
+    assert got is not None
+    # Convexity: the mean of e^{l u} - 1 beyond the VaR exceeds e^{E[l] u} - 1.
+    assert e.es > float(risk.to_price(np.array([got[1]]), 0.3, "short")[0])

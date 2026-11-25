@@ -107,7 +107,7 @@ export function RiskDetails({ risk, position }: { risk: Risk; position: number |
         </p>
       </section>
       <section className={styles.section} aria-label="Backtests">
-        <h3 className={styles.heading}>Backtests, next bar ({tests[0]?.n ?? 0} past bars)</h3>
+        <h3 className={styles.heading}>Backtests of the next bar, out of sample</h3>
         <div className={styles.scroll}>
           <table className={styles.table} aria-label="VaR backtests">
             <thead>

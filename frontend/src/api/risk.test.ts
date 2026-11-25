@@ -9,5 +9,7 @@ describe('parseRisk', () => {
     expect(r.backtests[0]?.christoffersen).toBeNull();
     expect(r.backtests[0]?.z2P).toBe(0.01);
     expect(() => parseRisk(null)).toThrow('Unexpected risk response');
+    const unknown = { ...RISK_BODY, estimates: [{ ...RISK_BODY.estimates[0], method: 'garch' }] };
+    expect(parseRisk(unknown).estimates).toEqual([]);
   });
 });

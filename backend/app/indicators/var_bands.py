@@ -44,11 +44,21 @@ def standardised_returns(frame: BarFrame, n: int) -> tuple[FloatArray, FloatArra
     return sigma, z
 
 
-def rolling_quantile(z: FloatArray, w: int, p: float) -> FloatArray:
-    """:math:`Q_p` of the last w values (NaN if any is NaN or before w values)."""
-    out = np.full(len(z), np.nan)
-    if len(z) >= w:
-        out[w - 1 :] = np.quantile(sliding_window_view(z, w), p, axis=1)
+#: Window values processed per block (bounds the copies np.quantile makes to ~8 MB).
+_BLOCK = 1 << 20
+
+
+def rolling_quantiles(z: FloatArray, w: int, ps: tuple[float, ...]) -> FloatArray:
+    """(len(ps), n): :math:`Q_p` of the last w values for each p (NaN if any is NaN or before w
+    values), in blocks of rows so a long history and window never copy all the windows at once."""
+    out = np.full((len(ps), len(z)), np.nan)
+    if len(z) < w:
+        return out
+    windows = sliding_window_view(z, w)
+    rows = max(1, _BLOCK // w)
+    for lo in range(0, len(windows), rows):
+        block = windows[lo : lo + rows]
+        out[:, w - 1 + lo : w - 1 + lo + len(block)] = np.quantile(block, ps, axis=1)
     return out
 
 
@@ -56,8 +66,9 @@ def compute(frame: BarFrame, params: Params) -> dict[str, FloatArray]:
     level = LEVELS[str(params["level"])]
     sigma, z = standardised_returns(frame, int(params["length"]))
     w = int(params["window"])
-    lower = core.shift(frame.close * np.exp(sigma * rolling_quantile(z, w, 1 - level)), 1)
-    upper = core.shift(frame.close * np.exp(sigma * rolling_quantile(z, w, level)), 1)
+    q_lo, q_hi = rolling_quantiles(z, w, (1 - level, level))
+    lower = core.shift(frame.close * np.exp(sigma * q_lo), 1)
+    upper = core.shift(frame.close * np.exp(sigma * q_hi), 1)
     breach = np.full(len(z), np.nan)
     breach[frame.close > upper] = 1.0
     breach[frame.close < lower] = -1.0
