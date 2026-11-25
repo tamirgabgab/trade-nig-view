@@ -68,6 +68,7 @@ export const TOOL_LABELS: Record<DrawingType, string> = {
   date_price_range: 'Date and price range',
   return_range: 'Return',
   stats_range: 'Statistics',
+  trade_plan: 'Trade plan',
 };
 
 /** Thin lines for the tools whose look comes from fills and labels. */
@@ -80,6 +81,7 @@ const THIN: ReadonlySet<DrawingType> = new Set([
   'date_price_range',
   'return_range',
   'stats_range',
+  'trade_plan',
 ]);
 
 function defaultProps(type: DrawingType): Drawing['props'] {
@@ -95,6 +97,8 @@ function defaultProps(type: DrawingType): Drawing['props'] {
       return { unit: 'year' };
     case 'stats_range':
       return { returns: 'log', basis: 'close' };
+    case 'trade_plan':
+      return { account: 10_000, risk_pct: 1 };
     default:
       return {};
   }

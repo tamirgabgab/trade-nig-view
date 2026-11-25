@@ -105,6 +105,68 @@ function drawChannel(ctx: CanvasRenderingContext2D, pts: readonly Point[], color
   segment(ctx, { x: a.x, y: a.y + dy / 2 }, { x: b.x, y: b.y + dy / 2 });
 }
 
+/** Colours of a trade plan's zones (TradingView's long / short position tools use the same). */
+const PROFIT = '#089981';
+const LOSS = '#F23645';
+
+/** A label: white text on `color`, centred on (x, y). */
+function tag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string) {
+  ctx.font = FONT;
+  const width = ctx.measureText(text).width + 10;
+  ctx.fillStyle = color;
+  ctx.fillRect(x - width / 2, y - 9, width, 18);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+}
+
+/**
+ * A trade plan: the profit zone from the entry to the target and the loss zone from the entry to
+ * the stop, as wide as the holding time (entry to the target's time), with the prices, the % moves,
+ * the reward-to-risk ratio and the bars held. The probabilities are in the Trade plan tab.
+ */
+function drawTradePlan(
+  ctx: CanvasRenderingContext2D,
+  drawing: Drawing,
+  pts: readonly Point[],
+  state: DrawState,
+): void {
+  const [a, b, c] = pts;
+  const [entry, target, stop] = drawing.points;
+  if (a === undefined || b === undefined || entry === undefined || target === undefined) return;
+  const left = Math.min(a.x, b.x);
+  const width = Math.abs(b.x - a.x);
+  const zone = (y: number, color: string) => {
+    ctx.fillStyle = withAlpha(color, 0.18);
+    ctx.fillRect(left, Math.min(a.y, y), width, Math.abs(y - a.y));
+  };
+  zone(b.y, PROFIT);
+  if (c !== undefined) zone(c.y, LOSS);
+  ctx.setLineDash([]);
+  segment(ctx, { x: left, y: a.y }, { x: left + width, y: a.y });
+  const mid = left + width / 2;
+  const move = (p: Anchor) =>
+    `${formatPrice(p.price, state.decimals)} (${(((p.price - entry.price) / entry.price) * 100).toFixed(2)}%)`;
+  const risk = stop === undefined ? 0 : Math.abs(entry.price - stop.price);
+  const reward = Math.abs(target.price - entry.price);
+  const ratio = risk > 0 ? `, R:R ${(reward / risk).toFixed(2)}` : '';
+  const up = b.y < a.y;
+  tag(ctx, `Target ${move(target)}${ratio}`, mid, b.y + (up ? -12 : 12), PROFIT);
+  if (c !== undefined && stop !== undefined) {
+    tag(ctx, `Stop ${move(stop)}`, mid, c.y + (up ? 12 : -12), LOSS);
+  }
+  const bars = state.span(entry, target)?.bars;
+  const side = target.price > entry.price ? 'Long' : 'Short';
+  tag(
+    ctx,
+    `${side}, ${bars === undefined ? '—' : String(Math.abs(bars))} bars`,
+    mid,
+    a.y,
+    drawing.style.line_color,
+  );
+}
+
 function drawRange(
   ctx: CanvasRenderingContext2D,
   drawing: Drawing,
@@ -199,6 +261,8 @@ export function drawDrawing(
     drawFib(ctx, drawing, pts, state);
   } else if (drawing.type === 'parallel_channel') {
     drawChannel(ctx, pts, color);
+  } else if (drawing.type === 'trade_plan') {
+    drawTradePlan(ctx, drawing, pts, state);
   } else if (isRange(drawing)) {
     drawRange(ctx, drawing, pts, state);
   } else {

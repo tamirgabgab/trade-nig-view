@@ -18,7 +18,8 @@ export type DrawingType =
   | 'date_range'
   | 'date_price_range'
   | 'return_range'
-  | 'stats_range';
+  | 'stats_range'
+  | 'trade_plan';
 
 /** The unit T of a return range's equivalent return. */
 export type ReturnUnit = 'year' | 'month' | 'week' | 'day' | 'bar';
@@ -54,6 +55,9 @@ export interface DrawingProps {
   /** Statistics range: log or simple returns, close-to-close or open-to-close. */
   returns?: 'log' | 'simple';
   basis?: 'close' | 'open';
+  /** Trade plan: account size and the % of it risked (the position size). */
+  account?: number;
+  risk_pct?: number;
 }
 
 export interface Drawing {
@@ -87,6 +91,7 @@ export const POINT_COUNT: Record<DrawingType, number> = {
   date_price_range: 2,
   return_range: 2,
   stats_range: 2,
+  trade_plan: 3,
 };
 
 export const DEFAULT_STYLE: DrawingStyle = {

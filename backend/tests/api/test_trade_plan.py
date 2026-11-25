@@ -60,7 +60,7 @@ def test_a_short_limit_plan_and_the_replay_cursor(e2e_client: TestClient) -> Non
         target=close * 0.96,
         stop=close * 1.03,
         h=10,
-        until=day,
+        cursor=epoch(day),
     )
     assert body["side"] == "short"
     assert 0 < body["summary"]["p_fill"] < 1

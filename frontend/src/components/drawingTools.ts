@@ -13,6 +13,7 @@ import {
   RectangleHorizontal,
   Rows4,
   Ruler,
+  Target,
   SeparatorVertical,
   Shapes,
   Slash,
@@ -86,6 +87,7 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
       tool('date_price_range', Move),
       tool('return_range', Percent),
       tool('stats_range', ChartNoAxesColumn),
+      tool('trade_plan', Target),
     ],
   },
   {

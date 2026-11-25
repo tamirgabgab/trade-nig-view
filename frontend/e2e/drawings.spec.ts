@@ -161,3 +161,37 @@ test('Statistics tool: a range opens the panel with its return distribution', as
     })
     .toBe('open');
 });
+
+test('Trade plan tool: entry, target and stop open the tab with the chances', async ({ page }) => {
+  const box = await page.getByTestId('chart-canvas').boundingBox();
+  if (box === null) throw new Error('no chart');
+  await pickMeasureTool(page, 'Trade plan');
+  // Entry in the middle of the history, the target up and 15-odd bars later, the stop below.
+  await page.mouse.click(box.x + 300, box.y + 300);
+  await page.mouse.move(box.x + 420, box.y + 220, { steps: 4 });
+  await page.mouse.click(box.x + 420, box.y + 220);
+  await page.mouse.move(box.x + 420, box.y + 350, { steps: 4 });
+  await page.mouse.click(box.x + 420, box.y + 350);
+  await expect
+    .poll(async () => (await saved(page)).drawings.map((d) => d.type))
+    .toEqual(['trade_plan']);
+
+  const chances = page.getByRole('table', { name: 'Plan chances' });
+  await expect(chances.getByRole('row', { name: /Target first/ })).toContainText('%', {
+    timeout: 30_000,
+  });
+  await expect(page.getByRole('table', { name: /Expected R by target and stop/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /Reliability/ })).toBeVisible();
+  await expect(page.getByText(/What happened:/)).toBeVisible(); // a plan drawn in the past
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: 'test-results/trade-plan.png' });
+
+  // The risk % is saved on the drawing.
+  await page.getByLabel('Risk %').fill('2');
+  await expect
+    .poll(async () => {
+      const doc = (await saved(page)) as { drawings: { props?: { risk_pct?: number } }[] };
+      return doc.drawings[0]?.props?.risk_pct;
+    })
+    .toBe(2);
+});

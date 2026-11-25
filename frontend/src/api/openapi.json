@@ -1563,23 +1563,22 @@
             }
           },
           {
-            "name": "until",
+            "name": "cursor",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "format": "date"
+                  "type": "integer"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Replay cursor: no bar after it",
-              "title": "Until"
+              "description": "Replay cursor (a bar's open, UTC seconds): no later bar",
+              "title": "Cursor"
             },
-            "description": "Replay cursor: no bar after it"
+            "description": "Replay cursor (a bar's open, UTC seconds): no later bar"
           }
         ],
         "responses": {

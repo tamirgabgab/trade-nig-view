@@ -3018,8 +3018,8 @@ export interface operations {
                 h: number;
                 interval?: components["schemas"]["Interval"];
                 adjusted?: boolean;
-                /** @description Replay cursor: no bar after it */
-                until?: string | null;
+                /** @description Replay cursor (a bar's open, UTC seconds): no later bar */
+                cursor?: number | null;
             };
             header?: never;
             path?: never;

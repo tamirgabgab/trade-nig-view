@@ -141,12 +141,18 @@ export function useDrawingManager(): (engine: ChartEngine | null) => void {
               useUiStore.getState().showToast(`Removed ${label}`, undo);
             },
             created: (drawing) => {
-              if (drawing.type !== 'stats_range') return;
-              // Show the Statistics tab (showSidebar toggles: only when it is not showing).
+              const tab =
+                drawing.type === 'stats_range'
+                  ? 'stats'
+                  : drawing.type === 'trade_plan'
+                    ? 'tradeplan'
+                    : null;
+              if (tab === null) return;
+              // Show the tool's tab (showSidebar toggles: only when it is not showing).
               const ui = useUiStore.getState();
               const narrow = window.matchMedia(NARROW_QUERY).matches;
               const open = narrow ? ui.watchlist.floating : ui.watchlist.docked;
-              if (!open || ui.sidebarTab !== 'stats') ui.showSidebar('stats', narrow);
+              if (!open || ui.sidebarTab !== tab) ui.showSidebar(tab, narrow);
             },
           });
   }, []);

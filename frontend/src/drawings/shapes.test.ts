@@ -1,4 +1,4 @@
-import { channelOffset, fibLines, hitTest, strokes } from './shapes.ts';
+import { channelOffset, fibLines, handles, hitTest, strokes } from './shapes.ts';
 import { DEFAULT_STYLE, type Drawing, type DrawingType } from './types.ts';
 
 const size = { width: 200, height: 100 };
@@ -143,5 +143,24 @@ describe('Fib and channel geometry', () => {
       kind: 'body',
     });
     expect(hitTest(range, [p(20, 20), p(80, 60)], p(150, 40), size, false, Y)).toBeNull();
+  });
+});
+
+describe('trade plan', () => {
+  // Entry at (10, 50), target at (110, 20) (up and 100 px later), stop clicked at (40, 70).
+  const plan = drawing('trade_plan');
+  const pts = [p(10, 50), p(110, 20), p(40, 70)];
+
+  it('is grabbed inside the target or the stop box, as wide as the holding time', () => {
+    expect(hitTest(plan, pts, p(60, 30), size, false, Y)).toEqual({ kind: 'body' });
+    expect(hitTest(plan, pts, p(100, 65), size, false, Y)).toEqual({ kind: 'body' });
+    expect(hitTest(plan, pts, p(150, 30), size, false, Y)).toBeNull();
+    expect(hitTest(plan, pts, p(60, 90), size, false, Y)).toBeNull();
+    expect(strokes(plan, pts, size, Y)).toEqual([]);
+  });
+
+  it('shows the stop handle on the right edge, under the target', () => {
+    expect(handles(plan, pts)).toEqual([p(10, 50), p(110, 20), p(110, 70)]);
+    expect(hitTest(plan, pts, p(110, 70), size, true, Y)).toEqual({ kind: 'handle', index: 2 });
   });
 });

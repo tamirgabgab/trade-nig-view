@@ -133,6 +133,7 @@ export function strokes(
     case 'date_price_range':
     case 'return_range':
     case 'stats_range':
+    case 'trade_plan':
       return [];
   }
 }
@@ -152,7 +153,10 @@ export function hitTest(
   priceToY: PriceToY,
 ): Hit | null {
   if (withHandles) {
-    const index = pts.findIndex((q) => Math.hypot(q.x - p.x, q.y - p.y) <= HIT_PX + 1);
+    // Where the handles are drawn (a trade plan's stop sits on the box's edge).
+    const index = handles(drawing, pts).findIndex(
+      (q) => Math.hypot(q.x - p.x, q.y - p.y) <= HIT_PX + 1,
+    );
     if (index >= 0) return { kind: 'handle', index };
   }
   const [a, b] = pts;
@@ -166,6 +170,13 @@ export function hitTest(
   if (drawing.type === 'text') {
     const box = textBox(drawing, a);
     return insideRect(p, box.a, box.b) ? { kind: 'body' } : null;
+  }
+  if (drawing.type === 'trade_plan' && b !== undefined) {
+    // The target box, and the stop box once there is a stop.
+    const c = pts[2];
+    const inTarget = insideRect(p, a, b);
+    const inStop = c !== undefined && insideRect(p, a, { x: b.x, y: c.y });
+    return inTarget || inStop ? { kind: 'body' } : null;
   }
   if (isRange(drawing) && b !== undefined) {
     return insideRect(p, a, b) || distanceToRectEdge(p, a, b) <= HIT_PX ? { kind: 'body' } : null;
@@ -193,5 +204,11 @@ export function hitTest(
 
 /** Points where a selected drawing shows its handles (one per anchor). */
 export function handles(drawing: Drawing, pts: readonly Point[]): Point[] {
-  return drawing.type === 'text' ? pts.slice(0, 1) : [...pts];
+  if (drawing.type === 'text') return pts.slice(0, 1);
+  // A trade plan's stop sits on the box's right edge, under the target (its time is unused).
+  const [, b, c] = pts;
+  if (drawing.type === 'trade_plan' && b !== undefined && c !== undefined) {
+    return [pts[0] ?? b, b, { x: b.x, y: c.y }];
+  }
+  return [...pts];
 }

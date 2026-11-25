@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import math
-from datetime import date
 from http import HTTPStatus
 from typing import Annotated, Literal
 
@@ -95,14 +94,18 @@ def get_trade_plan(
     h: Annotated[int, Query(ge=1, le=MAX_HORIZON, description="Bars to hold at most")],
     interval: Interval = Interval.D1,
     adjusted: bool = True,
-    until: Annotated[date | None, Query(description="Replay cursor: no bar after it")] = None,
+    cursor: Annotated[
+        int | None, Query(description="Replay cursor (a bar's open, UTC seconds): no later bar")
+    ] = None,
 ) -> TradePlanResponse:
     """The plan made at the bar of ``time`` from the history up to it; long when the target is
     above the entry, short when below; the stop must be on the other side."""
     if not (min(target, stop) < entry < max(target, stop)):
         raise InvalidPlanError("the entry must lie between the target and the stop")
-    result = service.get_bars(symbol, interval, adjusted=adjusted, until=until, limit=1_000_000_000)
+    result = service.get_bars(symbol, interval, adjusted=adjusted, limit=1_000_000_000)
     frame = result.frame
+    if cursor is not None:
+        frame = frame.take(frame.time <= cursor)
     origin = int((frame.time <= time).sum()) - 1
     if origin < 0:
         raise NotEnoughHistoryError(f"{symbol}: no bar at or before the entry")
