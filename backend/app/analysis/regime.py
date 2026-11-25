@@ -97,11 +97,6 @@ class Report:
     rules: tuple[RuleStats, ...]
 
 
-def _chow_denning(r: FloatArray) -> tuple[FloatArray, FloatArray]:
-    vr, z = variance_ratio.vr_stats(r[None, :])
-    return vr[0], z[0]
-
-
 def wild_bootstrap(r: FloatArray, observed: float, rng: np.random.Generator) -> float:
     """P(max |z*| >= |observed|) over sign-flipped demeaned returns."""
     d = r - r.mean()
@@ -220,7 +215,8 @@ def report(frame: BarFrame, seed: int = 0) -> Report | None:
         return None
     r = r_all[-window:]
     rng = np.random.default_rng(seed)
-    vr, z = _chow_denning(r)
+    vr_rows, z_rows = variance_ratio.vr_stats(r[None, :])
+    vr, z = vr_rows[0], z_rows[0]
     pick = int(np.nanargmax(np.abs(z)))
     cd = float(z[pick])
     p_boot = wild_bootstrap(r, cd, rng)
