@@ -24,6 +24,8 @@ export interface HorizonForecast {
   high: number[];
   low: number[];
   close: number[];
+  /** The close's quantiles at 1, 2, ..., 99 %. */
+  closePercentiles: number[];
   pUp: number;
   expectedRange: number;
 }
@@ -37,6 +39,8 @@ export interface Validation {
   coverage: number[];
   r2: number | null;
   hitRate: number | null;
+  /** Shares of the outcomes' PIT in ten equal bins (flat = calibrated). */
+  pit: number[];
 }
 
 export interface Forecast {
@@ -85,6 +89,7 @@ export function parseForecast(body: unknown): Forecast {
         high: nums(g('high')),
         low: nums(g('low')),
         close: nums(g('close')),
+        closePercentiles: nums(g('close_percentiles')),
         pUp: num(g('p_up')),
         expectedRange: num(g('expected_range')),
       };
@@ -100,6 +105,7 @@ export function parseForecast(body: unknown): Forecast {
         coverage: nums(g('coverage')),
         r2: numOrNull(g('r2')),
         hitRate: numOrNull(g('hit_rate')),
+        pit: nums(g('pit')),
       };
     }),
     coefficients: records(f('coefficients')).map((item) => {

@@ -1,6 +1,6 @@
 import type { Forecast } from '../api/forecast.ts';
 import { formatPrice } from './formatNumber.ts';
-import { atLevel } from './forecastView.ts';
+import { atLevel } from './forecastOutcome.ts';
 import styles from './ForecastPanel.module.css';
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;

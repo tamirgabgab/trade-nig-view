@@ -253,7 +253,12 @@ export class ChartEngine {
   private readonly forecastLayer = new ForecastLayer(
     (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),
     (price) => this.priceToY(price),
-    () => ({ up: this.theme.up, down: this.theme.down, fan: this.theme.line }),
+    () => ({
+      up: this.theme.up,
+      down: this.theme.down,
+      fan: this.theme.line,
+      dotRing: this.theme.background,
+    }),
   );
   private readonly replayLayer = new ReplayLayer(
     (index) => this.chart.timeScale().logicalToCoordinate(index as Logical),

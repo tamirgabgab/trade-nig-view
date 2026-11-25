@@ -1,7 +1,7 @@
 import { ChevronsRight } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useBarHistory } from '../api/bars.ts';
+import { useBarHistory, type Bar } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
@@ -100,7 +100,13 @@ export function ChartArea({ className }: ChartAreaProps) {
   useGlobalHotkey(altKey('KeyR'), () => {
     engineRef.current?.resetView();
   });
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number; price: number | null } | null>(null);
+  // The right-click point, and the bar under it (for "Forecast from this bar").
+  const [menuAt, setMenuAt] = useState<{
+    x: number;
+    y: number;
+    price: number | null;
+    bar: Bar | null;
+  } | null>(null);
   const contextMenu = usePresence(menuAt);
   // Stable: ActionMenu re-subscribes its click-away listener when onClose changes.
   const closeContextMenu = useCallback(() => {
@@ -309,14 +315,16 @@ export function ChartArea({ className }: ChartAreaProps) {
   }, [gaps, barIndex]);
 
   // The forecast (Structure menu), one query shared with the Forecast tab; drawn from its origin
-  // bar (the last one, or the frozen replay origin), so a stale symbol's forecast is not drawn.
+  // bar (the last one, the frozen replay origin or a past bar), so a stale symbol's forecast is
+  // not drawn; the actual closes shown after it get a dot in their band's colour.
   const forecast = useChartForecast(structure.forecast);
   useEffect(() => {
     const f = structure.forecast ? forecast.data : undefined;
     const origin = f === undefined ? undefined : barIndex.get(f.lastTime);
-    forecastRef.current = f === undefined || origin === undefined ? null : forecastView(f, origin);
+    forecastRef.current =
+      f === undefined || origin === undefined ? null : forecastView(f, origin, bars);
     engineRef.current?.setForecast(forecastRef.current);
-  }, [structure.forecast, forecast.data, barIndex]);
+  }, [structure.forecast, forecast.data, barIndex, bars]);
 
   // What the side panels (Data window, Gaps) show.
   const setChartData = useChartDataStore((s) => s.setData);
@@ -499,7 +507,13 @@ export function ChartArea({ className }: ChartAreaProps) {
         onPaneLayout={setPaneLayout}
         onAutoScaleChange={setAutoScale}
         onEngine={onEngine}
-        onContextMenu={setMenuAt}
+        onContextMenu={(at) => {
+          const index = engineRef.current?.barIndexAtClientX(at.x);
+          setMenuAt({
+            ...at,
+            bar: index === null || index === undefined ? null : (bars[index] ?? null),
+          });
+        }}
         theme={theme}
       />
       {offLatest && (
@@ -517,6 +531,13 @@ export function ChartArea({ className }: ChartAreaProps) {
         <ChartContextMenu
           at={contextMenu.shown}
           decimals={decimals}
+          forecastBar={
+            replay.mode === 'off' &&
+            contextMenu.shown.bar !== null &&
+            contextMenu.shown.bar !== bars.at(-1)
+              ? contextMenu.shown.bar.time
+              : null
+          }
           attrs={contextMenu.attrs}
           onClose={closeContextMenu}
           onResetView={() => {

@@ -1,17 +1,24 @@
+import type { Bar } from '../api/bars.ts';
 import { useChartStore } from '../store/chartStore.ts';
+import { useForecastOriginStore } from '../store/forecastOriginStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
+import { useStructureStore } from '../store/structureStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { ActionMenu, type MenuItem } from './ActionMenu.tsx';
 import { formatPrice } from './formatNumber.ts';
+import { usePastOrigin } from './useChartForecast.ts';
+import { NARROW_QUERY } from './useMediaQuery.ts';
 import type { OverlayAttrs } from './usePresence.ts';
 
 /** Approximate menu size, to keep it inside the window near the right and bottom edges. */
 const MENU_WIDTH = 200;
-const MENU_HEIGHT = 260;
+const MENU_HEIGHT = 320;
 
 interface ChartContextMenuProps {
   at: { x: number; y: number; price: number | null };
   decimals: number;
+  /** The past bar under the click a forecast can be made at (not the last bar, not in replay). */
+  forecastBar: Bar['time'] | null;
   attrs: OverlayAttrs;
   onClose: () => void;
   onResetView: () => void;
@@ -21,10 +28,15 @@ interface ChartContextMenuProps {
 export function ChartContextMenu({
   at,
   decimals,
+  forecastBar,
   attrs,
   onClose,
   onResetView,
 }: ChartContextMenuProps) {
+  const symbol = useChartStore((s) => s.symbol);
+  const interval = useChartStore((s) => s.interval);
+  const pastOrigin = usePastOrigin();
+  const setOrigin = useForecastOriginStore((s) => s.setOrigin);
   const scaleMode = useChartStore((s) => s.scaleMode);
   const toggleScaleMode = useChartStore((s) => s.toggleScaleMode);
   const indicatorCount = useIndicatorStore((s) => s.instances.length);
@@ -42,6 +54,36 @@ export function ChartContextMenu({
       },
     },
   ];
+  // A forecast at a past bar: turn the forecast on and open its tab, which compares it with what
+  // happened next.
+  const forecastFrom = (time: Bar['time'] | null) => {
+    setOrigin(time === null ? null : { symbol, interval, time });
+    const structure = useStructureStore.getState();
+    if (!structure.forecast) structure.toggleForecast();
+    const ui = useUiStore.getState();
+    const narrow =
+      typeof window.matchMedia === 'function' && window.matchMedia(NARROW_QUERY).matches;
+    const open = narrow ? ui.watchlist.floating : ui.watchlist.docked;
+    if (!open || ui.sidebarTab !== 'forecast') ui.showSidebar('forecast', narrow);
+  };
+  if (forecastBar !== null) {
+    items.push({
+      label: 'Forecast from this bar',
+      divider: true,
+      onSelect: () => {
+        forecastFrom(forecastBar);
+      },
+    });
+  }
+  if (pastOrigin !== null) {
+    items.push({
+      label: 'Forecast from the last bar',
+      divider: forecastBar === null,
+      onSelect: () => {
+        forecastFrom(null);
+      },
+    });
+  }
   if (at.price !== null) {
     const text = formatPrice(at.price, decimals);
     items.push({

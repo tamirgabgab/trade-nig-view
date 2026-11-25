@@ -99,3 +99,68 @@
 .table tr[aria-current='true'] td {
   color: var(--color-accent);
 }
+
+/* Forecast vs actual. */
+.outcomeSummary {
+  margin: var(--space-1) 0;
+  color: var(--color-text-strong);
+  font-weight: 500;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  color: var(--color-text-muted);
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+}
+
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: var(--space-1);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* Calibration charts. */
+.calibration svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: var(--space-2);
+}
+
+.axis {
+  fill: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.barNaive {
+  fill: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.barA {
+  fill: #ff9800;
+  opacity: 0.8;
+}
+
+.barC {
+  fill: var(--color-accent);
+  opacity: 0.85;
+}
+
+.target {
+  stroke: var(--color-text-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}

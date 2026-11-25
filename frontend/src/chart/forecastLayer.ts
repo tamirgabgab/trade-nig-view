@@ -2,7 +2,8 @@
  * The OHLC forecast (P3, ADR 0010) as one series primitive: from the origin bar, a shaded fan of
  * the close's central 50 / 80 / 95 % intervals for the next k bars, a faint median candle per bar
  * and thin whiskers to the 80 % high and low. Drawn at logical indexes past the origin, so it
- * lands in the empty space right of the last bar (or over the bars that replay reveals).
+ * lands in the empty space right of the last bar (or over the bars that replay reveals). A forecast
+ * made in the past also marks each actual close with a dot in its band's colour.
  */
 import type {
   IPrimitivePaneRenderer,
@@ -26,22 +27,33 @@ export interface ForecastBar {
   bands: readonly [number, number, number, number, number, number];
 }
 
+/** An actual close after the origin, coloured by the forecast band it fell in. */
+export interface ForecastOutcomeDot {
+  index: number;
+  close: number;
+  color: string;
+}
+
 export interface ForecastView {
   /** The origin bar and its close: the fan starts there. */
   origin: number;
   close: number;
   bars: readonly ForecastBar[];
+  outcomes: readonly ForecastOutcomeDot[];
 }
 
 export interface ForecastColors {
   up: string;
   down: string;
   fan: string;
+  /** The ring around an outcome dot (the chart background, so it stands out on a candle). */
+  dotRing: string;
 }
 
 /** Fill of the 95, 80 and 50 % bands (they overlap: the inner ones look darker). */
 const BAND_ALPHA = [0.08, 0.1, 0.14] as const;
 const CANDLE_ALPHA = 0.45;
+const DOT_RADIUS = 4.5;
 
 export class ForecastLayer implements ISeriesPrimitive {
   private view: ForecastView | null = null;
@@ -99,6 +111,19 @@ export class ForecastLayer implements ISeriesPrimitive {
           const top = Math.min(o ?? 0, c ?? 0);
           context.fillRect(x - body / 2, top, body, Math.max(1, Math.abs((o ?? 0) - (c ?? 0))));
         });
+        // The actual closes, over the real candles.
+        for (const dot of view.outcomes) {
+          const x = this.indexToX(dot.index);
+          const y = this.priceToY(dot.close);
+          if (x === null || y === null) continue;
+          context.beginPath();
+          context.arc(x, y, DOT_RADIUS, 0, 2 * Math.PI);
+          context.fillStyle = dot.color;
+          context.fill();
+          context.lineWidth = 1.5;
+          context.strokeStyle = colors.dotRing;
+          context.stroke();
+        }
       });
     },
   };

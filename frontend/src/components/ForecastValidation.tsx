@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { Forecast, Validation } from '../api/forecast.ts';
+import { ForecastCalibration } from './ForecastCalibration.tsx';
 import styles from './ForecastPanel.module.css';
 
 const NAMES: Record<Validation['model'], string> = {
@@ -13,7 +14,7 @@ const pct = (v: number | null, digits = 1) => (v === null ? '—' : `${(v * 100)
 /**
  * Walk-forward scores of the three models at one horizon: the pinball loss against the naive
  * benchmark (negative = better), the coverage of the close's 50 / 80 / 95 % intervals, the
- * out-of-sample R² of the return and the hit rate.
+ * out-of-sample R² of the return and the hit rate, then the calibration charts.
  */
 export function ForecastValidation({ forecast }: { forecast: Forecast }) {
   const [picked, setH] = useState(1);
@@ -78,6 +79,7 @@ export function ForecastValidation({ forecast }: { forecast: Forecast }) {
       <p className={styles.note}>
         {rows[0]?.n ?? 0} forecasts out of sample, each made with bars up to its own date only.
       </p>
+      <ForecastCalibration rows={rows} model={forecast.model} />
     </div>
   );
 }

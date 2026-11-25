@@ -1,5 +1,5 @@
 import type { Forecast } from '../../api/forecast.ts';
-import { atLevel } from '../forecastView.ts';
+import { atLevel, bandColor, type Outcome } from '../forecastOutcome.ts';
 import { extent, scale } from '../plotScale.ts';
 import styles from './Lab.module.css';
 
@@ -7,21 +7,31 @@ const W = 560;
 const H = 180;
 const HISTORY = 80;
 
-/** The last closes and the forecast's fan (50 / 80 / 95 % of the close) with its median. */
+/**
+ * The last closes and the forecast's fan (50 / 80 / 95 % of the close) with its median; with
+ * `outcomes`, the actual closes after the origin as a line and dots in their band's colour.
+ */
 export function ForecastFanChart({
   closes,
   forecast,
+  outcomes = [],
+  history = HISTORY,
 }: {
   closes: readonly number[];
   forecast: Forecast;
+  outcomes?: readonly Outcome[];
+  history?: number;
 }) {
-  const past = closes.slice(-HISTORY);
+  const past = closes.slice(-history);
   const k = forecast.horizons.length;
   const q = (values: readonly number[], level: number) => atLevel(forecast.levels, values, level);
   const lows = forecast.horizons.map((h) => q(h.close, 0.025));
   const highs = forecast.horizons.map((h) => q(h.close, 0.975));
   const x = scale([0, past.length - 1 + k], [4, W - 4]);
-  const y = scale(extent([...past, ...lows, ...highs], 0.05), [H - 4, 4]);
+  const y = scale(extent([...past, ...lows, ...highs, ...outcomes.map((o) => o.actual)], 0.05), [
+    H - 4,
+    4,
+  ]);
   const last = past.length - 1;
   const band = (lo: number, hi: number) => {
     const upper = forecast.horizons.map(
@@ -38,7 +48,9 @@ export function ForecastFanChart({
       className={styles.fan}
       viewBox={`0 0 ${String(W)} ${String(H)}`}
       role="img"
-      aria-label={`The last ${String(past.length)} closes and the forecast of the next ${String(k)}`}
+      aria-label={`The last ${String(past.length)} closes and the forecast of the next ${String(k)}${
+        outcomes.length > 0 ? `, with the ${String(outcomes.length)} actual closes` : ''
+      }`}
     >
       {(
         [
@@ -62,6 +74,27 @@ export function ForecastFanChart({
           ),
         ].join(' ')}
       />
+      {outcomes.length > 0 && (
+        <polyline
+          className={styles.fanActual}
+          points={[
+            `${x(last).toFixed(1)},${y(forecast.lastClose).toFixed(1)}`,
+            ...outcomes.map((o) => `${x(last + o.h).toFixed(1)},${y(o.actual).toFixed(1)}`),
+          ].join(' ')}
+        />
+      )}
+      {outcomes.map((o) => (
+        <circle
+          key={o.h}
+          className={styles.fanDot}
+          cx={x(last + o.h)}
+          cy={y(o.actual)}
+          r={4}
+          fill={bandColor(o.band)}
+        >
+          <title>{`+${String(o.h)}: ${o.band === null ? 'outside 95 %' : `inside ${String(o.band)} %`}`}</title>
+        </circle>
+      ))}
     </svg>
   );
 }

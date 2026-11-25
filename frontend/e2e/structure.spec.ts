@@ -186,3 +186,27 @@ test('the Market regime page tests the regimes scenario', async ({ page }) => {
     timeout: 60_000,
   });
 });
+
+test('forecast vs actual: from a past bar by the context menu, with the calibration charts', async ({
+  page,
+}) => {
+  // Right-click a bar in the middle of the chart: the forecast is made there, the tab opens.
+  const box = await page.getByTestId('chart-canvas').boundingBox();
+  if (box === null) throw new Error('no chart');
+  await page.mouse.click(box.x + box.width * 0.5, box.y + 150, { button: 'right' });
+  await page.getByRole('menuitem', { name: 'Forecast from this bar' }).click();
+  const panel = page.getByRole('complementary', { name: 'Watchlist and details' });
+  await expect(panel).toContainText('From a past bar:');
+  const vs = page.getByRole('table', { name: 'Forecast vs actual' });
+  await expect(vs.getByRole('row')).toHaveCount(6, { timeout: 30_000 }); // header + 5 bars
+  await expect(page.getByRole('status').filter({ hasText: /^5 of 5 bars:/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /with the 5 actual closes/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /PIT histogram/ })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: 'test-results/forecast-vs-actual.png' });
+
+  // Back to the last bar: no actual bars to compare with.
+  await panel.getByRole('button', { name: 'Back to the last bar' }).click();
+  await expect(vs).toHaveCount(0, { timeout: 30_000 });
+  await expect(panel).toContainText('Forecast from this bar');
+});

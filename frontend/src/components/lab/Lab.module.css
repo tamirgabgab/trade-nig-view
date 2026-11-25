@@ -247,6 +247,17 @@
   stroke-width: 1.2;
 }
 
+.fanActual {
+  fill: none;
+  stroke: var(--color-text-strong);
+  stroke-width: 1.5;
+}
+
+.fanDot {
+  stroke: var(--color-bg);
+  stroke-width: 1.5;
+}
+
 .fanMedian {
   fill: none;
   stroke: var(--color-accent);

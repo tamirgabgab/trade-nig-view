@@ -2,13 +2,16 @@ import { useState } from 'react';
 
 import { useChartDataStore } from '../store/chartDataStore.ts';
 import { useChartStore } from '../store/chartStore.ts';
+import { useForecastOriginStore } from '../store/forecastOriginStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { useStructureStore } from '../store/structureStore.ts';
 import { ForecastHorizons } from './ForecastHorizons.tsx';
+import { ForecastOutcome } from './ForecastOutcome.tsx';
+import { forecastOutcomes } from './forecastOutcome.ts';
 import styles from './ForecastPanel.module.css';
 import { ForecastValidation } from './ForecastValidation.tsx';
 import { formatBarTime } from './formatClock.ts';
-import { useChartForecast } from './useChartForecast.ts';
+import { useChartForecast, usePastOrigin } from './useChartForecast.ts';
 import { useDisplayTimeZone } from './useDisplayTimeZone.ts';
 
 const KS = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -19,7 +22,8 @@ const LAGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
  * The Forecast tab: the settings of the chart's forecast (k, the model, auto-tuned or manual), the
  * forecast per bar ahead, the walk-forward validation of models A and C against the naive one,
  * and the model's parameters and largest coefficients. While replaying, the forecast stays at its
- * origin until "Forecast from here" moves it to the cursor.
+ * origin until "Forecast from here" moves it to the cursor; a forecast made in the past (replay, or
+ * "Forecast from this bar") is compared with the actual bars after it.
  */
 export function ForecastPanel() {
   const zone = useDisplayTimeZone();
@@ -33,6 +37,9 @@ export function ForecastPanel() {
   const from = useReplayStore((s) => s.forecastFrom);
   const cursor = useReplayStore((s) => s.cursor);
   const fromHere = useReplayStore((s) => s.forecastFromHere);
+  const pastOrigin = usePastOrigin();
+  const setOrigin = useForecastOriginStore((s) => s.setOrigin);
+  const bars = useChartDataStore((s) => s.data?.bars);
   const forecast = useChartForecast(true);
   // The window being typed: applied on Enter or when the field is left, not on every keystroke.
   const [windowDraft, setWindowDraft] = useState<string | null>(null);
@@ -43,6 +50,7 @@ export function ForecastPanel() {
     setWindowDraft(null);
   };
   const f = forecast.data;
+  const outcomes = f === undefined || bars === undefined ? [] : forecastOutcomes(f, bars);
 
   return (
     <div className={styles.panel}>
@@ -162,6 +170,20 @@ export function ForecastPanel() {
           </button>
         </div>
       )}
+      {pastOrigin !== null && (
+        <div className={styles.settings}>
+          <span className={styles.summary}>From a past bar: {formatBarTime(pastOrigin, zone)}</span>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => {
+              setOrigin(null);
+            }}
+          >
+            Back to the last bar
+          </button>
+        </div>
+      )}
       {forecast.isError ? (
         <p className={styles.empty} role="alert">
           No forecast: {forecast.error.message}
@@ -177,6 +199,24 @@ export function ForecastPanel() {
               {f.symbol} from {formatBarTime(f.lastTime, zone)}
             </h3>
             <ForecastHorizons forecast={f} decimals={decimals} />
+          </section>
+          <section className={styles.section} aria-label="Forecast vs actual">
+            <h3 className={styles.heading}>Forecast vs actual</h3>
+            {outcomes.length > 0 && bars !== undefined ? (
+              <ForecastOutcome
+                forecast={f}
+                bars={bars}
+                outcomes={outcomes}
+                decimals={decimals}
+                zone={zone}
+              />
+            ) : (
+              <p className={styles.note}>
+                {replaying
+                  ? 'Step forward (Shift+→ or Play) to reveal the actual bars against the forecast.'
+                  : 'Right-click a past bar on the chart and pick "Forecast from this bar" to see a forecast against what happened next, or replay.'}
+              </p>
+            )}
           </section>
           <section className={styles.section} aria-label="Validation">
             <h3 className={styles.heading}>Validation out of sample</h3>

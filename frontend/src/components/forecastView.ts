@@ -1,17 +1,11 @@
+import type { Bar } from '../api/bars.ts';
 import type { Forecast } from '../api/forecast.ts';
 import type { ForecastView } from '../chart/forecastLayer.ts';
+import { atLevel, bandColor, forecastOutcomes } from './forecastOutcome.ts';
 
-/** The quantile of `levels` at `level` (the backend's levels: 2.5, 10, 25, 50, 75, 90, 97.5 %). */
-export function atLevel(
-  levels: readonly number[],
-  values: readonly number[],
-  level: number,
-): number {
-  return values[levels.indexOf(level)] ?? Number.NaN;
-}
-
-/** What the chart layer draws for a forecast made at bar `origin` (its index on the chart). */
-export function forecastView(f: Forecast, origin: number): ForecastView {
+/** What the chart layer draws for a forecast made at bar `origin` (its index on the chart), with
+ *  a dot on each actual close that `bars` (the chart's shown bars) already holds. */
+export function forecastView(f: Forecast, origin: number, bars: readonly Bar[]): ForecastView {
   const q = (values: readonly number[], level: number) => atLevel(f.levels, values, level);
   return {
     origin,
@@ -32,6 +26,11 @@ export function forecastView(f: Forecast, origin: number): ForecastView {
         q(h.close, 0.9),
         q(h.close, 0.975),
       ],
+    })),
+    outcomes: forecastOutcomes(f, bars).map((o) => ({
+      index: origin + o.h,
+      close: o.actual,
+      color: bandColor(o.band),
     })),
   };
 }

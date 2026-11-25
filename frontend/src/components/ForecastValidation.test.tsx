@@ -11,6 +11,7 @@ const row = (model: Validation['model'], h: number, pinball: number): Validation
   coverage: [0.5, 0.8, 0.95],
   r2: -0.001,
   hitRate: 0.5,
+  pit: Array.from({ length: 10 }, () => 0.1),
 });
 
 function forecast(k: number, naive = 0.01): Forecast {
@@ -20,6 +21,7 @@ function forecast(k: number, naive = 0.01): Forecast {
     high: [],
     low: [],
     close: [],
+    closePercentiles: [],
     pUp: 0.5,
     expectedRange: 0.02,
   }));
@@ -66,5 +68,19 @@ describe('ForecastValidation', () => {
     expect(within(table).getByRole('row', { name: /C: Ridge/ })).not.toHaveTextContent(
       /Infinity|NaN/,
     );
+  });
+});
+
+describe('ForecastCalibration', () => {
+  it('draws the coverage against the targets and reads the PIT histogram', () => {
+    const f = forecast(1);
+    const narrow = [0.2, 0.08, 0.07, 0.07, 0.08, 0.08, 0.07, 0.07, 0.08, 0.2];
+    f.validation = f.validation.map((v) => (v.model === 'c' ? { ...v, pit: narrow } : v));
+    render(<ForecastValidation forecast={f} />);
+    expect(
+      screen.getByRole('img', { name: /Coverage of the 50, 80 and 95 % intervals/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /PIT histogram/ })).toBeInTheDocument();
+    expect(screen.getByText(/the intervals are too narrow/)).toBeInTheDocument();
   });
 });
