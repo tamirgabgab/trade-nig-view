@@ -4802,6 +4802,7 @@
                 "enum": [
                   "target",
                   "stop",
+                  "both",
                   "neither",
                   "open",
                   "not_filled"
@@ -4812,7 +4813,7 @@
               }
             ],
             "title": "Actual",
-            "description": "What the bars after the origin did (null if there are none)"
+            "description": "What the bars after the origin did (null if there are none; 'both': the deciding bar touched both levels, actual_r is then the bridge's mean)"
           },
           "actual_r": {
             "anyOf": [

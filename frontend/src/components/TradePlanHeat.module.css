@@ -27,3 +27,11 @@
   color: var(--color-text-muted);
   font-size: 11px;
 }
+
+.gain {
+  background: color-mix(in srgb, var(--color-up) var(--strength), transparent);
+}
+
+.loss {
+  background: color-mix(in srgb, var(--color-down) var(--strength), transparent);
+}

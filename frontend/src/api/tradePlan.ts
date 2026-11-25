@@ -31,7 +31,8 @@ export interface PlanCalibration {
   brierBase: number;
 }
 
-export type Actual = 'target' | 'stop' | 'neither' | 'open' | 'not_filled';
+/** 'both': the deciding bar touched both levels (`actualR` is then the bridge's mean). */
+export type Actual = 'target' | 'stop' | 'both' | 'neither' | 'open' | 'not_filled';
 
 export interface TradePlan {
   side: 'long' | 'short';
@@ -51,7 +52,7 @@ export interface TradePlan {
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number.NaN);
 const numOrNull = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? (v as unknown[]) : []);
-const ACTUALS: readonly Actual[] = ['target', 'stop', 'neither', 'open', 'not_filled'];
+const ACTUALS: readonly Actual[] = ['target', 'stop', 'both', 'neither', 'open', 'not_filled'];
 
 export function parseTradePlan(body: unknown): TradePlan {
   if (!isRecord(body)) throw new Error('Unexpected trade plan response');

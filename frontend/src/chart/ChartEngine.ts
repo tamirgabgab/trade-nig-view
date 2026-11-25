@@ -236,6 +236,8 @@ export class ChartEngine {
       priceToY: (price) => this.priceToY(price),
       decimals: this.decimals,
       span: (a, b) => this.span(a, b),
+      up: this.theme.up,
+      down: this.theme.down,
     }),
   );
   private readonly gapLayer = new GapLayer(

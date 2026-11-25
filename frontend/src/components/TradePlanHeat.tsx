@@ -1,7 +1,6 @@
-import styles from './TradePlanHeat.module.css';
+import type { CSSProperties } from 'react';
 
-const PROFIT = '8 153 129';
-const LOSS = '242 54 69';
+import styles from './TradePlanHeat.module.css';
 
 /**
  * The EV heat map: the expected result in R for each target (columns) and stop (rows) distance,
@@ -48,12 +47,15 @@ export function TradePlanHeat({
               <td
                 key={multiples[j]}
                 aria-current={i === row && j === col}
-                style={{
-                  background:
-                    v === null
-                      ? undefined
-                      : `rgb(${v >= 0 ? PROFIT : LOSS} / ${String(Math.min(Math.abs(v) / top, 1) * 0.55)})`,
-                }}
+                className={v === null ? undefined : v >= 0 ? styles.gain : styles.loss}
+                // The cell's shade: its |EV| against the largest one (the colour is a token).
+                style={
+                  v === null
+                    ? undefined
+                    : ({
+                        '--strength': `${String(Math.min(Math.abs(v) / top, 1) * 55)}%`,
+                      } as CSSProperties)
+                }
               >
                 {v === null ? '—' : v.toFixed(2)}
               </td>

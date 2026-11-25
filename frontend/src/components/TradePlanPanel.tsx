@@ -7,16 +7,20 @@ import { useDrawingStore } from '../store/drawingStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { useDebounced } from './lab/useDebounced.ts';
 import { LearnLink } from './LearnLink.tsx';
+import { NumberField } from './NumberField.tsx';
 import styles from './ForecastPanel.module.css';
 import { ReliabilityChart } from './ReliabilityChart.tsx';
 import { TradePlanHeat } from './TradePlanHeat.tsx';
 
 const MAX_HORIZON = 250;
+/** The backend's bound on a drawing's account (a larger one could not be saved). */
+const MAX_ACCOUNT = 1e12;
 const pct = (x: number | null | undefined) =>
   x === null || x === undefined || !Number.isFinite(x) ? '—' : `${(x * 100).toFixed(1)}%`;
 const r = (x: number | null) => (x === null || !Number.isFinite(x) ? '—' : `${x.toFixed(2)}R`);
 const ACTUAL: Record<string, string> = {
   target: 'hit the target',
+  both: "touched both levels in one bar (OHLC cannot tell which came first; the bridge's mean R)",
   stop: 'hit the stop',
   neither: 'hit neither by the last bar',
   open: 'still running',
@@ -48,9 +52,12 @@ export function TradePlanPanel() {
       ? 0
       : Math.min(
           MAX_HORIZON,
+          // The holding time is the box's width, whichever side of the entry the target is on.
           Math.max(
             1,
-            Math.round(timeToLogical(times, target.time) - timeToLogical(times, entry.time)),
+            Math.round(
+              Math.abs(timeToLogical(times, target.time) - timeToLogical(times, entry.time)),
+            ),
           ),
         );
   const query = useDebounced<TradePlanQuery | null>(
@@ -85,7 +92,6 @@ export function TradePlanPanel() {
   const perShare = Math.abs(entry.price - stop.price);
   const shares = perShare > 0 ? Math.floor((account * riskPct) / 100 / perShare) : 0;
   const setProp = (name: 'account' | 'risk_pct', value: number) => {
-    if (!Number.isFinite(value) || value <= 0 || (name === 'risk_pct' && value > 100)) return;
     update(drawn.id, (d) => ({ ...d, props: { ...d.props, [name]: value } }));
   };
   const s = plan?.summary ?? null;
@@ -96,33 +102,26 @@ export function TradePlanPanel() {
   return (
     <div className={styles.panel}>
       <div className={styles.settings}>
-        <label className={styles.field}>
-          Account
-          <input
-            className={styles.input}
-            type="number"
-            min={1}
-            step={1000}
-            value={account}
-            onChange={(event) => {
-              setProp('account', Number(event.target.value));
-            }}
-          />
-        </label>
-        <label className={styles.field}>
-          Risk %
-          <input
-            className={styles.input}
-            type="number"
-            min={0.1}
-            max={100}
-            step={0.25}
-            value={riskPct}
-            onChange={(event) => {
-              setProp('risk_pct', Number(event.target.value));
-            }}
-          />
-        </label>
+        <NumberField
+          label="Account"
+          value={account}
+          min={0}
+          max={MAX_ACCOUNT}
+          step={1000}
+          onCommit={(v) => {
+            setProp('account', v);
+          }}
+        />
+        <NumberField
+          label="Risk %"
+          value={riskPct}
+          min={0}
+          max={100}
+          step={0.25}
+          onCommit={(v) => {
+            setProp('risk_pct', v);
+          }}
+        />
       </div>
       <p className={`${styles.summary} ${styles.section}`}>
         {target.price > entry.price ? 'Long' : 'Short'} for {h} bars: {shares} shares risk{' '}

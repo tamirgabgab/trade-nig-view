@@ -29,6 +29,9 @@ export interface DrawState {
   decimals: number;
   /** Bars and volume between two anchors (range tools). */
   span: (a: Anchor, b: Anchor) => Span | null;
+  /** The theme's up and down colours (a trade plan's profit and loss zones). */
+  up: string;
+  down: string;
 }
 
 function segment(ctx: CanvasRenderingContext2D, a: Point, b: Point): void {
@@ -105,10 +108,6 @@ function drawChannel(ctx: CanvasRenderingContext2D, pts: readonly Point[], color
   segment(ctx, { x: a.x, y: a.y + dy / 2 }, { x: b.x, y: b.y + dy / 2 });
 }
 
-/** Colours of a trade plan's zones (TradingView's long / short position tools use the same). */
-const PROFIT = '#089981';
-const LOSS = '#F23645';
-
 /** A label: white text on `color`, centred on (x, y). */
 function tag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string) {
   ctx.font = FONT;
@@ -141,8 +140,8 @@ function drawTradePlan(
     ctx.fillStyle = withAlpha(color, 0.18);
     ctx.fillRect(left, Math.min(a.y, y), width, Math.abs(y - a.y));
   };
-  zone(b.y, PROFIT);
-  if (c !== undefined) zone(c.y, LOSS);
+  zone(b.y, state.up);
+  if (c !== undefined) zone(c.y, state.down);
   ctx.setLineDash([]);
   segment(ctx, { x: left, y: a.y }, { x: left + width, y: a.y });
   const mid = left + width / 2;
@@ -152,9 +151,9 @@ function drawTradePlan(
   const reward = Math.abs(target.price - entry.price);
   const ratio = risk > 0 ? `, R:R ${(reward / risk).toFixed(2)}` : '';
   const up = b.y < a.y;
-  tag(ctx, `Target ${move(target)}${ratio}`, mid, b.y + (up ? -12 : 12), PROFIT);
+  tag(ctx, `Target ${move(target)}${ratio}`, mid, b.y + (up ? -12 : 12), state.up);
   if (c !== undefined && stop !== undefined) {
-    tag(ctx, `Stop ${move(stop)}`, mid, c.y + (up ? 12 : -12), LOSS);
+    tag(ctx, `Stop ${move(stop)}`, mid, c.y + (up ? 12 : -12), state.down);
   }
   const bars = state.span(entry, target)?.bars;
   const side = target.price > entry.price ? 'Long' : 'Short';

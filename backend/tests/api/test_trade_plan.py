@@ -77,3 +77,13 @@ def test_invalid_plans(e2e_client: TestClient) -> None:
     body = plan(e2e_client, 422, time=epoch(first), entry=c0, target=c0 * 1.1, stop=c0 * 0.9, h=10)
     assert body["code"] == "not_enough_history"
     assert plan(e2e_client, 422, time=0, entry=1, target=2, stop=0.5, h=5)["status"] == 422
+    after = plan(
+        e2e_client,
+        422,
+        **common,
+        entry=close,
+        target=close * 1.05,
+        stop=close * 0.97,
+        cursor=epoch(day) - 86_400,
+    )
+    assert "after the replay cursor" in after["detail"]

@@ -1841,9 +1841,9 @@ export interface components {
             calibration: components["schemas"]["Calibration"] | null;
             /**
              * Actual
-             * @description What the bars after the origin did (null if there are none)
+             * @description What the bars after the origin did (null if there are none; 'both': the deciding bar touched both levels, actual_r is then the bridge's mean)
              */
-            actual: ("target" | "stop" | "neither" | "open" | "not_filled") | null;
+            actual: ("target" | "stop" | "both" | "neither" | "open" | "not_filled") | null;
             /** Actual R */
             actual_r: number | null;
         };

@@ -198,3 +198,16 @@ def test_too_few_paths_is_none() -> None:
     frame = synthetic_bars(Scenario.RANDOM_WALK, 1, 120)
     c = float(frame.close[-1])
     assert tp.plan(frame, len(frame) - 1, c, c * 1.05, c * 0.97, 20) is None
+
+
+def test_a_stop_order_fill_bar_gapping_past_the_target_counts_once() -> None:
+    # A buy stop at +0.01: the fill bar opens at +0.03 (past the target +0.02) and trades down
+    # through the stop -0.02: one outcome, the cautious one, and counted in the bounds.
+    p = paths(o=[[0.03, 0.0]], h=[[0.04, 0.0]], lo=[[-0.03, 0.0]], c=[[0.0, 0.0]])
+    out = tp.simulate(p, 1.0, 0.01, 0.02, -0.02)
+    assert out.target[0] + out.stop[0] + out.neither[0] == pytest.approx(1)
+    assert out.stop[0] == 1
+    assert out.ambiguous[0] == 1
+    s = tp.summarise(out, 0.03)
+    assert s is not None
+    assert s.p_target_bounds == (0.0, 1.0)

@@ -77,8 +77,9 @@ class TradePlanResponse(BaseModel):
         description="Brownian P(target first), drift from the history, no horizon"
     )
     calibration: Calibration | None
-    actual: Literal["target", "stop", "neither", "open", "not_filled"] | None = Field(
-        description="What the bars after the origin did (null if there are none)"
+    actual: Literal["target", "stop", "both", "neither", "open", "not_filled"] | None = Field(
+        description="What the bars after the origin did (null if there are none; 'both': the "
+        "deciding bar touched both levels, actual_r is then the bridge's mean)"
     )
     actual_r: float | None
 
@@ -105,6 +106,8 @@ def get_trade_plan(
     result = service.get_bars(symbol, interval, adjusted=adjusted, limit=1_000_000_000)
     frame = result.frame
     if cursor is not None:
+        if time > cursor:
+            raise InvalidPlanError("the entry is after the replay cursor: step the replay to it")
         frame = frame.take(frame.time <= cursor)
     origin = int((frame.time <= time).sum()) - 1
     if origin < 0:

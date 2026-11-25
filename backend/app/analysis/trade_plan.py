@@ -55,7 +55,8 @@ Matrix = npt.NDArray[np.float64]
 Bools = npt.NDArray[np.bool_]
 Ints = npt.NDArray[np.int64]
 Side = Literal["long", "short"]
-Actual = Literal["target", "stop", "neither", "open", "not_filled"]
+#: "both": the deciding bar touched both levels (OHLC cannot tell; actual_r is the bridge's mean).
+Actual = Literal["target", "stop", "both", "neither", "open", "not_filled"]
 
 #: Bar range over its volatility for a Brownian bar (Parkinson): E[ln(H/L)^2] = 4 ln 2 sigma^2.
 RANGE_SIGMAS = 2 * math.sqrt(math.log(2))
@@ -246,9 +247,11 @@ def simulate(
     both: Bools = exits & stop_any[rows, k] & target_any[rows, k]
     w_target: FloatArray = np.where(exits & target_any[rows, k] & ~both, 1.0, 0.0)
     w_stop: FloatArray = np.where(exits & stop_any[rows, k] & ~both, 1.0, 0.0)
-    gap_up: Bools = both & (ok >= target)
-    gap_down: Bools = both & (ok <= stop)
-    split: Bools = both & ~gap_up & ~gap_down & (k != fill_bar)
+    # The fill bar's two-level touches go to the stop (cautious; counted in the bounds below).
+    fill_both: Bools = both & (k == fill_bar)
+    gap_up: Bools = both & ~fill_both & (ok >= target)
+    gap_down: Bools = both & ~fill_both & (ok <= stop)
+    split: Bools = both & ~fill_both & ~gap_up & ~gap_down
     sigma_bar = np.maximum((oh - ol) / RANGE_SIGMAS, TINY)
     p_up = np.zeros(n)
     if split.any():
@@ -258,7 +261,7 @@ def simulate(
             (oc[split] - ok[split]) / sigma_bar[split],
         )
     w_target += np.where(gap_up, 1.0, 0.0) + p_up * split
-    w_stop += np.where(gap_down | (both & (k == fill_bar)), 1.0, 0.0) + (1 - p_up) * split
+    w_stop += np.where(gap_down | fill_both, 1.0, 0.0) + (1 - p_up) * split
     # A gap beyond a level exits at the open; otherwise at the level.
     exit_target = np.where(ok >= target, ok, target)
     exit_stop = np.where(ok <= stop, ok, stop)
@@ -273,7 +276,7 @@ def simulate(
         r_stop=(money(exit_stop) - money(fill_price)) / risk,
         r_neither=(money(c[:, -1]) - money(fill_price)) / risk,
         bars=np.where(exits, k + 1, h).astype(np.float64),
-        ambiguous=np.where(split, 1.0, 0.0),
+        ambiguous=np.where(split | fill_both, 1.0, 0.0),
     )
 
 
@@ -290,7 +293,7 @@ class Summary:
     p_target_bounds: tuple[float, float]
     bars: float
     ev_r: float
-    ev_return: float  # mean exit log return over the fill price
+    ev_return: float  # ev_r x |entry - stop| / entry: a fraction of the entry price
     loss_r: float  # mean R when stopped
     kelly: float
 
@@ -443,7 +446,10 @@ def _actual(
         return ("not_filled" if done else "open"), None
     if o.neither[0] == 1.0:
         return ("neither" if done else "open"), float(o.r_neither[0])
-    hit: Actual = "target" if o.target[0] >= o.stop[0] else "stop"
+    if o.ambiguous[0] == 1.0:
+        mean = o.target[0] * o.r_target[0] + o.stop[0] * o.r_stop[0]
+        return "both", float(mean)
+    hit: Actual = "target" if o.target[0] == 1.0 else "stop"
     return hit, float(o.r_target[0] if hit == "target" else o.r_stop[0])
 
 
