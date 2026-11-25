@@ -10,7 +10,9 @@ fitted and the residual sum of squares :math:`RSS_b(s)` kept:
 
 H = 0.5 for a random walk, above 0.5 for persistent (trending) returns, below for anti-persistent
 (mean-reverting) ones. The linear detrending makes DFA robust to drifts, which bias the classic
-rescaled range. Only the scales with at least four boxes in W are used. The profile is taken
+rescaled range. Only the scales with at least four boxes in W are used. A window whose profile
+is a straight line (returns equal to within 1e-6 of their mean) has only rounding noise in F(s)
+and no H (NaN). The profile is taken
 from the cumulative returns of the whole series: within a window it differs from the window's own
 profile by a straight line, which each box's fit removes.
 Warm-up: W bars.
@@ -27,6 +29,9 @@ from app.indicators.registry import MIN_LOOKBACK, IndicatorSpec, OutputSpec, Par
 from app.models.bars import BarFrame, FloatArray
 
 SCALES: tuple[int, ...] = (8, 16, 32, 64)
+#: A window whose returns vary by less than this share of their mean is a straight-line profile
+#: (equal returns, up to rounding): its F(s) is rounding noise and it has no H.
+FLAT_RETURNS = 1e-6
 
 
 def box_rss(profile: FloatArray, s: int) -> FloatArray:
@@ -70,6 +75,11 @@ def rolling_hurst(frame: BarFrame, w: int) -> FloatArray:
     scales = tuple(s for s in SCALES if s <= w // 4)
     h = slope(scales, fluctuations(profile, w, scales))
     h[:w] = np.nan  # the boxes span at most w bars: values only once there are w returns
+    if len(r) > w:
+        windows = sliding_window_view(r[1:], w)  # the w returns ending at each bar from w on
+        spread = windows.std(axis=1)
+        flat = spread <= FLAT_RETURNS * np.abs(windows.mean(axis=1))
+        h[w:][flat] = np.nan
     return h
 
 

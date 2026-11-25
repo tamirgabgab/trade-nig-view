@@ -135,3 +135,12 @@ def test_a_year_of_24_5_hourly_bars_and_a_long_history_are_fast() -> None:
     spectrum = rg.mfdfa(ar1(0.0, 25_000, 8))
     assert time.perf_counter() - start < 1.0
     assert spectrum is not None
+
+
+def test_hurst_is_undefined_on_equal_returns() -> None:
+    """A straight-line profile (every return equal) has F(s) of rounding noise only: no H, rather
+    than a number that changes with the next bar (found by the no-lookahead property)."""
+    h = CATALOG["hurst_dfa"].run(frame_of(np.full(120, 0.01)), {"length": 64})["hurst"]
+    assert np.isnan(h).all()
+    noisy = frame_of(np.random.default_rng(1).normal(0.0005, 0.01, 120))
+    assert np.isfinite(CATALOG["hurst_dfa"].run(noisy, {"length": 64})["hurst"][64:]).all()
