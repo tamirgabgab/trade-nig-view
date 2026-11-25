@@ -715,3 +715,74 @@ def golden_var_bands(
         elif c[t + 1] < lower[t + 1]:
             breaches[t + 1] = -1.0
     return {"upper": upper, "lower": lower, "breaches": breaches}
+
+
+# --- regime (G1) --------------------------------------------------------------------------------
+
+
+def golden_vr_z(close: Sequence[float], w: int, qs: Sequence[int] = (2, 4, 8, 16)) -> list[float]:
+    """Signed Chow-Denning statistic over the last w log returns, straight from the formulas."""
+    r = [NAN] + [math.log(close[t] / close[t - 1]) for t in range(1, len(close))]
+    out: list[float] = []
+    for t in range(len(close)):
+        if t < w:
+            out.append(NAN)
+            continue
+        x = r[t - w + 1 : t + 1]
+        n = len(x)
+        mu = sum(x) / n
+        d = [v - mu for v in x]
+        ss = sum(v * v for v in d)
+        var1 = ss / (n - 1)
+        best = NAN
+        for q in qs:
+            sums = [sum(x[k - j] for j in range(q)) for k in range(q - 1, n)]
+            m = q * (n - q + 1) * (1 - q / n)
+            varq = sum((s - q * mu) ** 2 for s in sums) / m
+            vr = varq / var1
+            theta = 0.0
+            for j in range(1, q):
+                delta = n * sum(d[k] ** 2 * d[k - j] ** 2 for k in range(j, n)) / ss**2
+                theta += (2 * (q - j) / q) ** 2 * delta
+            z = math.sqrt(n) * (vr - 1) / math.sqrt(theta)
+            if math.isnan(best) or abs(z) > abs(best):
+                best = z
+        out.append(best)
+    return out
+
+
+def golden_dfa(
+    close: Sequence[float], w: int, scales: Sequence[int] = (8, 16, 32, 64)
+) -> list[float]:
+    """DFA Hurst over the last w returns: the window's own profile, boxes from its end, a line
+    fitted in each box by least squares."""
+    r = [NAN] + [math.log(close[t] / close[t - 1]) for t in range(1, len(close))]
+    used = [s for s in scales if s <= w // 4]
+    out: list[float] = []
+    for t in range(len(close)):
+        if t < w:
+            out.append(NAN)
+            continue
+        x = r[t - w + 1 : t + 1]
+        mu = sum(x) / w
+        profile: list[float] = []
+        acc = 0.0
+        for v in x:
+            acc += v - mu
+            profile.append(acc)
+        logs: list[tuple[float, float]] = []
+        for s in used:
+            nb = w // s
+            total = 0.0
+            for b in range(nb):
+                box = profile[w - (b + 1) * s : w - b * s]
+                xi = [i - (s - 1) / 2 for i in range(s)]
+                ym = sum(box) / s
+                sxy = sum(a * (y - ym) for a, y in zip(xi, box, strict=True))
+                sxx = sum(a * a for a in xi)
+                total += sum((y - ym) ** 2 for y in box) - sxy * sxy / sxx
+            logs.append((math.log(s), 0.5 * math.log(total / (nb * s))))
+        lx = sum(a for a, _ in logs) / len(logs)
+        ly = sum(b for _, b in logs) / len(logs)
+        out.append(sum((a - lx) * (b - ly) for a, b in logs) / sum((a - lx) ** 2 for a, _ in logs))
+    return out

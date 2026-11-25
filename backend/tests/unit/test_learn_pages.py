@@ -30,6 +30,7 @@ V2_PAGES: set[str] = {
     "ma-cross",
     "ma-ribbon",
     "macd",
+    "market-regime",
     "mcginley",
     "moving-average",
     "obv",
@@ -72,6 +73,7 @@ LAB_REQUIRED: dict[str, set[str]] = {
     "forecast": set(),
     "volatility": set(),
     "risk": set(),
+    "regime": set(),
 }
 MAX_AGO = 500  # app.analysis.conditions.Operand.ago's bound
 RULE_REQUIRED = {"label", "left", "op", "right"}

@@ -28,6 +28,9 @@ Close path, :math:`r_t = x_t - x_{t-1}` for :math:`t \ge 1` (:math:`r_0 = 0`), w
   volume than down bars (:math:`k_t = +1`), in distribution less (:math:`k_t = -1`), elsewhere
   :math:`k_t = 0`, so OBV rises before the markup while the price is flat, and falls before the
   markdown.
+* ``regimes``: returns with memory, :math:`r_t = \phi_t r_{t-1} + 0.012\,\varepsilon_t` (AR(1)),
+  :math:`\phi = +0.25` for :math:`t < h` (momentum: a trend regime, variance ratio about 1.3) and
+  :math:`-0.25` from :math:`h` on (mean reversion, about 0.6), no drift.
 
 OHLCV from the close path, with :math:`\sigma_t` the scenario's sigma at bar t, independent
 standard normals :math:`\eta, \nu, \lambda, \xi`, :math:`C_{-1} = 100` and :math:`J_t` the jump
@@ -82,6 +85,7 @@ class Scenario(StrEnum):
     SHOCK = "shock"
     VOLATILITY_REGIME = "volatility_regime"
     ACCUMULATION = "accumulation"
+    REGIMES = "regimes"
 
 
 def _business_day_times(n: int) -> IntArray:
@@ -124,6 +128,12 @@ def _log_path(
             mu, sigma = np.where(first, 0.0025, -0.0025), np.full(n, 0.012)
         case Scenario.VOLATILITY_REGIME:
             mu, sigma = np.zeros(n), np.where(first, 0.008, 0.03)
+        case Scenario.REGIMES:
+            sigma, phi = np.full(n, 0.012), np.where(first, 0.25, -0.25)
+            r = np.zeros(n)
+            for t in range(1, n):  # recursive (AR(1)) as RANGE
+                r[t] = phi[t] * r[t - 1] + sigma[t] * eps[t]
+            return np.cumsum(r), sigma, jump
         case Scenario.RANGE:
             sigma, theta = np.full(n, 0.015), 0.08
             d = np.zeros(n)

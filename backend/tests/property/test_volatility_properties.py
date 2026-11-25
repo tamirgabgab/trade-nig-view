@@ -102,3 +102,14 @@ def test_var_bands_no_lookahead_and_ordered(
     out = CATALOG["var_bands"].run(frame, params)
     ok = np.isfinite(out["upper"])
     assert (out["lower"][ok] <= out["upper"][ok]).all()
+
+
+@settings(max_examples=30, deadline=None)
+@given(data=st.data(), frame=bars(min_size=70))
+def test_regime_indicators_have_no_lookahead(data: st.DataObject, frame: BarFrame) -> None:
+    ks = _ks(data, frame)
+    for indicator in ("variance_ratio", "regime"):
+        check_no_lookahead(CATALOG[indicator], frame, {"length": 64}, ks)
+    check_no_lookahead(CATALOG["hurst_dfa"], frame, {"length": 64}, ks)
+    labels = CATALOG["regime"].run(frame, {"length": 64})["regime"]
+    assert set(labels[np.isfinite(labels)].tolist()) <= {-1.0, 0.0, 1.0}

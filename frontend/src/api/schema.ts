@@ -277,6 +277,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/learn/regime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn Regime
+         * @description The market regime (``GET /api/regime``) on a lab source, for the learn page's widget.
+         */
+        post: operations["learn_regime_api_learn_regime_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/drawings/{symbol}": {
         parameters: {
             query?: never;
@@ -488,6 +508,26 @@ export interface paths {
          * @description VaR and ES at the last bar (``origin`` in replay) from the whole history up to it.
          */
         get: operations["get_risk_api_risk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/regime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Regime
+         * @description The regime of the last year up to the last bar (``origin`` in replay).
+         */
+        get: operations["get_regime_api_regime_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1215,8 +1255,8 @@ export interface components {
             /** @description Null when there are no conditions */
             study: components["schemas"]["LabStudy"] | null;
         };
-        /** LabRiskRequest */
-        LabRiskRequest: {
+        /** LabSourceRequest */
+        LabSourceRequest: {
             /** Source */
             source: components["schemas"]["SyntheticSource"] | components["schemas"]["SymbolSource"];
         };
@@ -1480,7 +1520,7 @@ export interface components {
              * Plot
              * @enum {string}
              */
-            plot: "line" | "histogram" | "area" | "markers";
+            plot: "line" | "histogram" | "area" | "markers" | "background";
             /**
              * Color
              * @description Default colour (#RRGGBB)
@@ -1681,6 +1721,148 @@ export interface components {
              */
             high_52w: number | null;
         };
+        /** RegimeCell */
+        RegimeCell: {
+            /**
+             * Regime
+             * @enum {string}
+             */
+            regime: "trend" | "random" | "reversion";
+            /** High Volatility */
+            high_volatility: boolean;
+            /**
+             * Share
+             * @description Share of the history's bars in this cell
+             */
+            share: number;
+        };
+        /** RegimeRatio */
+        RegimeRatio: {
+            /** Q */
+            q: number;
+            /**
+             * Vr
+             * @description Variance ratio: 1 = random walk, > 1 trend, < 1 reversion
+             */
+            vr: number;
+            /**
+             * Z
+             * @description Heteroskedasticity-robust z*
+             */
+            z: number | null;
+        };
+        /** RegimeResponse */
+        RegimeResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /** Last Time */
+            last_time: string | number;
+            /**
+             * Window
+             * @description Bars in the tested window (a calendar year)
+             */
+            window: number;
+            /** Ratios */
+            ratios: components["schemas"]["RegimeRatio"][];
+            /**
+             * Cd
+             * @description Signed Chow-Denning statistic: the z* of largest modulus
+             */
+            cd: number;
+            /**
+             * P Bootstrap
+             * @description Wild-bootstrap p-value of max |z*| (999 runs)
+             */
+            p_bootstrap: number;
+            /**
+             * P Asymptotic
+             * @description Sidak p-value of max |z*| (normal)
+             */
+            p_asymptotic: number;
+            /** Hurst Window */
+            hurst_window: number | null;
+            /**
+             * Hurst Null
+             * @description 5 and 95 % of H on 199 shuffles of the window
+             */
+            hurst_null: number[];
+            /** Hurst History */
+            hurst_history: number | null;
+            spectrum_window: components["schemas"]["RegimeSpectrum"] | null;
+            spectrum_history: components["schemas"]["RegimeSpectrum"] | null;
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "trend" | "random" | "reversion";
+            /**
+             * High Volatility
+             * @description Volatility percentile >= 50 now
+             */
+            high_volatility: boolean | null;
+            /** Cells */
+            cells: components["schemas"]["RegimeCell"][];
+            /**
+             * Forward
+             * @description Bars of the event study's forward return
+             */
+            forward: number;
+            /** Rules */
+            rules: components["schemas"]["RegimeRule"][];
+        };
+        /** RegimeRule */
+        RegimeRule: {
+            /** Rule */
+            rule: string;
+            /**
+             * Family
+             * @enum {string}
+             */
+            family: "trend" | "reversion";
+            /**
+             * Regime
+             * @enum {string}
+             */
+            regime: "trend" | "random" | "reversion";
+            /**
+             * N
+             * @description Signals in that regime
+             */
+            n: number;
+            /**
+             * Mean
+             * @description Mean forward log return after the signals
+             */
+            mean: number;
+            /**
+             * Edge
+             * @description Minus the mean after every bar of that regime
+             */
+            edge: number;
+            /**
+             * T
+             * @description t-statistic of the edge
+             */
+            t: number | null;
+            /** Hit Rate */
+            hit_rate: number;
+        };
+        /** RegimeSpectrum */
+        RegimeSpectrum: {
+            /** Qs */
+            qs: number[];
+            /**
+             * H
+             * @description Generalised Hurst exponent H(q)
+             */
+            h: (number | null)[];
+            /**
+             * Width
+             * @description H(-2) - H(4): the multifractal width
+             */
+            width: number | null;
+        };
         /** ResponseInfo */
         ResponseInfo: {
             /** Id */
@@ -1842,7 +2024,7 @@ export interface components {
          * Scenario
          * @enum {string}
          */
-        Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime" | "accumulation";
+        Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime" | "accumulation" | "regimes";
         /** StatsBlock */
         StatsBlock: {
             /** N */
@@ -2727,7 +2909,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LabRiskRequest"];
+                "application/json": components["schemas"]["LabSourceRequest"];
             };
         };
         responses: {
@@ -2738,6 +2920,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RiskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    learn_regime_api_learn_regime_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegimeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3273,6 +3488,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RiskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_regime_api_regime_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                interval?: components["schemas"]["Interval"];
+                adjusted?: boolean;
+                /** @description At this bar (UTC epoch seconds of its open; replay) */
+                origin?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegimeResponse"];
                 };
             };
             /** @description Validation Error */

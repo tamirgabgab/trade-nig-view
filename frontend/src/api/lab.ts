@@ -20,6 +20,11 @@ export const SCENARIOS = [
     label: 'Accumulation',
     hint: 'Cycles: volume favours up bars before a rise and down bars before a fall',
   },
+  {
+    id: 'regimes',
+    label: 'Regimes',
+    hint: 'Momentum (returns follow each other) for half the bars, then mean reversion',
+  },
 ] as const;
 export type Scenario = (typeof SCENARIOS)[number]['id'];
 

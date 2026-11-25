@@ -615,7 +615,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LabRiskRequest"
+                "$ref": "#/components/schemas/LabSourceRequest"
               }
             }
           },
@@ -628,6 +628,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RiskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/learn/regime": {
+      "post": {
+        "tags": [
+          "learn"
+        ],
+        "summary": "Learn Regime",
+        "description": "The market regime (``GET /api/regime``) on a lab source, for the learn page's widget.",
+        "operationId": "learn_regime_api_learn_regime_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimeResponse"
                 }
               }
             }
@@ -1712,6 +1754,88 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RiskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/regime": {
+      "get": {
+        "tags": [
+          "regime"
+        ],
+        "summary": "Get Regime",
+        "description": "The regime of the last year up to the last bar (``origin`` in replay).",
+        "operationId": "get_regime_api_regime_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Interval",
+              "default": "1D"
+            }
+          },
+          {
+            "name": "adjusted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjusted"
+            }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "At this bar (UTC epoch seconds of its open; replay)",
+              "title": "Origin"
+            },
+            "description": "At this bar (UTC epoch seconds of its open; replay)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimeResponse"
                 }
               }
             }
@@ -3345,7 +3469,7 @@
         ],
         "title": "LabResponse"
       },
-      "LabRiskRequest": {
+      "LabSourceRequest": {
         "properties": {
           "source": {
             "oneOf": [
@@ -3370,7 +3494,7 @@
         "required": [
           "source"
         ],
-        "title": "LabRiskRequest"
+        "title": "LabSourceRequest"
       },
       "LabStudy": {
         "properties": {
@@ -3992,7 +4116,8 @@
               "line",
               "histogram",
               "area",
-              "markers"
+              "markers",
+              "background"
             ],
             "title": "Plot"
           },
@@ -4519,6 +4644,341 @@
         ],
         "title": "QuoteOut"
       },
+      "RegimeCell": {
+        "properties": {
+          "regime": {
+            "type": "string",
+            "enum": [
+              "trend",
+              "random",
+              "reversion"
+            ],
+            "title": "Regime"
+          },
+          "high_volatility": {
+            "type": "boolean",
+            "title": "High Volatility"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share",
+            "description": "Share of the history's bars in this cell"
+          }
+        },
+        "type": "object",
+        "required": [
+          "regime",
+          "high_volatility",
+          "share"
+        ],
+        "title": "RegimeCell"
+      },
+      "RegimeRatio": {
+        "properties": {
+          "q": {
+            "type": "integer",
+            "title": "Q"
+          },
+          "vr": {
+            "type": "number",
+            "title": "Vr",
+            "description": "Variance ratio: 1 = random walk, > 1 trend, < 1 reversion"
+          },
+          "z": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z",
+            "description": "Heteroskedasticity-robust z*"
+          }
+        },
+        "type": "object",
+        "required": [
+          "q",
+          "vr",
+          "z"
+        ],
+        "title": "RegimeRatio"
+      },
+      "RegimeResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "last_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Last Time"
+          },
+          "window": {
+            "type": "integer",
+            "title": "Window",
+            "description": "Bars in the tested window (a calendar year)"
+          },
+          "ratios": {
+            "items": {
+              "$ref": "#/components/schemas/RegimeRatio"
+            },
+            "type": "array",
+            "title": "Ratios"
+          },
+          "cd": {
+            "type": "number",
+            "title": "Cd",
+            "description": "Signed Chow-Denning statistic: the z* of largest modulus"
+          },
+          "p_bootstrap": {
+            "type": "number",
+            "title": "P Bootstrap",
+            "description": "Wild-bootstrap p-value of max |z*| (999 runs)"
+          },
+          "p_asymptotic": {
+            "type": "number",
+            "title": "P Asymptotic",
+            "description": "Sidak p-value of max |z*| (normal)"
+          },
+          "hurst_window": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurst Window"
+          },
+          "hurst_null": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Hurst Null",
+            "description": "5 and 95 % of H on 199 shuffles of the window"
+          },
+          "hurst_history": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurst History"
+          },
+          "spectrum_window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegimeSpectrum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spectrum_history": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegimeSpectrum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "trend",
+              "random",
+              "reversion"
+            ],
+            "title": "Label"
+          },
+          "high_volatility": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Volatility",
+            "description": "Volatility percentile >= 50 now"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/RegimeCell"
+            },
+            "type": "array",
+            "title": "Cells"
+          },
+          "forward": {
+            "type": "integer",
+            "title": "Forward",
+            "description": "Bars of the event study's forward return"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RegimeRule"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "last_time",
+          "window",
+          "ratios",
+          "cd",
+          "p_bootstrap",
+          "p_asymptotic",
+          "hurst_window",
+          "hurst_null",
+          "hurst_history",
+          "spectrum_window",
+          "spectrum_history",
+          "label",
+          "high_volatility",
+          "cells",
+          "forward",
+          "rules"
+        ],
+        "title": "RegimeResponse"
+      },
+      "RegimeRule": {
+        "properties": {
+          "rule": {
+            "type": "string",
+            "title": "Rule"
+          },
+          "family": {
+            "type": "string",
+            "enum": [
+              "trend",
+              "reversion"
+            ],
+            "title": "Family"
+          },
+          "regime": {
+            "type": "string",
+            "enum": [
+              "trend",
+              "random",
+              "reversion"
+            ],
+            "title": "Regime"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N",
+            "description": "Signals in that regime"
+          },
+          "mean": {
+            "type": "number",
+            "title": "Mean",
+            "description": "Mean forward log return after the signals"
+          },
+          "edge": {
+            "type": "number",
+            "title": "Edge",
+            "description": "Minus the mean after every bar of that regime"
+          },
+          "t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T",
+            "description": "t-statistic of the edge"
+          },
+          "hit_rate": {
+            "type": "number",
+            "title": "Hit Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule",
+          "family",
+          "regime",
+          "n",
+          "mean",
+          "edge",
+          "t",
+          "hit_rate"
+        ],
+        "title": "RegimeRule"
+      },
+      "RegimeSpectrum": {
+        "properties": {
+          "qs": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Qs"
+          },
+          "h": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "H",
+            "description": "Generalised Hurst exponent H(q)"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width",
+            "description": "H(-2) - H(4): the multifractal width"
+          }
+        },
+        "type": "object",
+        "required": [
+          "qs",
+          "h",
+          "width"
+        ],
+        "title": "RegimeSpectrum"
+      },
       "ResponseInfo": {
         "properties": {
           "id": {
@@ -4866,7 +5326,8 @@
           "reversal",
           "shock",
           "volatility_regime",
-          "accumulation"
+          "accumulation",
+          "regimes"
         ],
         "title": "Scenario"
       },

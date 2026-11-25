@@ -3,6 +3,8 @@ every bar of every golden data set, ``rtol=1e-9, atol=1e-12``; TA-Lib for the cl
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
@@ -13,16 +15,19 @@ from tests.golden.conftest import Row
 from tests.golden.harness import Comparison, compare, golden_frames
 from tests.golden.models import (
     golden_bars_per_year,
+    golden_dfa,
     golden_hv,
     golden_percentrank,
     golden_var_bands,
     golden_variance,
+    golden_vr_z,
 )
 from tests.golden.talib_ref import load_talib
 
 FRAMES = golden_frames()
 DATA = sorted(FRAMES)
 ESTIMATORS = sorted(hv.ESTIMATORS)
+NAN = math.nan
 talib, reason = load_talib()
 
 
@@ -125,3 +130,20 @@ def test_var_bands_match_golden_model(data: str, level: str, scoreboard: list[Ro
     compare(out["upper"], want["upper"])
     compare(out["breaches"], want["breaches"])
     _record(scoreboard, "var_bands", f"{level} 250, 21", data, compare(out["lower"], want["lower"]))
+
+
+@pytest.mark.parametrize("data", DATA)
+def test_variance_ratio_and_hurst_match_golden_models(data: str, scoreboard: list[Row]) -> None:
+    """The scalar models are O(n w q), so a short window on the last 900 bars."""
+    frame = FRAMES[data].take(slice(-900, None))
+    c = frame.close.tolist()
+    z = CATALOG["variance_ratio"].run(frame, {"length": 80})["z"]
+    _record(scoreboard, "variance_ratio", "80", data, compare(z, golden_vr_z(c, 80)))
+    h = CATALOG["hurst_dfa"].run(frame, {"length": 128})["hurst"]
+    _record(scoreboard, "hurst_dfa", "128", data, compare(h, golden_dfa(c, 128)))
+    regime = CATALOG["regime"].run(frame, {"length": 80})["regime"]
+    want = [
+        NAN if math.isnan(v) else (1.0 if v >= 2.49 else -1.0 if v <= -2.49 else 0.0)
+        for v in golden_vr_z(c, 80)
+    ]
+    compare(regime, want)

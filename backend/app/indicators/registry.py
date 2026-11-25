@@ -21,7 +21,7 @@ ComputeFn = Callable[[BarFrame, Params], dict[str, FloatArray]]
 CountFn = Callable[[Params], int]
 
 ParamType = Literal["int", "float", "bool", "enum", "source"]
-PlotStyle = Literal["line", "histogram", "area", "markers"]
+PlotStyle = Literal["line", "histogram", "area", "markers", "background"]
 Category = Literal["moving_averages", "bands", "oscillators", "volatility", "volume", "structure"]
 Input = Literal["open", "high", "low", "close", "volume"]
 

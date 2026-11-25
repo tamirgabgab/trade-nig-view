@@ -10,6 +10,7 @@ from app.indicators import (
     ema,
     envelope,
     hma,
+    hurst,
     hv,
     hv_percentile,
     kama,
@@ -22,6 +23,7 @@ from app.indicators import (
     obv,
     pivots,
     prev_hlc,
+    regime,
     rsi,
     sma,
     smma,
@@ -30,6 +32,7 @@ from app.indicators import (
     t3,
     tema,
     var_bands,
+    variance_ratio,
     vol_sma,
     vwap,
     vwma,
@@ -68,11 +71,14 @@ CATALOG: dict[str, IndicatorSpec] = {
         hv.SPEC,
         hv_percentile.SPEC,
         var_bands.SPEC,
+        variance_ratio.SPEC,
+        hurst.SPEC,
         obv.SPEC,
         vwap.SPEC,
         vol_sma.SPEC,
         prev_hlc.SPEC,
         pivots.SPEC,
+        regime.SPEC,
     )
 }
 
