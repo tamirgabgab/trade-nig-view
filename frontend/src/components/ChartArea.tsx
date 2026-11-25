@@ -5,7 +5,7 @@ import { useBarHistory, type Bar } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
-import type { ChartEngine, PaneLayout } from '../chart/ChartEngine.ts';
+import type { ChartEngine, ChartPointer, PaneLayout } from '../chart/ChartEngine.ts';
 import type { ForecastView } from '../chart/forecastLayer.ts';
 import type { GapZone } from '../chart/gapLayer.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
@@ -31,6 +31,7 @@ import { ChartContextMenu } from './ChartContextMenu.tsx';
 import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
 import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
 import { localDate } from './formatClock.ts';
+import { ForecastTooltip } from './ForecastTooltip.tsx';
 import { forecastView } from './forecastView.ts';
 import { useChartForecast } from './useChartForecast.ts';
 import { RemoveConfirm } from './RemoveConfirm.tsx';
@@ -90,14 +91,43 @@ export function ChartArea({ className }: ChartAreaProps) {
   const attachDrawings = useDrawingManager();
   const gapZonesRef = useRef<readonly GapZone[]>([]);
   const forecastRef = useRef<ForecastView | null>(null);
+  // The forecast candle under the pointer (its tooltip); a click on the fan opens the Forecast tab.
+  const [forecastHover, setForecastHover] = useState<{ h: number; x: number; y: number } | null>(
+    null,
+  );
+  const forecastAt = useCallback((at: ChartPointer | null) => {
+    const view = forecastRef.current;
+    if (at === null || view === null) return null;
+    const index = Math.round(at.logical);
+    const bar = view.bars.find((b) => b.index === index);
+    return bar === undefined ? null : { h: index - view.origin, bar };
+  }, []);
+  const unsubscribeForecast = useRef<() => void>(() => undefined);
   const onEngine = useCallback(
     (engine: ChartEngine | null) => {
       engineRef.current = engine;
       attachDrawings(engine);
       engine?.setGaps(gapZonesRef.current);
       engine?.setForecast(forecastRef.current);
+      unsubscribeForecast.current();
+      if (engine === null) return;
+      const offPointer = engine.onPointer((at) => {
+        const found = forecastAt(at);
+        setForecastHover(found === null || at === null ? null : { h: found.h, x: at.x, y: at.y });
+      });
+      const offClick = engine.onClick((at) => {
+        const found = forecastAt(at);
+        // Inside the 95 % band of a forecast bar.
+        if (found !== null && at.price >= found.bar.bands[0] && at.price <= found.bar.bands[5]) {
+          useUiStore.getState().openSidebar('forecast');
+        }
+      });
+      unsubscribeForecast.current = () => {
+        offPointer();
+        offClick();
+      };
     },
-    [attachDrawings],
+    [attachDrawings, forecastAt],
   );
   useDrawingsSync(symbol);
   // Alt+R: back to the latest bars at the default zoom.
@@ -548,6 +578,15 @@ export function ChartArea({ className }: ChartAreaProps) {
         theme={`${theme}/${accent}`}
         backdrop={backdrop}
       />
+      {forecastHover !== null && structure.forecast && forecast.data !== undefined && (
+        <ForecastTooltip
+          forecast={forecast.data}
+          h={forecastHover.h}
+          x={forecastHover.x}
+          y={forecastHover.y}
+          decimals={decimals}
+        />
+      )}
       {offLatest && (
         <IconButton
           className={styles.latest}

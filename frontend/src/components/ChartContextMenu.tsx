@@ -7,7 +7,6 @@ import { useUiStore } from '../store/uiStore.ts';
 import { ActionMenu, type MenuItem } from './ActionMenu.tsx';
 import { formatPrice } from './formatNumber.ts';
 import { usePastOrigin } from './useChartForecast.ts';
-import { NARROW_QUERY } from './useMediaQuery.ts';
 import type { OverlayAttrs } from './usePresence.ts';
 
 /** Approximate menu size, to keep it inside the window near the right and bottom edges. */
@@ -60,11 +59,7 @@ export function ChartContextMenu({
     setOrigin(time === null ? null : { symbol, interval, time });
     const structure = useStructureStore.getState();
     if (!structure.forecast) structure.toggleForecast();
-    const ui = useUiStore.getState();
-    const narrow =
-      typeof window.matchMedia === 'function' && window.matchMedia(NARROW_QUERY).matches;
-    const open = narrow ? ui.watchlist.floating : ui.watchlist.docked;
-    if (!open || ui.sidebarTab !== 'forecast') ui.showSidebar('forecast', narrow);
+    useUiStore.getState().openSidebar('forecast');
   };
   if (forecastBar !== null) {
     items.push({

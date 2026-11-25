@@ -175,6 +175,12 @@ export function usePaletteCommands(): Command[] {
         ['objects', 'object tree', 'drawings indicators list hide lock'],
         ['data', 'data window', 'values crosshair ohlc'],
         ['gaps', 'gaps panel', 'structure gap list'],
+        ['stats', 'statistics', 'open tab returns histogram range'],
+        ['forecast', 'forecast', 'open tab prediction next bars fan validation'],
+        ['volatility', 'volatility', 'open tab cone hv har squeeze'],
+        ['tradeplan', 'trade plan', 'open tab stop target position size'],
+        ['risk', 'risk', 'open tab var es value at risk'],
+        ['regime', 'regime', 'open tab trend mean reversion hurst variance ratio'],
       ] as const
     ).map(([tab, name, keywords]) => ({
       id: `sidebar-${tab}`,

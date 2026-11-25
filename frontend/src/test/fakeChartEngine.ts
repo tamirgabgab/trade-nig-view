@@ -8,10 +8,12 @@ import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 import type { Bar } from '../api/bars.ts';
 import type {
   ChartDisplay,
+  ChartPointer,
   CrosshairListener,
   IndicatorLine,
   PaneLayout,
   PaneLayoutListener,
+  PointerListener,
   ScaleOptions,
   SetBarsOptions,
   VisibleRangeListener,
@@ -79,6 +81,23 @@ export class FakeChartEngine {
     this.listener = listener;
     return () => {
       this.listener = null;
+    };
+  }
+
+  pointerListener: PointerListener | null = null;
+  clickListener: ((at: ChartPointer) => void) | null = null;
+
+  onPointer(listener: PointerListener): () => void {
+    this.pointerListener = listener;
+    return () => {
+      this.pointerListener = null;
+    };
+  }
+
+  onClick(listener: (at: ChartPointer) => void): () => void {
+    this.clickListener = listener;
+    return () => {
+      this.clickListener = null;
     };
   }
 

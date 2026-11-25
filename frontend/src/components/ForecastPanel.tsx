@@ -8,6 +8,7 @@ import { useReplayStore } from '../store/replayStore.ts';
 import { useStructureStore } from '../store/structureStore.ts';
 import { ForecastHorizons } from './ForecastHorizons.tsx';
 import { ForecastVsActual } from './ForecastVsActual.tsx';
+import { LearnLink } from './LearnLink.tsx';
 import { forecastOutcomes } from './forecastOutcome.ts';
 import styles from './ForecastPanel.module.css';
 import { ForecastValidation } from './ForecastValidation.tsx';
@@ -204,7 +205,14 @@ export function ForecastPanel() {
             <ForecastHorizons forecast={f} decimals={decimals} />
           </section>
           <section className={styles.section} aria-label="Forecast vs actual">
-            <h3 className={styles.heading}>Forecast vs actual</h3>
+            <h3 className={styles.heading}>
+              Forecast vs actual{' '}
+              <span className={styles.how}>
+                <LearnLink target="forecasting#one-forecast-against-what-happened">
+                  How to read it
+                </LearnLink>
+              </span>
+            </h3>
             {outcomes.length > 0 && bars !== undefined ? (
               <ForecastVsActual
                 forecast={f}
@@ -224,7 +232,14 @@ export function ForecastPanel() {
             )}
           </section>
           <section className={styles.section} aria-label="Validation">
-            <h3 className={styles.heading}>Validation out of sample</h3>
+            <h3 className={styles.heading}>
+              Validation out of sample{' '}
+              <span className={styles.how}>
+                <LearnLink target="forecasting#is-it-any-good-the-validation">
+                  How it is measured
+                </LearnLink>
+              </span>
+            </h3>
             <ForecastValidation forecast={f} />
           </section>
           <section className={styles.section} aria-label="Model">

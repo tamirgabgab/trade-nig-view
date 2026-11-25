@@ -57,6 +57,16 @@
   font-weight: 600;
 }
 
+/* The link to the learn page, beside a section heading. */
+.how {
+  margin-left: var(--space-2);
+  font-weight: 400;
+}
+
+.how a {
+  color: var(--color-accent);
+}
+
 .summary,
 .note,
 .empty {

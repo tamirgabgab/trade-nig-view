@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { NARROW_QUERY } from '../components/useMediaQuery.ts';
 
 /** How long a newly added indicator is drawn thicker. */
 export const EMPHASIS_MS = 700;
@@ -84,6 +85,8 @@ export interface UiState {
   sidebarTab: SidebarTab;
   /** A widget button: open the panel on `tab`, or close it when it already shows `tab`. */
   showSidebar: (tab: SidebarTab, narrow: boolean) => void;
+  /** Open the panel on `tab` (never closes it), floating or docked by the window's width. */
+  openSidebar: (tab: SidebarTab) => void;
   closeFloatingWatchlist: () => void;
   toast: Toast | null;
   showToast: (message: string, undo?: () => void) => void;
@@ -166,6 +169,14 @@ export const useUiStore = create<UiState>()((set) => ({
         watchlist: narrow ? { ...w, floating: open } : { ...w, docked: open },
       };
     });
+  },
+  openSidebar: (tab) => {
+    const narrow =
+      typeof window.matchMedia === 'function' && window.matchMedia(NARROW_QUERY).matches;
+    set(({ watchlist: w }) => ({
+      sidebarTab: tab,
+      watchlist: narrow ? { ...w, floating: true } : { ...w, docked: true },
+    }));
   },
   closeFloatingWatchlist: () => {
     set(({ watchlist: w }) => ({ watchlist: { ...w, floating: false } }));

@@ -7,6 +7,7 @@ interface FakeSeries {
   options: Record<string, unknown>;
   setData: ReturnType<typeof vi.fn>;
   applyOptions: ReturnType<typeof vi.fn>;
+  coordinateToPrice: (y: number) => number;
   pane: FakePane;
   priceLines: { price: number }[];
   primitives: unknown[];
@@ -31,7 +32,14 @@ const lwc = vi.hoisted(() => {
     appliedOptions: [] as unknown[],
     series: [] as FakeSeries[],
     panes: [] as FakePane[],
-    crosshair: undefined as ((param: { time?: unknown; logical?: number }) => void) | undefined,
+    crosshair: undefined as
+      | ((param: {
+          time?: unknown;
+          logical?: number;
+          point?: { x: number; y: number };
+          paneIndex?: number;
+        }) => void)
+      | undefined,
     priceScaleOptions: new Map<string, unknown>(),
     scrollToRealTime: vi.fn(),
     removed: [] as FakeSeries[],
@@ -39,6 +47,7 @@ const lwc = vi.hoisted(() => {
     rangeHandler: undefined as ((range: { from: number; to: number } | null) => void) | undefined,
     setVisibleLogicalRange: vi.fn(),
     watermarks: [] as { options: unknown; detached: boolean }[],
+    click: undefined as ((param: unknown) => void) | undefined,
     markerPlugins: [] as {
       series: unknown;
       markers: unknown[];
@@ -71,6 +80,7 @@ const lwc = vi.hoisted(() => {
         options,
         setData: vi.fn(),
         applyOptions: vi.fn(),
+        coordinateToPrice: (y: number) => 1000 - y,
         pane: target,
         priceLines: [],
         primitives: [],
@@ -119,6 +129,12 @@ const lwc = vi.hoisted(() => {
       state.crosshair = handler;
     },
     unsubscribeCrosshairMove: state.unsubscribe,
+    subscribeClick: (handler: typeof state.click) => {
+      state.click = handler;
+    },
+    unsubscribeClick: () => {
+      state.click = undefined;
+    },
     applyOptions: (options: unknown) => state.appliedOptions.push(options),
     remove: state.remove,
   };
@@ -408,6 +424,21 @@ describe('ChartEngine', () => {
     const main = lwc.state.series.at(-1);
     expect(main?.options).toMatchObject({ upColor: '#00aa00' });
     expect(main?.setData).toHaveBeenCalled();
+  });
+
+  it('reports the pointer and clicks on the price pane, past the last bar too', () => {
+    const { engine: chart } = engine();
+    chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
+    const pointer = vi.fn();
+    const click = vi.fn();
+    chart.onPointer(pointer);
+    chart.onClick(click);
+    lwc.state.crosshair?.({ logical: 5.4, point: { x: 30, y: 40 }, paneIndex: 0 });
+    expect(pointer).toHaveBeenLastCalledWith({ logical: 5.4, price: 960, x: 30, y: 40 });
+    lwc.state.crosshair?.({ logical: 1, point: { x: 30, y: 40 }, paneIndex: 1 }); // an indicator pane
+    expect(pointer).toHaveBeenLastCalledWith(null);
+    lwc.state.click?.({ logical: 4, point: { x: 20, y: 10 }, paneIndex: 0 });
+    expect(click).toHaveBeenCalledWith({ logical: 4, price: 990, x: 20, y: 10 });
   });
 
   it('writes the symbol watermark faintly on the price pane, updates it and removes it', () => {

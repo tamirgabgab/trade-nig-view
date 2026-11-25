@@ -227,6 +227,14 @@ function toLineWidth(width: number): LineWidth {
 }
 
 export type CrosshairListener = (index: number | null) => void;
+/** A pointer position on the price pane: logical bar index, price, and px from the chart's top-left. */
+export interface ChartPointer {
+  logical: number;
+  price: number;
+  x: number;
+  y: number;
+}
+export type PointerListener = (at: ChartPointer | null) => void;
 export type VisibleRangeListener = (range: LogicalRange | null) => void;
 
 /** Empty bars right of the last one (more while a forecast shows). */
@@ -244,6 +252,8 @@ export class ChartEngine {
   private readonly listeners = new Set<CrosshairListener>();
   private readonly rangeListeners = new Set<VisibleRangeListener>();
   private readonly hover: RafLatest<number | null>;
+  private readonly pointerListeners = new Set<PointerListener>();
+  private readonly clickListeners = new Set<(at: ChartPointer) => void>();
   private chartType: ChartType = 'candles';
   private bars: readonly Bar[] = [];
   /** Bar open times in UTC epoch seconds (drawing anchors map onto them). */
@@ -348,6 +358,7 @@ export class ChartEngine {
       for (const listener of this.listeners) listener(index);
     });
     this.chart.subscribeCrosshairMove(this.handleCrosshairMove);
+    this.chart.subscribeClick(this.handleClick);
     this.chart.timeScale().subscribeVisibleLogicalRangeChange(this.handleRangeChange);
     // Pane resizes (window, separator drags, panes added or removed) move the pane legends.
     this.paneObserver =
@@ -971,6 +982,9 @@ export class ChartEngine {
     window.removeEventListener('pointerup', this.checkAutoScale);
     this.container.removeEventListener('dblclick', this.checkAutoScale);
     this.chart.unsubscribeCrosshairMove(this.handleCrosshairMove);
+    this.chart.unsubscribeClick(this.handleClick);
+    this.pointerListeners.clear();
+    this.clickListeners.clear();
     this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.handleRangeChange);
     this.chart.remove();
   }
@@ -1037,7 +1051,37 @@ export class ChartEngine {
 
   private readonly handleCrosshairMove = (param: MouseEventParams): void => {
     this.hover.push(crosshairIndex(param.logical, param.time !== undefined, this.bars.length));
+    const at = this.pointerAt(param);
+    for (const listener of this.pointerListeners) listener(at);
   };
+
+  private readonly handleClick = (param: MouseEventParams): void => {
+    const at = this.pointerAt(param);
+    if (at !== null) for (const listener of this.clickListeners) listener(at);
+  };
+
+  private pointerAt(param: MouseEventParams): ChartPointer | null {
+    const { point, logical } = param;
+    if (point === undefined || logical === undefined || (param.paneIndex ?? 0) !== 0) return null;
+    const price = this.main.coordinateToPrice(point.y);
+    return price === null ? null : { logical, price, x: point.x, y: point.y };
+  }
+
+  /** The pointer over the chart (also past the last bar, where the forecast is), or null. */
+  onPointer(listener: PointerListener): () => void {
+    this.pointerListeners.add(listener);
+    return () => {
+      this.pointerListeners.delete(listener);
+    };
+  }
+
+  /** A click on the chart, with its logical index and price. */
+  onClick(listener: (at: ChartPointer) => void): () => void {
+    this.clickListeners.add(listener);
+    return () => {
+      this.clickListeners.delete(listener);
+    };
+  }
 
   private readonly handleRangeChange = (range: LwcLogicalRange | null): void => {
     const value = range === null ? null : { from: range.from, to: range.to };
