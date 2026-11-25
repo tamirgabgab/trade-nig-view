@@ -258,6 +258,10 @@ export class ChartEngine {
       down: this.theme.down,
       fan: this.theme.line,
       dotRing: this.theme.background,
+      band: (band) =>
+        band === null
+          ? this.theme.bandOut
+          : { 50: this.theme.band50, 80: this.theme.band80, 95: this.theme.band95 }[band],
     }),
   );
   private readonly replayLayer = new ReplayLayer(
@@ -742,7 +746,9 @@ export class ChartEngine {
   /** Show the forecast past its origin bar (null: none); the right margin makes room for it. */
   setForecast(view: ForecastView | null): void {
     this.forecastLayer.set(view);
-    const ahead = view === null ? 0 : (view.bars.at(-1)?.index ?? view.origin) - view.origin;
+    // Room for the bars drawn past the last one (a forecast made in the past needs none).
+    const last = view?.bars.at(-1)?.index ?? 0;
+    const ahead = Math.max(0, last - (this.bars.length - 1));
     const offset = Math.max(RIGHT_OFFSET, ahead + 3);
     // Only a change: applying the option scrolls to the latest bar, so a view scrolled back into
     // the history is put back afterwards (a restored view would be lost otherwise).

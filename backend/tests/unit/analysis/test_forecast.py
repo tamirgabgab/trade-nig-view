@@ -187,6 +187,12 @@ def test_pit_against_a_scalar_loop() -> None:
     assert sum(s.pit) == pytest.approx(1.0)
 
 
+def test_pit_bins_put_exact_edges_in_the_upper_bin() -> None:
+    u = np.array([0.0, 0.1, 0.3, 0.6, 0.7, 0.99, 1.0])
+    expected = [1, 1, 0, 1, 0, 0, 1, 1, 0, 2]
+    np.testing.assert_allclose(fc.pit_histogram(u), np.array(expected) / len(u))
+
+
 def test_a_horizon_past_the_data_is_all_nan() -> None:
     assert np.isnan(fc.horizon_log_range(BARS, 7)).all()
     assert np.isnan(fc.targets(BARS, 7)).all()

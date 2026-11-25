@@ -1,7 +1,7 @@
 import type { Bar } from '../api/bars.ts';
 import type { Forecast } from '../api/forecast.ts';
 import type { ForecastView } from '../chart/forecastLayer.ts';
-import { atLevel, bandColor, forecastOutcomes } from './forecastOutcome.ts';
+import { atLevel, forecastOutcomes } from './forecastOutcome.ts';
 
 /** What the chart layer draws for a forecast made at bar `origin` (its index on the chart), with
  *  a dot on each actual close that `bars` (the chart's shown bars) already holds. */
@@ -30,7 +30,7 @@ export function forecastView(f: Forecast, origin: number, bars: readonly Bar[]):
     outcomes: forecastOutcomes(f, bars).map((o) => ({
       index: origin + o.h,
       close: o.actual,
-      color: bandColor(o.band),
+      band: o.band,
     })),
   };
 }

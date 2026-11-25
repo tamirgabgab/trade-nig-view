@@ -150,7 +150,7 @@
 }
 
 .barA {
-  fill: #ff9800;
+  fill: var(--color-band-95);
   opacity: 0.8;
 }
 

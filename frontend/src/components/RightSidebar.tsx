@@ -98,7 +98,10 @@ export function RightSidebar({ className }: RightSidebarProps) {
       {panel.shown !== null && (
         <section
           className={[styles.panel, narrow ? styles.floating : ''].join(' ')}
-          style={{ width: panelWidth }}
+          // A width dragged on a larger screen still leaves the chart 360 px on a smaller one.
+          style={{
+            width: `min(${String(panelWidth)}px, max(260px, calc(100vw - var(--size-widgetbar) - 360px)))`,
+          }}
           aria-labelledby="sidebar-title"
           {...panel.attrs}
         >

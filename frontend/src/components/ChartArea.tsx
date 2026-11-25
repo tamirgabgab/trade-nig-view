@@ -13,6 +13,7 @@ import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../cha
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
+import { useForecastOriginStore } from '../store/forecastOriginStore.ts';
 import { useLayoutStore } from '../store/layoutStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { registerViewCapture, scheduleSave } from '../store/layoutSync.ts';
@@ -57,6 +58,8 @@ interface ChartAreaProps {
 }
 
 const DEFAULT_DECIMALS = 2;
+/** Bars a forecast needs before its origin, plus k (the backend's MIN_TRAIN 60 + HAR 22 + 1). */
+const MIN_FORECAST_BARS = 83;
 /** Load the next older page when fewer than this many bars are left of the viewport. */
 export const LOAD_OLDER_THRESHOLD = 50;
 /** Loaders: nothing for fast loads, a thin progress bar after this delay, a skeleton after 1 s. */
@@ -106,6 +109,7 @@ export function ChartArea({ className }: ChartAreaProps) {
     y: number;
     price: number | null;
     bar: Bar | null;
+    index: number;
   } | null>(null);
   const contextMenu = usePresence(menuAt);
   // Stable: ActionMenu re-subscribes its click-away listener when onClose changes.
@@ -322,9 +326,20 @@ export function ChartArea({ className }: ChartAreaProps) {
     const f = structure.forecast ? forecast.data : undefined;
     const origin = f === undefined ? undefined : barIndex.get(f.lastTime);
     forecastRef.current =
-      f === undefined || origin === undefined ? null : forecastView(f, origin, bars);
+      f === undefined || origin === undefined
+        ? null
+        : forecastView(f, origin, transform === 'none' ? bars : []); // Heikin Ashi: no real closes
     engineRef.current?.setForecast(forecastRef.current);
-  }, [structure.forecast, forecast.data, barIndex, bars]);
+  }, [structure.forecast, forecast.data, barIndex, bars, transform]);
+
+  // A past-bar forecast ends with another symbol or interval, a replay, or the forecast off.
+  const setForecastOrigin = useForecastOriginStore((s) => s.setOrigin);
+  useEffect(() => {
+    setForecastOrigin(null);
+  }, [symbol, interval, setForecastOrigin]);
+  useEffect(() => {
+    if (replay.mode !== 'off' || !structure.forecast) setForecastOrigin(null);
+  }, [replay.mode, structure.forecast, setForecastOrigin]);
 
   // What the side panels (Data window, Gaps) show.
   const setChartData = useChartDataStore((s) => s.setData);
@@ -508,11 +523,8 @@ export function ChartArea({ className }: ChartAreaProps) {
         onAutoScaleChange={setAutoScale}
         onEngine={onEngine}
         onContextMenu={(at) => {
-          const index = engineRef.current?.barIndexAtClientX(at.x);
-          setMenuAt({
-            ...at,
-            bar: index === null || index === undefined ? null : (bars[index] ?? null),
-          });
+          const i = engineRef.current?.barIndexAtClientX(at.x) ?? -1;
+          setMenuAt({ ...at, bar: bars[i] ?? null, index: i });
         }}
         theme={theme}
       />
@@ -534,7 +546,8 @@ export function ChartArea({ className }: ChartAreaProps) {
           forecastBar={
             replay.mode === 'off' &&
             contextMenu.shown.bar !== null &&
-            contextMenu.shown.bar !== bars.at(-1)
+            contextMenu.shown.index >= MIN_FORECAST_BARS + structure.forecastSettings.k &&
+            contextMenu.shown.bar.time !== bars.at(-1)?.time
               ? contextMenu.shown.bar.time
               : null
           }

@@ -27,6 +27,11 @@
   --color-warning: #f7a600;
   --color-on-danger: #ffffff;
   --color-on-accent: #ffffff;
+  /* Forecast vs actual: the band an actual close fell in (and model A in the calibration). */
+  --color-band-50: #22ab94;
+  --color-band-80: #f7c948;
+  --color-band-95: #ff9800;
+  --color-band-out: #f23645;
   --color-focus: #2962ff;
 
   --color-chart-grid: #1c1c1c;
@@ -92,6 +97,8 @@
   --color-chart-crosshair: #9598a1;
   --color-series-1: #2a78d6;
   --color-series-2: #eb6834;
+
+  --color-band-80: #d9a400;
 
   --color-tooltip-bg: #131722;
   --color-tooltip-text: #ffffff;

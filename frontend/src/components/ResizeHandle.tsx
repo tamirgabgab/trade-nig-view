@@ -31,6 +31,7 @@ export function ResizeHandle({ panel, label }: { panel: Panel; label: string }) 
       tabIndex={0}
       className={styles.handle}
       onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
         drag.current = { x: event.clientX, width };

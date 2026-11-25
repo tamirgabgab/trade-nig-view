@@ -27,11 +27,11 @@ export interface ForecastBar {
   bands: readonly [number, number, number, number, number, number];
 }
 
-/** An actual close after the origin, coloured by the forecast band it fell in. */
+/** An actual close after the origin and the narrowest forecast interval holding it (null: none). */
 export interface ForecastOutcomeDot {
   index: number;
   close: number;
-  color: string;
+  band: 50 | 80 | 95 | null;
 }
 
 export interface ForecastView {
@@ -48,6 +48,8 @@ export interface ForecastColors {
   fan: string;
   /** The ring around an outcome dot (the chart background, so it stands out on a candle). */
   dotRing: string;
+  /** An outcome dot's fill by its band. */
+  band: (band: ForecastOutcomeDot['band']) => string;
 }
 
 /** Fill of the 95, 80 and 50 % bands (they overlap: the inner ones look darker). */
@@ -118,7 +120,7 @@ export class ForecastLayer implements ISeriesPrimitive {
           if (x === null || y === null) continue;
           context.beginPath();
           context.arc(x, y, DOT_RADIUS, 0, 2 * Math.PI);
-          context.fillStyle = dot.color;
+          context.fillStyle = colors.band(dot.band);
           context.fill();
           context.lineWidth = 1.5;
           context.strokeStyle = colors.dotRing;

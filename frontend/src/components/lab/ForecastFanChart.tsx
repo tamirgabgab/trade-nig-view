@@ -90,7 +90,7 @@ export function ForecastFanChart({
           cx={x(last + o.h)}
           cy={y(o.actual)}
           r={4}
-          fill={bandColor(o.band)}
+          style={{ fill: bandColor(o.band) }}
         >
           <title>{`+${String(o.h)}: ${o.band === null ? 'outside 95 %' : `inside ${String(o.band)} %`}`}</title>
         </circle>

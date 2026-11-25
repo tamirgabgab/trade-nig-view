@@ -2,17 +2,17 @@ import type { Bar } from '../api/bars.ts';
 import type { Forecast } from '../api/forecast.ts';
 import { formatBarTime } from './formatClock.ts';
 import { formatPrice } from './formatNumber.ts';
-import { BAND_COLORS, bandColor, outcomeSummary, type Outcome } from './forecastOutcome.ts';
+import { bandColor, outcomeSummary, type Band, type Outcome } from './forecastOutcome.ts';
 import { ForecastFanChart } from './lab/ForecastFanChart.tsx';
 import styles from './ForecastPanel.module.css';
 
 const HISTORY = 12;
-const LEGEND = [
-  ['50', 'inside 50 %'],
-  ['80', 'inside 80 %'],
-  ['95', 'inside 95 %'],
-  ['out', 'outside'],
-] as const;
+const LEGEND: readonly [Band, string][] = [
+  [50, 'inside 50 %'],
+  [80, 'inside 80 %'],
+  [95, 'inside 95 %'],
+  [null, 'outside'],
+];
 
 const percentile = (p: number) => (p === 0 ? '<1' : p === 99 ? '>99' : String(p));
 const signed = (v: number, text: string) => `${v > 0 ? '+' : ''}${text}`;
@@ -43,9 +43,9 @@ export function ForecastVsActual({
         {outcomeSummary(outcomes, forecast.horizons.length)}
       </p>
       <ul className={styles.legend} aria-label="Bands">
-        {LEGEND.map(([key, label]) => (
-          <li key={key}>
-            <span className={styles.swatch} style={{ background: BAND_COLORS[key] }} />
+        {LEGEND.map(([band, label]) => (
+          <li key={label}>
+            <span className={styles.swatch} style={{ background: bandColor(band) }} />
             {label}
           </li>
         ))}

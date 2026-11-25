@@ -26,6 +26,14 @@ describe('ResizeHandle', () => {
     expect(usePanelWidthStore.getState().sidebar).toBe(PANEL_WIDTHS.sidebar.max); // no drag
   });
 
+  it('ignores a right-button drag', () => {
+    render(<ResizeHandle panel="sidebar" label="Resize the side panel" />);
+    const handle = screen.getByRole('separator', { name: 'Resize the side panel' });
+    fireEvent.pointerDown(handle, { clientX: 1000, pointerId: 1, button: 2 });
+    fireEvent.pointerMove(handle, { clientX: 800, pointerId: 1 });
+    expect(usePanelWidthStore.getState().sidebar).toBe(320);
+  });
+
   it('moves by the arrows and restores the default on a double click', () => {
     render(<ResizeHandle panel="learn" label="Resize the learn panel" />);
     const handle = screen.getByRole('separator', { name: 'Resize the learn panel' });

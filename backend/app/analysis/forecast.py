@@ -341,6 +341,13 @@ def _pinball(y: FloatArray, q: Matrix) -> float:
     return float(np.mean(np.maximum(levels * diff, (levels - 1) * diff)))
 
 
+def pit_histogram(u: FloatArray) -> FloatArray:
+    """Shares of ``u`` in PIT_BINS equal bins of [0, 1]: bin floor(u * PIT_BINS), u = 1 in the
+    last. Exact edges (u = k / residuals, often a tenth) go up, which float edges would not do."""
+    bins = np.minimum((u * PIT_BINS).astype(np.intp), PIT_BINS - 1)
+    return np.bincount(bins, minlength=PIT_BINS) / len(u)
+
+
 def evaluate(
     d: Design, h: int, model: Model, params: Params, origins: npt.NDArray[np.intp], refit: int
 ) -> Scores | None:
@@ -391,9 +398,7 @@ def evaluate(
         coverage=(coverage[0], coverage[1], coverage[2]),
         r2=1.0 - float(np.sum((r - pred) ** 2)) / denom if denom > 0 else float("nan"),
         hit_rate=float(np.mean(same_sign)) if called.any() else float("nan"),
-        pit=tuple(
-            float(x) for x in np.histogram(np.concatenate(pits), PIT_BINS, (0.0, 1.0))[0] / len(r)
-        ),
+        pit=tuple(float(x) for x in pit_histogram(np.concatenate(pits))),
     )
 
 

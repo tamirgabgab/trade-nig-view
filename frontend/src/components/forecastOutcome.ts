@@ -13,15 +13,9 @@ export function atLevel(
 /** The narrowest central interval of the forecast that holds the actual close; null: outside 95 %. */
 export type Band = 50 | 80 | 95 | null;
 
-/** Colours of the bands, from a hit in the middle to a miss (chart dots, tab chart and table). */
-export const BAND_COLORS: Record<'50' | '80' | '95' | 'out', string> = {
-  '50': '#22ab94',
-  '80': '#f7c948',
-  '95': '#ff9800',
-  out: '#f23645',
-};
-
-export const bandColor = (band: Band) => BAND_COLORS[band === null ? 'out' : band];
+/** A band's colour token (styles/tokens.css), for the tab's legend, chart and table. */
+export const bandColor = (band: Band) =>
+  `var(--color-band-${band === null ? 'out' : String(band)})`;
 
 /** One bar ahead whose actual bar is known. */
 export interface Outcome {
@@ -91,7 +85,7 @@ export const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
 /** What the PIT histogram says, in words: are the tails too heavy (too narrow) or too light (too
  *  wide), is the forecast biased? Two binomial standard errors count as a difference. */
 export function pitVerdict(pit: readonly number[], n: number): string {
-  if (pit.length !== 10 || n === 0) return '';
+  if (n === 0) return '';
   const tails = (pit[0] ?? 0) + (pit[9] ?? 0);
   const below = pit.slice(0, 5).reduce((a, b) => a + b, 0);
   const tailTol = 2 * Math.sqrt((0.2 * 0.8) / n);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { transformFor } from '../chart/chartTypes.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useForecastOriginStore } from '../store/forecastOriginStore.ts';
@@ -39,7 +40,9 @@ export function ForecastPanel() {
   const fromHere = useReplayStore((s) => s.forecastFromHere);
   const pastOrigin = usePastOrigin();
   const setOrigin = useForecastOriginStore((s) => s.setOrigin);
-  const bars = useChartDataStore((s) => s.data?.bars);
+  // Heikin Ashi and other transformed bars are not the real closes: nothing to compare with.
+  const realBars = useChartStore((s) => transformFor(s.chartType) === 'none');
+  const bars = useChartDataStore((s) => (realBars ? s.data?.bars : undefined));
   const forecast = useChartForecast(true);
   // The window being typed: applied on Enter or when the field is left, not on every keystroke.
   const [windowDraft, setWindowDraft] = useState<string | null>(null);
@@ -212,9 +215,11 @@ export function ForecastPanel() {
               />
             ) : (
               <p className={styles.note}>
-                {replaying
-                  ? 'Step forward (Shift+→ or Play) to reveal the actual bars against the forecast.'
-                  : 'Right-click a past bar on the chart and pick "Forecast from this bar" to see a forecast against what happened next, or replay.'}
+                {!realBars
+                  ? 'Switch to candles or bars: this chart type does not show the real closes.'
+                  : replaying
+                    ? 'Step forward (Shift+→ or Play) to reveal the actual bars against the forecast.'
+                    : 'Right-click a past bar on the chart and pick "Forecast from this bar" to see a forecast against what happened next, or replay.'}
               </p>
             )}
           </section>

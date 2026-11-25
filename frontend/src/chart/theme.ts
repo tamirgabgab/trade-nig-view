@@ -14,6 +14,11 @@ export interface ChartTheme {
   down: string;
   /** Line and area charts. */
   line: string;
+  /** Forecast vs actual: the band an actual close fell in. */
+  band50: string;
+  band80: string;
+  band95: string;
+  bandOut: string;
   fontFamily: string;
 }
 
@@ -28,6 +33,10 @@ export const FALLBACK_THEME: ChartTheme = {
   up: '#089981',
   down: '#f23645',
   line: '#2962ff',
+  band50: '#22ab94',
+  band80: '#f7c948',
+  band95: '#ff9800',
+  bandOut: '#f23645',
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif",
 };
 
@@ -42,6 +51,10 @@ const TOKENS: Record<keyof ChartTheme, string> = {
   up: '--color-up',
   down: '--color-down',
   line: '--color-accent',
+  band50: '--color-band-50',
+  band80: '--color-band-80',
+  band95: '--color-band-95',
+  bandOut: '--color-band-out',
   fontFamily: '--font-sans',
 };
 
