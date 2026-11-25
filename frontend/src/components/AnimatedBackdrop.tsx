@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useSymbols, useUniverseQuotes } from '../api/market.ts';
 import { readChartTheme, withAlpha } from '../chart/theme.ts';
 import { useReplayStore } from '../store/replayStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
+import { useThemeStore } from '../store/themeStore.ts';
 import {
   auroraBlobs,
   candleField,
@@ -27,6 +29,12 @@ const TICKER_FONT = 13;
  */
 export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // The scene survives a new tape or theme: only its drawing restarts.
+  const elapsedRef = useRef(0);
+  const candlesRef = useRef<DriftCandle[]>(candleField());
+  const tapeRef = useRef('');
+  // A theme change repaints in the new colours.
+  const themeKey = `${useThemeStore((s) => s.theme)}/${useSettingsStore((s) => s.accent)}`;
   const playing = useReplayStore((s) => s.playing);
   // Today's quotes would give away a replay's future: no tape while one runs.
   const replaying = useReplayStore((s) => s.mode !== 'off');
@@ -47,6 +55,10 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
   );
 
   useEffect(() => {
+    tapeRef.current = tape;
+  }, [tape]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d') ?? null;
     if (canvas === null || context === null) return;
@@ -55,10 +67,8 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const theme = readChartTheme();
-    let candles: DriftCandle[] = candleField();
     let frame = 0;
     let last = performance.now();
-    let elapsed = 0;
 
     const draw = () => {
       const ratio = window.devicePixelRatio || 1;
@@ -71,7 +81,7 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, w, h);
       if (kind === 'candles') {
-        for (const c of candles) {
+        for (const c of candlesRef.current) {
           const x = c.x * w;
           const color = withAlpha(c.up ? theme.up : theme.down, 0.1);
           ctx.fillStyle = color;
@@ -85,7 +95,7 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
         }
       } else if (kind === 'aurora') {
         const colors = [theme.line, theme.compare2, theme.up];
-        for (const b of auroraBlobs(elapsed)) {
+        for (const b of auroraBlobs(elapsedRef.current)) {
           const r = b.r * Math.max(w, h);
           const g = ctx.createRadialGradient(b.x * w, b.y * h, 0, b.x * w, b.y * h, r);
           g.addColorStop(0, withAlpha(colors[b.slot] ?? theme.line, 0.12));
@@ -93,13 +103,13 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
           ctx.fillStyle = g;
           ctx.fillRect(0, 0, w, h);
         }
-      } else if (tape !== '') {
+      } else if (tapeRef.current !== '') {
         ctx.font = `${String(TICKER_FONT)}px ${theme.fontFamily}`;
         ctx.textBaseline = 'middle';
         ctx.fillStyle = withAlpha(theme.text, 0.3);
-        const text = `${tape}     `;
+        const text = `${tapeRef.current}     `;
         const width = ctx.measureText(text).width;
-        const x = -tickerOffset(elapsed, TICKER_SPEED, width);
+        const x = -tickerOffset(elapsedRef.current, TICKER_SPEED, width);
         const y = h * 0.86;
         for (let at = x; at < w; at += width) ctx.fillText(text, at, y);
       }
@@ -112,8 +122,8 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
       last = now;
       // A long gap (a hidden tab) does not jump the scene.
       const step = Math.min(dt, 0.1);
-      elapsed += step;
-      candles = stepCandles(candles, step);
+      elapsedRef.current += step;
+      candlesRef.current = stepCandles(candlesRef.current, step);
       draw();
     };
 
@@ -138,7 +148,7 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [kind, playing, tape]);
+  }, [kind, playing, themeKey]);
 
   return <canvas ref={canvasRef} className={styles.svg} data-animated={kind} />;
 }

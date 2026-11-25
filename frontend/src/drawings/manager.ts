@@ -192,7 +192,9 @@ export class DrawingManager {
   }
 
   dispose(): void {
-    if (this.creating !== null || this.dragging !== null) this.surface.setPanZoom(true);
+    if (this.creating !== null || this.dragging !== null || this.zooming !== null) {
+      this.surface.setPanZoom(true);
+    }
     const el = this.surface.element();
     el.removeEventListener('pointerdown', this.onPointerDown, true);
     el.removeEventListener('pointermove', this.onPointerMove, true);
@@ -501,6 +503,7 @@ export class DrawingManager {
         this.cancelCreating();
         this.render();
       } else if (s.pointerTool !== null) {
+        if (this.zooming !== null) this.surface.setPanZoom(true);
         this.zooming = null;
         s.setPointerTool(null);
         this.render();

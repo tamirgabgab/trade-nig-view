@@ -103,7 +103,6 @@ def test_delete(client: TestClient) -> None:
         ({"chart_type": "renko"}, "validation_error"),
         ({"interval": "5m"}, "validation_error"),
         ({"extra": 1}, "validation_error"),
-        ({"compare": ["nope"]}, "invalid_layout"),
         ({"compare": ["a", "b", "c", "d"]}, "validation_error"),
     ],
 )
@@ -136,5 +135,7 @@ def test_compare_symbols_are_canonical_unique_and_not_the_chart(client: TestClie
     assert doc["compare"] == []  # the chart's own symbol, once canonical, is dropped
     universe = client.get("/api/symbols").json()
     others = [s["symbol"] for s in universe if s["symbol"] != "^IDX"][:2]
-    doc = put(client, "C", 1, compare=[*others, others[0]]).json()
-    assert doc["compare"] == others
+    doc = put(client, "C", 1, compare=[others[0], "gone", others[1]]).json()
+    assert doc["compare"] == others  # a symbol not in the universe is dropped
+    doc = put(client, "C", 2, compare=[others[0], others[0]]).json()
+    assert doc["compare"] == others[:1]

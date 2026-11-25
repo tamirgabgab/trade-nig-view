@@ -109,6 +109,14 @@ describe('DrawingManager', () => {
     expect(chart.view?.draft).toBeNull();
     expect(store.getState().pointerTool).toBeNull();
     expect(chart.panZoom).toBe(true);
+    // Esc in the middle of a box: no zoom, and the chart pans again.
+    store.getState().setPointerTool('zoom');
+    fire(el, 'pointerdown', 100, 100);
+    expect(chart.panZoom).toBe(false);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(chart.panZoom).toBe(true);
+    fire(window, 'pointerup', 300, 250);
+    expect(zoomTo).toHaveBeenCalledTimes(1);
     // A click without a box zooms nothing and keeps the tool.
     store.getState().setPointerTool('zoom');
     click(el, 50, 50);

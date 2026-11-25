@@ -47,6 +47,7 @@ const lwc = vi.hoisted(() => {
     rangeHandler: undefined as ((range: { from: number; to: number } | null) => void) | undefined,
     setVisibleLogicalRange: vi.fn(),
     watermarks: [] as { options: unknown; detached: boolean }[],
+    priceRanges: [] as { from: number; to: number }[],
     click: undefined as ((param: unknown) => void) | undefined,
     markerPlugins: [] as {
       series: unknown;
@@ -111,10 +112,20 @@ const lwc = vi.hoisted(() => {
       state.panes.splice(index, 1);
     },
     priceScale: (id: string) => ({
+      setAutoScale: (on: boolean) => {
+        state.priceScaleOptions.set(id, {
+          ...(state.priceScaleOptions.get(id) as object),
+          autoScale: on,
+        });
+      },
+      setVisibleRange: (range: { from: number; to: number }) => {
+        state.priceRanges.push(range);
+      },
       applyOptions: (options: unknown) => state.priceScaleOptions.set(id, options),
       options: () => ({ autoScale: true, ...(state.priceScaleOptions.get(id) as object) }),
     }),
     timeScale: () => ({
+      coordinateToLogical: (x: number) => x / 10,
       setVisibleLogicalRange: state.setVisibleLogicalRange,
       scrollToRealTime: state.scrollToRealTime,
       getVisibleLogicalRange: () => state.visible,
@@ -227,6 +238,7 @@ beforeEach(() => {
   lwc.state.rangeHandler = undefined;
   lwc.state.appliedOptions = [];
   lwc.state.watermarks = [];
+  lwc.state.priceRanges = [];
   lwc.state.setVisibleLogicalRange.mockClear();
   lwc.state.remove.mockClear();
   frames = [];
@@ -456,11 +468,27 @@ describe('ChartEngine', () => {
     expect(mark?.options).toMatchObject({
       lines: [{ text: 'AAPL · 1D', color: 'rgba(209, 212, 220, 0.06)' }],
     });
+    const removedBefore = lwc.state.removed.length;
     chart.setDisplay({ ...display, watermark: 'MSFT · 1W' });
     expect(lwc.state.watermarks).toHaveLength(1);
+    expect(lwc.state.removed).toHaveLength(removedBefore); // only the text: no series rebuilt
     expect(mark?.options).toMatchObject({ lines: [{ text: 'MSFT · 1W' }] });
     chart.setDisplay({ ...display, watermark: null });
     expect(mark?.detached).toBe(true);
+  });
+
+  it('zooms a box in time and, on a normal axis only, in price', () => {
+    const { engine: chart } = engine();
+    chart.setBars(BARS.slice(0, 50), { decimals: 2, hasVolume: true, resetView: true });
+    chart.setScale({ mode: 'normal', autoScale: true });
+    chart.zoomTo({ x: 100, y: 300 }, { x: 300, y: 100 });
+    expect(lwc.state.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 10, to: 30 });
+    expect(lwc.state.priceRanges).toEqual([{ from: 700, to: 900 }]); // price = 1000 - y
+    expect(lwc.state.priceScaleOptions.get('right')).toMatchObject({ autoScale: false });
+    chart.setScale({ mode: 'percent', autoScale: true });
+    chart.zoomTo({ x: 100, y: 300 }, { x: 200, y: 100 });
+    expect(lwc.state.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 10, to: 20 });
+    expect(lwc.state.priceRanges).toHaveLength(1); // the % axis keeps fitting
   });
 
   it('maps scale modes and auto-fit to the right price scale', () => {

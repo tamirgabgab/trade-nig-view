@@ -698,7 +698,15 @@ export class ChartEngine {
       ([key, value]) => this.display[key as keyof ChartDisplay] === value,
     );
     if (same) return;
+    // Only the watermark's text changed (another symbol or interval): no repaint of the series.
+    const onlyWatermark = Object.entries(display).every(
+      ([key, value]) => key === 'watermark' || this.display[key as keyof ChartDisplay] === value,
+    );
     this.display = display;
+    if (onlyWatermark) {
+      this.renderWatermark();
+      return;
+    }
     this.volume.applyOptions({ visible: this.hasVolume && display.volume });
     this.chart.applyOptions({
       layout: { fontSize: display.fontSize },
@@ -966,8 +974,8 @@ export class ChartEngine {
     this.chart.applyOptions({ handleScroll: enabled, handleScale: enabled });
   }
 
-  /** Fill the chart with the box between two points of the price pane: its bars and its prices
-   *  (the price axis leaves auto-fit; "auto" or a reset brings it back). */
+  /** Fill the chart with the box between two points of the price pane: its bars and, on a
+   *  normal axis, its prices (the axis leaves auto-fit; "auto" or a reset brings it back). */
   zoomTo(a: Point, b: Point): void {
     const ts = this.chart.timeScale();
     const [l1, l2] = [ts.coordinateToLogical(a.x), ts.coordinateToLogical(b.x)];
@@ -975,6 +983,9 @@ export class ChartEngine {
     if (l1 === null || l2 === null || p1 === null || p2 === null) return;
     ts.setVisibleLogicalRange({ from: Math.min(l1, l2), to: Math.max(l1, l2) });
     const scale = this.chart.priceScale('right');
+    // On a log or % axis the visible range is in the axis's own units, not prices: there the box
+    // zooms the time only and the axis keeps fitting.
+    if (scale.options().mode !== PriceScaleMode.Normal) return;
     scale.setAutoScale(false);
     scale.setVisibleRange({ from: Math.min(p1, p2), to: Math.max(p1, p2) });
     this.checkAutoScale();

@@ -120,6 +120,9 @@ describe('compare', () => {
     });
     removeCompare('MSFT');
     expect(useChartStore.getState().compare).toEqual(['SPY', 'NVDA']);
+    // Opening a compared symbol as the chart takes it out of the comparison.
+    useChartStore.getState().setSymbol('SPY');
+    expect(useChartStore.getState().compare).toEqual(['NVDA']);
     expect(sanitizePersisted({ compare: ['A', 'A', 7, '', 'B', 'C', 'D'] }).compare).toEqual([
       'A',
       'B',

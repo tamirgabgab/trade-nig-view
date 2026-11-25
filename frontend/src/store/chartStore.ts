@@ -120,7 +120,17 @@ export const useChartStore = create<ChartState>()(
         set((s) => ({ compare: s.compare.filter((c) => c !== symbol) }));
       },
       setSymbol: (symbol) => {
-        set((s) => (s.symbol === symbol ? s : { symbol, range: null, rangeRequest: null }));
+        set((s) =>
+          s.symbol === symbol
+            ? s
+            : {
+                symbol,
+                range: null,
+                rangeRequest: null,
+                // A compared symbol opened as the chart is no longer compared with itself.
+                compare: s.compare.filter((c) => c !== symbol),
+              },
+        );
       },
       setInterval: (interval) => {
         // Locked during a bar replay (R7), whoever asks: buttons, palette, undo.

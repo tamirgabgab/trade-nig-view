@@ -12,19 +12,32 @@ export function ForecastTooltip({
   h,
   x,
   y,
+  left,
+  up,
   decimals,
 }: {
   forecast: Forecast;
   h: number;
   x: number;
   y: number;
+  /** Open left of / above the pointer (near the chart's right or bottom edge). */
+  left: boolean;
+  up: boolean;
   decimals: number;
 }) {
   const hz = forecast.horizons[h - 1];
   if (hz === undefined) return null;
   const q = (level: number) => formatPrice(atLevel(forecast.levels, hz.close, level), decimals);
   return (
-    <div className={styles.tooltip} style={{ left: x + 14, top: y + 14 }} role="tooltip">
+    <div
+      className={styles.tooltip}
+      style={{
+        left: x + (left ? -14 : 14),
+        top: y + (up ? -14 : 14),
+        transform: `translate(${left ? '-100%' : '0'}, ${up ? '-100%' : '0'})`,
+      }}
+      role="tooltip"
+    >
       <div className={styles.title}>
         Forecast +{h} bar{h === 1 ? '' : 's'}
       </div>

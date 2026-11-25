@@ -13,6 +13,7 @@ import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../cha
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
+import { useDrawingStore } from '../store/drawingStore.ts';
 import { useForecastOriginStore } from '../store/forecastOriginStore.ts';
 import { useLayoutStore } from '../store/layoutStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
@@ -61,6 +62,8 @@ interface ChartAreaProps {
 }
 
 const DEFAULT_DECIMALS = 2;
+/** Room the forecast tooltip needs right of and below the pointer (else it flips). */
+const TOOLTIP_ROOM = { width: 230, height: 190 };
 /** Bars a forecast needs before its origin, plus k (the backend's MIN_TRAIN 60 + HAR 22 + 1). */
 const MIN_FORECAST_BARS = 83;
 /** Load the next older page when fewer than this many bars are left of the viewport. */
@@ -94,9 +97,13 @@ export function ChartArea({ className }: ChartAreaProps) {
   const forecastRef = useRef<ForecastView | null>(null);
   const compareRef = useRef<readonly CompareBars[]>([]);
   // The forecast candle under the pointer (its tooltip); a click on the fan opens the Forecast tab.
-  const [forecastHover, setForecastHover] = useState<{ h: number; x: number; y: number } | null>(
-    null,
-  );
+  const [forecastHover, setForecastHover] = useState<{
+    h: number;
+    x: number;
+    y: number;
+    left: boolean;
+    up: boolean;
+  } | null>(null);
   const forecastAt = useCallback((at: ChartPointer | null) => {
     const view = forecastRef.current;
     if (at === null || view === null) return null;
@@ -116,9 +123,26 @@ export function ChartArea({ className }: ChartAreaProps) {
       if (engine === null) return;
       const offPointer = engine.onPointer((at) => {
         const found = forecastAt(at);
-        setForecastHover(found === null || at === null ? null : { h: found.h, x: at.x, y: at.y });
+        if (found === null || at === null) {
+          setForecastHover(null);
+          return;
+        }
+        // Near the right or bottom edge the tooltip opens left of or above the pointer.
+        const { clientWidth, clientHeight } = engine.element();
+        setForecastHover({
+          h: found.h,
+          x: at.x,
+          y: at.y,
+          left: at.x > clientWidth - TOOLTIP_ROOM.width,
+          up: at.y > clientHeight - TOOLTIP_ROOM.height,
+        });
       });
       const offClick = engine.onClick((at) => {
+        // Not a click that draws, erases or picks a drawing.
+        const drawing = useDrawingStore.getState();
+        if (drawing.tool !== null || drawing.pointerTool !== null || drawing.hoverId !== null) {
+          return;
+        }
         const found = forecastAt(at);
         // Inside the 95 % band of a forecast bar.
         if (found !== null && at.price >= found.bar.bands[0] && at.price <= found.bar.bands[5]) {
@@ -385,24 +409,23 @@ export function ChartArea({ className }: ChartAreaProps) {
   const compared = useMemo(
     () =>
       compareSymbols.flatMap((symbol, i) => {
-        const data = compareData[i];
         const other = symbols?.find((x) => x.symbol === symbol);
-        return data === undefined
-          ? []
-          : [
-              {
-                symbol,
-                display: other?.display ?? symbol,
-                bars: data.bars,
-                decimals: other?.decimals ?? DEFAULT_DECIMALS,
-              },
-            ];
+        // Listed (and removable) while loading or when its bars never come: no line then.
+        return [
+          {
+            symbol,
+            display: other?.display ?? symbol,
+            bars: compareData[i]?.bars ?? [],
+            decimals: other?.decimals ?? DEFAULT_DECIMALS,
+          },
+        ];
       }),
     [compareSymbols, symbols, compareData],
   );
   useEffect(() => {
-    compareRef.current = compared;
-    engineRef.current?.setCompare(compared);
+    const drawn = compared.filter((c) => c.bars.length > 0);
+    compareRef.current = drawn;
+    engineRef.current?.setCompare(drawn);
   }, [compared]);
 
   // A past-bar forecast ends with another symbol or interval, a replay, or the forecast off.
@@ -614,6 +637,8 @@ export function ChartArea({ className }: ChartAreaProps) {
           h={forecastHover.h}
           x={forecastHover.x}
           y={forecastHover.y}
+          left={forecastHover.left}
+          up={forecastHover.up}
           decimals={decimals}
         />
       )}
