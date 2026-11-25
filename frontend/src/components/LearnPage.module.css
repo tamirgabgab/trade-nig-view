@@ -89,3 +89,8 @@
 .page :global(.katex) {
   font-size: 1.05em;
 }
+
+/* Display equations a size up: their fractions and indices stay legible. */
+.page :global(.katex-display > .katex) {
+  font-size: 1.3em;
+}

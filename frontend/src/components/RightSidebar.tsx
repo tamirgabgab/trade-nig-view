@@ -28,6 +28,8 @@ import { ForecastPanel } from './ForecastPanel.tsx';
 import { StatisticsPanel } from './StatisticsPanel.tsx';
 import { SymbolCard } from './SymbolCard.tsx';
 import { RegimePanel } from './RegimePanel.tsx';
+import { usePanelWidthStore } from '../store/panelWidthStore.ts';
+import { ResizeHandle } from './ResizeHandle.tsx';
 import { RiskPanel } from './RiskPanel.tsx';
 import { TradePlanPanel } from './TradePlanPanel.tsx';
 import { VolatilityPanel } from './VolatilityPanel.tsx';
@@ -65,6 +67,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
   const open = narrow ? floating : docked;
   const panel = usePresence(open ? tab : null);
   const asideRef = useRef<HTMLElement>(null);
+  const panelWidth = usePanelWidthStore((s) => s.sidebar);
 
   // Floating: Esc or a click outside the sidebar closes it.
   useEffect(() => {
@@ -95,9 +98,11 @@ export function RightSidebar({ className }: RightSidebarProps) {
       {panel.shown !== null && (
         <section
           className={[styles.panel, narrow ? styles.floating : ''].join(' ')}
+          style={{ width: panelWidth }}
           aria-labelledby="sidebar-title"
           {...panel.attrs}
         >
+          <ResizeHandle panel="sidebar" label="Resize the side panel" />
           <div className={styles.panelHeader}>
             <span id="sidebar-title">{TABS.find((t) => t.tab === panel.shown)?.title}</span>
           </div>

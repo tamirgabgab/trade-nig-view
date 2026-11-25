@@ -8,8 +8,10 @@ import { FilterView } from './FilterView.tsx';
 import { IconButton } from './IconButton.tsx';
 import styles from './LearnDrawer.module.css';
 import { withDefaults } from './lab/labModel.ts';
+import { usePanelWidthStore } from '../store/panelWidthStore.ts';
 import { TryIt } from './lab/TryIt.tsx';
 import { LearnPage } from './LearnPage.tsx';
+import { ResizeHandle } from './ResizeHandle.tsx';
 import { restoreFocus, type OverlayAttrs } from './usePresence.ts';
 import type { IndicatorView } from './useChartIndicators.ts';
 
@@ -38,6 +40,7 @@ export function LearnDrawer({
   const learnNav = useUiStore((s) => s.learnNav);
   const [tab, setTab] = useState<Tab>('page');
   const titleId = useId();
+  const width = usePanelWidthStore((s) => s.learn);
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const tablist = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -95,6 +98,7 @@ export function LearnDrawer({
   return (
     <aside
       className={styles.drawer}
+      style={{ width: `min(${String(width)}px, 100vw)` }}
       {...attrs}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
@@ -104,6 +108,7 @@ export function LearnDrawer({
         }
       }}
     >
+      <ResizeHandle panel="learn" label="Resize the learn panel" />
       <header className={styles.header}>
         <div className={styles.heading}>
           <h2 id={titleId} className={styles.title}>

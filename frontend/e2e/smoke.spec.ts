@@ -179,3 +179,33 @@ test('right-click opens the chart menu', async ({ page }) => {
     'true',
   );
 });
+
+test('the side panel and the learn panel widen by a drag on their left edge, and stay so', async ({
+  page,
+}) => {
+  const panel = page.getByRole('region', { name: 'Watchlist' });
+  const before = (await panel.boundingBox())?.width ?? 0;
+  const handle = page.getByRole('separator', { name: 'Resize the side panel' });
+  const box = await handle.boundingBox();
+  if (box === null) throw new Error('no handle');
+  await page.mouse.move(box.x + box.width / 2, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 200, box.y + 200, { steps: 5 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await panel.boundingBox())?.width ?? 0)
+    .toBeCloseTo(before + 200, -1);
+
+  // The learn panel too, by the keyboard; both widths survive a reload.
+  await page.getByRole('button', { name: 'Learn pages' }).click();
+  await page.keyboard.type('Simple Moving');
+  await page.keyboard.press('Enter');
+  const learn = page.getByRole('separator', { name: 'Resize the learn panel' });
+  await learn.focus();
+  for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowLeft');
+  await expect(learn).toHaveAttribute('aria-valuenow', '676');
+  await page.reload();
+  await expect
+    .poll(async () => (await panel.boundingBox())?.width ?? 0)
+    .toBeCloseTo(before + 200, -1);
+});
