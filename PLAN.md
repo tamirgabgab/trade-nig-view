@@ -100,6 +100,10 @@ full harness.
 - [x] T1: the Trade plan tool (ADR 0012): entry, target and stop drawn in three clicks; chances from normalised
   historical paths (limit fills, gaps, the exact Brownian bridge for two-level bars), EV in R, loss when stopped,
   Kelly, position size, an EV heat map, a walk-forward calibration and the actual outcome; the Trade plan learn page
+- [x] R2: VaR and ES (ADR 0013): normal, Cornish-Fisher, FHS and EVT (GPD) at 90/95/99 % for a bar, a week and a
+  month, both tails; Kupiec, Christoffersen and Acerbi-Szekely backtests; `var_bands` with breach markers; the Risk
+  tab and the Value at Risk learn page
+- [ ] G1: regime (Variance Ratio with Chow-Denning and a wild bootstrap, DFA Hurst, MF-DFA, the regime map)
 
 ---
 
