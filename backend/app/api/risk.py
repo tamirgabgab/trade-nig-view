@@ -63,12 +63,6 @@ class RiskBacktest(BaseModel):
     z2_p: float = Field(description="P(Z2 <= the observed one) under the model (500 runs)")
 
 
-class RiskBreaches(BaseModel):
-    tail: Tail
-    level: float
-    times: list[str | int] = Field(description="Bars whose close broke the FHS 1-bar VaR")
-
-
 class RiskResponse(BaseModel):
     symbol: str
     interval: Interval
@@ -78,17 +72,12 @@ class RiskResponse(BaseModel):
     estimates: list[RiskEstimate]
     tails: list[RiskTail]
     backtests: list[RiskBacktest]
-    breaches: list[RiskBreaches]
 
 
 def risk_response(frame: BarFrame, interval: Interval, symbol: str) -> RiskResponse:
     r = rk.report(frame)
     if r is None:
         raise NotEnoughHistoryError(f"{symbol}: {len(frame)} bars are too few for VaR and ES")
-
-    def times(index: list[int]) -> list[str | int]:
-        t = frame.time[index]
-        return [int(x) for x in t] if interval.is_intraday else list(ts_to_iso_dates(t))
 
     last = frame.time[-1:]
     return RiskResponse(
@@ -127,10 +116,6 @@ def risk_response(frame: BarFrame, interval: Interval, symbol: str) -> RiskRespo
                 z2_p=b.z2_p,
             )
             for b in r.backtests
-        ],
-        breaches=[
-            RiskBreaches(tail=tail, level=level, times=times(hits.tolist()))
-            for (tail, level), hits in r.breaches.items()
         ],
     )
 

@@ -25,5 +25,4 @@ export const RISK_BODY = {
       z2_p: 0.01,
     },
   ],
-  breaches: [{ tail: 'long', level: 0.99, times: ['2026-03-02', 1_700_000_000] }],
 };

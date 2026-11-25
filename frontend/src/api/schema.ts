@@ -1759,21 +1759,6 @@ export interface components {
              */
             z2_p: number;
         };
-        /** RiskBreaches */
-        RiskBreaches: {
-            /**
-             * Tail
-             * @enum {string}
-             */
-            tail: "long" | "short";
-            /** Level */
-            level: number;
-            /**
-             * Times
-             * @description Bars whose close broke the FHS 1-bar VaR
-             */
-            times: (string | number)[];
-        };
         /** RiskEstimate */
         RiskEstimate: {
             /**
@@ -1827,8 +1812,6 @@ export interface components {
             tails: components["schemas"]["RiskTail"][];
             /** Backtests */
             backtests: components["schemas"]["RiskBacktest"][];
-            /** Breaches */
-            breaches: components["schemas"]["RiskBreaches"][];
         };
         /** RiskTail */
         RiskTail: {

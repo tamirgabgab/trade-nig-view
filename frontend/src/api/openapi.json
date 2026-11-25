@@ -4692,44 +4692,6 @@
         ],
         "title": "RiskBacktest"
       },
-      "RiskBreaches": {
-        "properties": {
-          "tail": {
-            "type": "string",
-            "enum": [
-              "long",
-              "short"
-            ],
-            "title": "Tail"
-          },
-          "level": {
-            "type": "number",
-            "title": "Level"
-          },
-          "times": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Times",
-            "description": "Bars whose close broke the FHS 1-bar VaR"
-          }
-        },
-        "type": "object",
-        "required": [
-          "tail",
-          "level",
-          "times"
-        ],
-        "title": "RiskBreaches"
-      },
       "RiskEstimate": {
         "properties": {
           "horizon": {
@@ -4840,13 +4802,6 @@
             },
             "type": "array",
             "title": "Backtests"
-          },
-          "breaches": {
-            "items": {
-              "$ref": "#/components/schemas/RiskBreaches"
-            },
-            "type": "array",
-            "title": "Breaches"
           }
         },
         "type": "object",
@@ -4858,8 +4813,7 @@
           "sigma",
           "estimates",
           "tails",
-          "backtests",
-          "breaches"
+          "backtests"
         ],
         "title": "RiskResponse"
       },

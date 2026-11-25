@@ -286,11 +286,9 @@ class Backtest:
     z2_p: float
 
 
-def backtests(
-    z1: FloatArray, origin: int, tail: Tail
-) -> list[tuple[Backtest, npt.NDArray[np.int64]]]:
+def backtests(z1: FloatArray, origin: int, tail: Tail) -> list[Backtest]:
     """1-bar walk-forward over the last EVALUATE origins s (the outcome z1[s], from s to s + 1,
-    known by ``origin``), every method and level: the scores and the breaching bars (s + 1).
+    known by ``origin``), every method and level.
     The sample is refitted every REFIT origins on the standardised returns known by then."""
     sign = -1.0 if tail == "long" else 1.0
     origins = np.arange(max(MIN_SAMPLE + 1, origin - EVALUATE), origin)
@@ -319,7 +317,7 @@ def backtests(
                 if fitted is not None:
                     var[(method, level)][block], es[(method, level)][block] = fitted
     real = sign * z1[origins]  # the outcome from s to s + 1
-    out: list[tuple[Backtest, npt.NDArray[np.int64]]] = []
+    out: list[Backtest] = []
     for method, level in keys:
         ok = np.isfinite(var[(method, level)]) & np.isfinite(real)
         if ok.sum() < MIN_SAMPLE // 5:
@@ -330,19 +328,20 @@ def backtests(
         z2 = acerbi_szekely(r, v, e, tail_p)
         z2_sims = np.array([acerbi_szekely(row[ok], v, e, tail_p) for row in sims[method]])
         n, k = int(ok.sum()), int(hits.sum())
-        result = Backtest(
-            method=method,
-            level=level,
-            tail=tail,
-            n=n,
-            breaches=k,
-            expected=n * tail_p,
-            kupiec=kupiec(k, n, tail_p),
-            christoffersen=christoffersen(hits),
-            z2=z2,
-            z2_p=float(np.mean(z2_sims <= z2)),
+        out.append(
+            Backtest(
+                method=method,
+                level=level,
+                tail=tail,
+                n=n,
+                breaches=k,
+                expected=n * tail_p,
+                kupiec=kupiec(k, n, tail_p),
+                christoffersen=christoffersen(hits),
+                z2=z2,
+                z2_p=float(np.mean(z2_sims <= z2)),
+            )
         )
-        out.append((result, (origins[ok][hits] + 1).astype(np.int64)))
     return out
 
 
@@ -375,8 +374,6 @@ class Report:
     estimates: tuple[Estimate, ...]
     tails: tuple[TailFit, ...]
     backtests: tuple[Backtest, ...]
-    #: FHS 1-bar breaches at each level: bar indexes, per tail.
-    breaches: dict[tuple[Tail, float], npt.NDArray[np.int64]]
 
 
 def standardised(frame: BarFrame, sigma: FloatArray, h: int) -> FloatArray:
@@ -444,11 +441,5 @@ def report(frame: BarFrame) -> Report | None:
     if not estimates:
         return None
     z1 = standardised(frame, sigma, 1)
-    scores: list[Backtest] = []
-    breaches: dict[tuple[Tail, float], npt.NDArray[np.int64]] = {}
-    for tail in TAILS:
-        for result, hits in backtests(z1, len(frame) - 1, tail):
-            scores.append(result)
-            if result.method == "fhs":
-                breaches[(tail, result.level)] = hits
-    return Report(now, tuple(estimates), tuple(tails), tuple(scores), breaches)
+    scores = [b for tail in TAILS for b in backtests(z1, len(frame) - 1, tail)]
+    return Report(now, tuple(estimates), tuple(tails), tuple(scores))

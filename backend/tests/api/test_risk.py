@@ -22,9 +22,6 @@ def test_var_and_es_per_horizon_method_level_and_tail(e2e_client: TestClient) ->
     assert {t["tail"] for t in body["tails"]} == {"long", "short"}
     assert len(body["backtests"]) == 24
     assert all(b["n"] == 1000 for b in body["backtests"])
-    breaches = {(b["tail"], b["level"]): b["times"] for b in body["breaches"]}
-    assert len(breaches) == 6
-    assert all(isinstance(t, str) for t in breaches[("long", 0.95)])
 
 
 def test_replay_origin_and_short_history(e2e_client: TestClient) -> None:

@@ -94,7 +94,6 @@ def test_report_on_a_random_walk_is_calibrated() -> None:
         assert b.n == 1000
         assert b.kupiec > 0.05
         assert 0.05 < b.z2_p < 0.95
-    assert set(r.breaches) == {(t, lv) for t in risk.TAILS for lv in risk.LEVELS}
     assert {t.tail for t in r.tails} == {"long", "short"}
 
 

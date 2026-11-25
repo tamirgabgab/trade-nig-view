@@ -58,7 +58,6 @@ export interface Risk {
   estimates: RiskEstimate[];
   tails: RiskTailFit[];
   backtests: RiskBacktest[];
-  breaches: { tail: RiskTail; level: number; times: (string | number)[] }[];
 }
 
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number.NaN);
@@ -112,17 +111,6 @@ export function parseRisk(body: unknown): Risk {
         christoffersen: numOrNull(g('christoffersen')),
         z2: num(g('z2')),
         z2P: num(g('z2_p')),
-      };
-    }),
-    breaches: records(f('breaches')).map((item) => {
-      const g = fieldsOf<Schemas['RiskBreaches']>(item);
-      const times = g('times');
-      return {
-        tail: tail(g('tail')),
-        level: num(g('level')),
-        times: Array.isArray(times)
-          ? (times as unknown[]).map((t) => (typeof t === 'number' ? t : String(t)))
-          : [],
       };
     }),
   };
