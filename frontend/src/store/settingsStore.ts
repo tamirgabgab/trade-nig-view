@@ -28,7 +28,16 @@ export type Accent = (typeof ACCENTS)[number];
 export const TEXT_SCALES = [1, 1.1, 1.25] as const;
 export type TextScale = (typeof TEXT_SCALES)[number];
 /** What is drawn behind the chart. */
-export const BACKDROPS = ['solid', 'gradient', 'topo', 'ghost', 'image'] as const;
+export const BACKDROPS = [
+  'solid',
+  'gradient',
+  'topo',
+  'ghost',
+  'image',
+  'candles',
+  'ticker',
+  'aurora',
+] as const;
 export type Backdrop = (typeof BACKDROPS)[number];
 /** How much an image background is dimmed (0.7-0.95) and blurred (0-12 px). */
 export const DIM_RANGE = [0.7, 0.95] as const;

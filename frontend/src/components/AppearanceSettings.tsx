@@ -20,6 +20,9 @@ const BACKDROP_NAMES: Record<Backdrop, string> = {
   topo: 'Topographic lines',
   ghost: 'Ghost history',
   image: 'My image',
+  candles: 'Drifting candles (animated)',
+  ticker: 'Ticker tape (animated)',
+  aurora: 'Aurora (animated)',
 };
 
 /**

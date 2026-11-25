@@ -4,6 +4,7 @@ import { useWeeklyHistory, type Bar } from '../api/bars.ts';
 import { useBackdropImageStore } from '../store/backdropImageStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { dayChange, ghostCloses, ghostPath, pulseAlpha, topoPaths } from './backdrop.ts';
+import { AnimatedBackdrop } from './AnimatedBackdrop.tsx';
 import styles from './ChartBackdrop.module.css';
 
 /** The SVG backdrops' box (scaled to cover the chart). */
@@ -76,6 +77,9 @@ export function ChartBackdrop({
         >
           <path className={styles.ghost} d={ghost} />
         </svg>
+      )}
+      {(backdrop === 'candles' || backdrop === 'ticker' || backdrop === 'aurora') && (
+        <AnimatedBackdrop kind={backdrop} />
       )}
       {change !== null && change !== 0 && (
         <div
