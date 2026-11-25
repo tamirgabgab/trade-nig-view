@@ -396,10 +396,10 @@ def calibrate(p: Paths, origin: int, h: int) -> Calibration | None:
     observed: list[FloatArray] = []
     for block in range(lo_origin, origin - h + 1, REFIT):
         pool = subset(p, starts + h <= block)
-        targets = np.flatnonzero((starts >= block) & (starts < min(block + REFIT, origin - h + 1)))
-        if len(pool.start) < MIN_PATHS or len(targets) == 0:
+        mine = (starts >= block) & (starts < min(block + REFIT, origin - h + 1))
+        if len(pool.start) < MIN_PATHS or not mine.any():
             continue
-        own = subset(p, np.isin(np.arange(len(starts)), targets))
+        own = subset(p, mine)
         for ms in MULTIPLES:
             for mt in MULTIPLES:
                 levels = (0.0, mt * unit, -ms * unit)
@@ -437,7 +437,7 @@ def _actual(
         return None, None
     window = frame.take(slice(origin, origin + m + 1))
     one = oriented_paths(history_paths(window, np.ones(m + 1), m), side)
-    o = simulate(subset(one, one.start == 0), 1.0, *levels, sign=1 if side == "long" else -1)
+    o = simulate(one, 1.0, *levels, sign=1 if side == "long" else -1)  # the one window at 0
     done = m >= h
     if not o.filled[0]:
         return ("not_filled" if done else "open"), None
