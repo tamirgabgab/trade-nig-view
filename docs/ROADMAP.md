@@ -308,7 +308,8 @@ Phase-2 plan.
   Brownian bridge, EV and position size, EV heat map, walk-forward calibration; the Trade plan learn page.
 - [x] R2: VaR and ES (ADR 0013): four methods, three levels, three horizons, both tails, backtests; VaR Bands on
   the chart with breach markers; the Risk tab and the Value at Risk learn page.
-- [ ] G1: market regime (trend or mean reversion) with significance, the regime map and an event study.
+- [x] G1: market regime (ADR 0014): Variance Ratio (Chow-Denning), Hurst (DFA) and a regime tint on the chart;
+  the Regime tab with the wild bootstrap, MF-DFA, the regime map and an event study by regime; the learn page.
 - Deferred: the Python plugin API (`plugins/` folder, hot reload, `chartlab test-indicator`), if ever needed.
 
 ### Phase 4 — Strategies & backtesting

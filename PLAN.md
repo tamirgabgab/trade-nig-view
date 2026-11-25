@@ -103,7 +103,10 @@ full harness.
 - [x] R2: VaR and ES (ADR 0013): normal, Cornish-Fisher, FHS and EVT (GPD) at 90/95/99 % for a bar, a week and a
   month, both tails; Kupiec, Christoffersen and Acerbi-Szekely backtests; `var_bands` with breach markers; the Risk
   tab and the Value at Risk learn page
-- [ ] G1: regime (Variance Ratio with Chow-Denning and a wild bootstrap, DFA Hurst, MF-DFA, the regime map)
+- [x] G1: market regime (ADR 0014): `variance_ratio` (Chow-Denning), `hurst_dfa`, `regime` (a background tint,
+  the new `background` plot style); the Regime tab with a wild-bootstrap p-value, Hurst against shuffles, MF-DFA,
+  the regime x volatility map and an event study of trend and reversion rules by regime; the `regimes` scenario;
+  the Market regime learn page
 
 ---
 
