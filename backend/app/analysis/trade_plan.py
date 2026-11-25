@@ -47,7 +47,7 @@ from typing import Literal
 import numpy as np
 import numpy.typing as npt
 
-from app.analysis.volatility import horizon_bars
+from app.analysis.volatility import unit_volatility
 from app.indicators import hv
 from app.models.bars import BarFrame, FloatArray
 
@@ -154,13 +154,6 @@ class Paths:
     low: Matrix
     close: Matrix
     start: Ints  # the start bar s of each path
-
-
-def unit_volatility(frame: BarFrame) -> FloatArray:
-    """Per-bar volatility over a month (Yang-Zhang), the unit the paths are measured in."""
-    per_year = float(hv.bars_per_year(frame.time)[-1]) if len(frame) > 1 else 252.0
-    month = horizon_bars(per_year).get("month", 21)
-    return np.sqrt(np.maximum(hv.rolling_variance(frame, "yang_zhang", month), 0.0))
 
 
 def history_paths(frame: BarFrame, sigma: FloatArray, h: int) -> Paths:

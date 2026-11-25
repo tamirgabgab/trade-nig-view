@@ -673,3 +673,45 @@ def golden_percentrank(x: Sequence[float], m: int) -> list[float]:
             continue
         out.append(100 * sum(1 for v in window if v <= x[t]) / m)
     return out
+
+
+def _linear_quantile(values: Sequence[float], p: float) -> float:
+    """numpy's default quantile: linear between the order statistics at (n - 1) p."""
+    v = sorted(values)
+    h = (len(v) - 1) * p
+    i = min(math.floor(h), len(v) - 2)
+    return v[i] + (h - i) * (v[i + 1] - v[i])
+
+
+def golden_var_bands(
+    o: Sequence[float],
+    h: Sequence[float],
+    lo: Sequence[float],
+    c: Sequence[float],
+    level: float,
+    window: int,
+    n: int,
+) -> dict[str, list[float]]:
+    """VaR bands for bar t + 1 from the standardised returns up to t; breaches on t + 1."""
+    sigma = [
+        math.sqrt(max(v, 0.0)) if not math.isnan(v) else NAN
+        for v in golden_variance(o, h, lo, c, "yang_zhang", n)
+    ]
+    z = [NAN] + [
+        math.log(c[t] / c[t - 1]) / sigma[t - 1]
+        if not math.isnan(sigma[t - 1]) and sigma[t - 1] > 0
+        else NAN
+        for t in range(1, len(c))
+    ]
+    upper, lower, breaches = [NAN] * len(c), [NAN] * len(c), [NAN] * len(c)
+    for t in range(window - 1, len(c) - 1):
+        w = z[t - window + 1 : t + 1]
+        if any(math.isnan(x) for x in w):
+            continue
+        lower[t + 1] = c[t] * math.exp(sigma[t] * _linear_quantile(w, 1 - level))
+        upper[t + 1] = c[t] * math.exp(sigma[t] * _linear_quantile(w, level))
+        if c[t + 1] > upper[t + 1]:
+            breaches[t + 1] = 1.0
+        elif c[t + 1] < lower[t + 1]:
+            breaches[t + 1] = -1.0
+    return {"upper": upper, "lower": lower, "breaches": breaches}

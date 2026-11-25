@@ -257,6 +257,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/learn/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn Risk
+         * @description VaR and ES (``GET /api/risk``) on a lab source, for the learn page's widget.
+         */
+        post: operations["learn_risk_api_learn_risk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/drawings/{symbol}": {
         parameters: {
             query?: never;
@@ -448,6 +468,26 @@ export interface paths {
          *     above the entry, short when below; the stop must be on the other side.
          */
         get: operations["get_trade_plan_api_trade_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Risk
+         * @description VaR and ES at the last bar (``origin`` in replay) from the whole history up to it.
+         */
+        get: operations["get_risk_api_risk_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1175,6 +1215,11 @@ export interface components {
             /** @description Null when there are no conditions */
             study: components["schemas"]["LabStudy"] | null;
         };
+        /** LabRiskRequest */
+        LabRiskRequest: {
+            /** Source */
+            source: components["schemas"]["SyntheticSource"] | components["schemas"]["SymbolSource"];
+        };
         /** LabStudy */
         LabStudy: {
             /** Horizon */
@@ -1666,6 +1711,149 @@ export interface components {
             params?: {
                 [key: string]: boolean | number | string;
             };
+        };
+        /** RiskBacktest */
+        RiskBacktest: {
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "normal" | "cornish_fisher" | "fhs" | "evt";
+            /** Level */
+            level: number;
+            /**
+             * Tail
+             * @enum {string}
+             */
+            tail: "long" | "short";
+            /**
+             * N
+             * @description Out-of-sample 1-bar forecasts scored
+             */
+            n: number;
+            /** Breaches */
+            breaches: number;
+            /**
+             * Expected
+             * @description n x (1 - level)
+             */
+            expected: number;
+            /**
+             * Kupiec
+             * @description p-value: is the breach rate right?
+             */
+            kupiec: number | null;
+            /**
+             * Christoffersen
+             * @description p-value: are the breaches independent?
+             */
+            christoffersen: number | null;
+            /**
+             * Z2
+             * @description Acerbi-Szekely Z2: 0 if the ES is right, < 0 if too small
+             */
+            z2: number;
+            /**
+             * Z2 P
+             * @description P(Z2 <= the observed one) under the model (500 runs)
+             */
+            z2_p: number;
+        };
+        /** RiskBreaches */
+        RiskBreaches: {
+            /**
+             * Tail
+             * @enum {string}
+             */
+            tail: "long" | "short";
+            /** Level */
+            level: number;
+            /**
+             * Times
+             * @description Bars whose close broke the FHS 1-bar VaR
+             */
+            times: (string | number)[];
+        };
+        /** RiskEstimate */
+        RiskEstimate: {
+            /**
+             * Horizon
+             * @enum {string}
+             */
+            horizon: "bar" | "week" | "month";
+            /** Bars */
+            bars: number;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "normal" | "cornish_fisher" | "fhs" | "evt";
+            /** Level */
+            level: number;
+            /**
+             * Tail
+             * @description long: the loss of a fall; short: the loss of a rise
+             * @enum {string}
+             */
+            tail: "long" | "short";
+            /**
+             * Var
+             * @description Value at Risk as a fraction of the price (a loss)
+             */
+            var: number;
+            /**
+             * Es
+             * @description Expected Shortfall: the mean loss beyond the VaR
+             */
+            es: number;
+        };
+        /** RiskResponse */
+        RiskResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /** Last Time */
+            last_time: string | number;
+            /** Last Close */
+            last_close: number;
+            /**
+             * Sigma
+             * @description Today's per-bar volatility (Yang-Zhang, a month)
+             */
+            sigma: number;
+            /** Estimates */
+            estimates: components["schemas"]["RiskEstimate"][];
+            /** Tails */
+            tails: components["schemas"]["RiskTail"][];
+            /** Backtests */
+            backtests: components["schemas"]["RiskBacktest"][];
+            /** Breaches */
+            breaches: components["schemas"]["RiskBreaches"][];
+        };
+        /** RiskTail */
+        RiskTail: {
+            /**
+             * Tail
+             * @enum {string}
+             */
+            tail: "long" | "short";
+            /**
+             * Threshold
+             * @description u: the 90th percentile of the standardised losses
+             */
+            threshold: number;
+            /**
+             * Xi
+             * @description GPD shape: > 0 a fat (power-law) tail, < 0 a bounded one
+             */
+            xi: number;
+            /**
+             * Beta
+             * @description GPD scale (standardised units)
+             */
+            beta: number;
+            /** Exceedances */
+            exceedances: number;
         };
         /**
          * Scenario
@@ -2547,6 +2735,39 @@ export interface operations {
             };
         };
     };
+    learn_risk_api_learn_risk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabRiskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_drawings_of_api_drawings__symbol__get: {
         parameters: {
             query?: never;
@@ -3034,6 +3255,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TradePlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_risk_api_risk_get: {
+        parameters: {
+            query: {
+                symbol: string;
+                interval?: components["schemas"]["Interval"];
+                adjusted?: boolean;
+                /** @description At this bar (UTC epoch seconds of its open; replay) */
+                origin?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskResponse"];
                 };
             };
             /** @description Validation Error */

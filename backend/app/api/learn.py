@@ -21,6 +21,7 @@ from app.analysis.synthetic import Scenario, synthetic_bars
 from app.api.deps import get_bar_service
 from app.api.forecast import ForecastResponse, forecast_cache, forecast_frame
 from app.api.indicators import ParamValue
+from app.api.risk import RiskResponse, risk_response
 from app.api.volatility import Estimator, VolatilityResponse, volatility_response
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
@@ -373,3 +374,18 @@ def learn_volatility(
     return volatility_response(
         frame, Interval(source.interval), name, body.estimator, "month", 10.0, 1.5
     )
+
+
+class LabRiskRequest(BaseModel):
+    source: Annotated[SyntheticSource | SymbolSource, Field(discriminator="kind")]
+
+
+@router.post("/learn/risk", response_model=RiskResponse)
+def learn_risk(
+    body: LabRiskRequest, service: Annotated[BarService, Depends(get_bar_service)]
+) -> RiskResponse:
+    """VaR and ES (``GET /api/risk``) on a lab source, for the learn page's widget."""
+    source = body.source
+    frame = _lab_frame(source, service)
+    name = source.scenario.value if isinstance(source, SyntheticSource) else source.symbol
+    return risk_response(frame, Interval(source.interval), name)

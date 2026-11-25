@@ -90,3 +90,15 @@ def test_bars_per_year_depends_on_the_spacing_only(frame: BarFrame, shift: int) 
     per_year = hv.bars_per_year(frame.time)
     np.testing.assert_allclose(hv.bars_per_year(frame.time + shift), per_year, equal_nan=True)
     assert (per_year[1:] > 0).all()
+
+
+@settings(max_examples=40, deadline=None)
+@given(data=st.data(), frame=bars(min_size=60), level=st.sampled_from(["90", "95", "99"]))
+def test_var_bands_no_lookahead_and_ordered(
+    data: st.DataObject, frame: BarFrame, level: str
+) -> None:
+    params = {"level": level, "window": 50, "length": 3}
+    check_no_lookahead(CATALOG["var_bands"], frame, params, _ks(data, frame))
+    out = CATALOG["var_bands"].run(frame, params)
+    ok = np.isfinite(out["upper"])
+    assert (out["lower"][ok] <= out["upper"][ok]).all()

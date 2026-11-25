@@ -42,6 +42,7 @@ V2_PAGES: set[str] = {
     "swma",
     "t3",
     "tema",
+    "value-at-risk",
     "volume-sma",
     "vwap",
     "vwma",
@@ -70,6 +71,7 @@ LAB_REQUIRED: dict[str, set[str]] = {
     "filter": {"indicator"},
     "forecast": set(),
     "volatility": set(),
+    "risk": set(),
 }
 MAX_AGO = 500  # app.analysis.conditions.Operand.ago's bound
 RULE_REQUIRED = {"label", "left", "op", "right"}

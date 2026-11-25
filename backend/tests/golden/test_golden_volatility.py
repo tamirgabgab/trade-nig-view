@@ -15,6 +15,7 @@ from tests.golden.models import (
     golden_bars_per_year,
     golden_hv,
     golden_percentrank,
+    golden_var_bands,
     golden_variance,
 )
 from tests.golden.talib_ref import load_talib
@@ -113,3 +114,14 @@ def test_close_estimator_matches_talib_stddev(data: str, length: int) -> None:
     returns = np.ascontiguousarray(hv.returns(frame))
     theirs = 100 * talib.STDDEV(returns, length, 1.0)
     compare(ours["hv"][length:], theirs[length:].tolist())
+
+
+@pytest.mark.parametrize("level", ["90", "99"])
+@pytest.mark.parametrize("data", DATA)
+def test_var_bands_match_golden_model(data: str, level: str, scoreboard: list[Row]) -> None:
+    frame = FRAMES[data]
+    out = CATALOG["var_bands"].run(frame, {"level": level, "window": 250})
+    want = golden_var_bands(*_ohlc(frame), float(level) / 100, 250, 21)
+    compare(out["upper"], want["upper"])
+    compare(out["breaches"], want["breaches"])
+    _record(scoreboard, "var_bands", f"{level} 250, 21", data, compare(out["lower"], want["lower"]))

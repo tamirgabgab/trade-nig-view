@@ -70,7 +70,7 @@ def test_lists_the_registry(client: TestClient) -> None:
 
 def test_lists_ma_types_with_display_names(client: TestClient) -> None:
     by_id = {item["id"]: item for item in client.get("/api/indicators").json()}
-    assert len(by_id) == 31
+    assert len(by_id) == 32
     ma_type = by_id["ma"]["params"][0]
     assert ma_type["name"] == "ma_type"
     assert ma_type["type"] == "enum"

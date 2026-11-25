@@ -222,6 +222,14 @@ def spaced(index: npt.NDArray[np.int64], gap: int) -> int:
     return count
 
 
+def unit_volatility(frame: BarFrame) -> FloatArray:
+    """Per-bar volatility over a month (Yang-Zhang) at every bar: the unit the trade plan's
+    paths and the risk's standardised returns are measured in."""
+    per_year = float(hv.bars_per_year(frame.time)[-1]) if len(frame) > 1 else 252.0
+    month = horizon_bars(per_year).get("month", 21)
+    return np.sqrt(np.maximum(hv.rolling_variance(frame, "yang_zhang", month), 0.0))
+
+
 # --- HAR ----------------------------------------------------------------------------------------
 
 

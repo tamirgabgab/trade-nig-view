@@ -603,6 +603,48 @@
         }
       }
     },
+    "/api/learn/risk": {
+      "post": {
+        "tags": [
+          "learn"
+        ],
+        "summary": "Learn Risk",
+        "description": "VaR and ES (``GET /api/risk``) on a lab source, for the learn page's widget.",
+        "operationId": "learn_risk_api_learn_risk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabRiskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/drawings/{symbol}": {
       "get": {
         "tags": [
@@ -1588,6 +1630,88 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TradePlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/risk": {
+      "get": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Get Risk",
+        "description": "VaR and ES at the last bar (``origin`` in replay) from the whole history up to it.",
+        "operationId": "get_risk_api_risk_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Interval",
+              "default": "1D"
+            }
+          },
+          {
+            "name": "adjusted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Adjusted"
+            }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "At this bar (UTC epoch seconds of its open; replay)",
+              "title": "Origin"
+            },
+            "description": "At this bar (UTC epoch seconds of its open; replay)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskResponse"
                 }
               }
             }
@@ -3221,6 +3345,33 @@
         ],
         "title": "LabResponse"
       },
+      "LabRiskRequest": {
+        "properties": {
+          "source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SyntheticSource"
+              },
+              {
+                "$ref": "#/components/schemas/SymbolSource"
+              }
+            ],
+            "title": "Source",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "symbol": "#/components/schemas/SymbolSource",
+                "synthetic": "#/components/schemas/SyntheticSource"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "LabRiskRequest"
+      },
       "LabStudy": {
         "properties": {
           "horizon": {
@@ -4452,6 +4603,305 @@
           "id"
         ],
         "title": "ResponseRequest"
+      },
+      "RiskBacktest": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "cornish_fisher",
+              "fhs",
+              "evt"
+            ],
+            "title": "Method"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level"
+          },
+          "tail": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Tail"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N",
+            "description": "Out-of-sample 1-bar forecasts scored"
+          },
+          "breaches": {
+            "type": "integer",
+            "title": "Breaches"
+          },
+          "expected": {
+            "type": "number",
+            "title": "Expected",
+            "description": "n x (1 - level)"
+          },
+          "kupiec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kupiec",
+            "description": "p-value: is the breach rate right?"
+          },
+          "christoffersen": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Christoffersen",
+            "description": "p-value: are the breaches independent?"
+          },
+          "z2": {
+            "type": "number",
+            "title": "Z2",
+            "description": "Acerbi-Szekely Z2: 0 if the ES is right, < 0 if too small"
+          },
+          "z2_p": {
+            "type": "number",
+            "title": "Z2 P",
+            "description": "P(Z2 <= the observed one) under the model (500 runs)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "level",
+          "tail",
+          "n",
+          "breaches",
+          "expected",
+          "kupiec",
+          "christoffersen",
+          "z2",
+          "z2_p"
+        ],
+        "title": "RiskBacktest"
+      },
+      "RiskBreaches": {
+        "properties": {
+          "tail": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Tail"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level"
+          },
+          "times": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Times",
+            "description": "Bars whose close broke the FHS 1-bar VaR"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tail",
+          "level",
+          "times"
+        ],
+        "title": "RiskBreaches"
+      },
+      "RiskEstimate": {
+        "properties": {
+          "horizon": {
+            "type": "string",
+            "enum": [
+              "bar",
+              "week",
+              "month"
+            ],
+            "title": "Horizon"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "cornish_fisher",
+              "fhs",
+              "evt"
+            ],
+            "title": "Method"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level"
+          },
+          "tail": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Tail",
+            "description": "long: the loss of a fall; short: the loss of a rise"
+          },
+          "var": {
+            "type": "number",
+            "title": "Var",
+            "description": "Value at Risk as a fraction of the price (a loss)"
+          },
+          "es": {
+            "type": "number",
+            "title": "Es",
+            "description": "Expected Shortfall: the mean loss beyond the VaR"
+          }
+        },
+        "type": "object",
+        "required": [
+          "horizon",
+          "bars",
+          "method",
+          "level",
+          "tail",
+          "var",
+          "es"
+        ],
+        "title": "RiskEstimate"
+      },
+      "RiskResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "last_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Last Time"
+          },
+          "last_close": {
+            "type": "number",
+            "title": "Last Close"
+          },
+          "sigma": {
+            "type": "number",
+            "title": "Sigma",
+            "description": "Today's per-bar volatility (Yang-Zhang, a month)"
+          },
+          "estimates": {
+            "items": {
+              "$ref": "#/components/schemas/RiskEstimate"
+            },
+            "type": "array",
+            "title": "Estimates"
+          },
+          "tails": {
+            "items": {
+              "$ref": "#/components/schemas/RiskTail"
+            },
+            "type": "array",
+            "title": "Tails"
+          },
+          "backtests": {
+            "items": {
+              "$ref": "#/components/schemas/RiskBacktest"
+            },
+            "type": "array",
+            "title": "Backtests"
+          },
+          "breaches": {
+            "items": {
+              "$ref": "#/components/schemas/RiskBreaches"
+            },
+            "type": "array",
+            "title": "Breaches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "last_time",
+          "last_close",
+          "sigma",
+          "estimates",
+          "tails",
+          "backtests",
+          "breaches"
+        ],
+        "title": "RiskResponse"
+      },
+      "RiskTail": {
+        "properties": {
+          "tail": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Tail"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold",
+            "description": "u: the 90th percentile of the standardised losses"
+          },
+          "xi": {
+            "type": "number",
+            "title": "Xi",
+            "description": "GPD shape: > 0 a fat (power-law) tail, < 0 a bounded one"
+          },
+          "beta": {
+            "type": "number",
+            "title": "Beta",
+            "description": "GPD scale (standardised units)"
+          },
+          "exceedances": {
+            "type": "integer",
+            "title": "Exceedances"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tail",
+          "threshold",
+          "xi",
+          "beta",
+          "exceedances"
+        ],
+        "title": "RiskTail"
       },
       "Scenario": {
         "type": "string",
