@@ -12,6 +12,8 @@ import {
   CrosshairMode,
   HistogramSeries,
   LineSeries,
+  createTextWatermark,
+  type ITextWatermarkPluginApi,
   LineStyle,
   LineType,
   PriceScaleMode,
@@ -160,6 +162,8 @@ export interface ChartDisplay {
   quietVolume: boolean;
   /** Axis and label text, px. */
   fontSize: number;
+  /** Written large and faint behind the bars (e.g. "AAPL · 1D"); null: none. */
+  watermark: string | null;
 }
 
 const DEFAULT_DISPLAY: ChartDisplay = {
@@ -169,7 +173,10 @@ const DEFAULT_DISPLAY: ChartDisplay = {
   volume: true,
   quietVolume: true,
   fontSize: 12,
+  watermark: null,
 };
+const WATERMARK_ALPHA = 0.06;
+const WATERMARK_SIZE = 96;
 
 /** Top of each own-pane indicator's pane (by group), in px from the top of the chart. */
 export type PaneLayout = Readonly<Record<string, number>>;
@@ -233,6 +240,7 @@ export class ChartEngine {
   /** The light/dark theme before the user's candle colours are applied. */
   private baseTheme: ChartTheme;
   private display: ChartDisplay = DEFAULT_DISPLAY;
+  private watermark: ITextWatermarkPluginApi<Time> | null = null;
   private readonly listeners = new Set<CrosshairListener>();
   private readonly rangeListeners = new Set<VisibleRangeListener>();
   private readonly hover: RafLatest<number | null>;
@@ -509,7 +517,15 @@ export class ChartEngine {
     const series =
       line.plot === 'histogram'
         ? this.chart.addSeries(HistogramSeries, options, pane)
-        : this.chart.addSeries(LineSeries, { ...options, crosshairMarkerRadius: 3 }, pane);
+        : this.chart.addSeries(
+            LineSeries,
+            {
+              ...options,
+              crosshairMarkerRadius: 3,
+              crosshairMarkerBorderColor: this.theme.background,
+            },
+            pane,
+          );
     if (line.ownPane && sibling === undefined) {
       series.getPane().setStretchFactor(this.stretches.get(line.group) ?? PANE_STRETCH);
       const element = series.getPane().getHTMLElement();
@@ -639,10 +655,16 @@ export class ChartEngine {
       down: this.display.downColor ?? theme.down,
     };
     this.chart.applyOptions(themeOptions(this.theme));
+    this.renderWatermark();
     this.recreateMain();
     this.renderVolume();
     // Level lines take their colour from the theme: redraw them (indicator data stays as is).
-    for (const entry of this.lines.values()) entry.levels = '';
+    for (const entry of this.lines.values()) {
+      entry.levels = '';
+      if (entry.plot !== 'histogram') {
+        entry.series.applyOptions({ crosshairMarkerBorderColor: this.theme.background });
+      }
+    }
     this.setIndicatorLines(this.lastLines);
   }
 
@@ -662,6 +684,32 @@ export class ChartEngine {
       .priceScale(VOLUME_SCALE_ID)
       .applyOptions({ scaleMargins: display.quietVolume ? QUIET_VOLUME_MARGINS : VOLUME_MARGINS });
     this.setTheme(this.baseTheme);
+  }
+
+  /** The symbol watermark on the price pane, in the theme's text colour (a library primitive). */
+  private renderWatermark(): void {
+    const text = this.display.watermark;
+    if (text === null) {
+      this.watermark?.detach();
+      this.watermark = null;
+      return;
+    }
+    const options = {
+      horzAlign: 'center' as const,
+      vertAlign: 'center' as const,
+      lines: [
+        {
+          text,
+          color: withAlpha(this.theme.text, WATERMARK_ALPHA),
+          fontSize: WATERMARK_SIZE,
+          fontStyle: '600',
+          fontFamily: this.theme.fontFamily,
+        },
+      ],
+    };
+    const pane = this.chart.panes()[0];
+    if (this.watermark !== null) this.watermark.applyOptions(options);
+    else if (pane !== undefined) this.watermark = createTextWatermark(pane, options);
   }
 
   /** Volume bars coloured by candle direction (the colours come from the theme). */
@@ -919,14 +967,22 @@ export class ChartEngine {
       priceFormat: { type: 'price' as const, ...priceFormat(this.decimals) },
       priceLineVisible: this.display.lastPriceLine,
     };
+    // The crosshair dot's ring: the library takes it from the (now transparent) chart background.
+    const marker = { crosshairMarkerBorderColor: this.theme.background };
     switch (type) {
       case 'bars':
         return this.chart.addSeries(BarSeries, { ...options, upColor: up, downColor: down });
       case 'line':
-        return this.chart.addSeries(LineSeries, { ...options, color: line, lineWidth: 2 });
+        return this.chart.addSeries(LineSeries, {
+          ...options,
+          ...marker,
+          color: line,
+          lineWidth: 2,
+        });
       case 'area':
         return this.chart.addSeries(AreaSeries, {
           ...options,
+          ...marker,
           lineColor: line,
           lineWidth: 2,
           topColor: withAlpha(line, AREA_TOP_ALPHA),

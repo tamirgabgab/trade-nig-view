@@ -1,5 +1,12 @@
 import type { Bar } from '../api/bars.ts';
-import { dayChange, ghostPath, pulseAlpha, PULSE_MAX_ALPHA, topoPaths } from './backdrop.ts';
+import {
+  dayChange,
+  ghostCloses,
+  ghostPath,
+  pulseAlpha,
+  PULSE_MAX_ALPHA,
+  topoPaths,
+} from './backdrop.ts';
 
 const bar = (time: string | number, close: number): Bar => ({
   time,
@@ -65,5 +72,15 @@ describe('ghostPath', () => {
     );
     expect(long.split('L').length).toBeLessThanOrEqual(400 + 3);
     expect(ghostPath([5], 100, 50)).toBe('');
+  });
+});
+
+describe('ghostCloses', () => {
+  it('keeps only the weeks over by the last shown bar, then its own close (no peek in replay)', () => {
+    const weeks = [bar('2020-03-02', 10), bar('2020-03-09', 11), bar('2020-03-16', 12)];
+    // Wednesday 11 March: the week of 9 March is not over; its Friday close (11) stays hidden.
+    expect(ghostCloses(weeks, bar('2020-03-11', 10.5))).toEqual([10, 10.5]);
+    // Monday 16 March: the week of 9 March is over.
+    expect(ghostCloses(weeks, bar('2020-03-16', 11.8))).toEqual([10, 11, 11.8]);
   });
 });

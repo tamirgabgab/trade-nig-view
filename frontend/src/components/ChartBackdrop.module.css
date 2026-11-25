@@ -63,15 +63,3 @@
 .pulse[data-pulse='down'] {
   background: radial-gradient(ellipse at 50% 0%, var(--color-down), transparent 70%);
 }
-
-.watermark {
-  position: absolute;
-  top: 45%;
-  left: 50%;
-  color: var(--color-text-strong);
-  font-size: clamp(40px, 8vw, 128px);
-  font-weight: 600;
-  white-space: nowrap;
-  opacity: 0.05;
-  transform: translate(-50%, -50%);
-}

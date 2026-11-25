@@ -216,8 +216,7 @@ test('appearance: theme, accent, text size, chart backgrounds with an image, hea
   await expect(field(page, 'C')).toBeVisible();
   const html = page.locator('html');
   const backdrop = page.getByTestId('chart-backdrop');
-  // On by default: the watermark and the watchlist heatmap.
-  await expect(backdrop).toContainText('AAPL · 1D');
+  // On by default: the watchlist heatmap (and the watermark, drawn on the canvas).
   const heatmap = page.getByRole('region', { name: "Day's change heatmap" });
   await heatmap.getByRole('button', { name: /NVDA/ }).click();
   await expect(legend(page)).toContainText('NVIDIA');

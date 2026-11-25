@@ -14,16 +14,6 @@ import { THEME_NAMES, THEMES, useThemeStore } from '../store/themeStore.ts';
 import panel from './IndicatorSettingsPanel.module.css';
 import styles from './SettingsDialog.module.css';
 
-/** Background and text of each preset, for its swatch (the values of styles/tokens.css). */
-const THEME_SWATCH = {
-  dark: ['#0f0f0f', '#d1d4dc'],
-  light: ['#ffffff', '#131722'],
-  midnight: ['#0b1426', '#cfd8e8'],
-  graphite: ['#1b1b1d', '#d6d6da'],
-  amber: ['#0c0a07', '#f0c674'],
-  paper: ['#fbf8f1', '#2b2620'],
-} as const;
-const ACCENT_SWATCH = { blue: '#2962ff', purple: '#7e57c2', teal: '#00897b', amber: '#e69500' };
 const BACKDROP_NAMES: Record<Backdrop, string> = {
   solid: 'Solid',
   gradient: 'Gradient',
@@ -60,11 +50,7 @@ export function AppearanceSettings() {
                   setTheme(t);
                 }}
               />
-              <span
-                className={styles.preview}
-                style={{ background: THEME_SWATCH[t][0], color: THEME_SWATCH[t][1] }}
-                aria-hidden="true"
-              >
+              <span className={styles.preview} data-theme={t} aria-hidden="true">
                 Aa
               </span>
               {THEME_NAMES[t]}
@@ -85,11 +71,7 @@ export function AppearanceSettings() {
                   settings.set({ accent: a });
                 }}
               />
-              <span
-                className={styles.dot}
-                style={{ background: ACCENT_SWATCH[a] }}
-                aria-hidden="true"
-              />
+              <span className={styles.dot} data-accent={a} aria-hidden="true" />
               {a[0]?.toUpperCase()}
               {a.slice(1)}
             </label>
@@ -152,8 +134,13 @@ export function AppearanceSettings() {
                   if (file === undefined) return;
                   shrinkImage(file).then(
                     (url) => {
-                      setImageError(null);
-                      setImage(url);
+                      try {
+                        setImage(url); // saved to localStorage at once: a full store throws
+                        setImageError(null);
+                      } catch {
+                        setImage(image);
+                        setImageError('That image is too large to keep in this browser.');
+                      }
                     },
                     () => {
                       setImageError('Could not read that file as an image.');
@@ -228,7 +215,7 @@ export function AppearanceSettings() {
             settings.set({ pulse: event.target.checked });
           }}
         />
-        Market pulse (tint by the day&apos;s change)
+        Market pulse (tint by the latest change)
       </label>
       <label className={panel.check}>
         <input

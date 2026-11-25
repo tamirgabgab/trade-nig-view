@@ -38,6 +38,7 @@ const lwc = vi.hoisted(() => {
     visible: null as { from: number; to: number } | null,
     rangeHandler: undefined as ((range: { from: number; to: number } | null) => void) | undefined,
     setVisibleLogicalRange: vi.fn(),
+    watermarks: [] as { options: unknown; detached: boolean }[],
     markerPlugins: [] as {
       series: unknown;
       markers: unknown[];
@@ -140,12 +141,27 @@ const lwc = vi.hoisted(() => {
     state.markerPlugins.push(plugin);
     return plugin;
   };
-  return { state, createChart, createSeriesMarkers };
+  const createTextWatermark = (_pane: unknown, options: unknown) => {
+    const plugin = {
+      options,
+      detached: false,
+      applyOptions: (next: unknown) => {
+        plugin.options = next;
+      },
+      detach: () => {
+        plugin.detached = true;
+      },
+    };
+    state.watermarks.push(plugin);
+    return plugin;
+  };
+  return { state, createChart, createSeriesMarkers, createTextWatermark };
 });
 
 vi.mock('lightweight-charts', () => ({
   createChart: lwc.createChart,
   createSeriesMarkers: lwc.createSeriesMarkers,
+  createTextWatermark: lwc.createTextWatermark,
   AreaSeries: { kind: 'Area' },
   BarSeries: { kind: 'Bar' },
   CandlestickSeries: { kind: 'Candlestick' },
@@ -194,6 +210,7 @@ beforeEach(() => {
   lwc.state.visible = null;
   lwc.state.rangeHandler = undefined;
   lwc.state.appliedOptions = [];
+  lwc.state.watermarks = [];
   lwc.state.setVisibleLogicalRange.mockClear();
   lwc.state.remove.mockClear();
   frames = [];
@@ -391,6 +408,28 @@ describe('ChartEngine', () => {
     const main = lwc.state.series.at(-1);
     expect(main?.options).toMatchObject({ upColor: '#00aa00' });
     expect(main?.setData).toHaveBeenCalled();
+  });
+
+  it('writes the symbol watermark faintly on the price pane, updates it and removes it', () => {
+    const { engine: chart } = engine();
+    const display = {
+      upColor: null,
+      downColor: null,
+      lastPriceLine: true,
+      volume: true,
+      quietVolume: true,
+      fontSize: 12,
+    };
+    chart.setDisplay({ ...display, watermark: 'AAPL · 1D' });
+    const mark = lwc.state.watermarks[0];
+    expect(mark?.options).toMatchObject({
+      lines: [{ text: 'AAPL · 1D', color: 'rgba(209, 212, 220, 0.06)' }],
+    });
+    chart.setDisplay({ ...display, watermark: 'MSFT · 1W' });
+    expect(lwc.state.watermarks).toHaveLength(1);
+    expect(mark?.options).toMatchObject({ lines: [{ text: 'MSFT · 1W' }] });
+    chart.setDisplay({ ...display, watermark: null });
+    expect(mark?.detached).toBe(true);
   });
 
   it('maps scale modes and auto-fit to the right price scale', () => {

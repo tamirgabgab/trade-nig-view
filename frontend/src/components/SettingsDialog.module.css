@@ -86,6 +86,9 @@ div.dialog {
   height: 20px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
+  /* data-theme on the swatch: that preset's tokens. */
+  background: var(--color-bg);
+  color: var(--color-text);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -94,6 +97,7 @@ div.dialog {
   width: 14px;
   height: 14px;
   border-radius: 50%;
+  background: var(--color-accent); /* data-accent on the dot: that accent's token */
 }
 
 .image {

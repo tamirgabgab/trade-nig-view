@@ -129,17 +129,7 @@ export function ChartArea({ className }: ChartAreaProps) {
   const quietVolume = useSettingsStore((s) => s.quietVolume);
   const textScale = useSettingsStore((s) => s.textScale);
   const accent = useSettingsStore((s) => s.accent);
-  const display = useMemo(
-    () => ({
-      upColor,
-      downColor,
-      lastPriceLine,
-      volume: showVolume,
-      quietVolume,
-      fontSize: Math.round(12 * textScale),
-    }),
-    [upColor, downColor, lastPriceLine, showVolume, quietVolume, textScale],
-  );
+  const showWatermark = useSettingsStore((s) => s.watermark);
   const legendFocus = useUiStore((s) => s.legendFocus);
   const emphasis = useUiStore((s) => s.emphasis);
   const setEmphasis = useUiStore((s) => s.setEmphasis);
@@ -174,6 +164,19 @@ export function ChartArea({ className }: ChartAreaProps) {
   const shownSymbol = data?.symbol ?? symbol;
   const shownInterval = data?.interval ?? interval;
   const info = symbols?.find((s) => s.symbol === shownSymbol);
+  const watermark = showWatermark ? `${info?.display ?? shownSymbol} · ${shownInterval}` : null;
+  const display = useMemo(
+    () => ({
+      upColor,
+      downColor,
+      lastPriceLine,
+      volume: showVolume,
+      quietVolume,
+      fontSize: Math.round(12 * textScale),
+      watermark,
+    }),
+    [upColor, downColor, lastPriceLine, showVolume, quietVolume, textScale, watermark],
+  );
   const selected = symbols?.find((s) => s.symbol === symbol);
   const decimals = info?.decimals ?? DEFAULT_DECIMALS;
   const hasVolume = info?.hasVolume ?? true;
@@ -461,18 +464,9 @@ export function ChartArea({ className }: ChartAreaProps) {
     status = 'Cached data (refresh failed)';
   }
 
-  const watermark = `${info?.display ?? shownSymbol} · ${shownInterval}`;
   const backdrop = useMemo(
-    () => (
-      <ChartBackdrop
-        bars={bars}
-        symbol={shownSymbol}
-        label={watermark}
-        adjusted={adjusted}
-        zone={timeZone}
-      />
-    ),
-    [bars, shownSymbol, watermark, adjusted, timeZone],
+    () => <ChartBackdrop bars={bars} symbol={shownSymbol} adjusted={adjusted} zone={timeZone} />,
+    [bars, shownSymbol, adjusted, timeZone],
   );
 
   return (

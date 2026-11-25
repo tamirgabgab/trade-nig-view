@@ -3,7 +3,7 @@
  * so DOM and canvas stay in sync. Spacing follows a 4px grid.
  */
 :root,
-:root[data-theme='dark'] {
+[data-theme='dark'] {
   color-scheme: dark;
 
   --color-bg: #0f0f0f;
@@ -79,8 +79,8 @@
   --z-tooltip: 100;
 }
 
-:root[data-theme='light'],
-:root[data-theme='paper'] {
+[data-theme='light'],
+[data-theme='paper'] {
   color-scheme: light;
 
   --color-bg: #ffffff;
@@ -109,8 +109,9 @@
   --shadow-panel: -6px 0 18px rgb(0 0 0 / 6%);
 }
 
-/* Theme presets (Settings → Appearance): each overrides the surfaces of the dark or light base. */
-:root[data-theme='midnight'] {
+/* Theme presets (Settings → Appearance): each overrides the surfaces of the dark or light base.
+   The selectors match any element, so a swatch with data-theme shows that preset's colours. */
+[data-theme='midnight'] {
   --color-bg: #0b1426;
   --color-surface: #101b31;
   --color-surface-raised: #16233d;
@@ -125,7 +126,7 @@
   --color-chart-crosshair: #6b7a96;
 }
 
-:root[data-theme='graphite'] {
+[data-theme='graphite'] {
   --color-bg: #1b1b1d;
   --color-surface: #222225;
   --color-surface-raised: #2a2a2e;
@@ -140,7 +141,7 @@
   --color-chart-crosshair: #74747c;
 }
 
-:root[data-theme='amber'] {
+[data-theme='amber'] {
   --color-bg: #0c0a07;
   --color-surface: #141008;
   --color-surface-raised: #1c170d;
@@ -155,7 +156,7 @@
   --color-chart-crosshair: #8a7040;
 }
 
-:root[data-theme='paper'] {
+[data-theme='paper'] {
   --color-bg: #fbf8f1;
   --color-surface: #f4efe3;
   --color-surface-raised: #fffdf8;
@@ -170,23 +171,33 @@
   --color-chart-crosshair: #9a8f78;
 }
 
-/* Accent (Settings → Appearance): one interactive hue at a time; blue is the default above. */
-:root[data-accent='purple'] {
+/* Accent (Settings → Appearance): one interactive hue at a time. Text on the accent keeps 4.5:1. */
+[data-accent='blue'] {
+  --color-accent: #2962ff;
+  --color-accent-soft: rgb(41 98 255 / 18%);
+  --color-focus: #2962ff;
+  --color-on-accent: #ffffff;
+}
+
+[data-accent='purple'] {
   --color-accent: #7e57c2;
   --color-accent-soft: rgb(126 87 194 / 20%);
   --color-focus: #7e57c2;
+  --color-on-accent: #ffffff;
 }
 
-:root[data-accent='teal'] {
-  --color-accent: #00897b;
-  --color-accent-soft: rgb(0 137 123 / 20%);
-  --color-focus: #00897b;
+[data-accent='teal'] {
+  --color-accent: #00796b;
+  --color-accent-soft: rgb(0 121 107 / 20%);
+  --color-focus: #00796b;
+  --color-on-accent: #ffffff;
 }
 
-:root[data-accent='amber'] {
+[data-accent='amber'] {
   --color-accent: #e69500;
   --color-accent-soft: rgb(230 149 0 / 20%);
   --color-focus: #e69500;
+  --color-on-accent: #1a1200;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -210,6 +210,7 @@ describe('App shell', () => {
       volume: false,
       quietVolume: true,
       fontSize: 12,
+      watermark: expect.stringMatching(/ · 1D$/) as unknown,
     });
     await user.click(within(dialog).getByRole('button', { name: 'Reset colors' }));
     expect(liveEngine().display?.upColor).toBeNull();

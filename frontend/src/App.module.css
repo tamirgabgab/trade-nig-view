@@ -4,7 +4,7 @@
   grid-template-areas:
     'top top top'
     'left chart right'
-    'left bottom right';
+    'left bottom bottom';
   grid-template-columns: var(--size-toolbar-left) minmax(0, 1fr) auto;
   grid-template-rows: var(--size-topbar) minmax(0, 1fr) var(--size-bottombar);
   gap: 1px;

@@ -1,7 +1,10 @@
 /** Pure helpers for the chart backdrop: the day's change (Market pulse), the topographic lines and
  *  the ghost history path. */
 import type { Bar } from '../api/bars.ts';
+import { barSeconds } from '../chart/visibleRange.ts';
 import { localDate } from './formatClock.ts';
+
+const WEEK = 7 * 86_400;
 
 /** A move this large (3 %) gives the strongest pulse tint. */
 const FULL_PULSE = 0.03;
@@ -9,9 +12,10 @@ const FULL_PULSE = 0.03;
 export const PULSE_MAX_ALPHA = 0.12;
 
 /**
- * The day's change of the last shown bar's close: against the previous bar's close on daily and
- * longer bars, against the last close of the previous day on intraday bars (the chart's own bars,
- * so a replay never shows a later day). Null without a previous close.
+ * The latest change of the last shown bar's close: against the previous bar's close on daily and
+ * longer bars (a week's or month's change there), against the last close of the previous day on
+ * intraday bars. The chart's own bars, so a replay never shows a later day. Null without a
+ * previous close.
  */
 export function dayChange(bars: readonly Bar[], zone: string): number | null {
   const last = bars.at(-1);
@@ -90,4 +94,16 @@ export function ghostPath(closes: readonly number[], width: number, height: numb
       `${((i / (logs.length - 1)) * width).toFixed(1)},${(height * (0.95 - 0.75 * ((v - lo) / span))).toFixed(1)}`,
   );
   return `M0,${String(height)}L${xy.join('L')}L${String(width)},${String(height)}Z`;
+}
+
+/**
+ * The ghost history's closes: the weekly bars whose week is over by the last shown bar (a week's
+ * bar carries its Friday close), then that bar's own close, so a replay never sees a later price.
+ */
+export function ghostCloses(weekly: readonly Bar[], last: Bar): number[] {
+  const until = barSeconds(last.time);
+  return [
+    ...weekly.filter((b) => barSeconds(b.time) + WEEK <= until).map((b) => b.close),
+    last.close,
+  ];
 }

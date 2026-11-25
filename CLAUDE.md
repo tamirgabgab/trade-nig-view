@@ -81,7 +81,9 @@ ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.
 ## 7. Chart rules
 - Only `frontend/src/chart/` imports `lightweight-charts`; everything else goes through `ChartEngine`.
 - Keep `layout.attributionLogo: true`. No TradingView branding/assets.
-- No direct DOM hacks on the canvas; overlays = series/pane primitives; legends are React components.
+- No direct DOM hacks on the canvas; overlays = series/pane primitives; legends are React components. The
+  canvas is transparent: chart backgrounds (colour, image, Market pulse tint) are a DOM `ChartBackdrop` *beneath*
+  it (ADR 0015); anything drawn over the bars, the watermark included, stays a primitive.
 
 ## 8. Data rules
 - Tests **never** hit the network (socket blocker fixture). Use committed fixtures / recorded responses.
