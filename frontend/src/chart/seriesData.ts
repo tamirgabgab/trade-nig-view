@@ -150,6 +150,19 @@ export function toHollowCandles(
 }
 
 /** Close prices for line and area charts. */
+/**
+ * Another symbol's closes on this chart's times (Compare): only the bars whose time the chart
+ * has, so the compared line never adds bars to the time axis (and never runs past a replay).
+ */
+export function compareLine(
+  chart: readonly ChartTime[],
+  bars: readonly Bar[],
+  timeZone: string,
+): LinePoint[] {
+  const shown = new Set(chart);
+  return toLine(bars, chartTimes(bars, timeZone)).filter((p) => shown.has(p.time));
+}
+
 export function toLine(bars: readonly Bar[], times: readonly ChartTime[]): LinePoint[] {
   return bars.map((bar, i) => ({ time: times[i] ?? '', value: bar.close }));
 }

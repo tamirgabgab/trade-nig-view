@@ -32,6 +32,7 @@ export type SidebarTab =
 /** The modal dialogs; at most one is open, so they can never stack. */
 export type Modal =
   | 'symbols'
+  | 'compare'
   | 'indicators'
   | 'shortcuts'
   | 'palette'

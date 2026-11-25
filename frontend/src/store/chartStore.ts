@@ -33,6 +33,10 @@ export interface ChartState {
   autoScale: boolean;
   /** Dividend-adjusted history (ADJ). */
   adjusted: boolean;
+  /** Symbols drawn as % lines over the chart (Compare), at most MAX_COMPARE. */
+  compare: string[];
+  addCompare: (symbol: string) => void;
+  removeCompare: (symbol: string) => void;
   /** Highlighted range button; cleared when the user picks another interval or symbol. */
   range: RangeId | null;
   rangeRequest: RangeRequest | null;
@@ -49,8 +53,20 @@ export interface ChartState {
 
 type Persisted = Pick<
   ChartState,
-  'symbol' | 'interval' | 'chartType' | 'scaleMode' | 'autoScale' | 'adjusted'
+  'symbol' | 'interval' | 'chartType' | 'scaleMode' | 'autoScale' | 'adjusted' | 'compare'
 >;
+
+/** Symbols a chart compares with at most (the backend's MAX_COMPARE). */
+export const MAX_COMPARE = 3;
+
+/** At most MAX_COMPARE distinct, well-formed symbols. */
+export function sanitizeCompare(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const symbols = value.filter(
+    (v): v is string => typeof v === 'string' && v.length > 0 && v.length <= MAX_SYMBOL_LENGTH,
+  );
+  return [...new Set(symbols)].slice(0, MAX_COMPARE);
+}
 
 /** Keep only well-formed persisted values; anything else falls back to the defaults. */
 export function sanitizePersisted(persisted: unknown): Persisted {
@@ -72,6 +88,7 @@ export function sanitizePersisted(persisted: unknown): Persisted {
     scaleMode: isScaleMode(scaleMode) ? scaleMode : 'normal',
     autoScale: record['autoScale'] !== false,
     adjusted: record['adjusted'] !== false,
+    compare: sanitizeCompare(record['compare']),
   };
 }
 
@@ -88,8 +105,20 @@ export const useChartStore = create<ChartState>()(
       scaleMode: 'normal',
       autoScale: true,
       adjusted: true,
+      compare: [],
       range: null,
       rangeRequest: null,
+      addCompare: (symbol) => {
+        set((s) =>
+          s.compare.includes(symbol) || s.compare.length >= MAX_COMPARE || symbol === s.symbol
+            ? s
+            : // The lines start together on the % scale, as in TradingView.
+              { compare: [...s.compare, symbol], scaleMode: 'percent' },
+        );
+      },
+      removeCompare: (symbol) => {
+        set((s) => ({ compare: s.compare.filter((c) => c !== symbol) }));
+      },
       setSymbol: (symbol) => {
         set((s) => (s.symbol === symbol ? s : { symbol, range: null, rangeRequest: null }));
       },
@@ -130,6 +159,7 @@ export const useChartStore = create<ChartState>()(
         scaleMode: state.scaleMode,
         autoScale: state.autoScale,
         adjusted: state.adjusted,
+        compare: state.compare,
       }),
       // Version 1 stored only symbol + interval; sanitizing fills the new fields with defaults.
       migrate: (persisted) => sanitizePersisted(persisted),

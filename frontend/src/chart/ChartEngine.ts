@@ -37,6 +37,7 @@ import type { ChartType, ScaleMode } from './chartTypes.ts';
 import { rafLatest, type RafLatest } from './rafLatest.ts';
 import {
   chartTimes,
+  compareLine,
   crosshairIndex,
   hasIntradayTimes,
   initialRange,
@@ -227,6 +228,11 @@ function toLineWidth(width: number): LineWidth {
 }
 
 export type CrosshairListener = (index: number | null) => void;
+/** A compared symbol and its bars (same interval and adjustment as the chart). */
+export interface CompareBars {
+  symbol: string;
+  bars: readonly Bar[];
+}
 /** A pointer position on the price pane: logical bar index, price, and px from the chart's top-left. */
 export interface ChartPointer {
   logical: number;
@@ -300,6 +306,10 @@ export class ChartEngine {
   /** Pane heights to give own-pane indicators (by group) when their pane is created. */
   private stretches = new Map<string, number>();
   private times: ChartTime[] = [];
+  private timeZone = DISPLAY_TIME_ZONE;
+  /** Compare: other symbols' bars, drawn as lines (on the % scale) in this order. */
+  private compareBars: readonly CompareBars[] = [];
+  private readonly compareSeries = new Map<string, ISeriesApi<'Line'>>();
   private decimals = 2;
   private readonly lines = new Map<string, LineEntry>();
   private markerData: (Omit<MarkerPoint, 'time'> & { time: Time })[] = [];
@@ -383,12 +393,14 @@ export class ChartEngine {
     this.decimals = decimals;
     this.hasVolume = hasVolume;
     this.times = chartTimes(bars, timeZone);
+    this.timeZone = timeZone;
     // Intraday bars need the time of day on the axis; daily and longer bars show dates only.
     this.chart.applyOptions({ timeScale: { timeVisible: hasIntradayTimes(bars) } });
     this.renderMain();
 
     this.volume.applyOptions({ visible: hasVolume && this.display.volume });
     this.renderVolume();
+    this.renderCompare();
 
     if (before !== null) {
       // Older bars were prepended: every bar index moved right by `shift`; keep the same bars.
@@ -668,6 +680,7 @@ export class ChartEngine {
     this.chart.applyOptions(themeOptions(this.theme));
     this.renderWatermark();
     this.recreateMain();
+    this.renderCompare();
     this.renderVolume();
     // Level lines take their colour from the theme: redraw them (indicator data stays as is).
     for (const entry of this.lines.values()) {
@@ -695,6 +708,38 @@ export class ChartEngine {
       .priceScale(VOLUME_SCALE_ID)
       .applyOptions({ scaleMargins: display.quietVolume ? QUIET_VOLUME_MARGINS : VOLUME_MARGINS });
     this.setTheme(this.baseTheme);
+  }
+
+  /** Compare: draw these symbols' closes as lines on the price scale (the % mode makes them
+   *  start together), only at the chart's own bar times. */
+  setCompare(compare: readonly CompareBars[]): void {
+    this.compareBars = compare;
+    this.renderCompare();
+  }
+
+  private renderCompare(): void {
+    const wanted = new Set(this.compareBars.map((c) => c.symbol));
+    for (const [symbol, series] of this.compareSeries) {
+      if (wanted.has(symbol)) continue;
+      this.chart.removeSeries(series);
+      this.compareSeries.delete(symbol);
+    }
+    this.compareBars.forEach(({ symbol, bars }, i) => {
+      const color = [this.theme.compare1, this.theme.compare2, this.theme.compare3][i % 3] ?? '';
+      let series = this.compareSeries.get(symbol);
+      if (series === undefined) {
+        series = this.chart.addSeries(LineSeries, {
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: symbol,
+          crosshairMarkerRadius: 3,
+        });
+        this.compareSeries.set(symbol, series);
+      }
+      series.applyOptions({ color, crosshairMarkerBorderColor: this.theme.background });
+      series.setData(withTime(compareLine(this.times, bars, this.timeZone)));
+    });
   }
 
   /** The symbol watermark on the price pane, in the theme's text colour (a library primitive). */

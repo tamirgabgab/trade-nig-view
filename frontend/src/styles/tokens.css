@@ -32,6 +32,10 @@
   --color-band-80: #f7c948;
   --color-band-95: #ff9800;
   --color-band-out: #f23645;
+  /* Compare: the other symbols' lines, in order. */
+  --color-compare-1: #ff9800;
+  --color-compare-2: #ab47bc;
+  --color-compare-3: #00bcd4;
   --color-focus: #2962ff;
 
   --color-chart-grid: #1c1c1c;

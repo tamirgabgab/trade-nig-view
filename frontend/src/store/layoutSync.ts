@@ -47,6 +47,7 @@ export function currentLayout(): LayoutState {
     scaleMode: c.scaleMode,
     autoScale: c.autoScale,
     adjusted: c.adjusted,
+    compare: c.compare,
     indicators: useIndicatorStore.getState().instances,
     // A layout just opened shows its own view once its bars are in; until then that is the view.
     ...view(),
@@ -64,6 +65,7 @@ export function applyLayout(layout: SavedLayout): void {
     scaleMode: layout.scaleMode,
     autoScale: layout.autoScale,
     adjusted: layout.adjusted,
+    compare: layout.compare,
     range: null,
     rangeRequest: null,
   });

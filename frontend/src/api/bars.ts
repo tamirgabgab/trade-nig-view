@@ -1,6 +1,7 @@
 import {
   keepPreviousData,
   useInfiniteQuery,
+  useQueries,
   useQuery,
   type InfiniteData,
 } from '@tanstack/react-query';
@@ -201,5 +202,24 @@ export function useWeeklyHistory(symbol: string, adjusted: boolean, enabled: boo
       apiGet(barsPath(query, { limit: OLDER_PAGE_LIMIT }), parseBars, { signal }),
     enabled,
     staleTime: 3_600_000,
+  });
+}
+
+const dataOf = (results: readonly { data?: BarsData | undefined }[]) => results.map((r) => r.data);
+
+/** The bars of each compared symbol (same interval and adjustment, the plain closes), in order;
+ *  undefined while one loads. The array keeps its identity while the data does. */
+export function useCompareBars(symbols: readonly string[], interval: Interval, adjusted: boolean) {
+  return useQueries({
+    combine: dataOf,
+    queries: symbols.map((symbol) => {
+      const query: BarsQuery = { symbol, interval, adjusted, transform: 'none' };
+      return {
+        queryKey: ['bars-compare', symbol, interval, adjusted],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          apiGet(barsPath(query), parseBars, { signal }),
+        staleTime: 60_000,
+      };
+    }),
   });
 }

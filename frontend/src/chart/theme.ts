@@ -19,6 +19,10 @@ export interface ChartTheme {
   band80: string;
   band95: string;
   bandOut: string;
+  /** Compare lines, in order. */
+  compare1: string;
+  compare2: string;
+  compare3: string;
   fontFamily: string;
 }
 
@@ -37,6 +41,9 @@ export const FALLBACK_THEME: ChartTheme = {
   band80: '#f7c948',
   band95: '#ff9800',
   bandOut: '#f23645',
+  compare1: '#ff9800',
+  compare2: '#ab47bc',
+  compare3: '#00bcd4',
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif",
 };
 
@@ -55,6 +62,9 @@ const TOKENS: Record<keyof ChartTheme, string> = {
   band80: '--color-band-80',
   band95: '--color-band-95',
   bandOut: '--color-band-out',
+  compare1: '--color-compare-1',
+  compare2: '--color-compare-2',
+  compare3: '--color-compare-3',
   fontFamily: '--font-sans',
 };
 

@@ -3,6 +3,7 @@ import {
   sanitizePersisted as sanitizeIndicators,
   type IndicatorInstance,
 } from '../store/indicatorStore.ts';
+import { sanitizeCompare } from '../store/chartStore.ts';
 import { isInterval, type Interval } from './bars.ts';
 import { apiDelete, apiGet, apiPut, ApiError, isRecord } from './client.ts';
 
@@ -19,6 +20,8 @@ export interface LayoutState {
   stretches: Record<string, number>;
   /** First and last visible bar, in the bars' own time format. */
   visibleRange: { from: string | number; to: string | number } | null;
+  /** Symbols drawn as % lines over the chart. */
+  compare: string[];
 }
 
 export interface SavedLayout extends LayoutState {
@@ -48,6 +51,7 @@ export function layoutBody(revision: number, state: LayoutState): Record<string,
     scale_mode: state.scaleMode,
     auto_scale: state.autoScale,
     adjusted: state.adjusted,
+    compare: state.compare,
     indicators: state.indicators.map((i) => ({
       uid: i.uid,
       id: i.id,
@@ -107,6 +111,7 @@ export function parseLayout(body: unknown): SavedLayout {
     indicators: sanitizeIndicators({ instances }).instances,
     stretches,
     visibleRange: from === null || to === null ? null : { from, to },
+    compare: sanitizeCompare(body['compare']),
   };
 }
 

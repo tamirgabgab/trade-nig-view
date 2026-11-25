@@ -135,8 +135,14 @@ describe('layout sync', () => {
       indicators: [{ uid: 'ema-7', id: 'ema', params: {}, styles: {}, visible: true }],
       stretches: { 'ema-7': 0.5 },
       visibleRange: null,
+      compare: ['SPY'],
     });
-    expect(currentLayout()).toMatchObject({ symbol: 'NVDA', interval: '1W', chartType: 'line' });
+    expect(currentLayout()).toMatchObject({
+      symbol: 'NVDA',
+      interval: '1W',
+      chartType: 'line',
+      compare: ['SPY'],
+    });
     expect(useIndicatorStore.getState().add('sma', {})).toBe('sma-8');
     expect(useLayoutStore.getState()).toMatchObject({ name: 'Swing', revision: 2 });
     expect(useLayoutStore.getState().pending?.stretches).toEqual({ 'ema-7': 0.5 });

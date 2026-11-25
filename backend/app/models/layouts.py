@@ -67,6 +67,10 @@ class LayoutIndicator(BaseModel):
     pane_stretch: float | None = Field(default=None, gt=0, le=100)
 
 
+#: Symbols a chart compares with at most.
+MAX_COMPARE = 3
+
+
 class VisibleRange(BaseModel):
     """Visible bar times, in the ``/api/bars`` format (``YYYY-MM-DD`` or UTC epoch seconds)."""
 
@@ -91,6 +95,11 @@ class LayoutBody(BaseModel):
         default_factory=list[LayoutIndicator], max_length=MAX_INDICATORS
     )
     visible_range: VisibleRange | None = None
+    compare: list[str] = Field(
+        default_factory=list[str],
+        max_length=MAX_COMPARE,
+        description="Symbols drawn as % lines over the chart (Compare)",
+    )
 
     @field_validator("indicators")
     @classmethod

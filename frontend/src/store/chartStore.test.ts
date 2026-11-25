@@ -12,6 +12,7 @@ const DEFAULTS = {
   scaleMode: 'normal',
   autoScale: true,
   adjusted: true,
+  compare: [],
 };
 
 describe('sanitizePersisted', () => {
@@ -23,6 +24,7 @@ describe('sanitizePersisted', () => {
       scaleMode: 'log',
       autoScale: false,
       adjusted: false,
+      compare: ['SPY'],
     };
     expect(sanitizePersisted(saved)).toEqual(saved);
   });
@@ -102,5 +104,26 @@ describe('useChartStore', () => {
     store.selectRange('1Y');
     store.setInterval('1h');
     expect(useChartStore.getState()).toMatchObject({ range: null, rangeRequest: null });
+  });
+});
+
+describe('compare', () => {
+  it('adds up to three other symbols, switches to the % scale, and removes them', () => {
+    useChartStore.setState({ symbol: 'AAPL', compare: [], scaleMode: 'normal' });
+    const { addCompare, removeCompare } = useChartStore.getState();
+    addCompare('AAPL'); // the chart's own symbol
+    expect(useChartStore.getState().compare).toEqual([]);
+    for (const s of ['SPY', 'SPY', 'MSFT', 'NVDA', 'QQQ']) addCompare(s);
+    expect(useChartStore.getState()).toMatchObject({
+      compare: ['SPY', 'MSFT', 'NVDA'],
+      scaleMode: 'percent',
+    });
+    removeCompare('MSFT');
+    expect(useChartStore.getState().compare).toEqual(['SPY', 'NVDA']);
+    expect(sanitizePersisted({ compare: ['A', 'A', 7, '', 'B', 'C', 'D'] }).compare).toEqual([
+      'A',
+      'B',
+      'C',
+    ]);
   });
 });

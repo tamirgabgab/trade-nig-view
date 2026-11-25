@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import { useSymbols } from '../api/market.ts';
-import { useChartStore } from '../store/chartStore.ts';
+import { MAX_COMPARE, useChartStore } from '../store/chartStore.ts';
 import { useHistoryStore } from '../store/historyStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { isLightTheme, useThemeStore } from '../store/themeStore.ts';
@@ -41,6 +41,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
   const display = useSymbols().data?.find((s) => s.symbol === symbol)?.display ?? symbol;
   const openModal = useUiStore((s) => s.openModal);
   const theme = useThemeStore((s) => s.theme);
+  const compareFull = useChartStore((s) => s.compare.length >= MAX_COMPARE);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const fullscreen = useFullscreen();
   const replaying = useReplayStore((s) => s.mode !== 'off');
@@ -64,9 +65,13 @@ export function TopToolbar({ className }: TopToolbarProps) {
         {display}
       </button>
       <IconButton
-        label="Compare or add symbol"
+        label="Compare with another symbol"
         icon={<Plus size={ICON_SIZE} />}
-        comingIn="a later round"
+        aria-haspopup="dialog"
+        disabled={compareFull}
+        onClick={() => {
+          openModal('compare');
+        }}
       />
       <span className={styles.separator} aria-hidden="true" />
       <IntervalSwitcher />

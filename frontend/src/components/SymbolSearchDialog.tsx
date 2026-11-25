@@ -14,8 +14,10 @@ import { addSymbol } from './watchlistEdit.ts';
 /** Modal symbol search: type to filter, arrows to move, Enter to pick, Esc to close. */
 export function SymbolSearchDialog() {
   const mode = useUiStore((s) =>
-    s.modal === 'symbols' || s.modal === 'watchlistAdd' ? s.modal : null,
+    s.modal === 'symbols' || s.modal === 'watchlistAdd' || s.modal === 'compare' ? s.modal : null,
   );
+  const compare = useChartStore((s) => s.compare);
+  const addCompare = useChartStore((s) => s.addCompare);
   const editor = useWatchlistEditor();
   const seed = useUiStore((s) => s.symbolSeed);
   const closeModal = useUiStore((s) => s.closeModal);
@@ -32,6 +34,7 @@ export function SymbolSearchDialog() {
   const { shown, attrs, key } = usePresence(request);
   if (shown === null) return null;
   const adding = shown.mode === 'watchlistAdd';
+  const comparing = shown.mode === 'compare';
   const inList = new Set(editor.active?.sections.flatMap((s) => s.symbols) ?? []);
   const close = () => {
     closeModal(shown.mode);
@@ -40,7 +43,13 @@ export function SymbolSearchDialog() {
   return (
     <SearchDialog
       key={key}
-      title={adding ? `Add to ${editor.active?.name ?? 'the watchlist'}` : 'Symbol search'}
+      title={
+        comparing
+          ? 'Compare with'
+          : adding
+            ? `Add to ${editor.active?.name ?? 'the watchlist'}`
+            : 'Symbol search'
+      }
       icon={<Search size={16} />}
       inputLabel="Symbol"
       listLabel="Matching symbols"
@@ -52,7 +61,13 @@ export function SymbolSearchDialog() {
       search={search}
       itemKey={(info) => info.symbol}
       itemAttrs={(info) => ({
-        'aria-current': (adding ? inList.has(info.symbol) : info.symbol === current)
+        'aria-current': (
+          comparing
+            ? compare.includes(info.symbol)
+            : adding
+              ? inList.has(info.symbol)
+              : info.symbol === current
+        )
           ? 'true'
           : undefined,
       })}
@@ -64,7 +79,9 @@ export function SymbolSearchDialog() {
         </>
       )}
       onPick={(info) => {
-        if (adding) {
+        if (comparing) {
+          addCompare(info.symbol);
+        } else if (adding) {
           editor.edit((s) => addSymbol(s, info.symbol));
           useUiStore
             .getState()

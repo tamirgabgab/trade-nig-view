@@ -1,11 +1,11 @@
 import { ChevronsRight } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useBarHistory, type Bar } from '../api/bars.ts';
+import { useBarHistory, useCompareBars, type Bar } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
-import type { ChartEngine, ChartPointer, PaneLayout } from '../chart/ChartEngine.ts';
+import type { ChartEngine, ChartPointer, CompareBars, PaneLayout } from '../chart/ChartEngine.ts';
 import type { ForecastView } from '../chart/forecastLayer.ts';
 import type { GapZone } from '../chart/gapLayer.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
@@ -28,6 +28,7 @@ import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { ChartBackdrop } from './ChartBackdrop.tsx';
 import { ChartContextMenu } from './ChartContextMenu.tsx';
+import { CompareLegend } from './CompareLegend.tsx';
 import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
 import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
 import { localDate } from './formatClock.ts';
@@ -91,6 +92,7 @@ export function ChartArea({ className }: ChartAreaProps) {
   const attachDrawings = useDrawingManager();
   const gapZonesRef = useRef<readonly GapZone[]>([]);
   const forecastRef = useRef<ForecastView | null>(null);
+  const compareRef = useRef<readonly CompareBars[]>([]);
   // The forecast candle under the pointer (its tooltip); a click on the fan opens the Forecast tab.
   const [forecastHover, setForecastHover] = useState<{ h: number; x: number; y: number } | null>(
     null,
@@ -109,6 +111,7 @@ export function ChartArea({ className }: ChartAreaProps) {
       attachDrawings(engine);
       engine?.setGaps(gapZonesRef.current);
       engine?.setForecast(forecastRef.current);
+      engine?.setCompare(compareRef.current);
       unsubscribeForecast.current();
       if (engine === null) return;
       const offPointer = engine.onPointer((at) => {
@@ -376,6 +379,32 @@ export function ChartArea({ className }: ChartAreaProps) {
     engineRef.current?.setForecast(forecastRef.current);
   }, [structure.forecast, forecast.data, barIndex, bars, transform]);
 
+  // Compare: the other symbols' bars, drawn as lines on the chart's own bar times.
+  const compareSymbols = useChartStore((s) => s.compare);
+  const compareData = useCompareBars(compareSymbols, shownInterval, adjusted);
+  const compared = useMemo(
+    () =>
+      compareSymbols.flatMap((symbol, i) => {
+        const data = compareData[i];
+        const other = symbols?.find((x) => x.symbol === symbol);
+        return data === undefined
+          ? []
+          : [
+              {
+                symbol,
+                display: other?.display ?? symbol,
+                bars: data.bars,
+                decimals: other?.decimals ?? DEFAULT_DECIMALS,
+              },
+            ];
+      }),
+    [compareSymbols, symbols, compareData],
+  );
+  useEffect(() => {
+    compareRef.current = compared;
+    engineRef.current?.setCompare(compared);
+  }, [compared]);
+
   // A past-bar forecast ends with another symbol or interval, a replay, or the forecast off.
   const setForecastOrigin = useForecastOriginStore((s) => s.setOrigin);
   useEffect(() => {
@@ -528,6 +557,7 @@ export function ChartArea({ className }: ChartAreaProps) {
             : null
         }
       >
+        <CompareLegend compare={compared} time={bars[hoverIndex ?? bars.length - 1]?.time} />
         <IndicatorLegend
           views={priceViews}
           hoverIndex={hoverIndex}

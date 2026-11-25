@@ -1,5 +1,6 @@
 import type { Bar } from '../api/bars.ts';
 import {
+  compareLine,
   chartTimes,
   crosshairIndex,
   hasIntradayTimes,
@@ -207,6 +208,24 @@ describe('toHistogram', () => {
       { time: 'd6', value: -0.5, color: 'd' },
       { time: 'd7', value: -0.5, color: 'D' },
       { time: 'd8', value: 2, color: 'U' },
+    ]);
+  });
+});
+
+describe('compareLine', () => {
+  it('keeps only the bars the chart has, so the axis gets no extra bars', () => {
+    const bar = (time: string, close: number) => ({
+      time,
+      open: 1,
+      high: 1,
+      low: 1,
+      close,
+      volume: 0,
+    });
+    const other = [bar('2024-01-01', 5), bar('2024-01-02', 6), bar('2024-01-04', 8)];
+    expect(compareLine(['2024-01-02', '2024-01-03', '2024-01-04'], other, 'UTC')).toEqual([
+      { time: '2024-01-02', value: 6 },
+      { time: '2024-01-04', value: 8 },
     ]);
   });
 });

@@ -9,6 +9,7 @@ import type { Bar } from '../api/bars.ts';
 import type {
   ChartDisplay,
   ChartPointer,
+  CompareBars,
   CrosshairListener,
   IndicatorLine,
   PaneLayout,
@@ -82,6 +83,12 @@ export class FakeChartEngine {
     return () => {
       this.listener = null;
     };
+  }
+
+  compare: readonly CompareBars[] = [];
+
+  setCompare(compare: readonly CompareBars[]): void {
+    this.compare = compare;
   }
 
   pointerListener: PointerListener | null = null;

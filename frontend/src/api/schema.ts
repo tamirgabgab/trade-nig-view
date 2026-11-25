@@ -1347,6 +1347,11 @@ export interface components {
             indicators?: components["schemas"]["LayoutIndicator"][];
             visible_range?: components["schemas"]["VisibleRange"] | null;
             /**
+             * Compare
+             * @description Symbols drawn as % lines over the chart (Compare)
+             */
+            compare?: string[];
+            /**
              * Schema Version
              * @default 1
              */
@@ -1456,6 +1461,11 @@ export interface components {
             /** Indicators */
             indicators?: components["schemas"]["LayoutIndicator"][];
             visible_range?: components["schemas"]["VisibleRange"] | null;
+            /**
+             * Compare
+             * @description Symbols drawn as % lines over the chart (Compare)
+             */
+            compare?: string[];
             /**
              * Revision
              * @description Revision the client last read; 0 = create

@@ -3738,6 +3738,15 @@
               }
             ]
           },
+          "compare": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Compare",
+            "description": "Symbols drawn as % lines over the chart (Compare)"
+          },
           "schema_version": {
             "type": "integer",
             "title": "Schema Version",
@@ -3970,6 +3979,15 @@
                 "type": "null"
               }
             ]
+          },
+          "compare": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Compare",
+            "description": "Symbols drawn as % lines over the chart (Compare)"
           },
           "revision": {
             "type": "integer",

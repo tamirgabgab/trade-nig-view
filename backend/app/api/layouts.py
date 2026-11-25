@@ -102,10 +102,18 @@ def put_layout(
     info = universe.resolve(body.symbol)
     if info is None:
         raise InvalidLayoutError(f"Unknown symbol {body.symbol!r}")
+    compare: list[str] = []
+    for symbol in body.compare:
+        other = universe.resolve(symbol)
+        if other is None:
+            raise InvalidLayoutError(f"Unknown symbol {symbol!r} to compare")
+        if other.symbol != info.symbol and other.symbol not in compare:
+            compare.append(other.symbol)
     layout = body.model_copy(
         update={
             "symbol": info.symbol,
             "indicators": [_checked_indicator(i) for i in body.indicators],
+            "compare": compare,
         }
     )
     document: Document = {

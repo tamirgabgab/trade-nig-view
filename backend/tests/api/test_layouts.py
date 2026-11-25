@@ -39,6 +39,7 @@ def test_round_trip_with_revisions(client: TestClient) -> None:
     assert doc["indicators"][0]["params"] == {"length": 30}  # coerced to the param's type
     assert doc["visible_range"] == {"from": "2026-01-02", "to": "2026-03-31"}
     assert (doc["auto_scale"], doc["adjusted"]) == (True, True)
+    assert doc["compare"] == []
 
     again = client.get("/api/layouts/My%20setup").json()
     assert again == doc
@@ -102,6 +103,8 @@ def test_delete(client: TestClient) -> None:
         ({"chart_type": "renko"}, "validation_error"),
         ({"interval": "5m"}, "validation_error"),
         ({"extra": 1}, "validation_error"),
+        ({"compare": ["nope"]}, "invalid_layout"),
+        ({"compare": ["a", "b", "c", "d"]}, "validation_error"),
     ],
 )
 def test_invalid_layouts_are_422(client: TestClient, changes: dict[str, Any], code: str) -> None:
@@ -126,3 +129,12 @@ def test_names_of_only_dots_are_refused(name: str) -> None:
     # A URL path cannot carry them (the browser collapses "." and ".."), so test the type itself.
     with pytest.raises(ValidationError, match="only dots"):
         TypeAdapter(DocumentName).validate_python(name)
+
+
+def test_compare_symbols_are_canonical_unique_and_not_the_chart(client: TestClient) -> None:
+    doc = put(client, "C", 0, compare=["idx", "^IDX"]).json()
+    assert doc["compare"] == []  # the chart's own symbol, once canonical, is dropped
+    universe = client.get("/api/symbols").json()
+    others = [s["symbol"] for s in universe if s["symbol"] != "^IDX"][:2]
+    doc = put(client, "C", 1, compare=[*others, others[0]]).json()
+    assert doc["compare"] == others
