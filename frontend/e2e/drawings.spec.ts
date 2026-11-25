@@ -196,3 +196,51 @@ test('Trade plan tool: entry, target and stop open the tab with the chances', as
     })
     .toBe(2);
 });
+
+test('U3: patterns, icons, the eraser and the zoom-in box', async ({ page }) => {
+  const box = await page.getByTestId('chart-canvas').boundingBox();
+  if (box === null) throw new Error('no chart');
+  const at = (x: number, y: number) => [box.x + box.width * x, box.y + box.height * y] as const;
+  const tree = async () => {
+    await page
+      .getByRole('button', { name: /object tree/i })
+      .first()
+      .click();
+  };
+
+  // An ABCD from the Patterns flyout: four clicks.
+  await page.getByRole('button', { name: 'Patterns: all tools' }).click();
+  await page.getByRole('menuitemradio', { name: 'ABCD pattern', exact: true }).click();
+  for (const [x, y] of [
+    [0.2, 0.6],
+    [0.3, 0.3],
+    [0.4, 0.5],
+    [0.5, 0.2],
+  ] as const)
+    await page.mouse.click(...at(x, y));
+  // A flag from the Icons flyout: one click.
+  await page.getByRole('button', { name: 'Icons: all tools' }).click();
+  await page.getByRole('menuitemradio', { name: 'Flag' }).click();
+  await page.mouse.click(...at(0.7, 0.4));
+  await tree();
+  const objects = page.getByRole('region', { name: 'Object tree' });
+  await expect(objects).toContainText('ABCD pattern');
+  await expect(objects).toContainText('Icon');
+
+  // The eraser removes the icon under the click (Undo offered), and stays on.
+  await page.getByRole('button', { name: /^Eraser/ }).click();
+  await page.mouse.click(...at(0.7, 0.4));
+  await expect(objects).not.toContainText('Icon');
+  await page.keyboard.press('Escape');
+
+  // Zoom in: a dragged box takes over the price axis (auto-fit turns off).
+  await page.getByRole('button', { name: /^Zoom in/ }).click();
+  await page.mouse.move(...at(0.3, 0.3));
+  await page.mouse.down();
+  await page.mouse.move(...at(0.6, 0.6), { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByRole('button', { name: 'Auto-fit price scale' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+});

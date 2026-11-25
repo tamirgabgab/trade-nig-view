@@ -210,3 +210,64 @@ test('forecast vs actual: from a past bar by the context menu, with the calibrat
   await expect(vs).toHaveCount(0, { timeout: 30_000 });
   await expect(panel).toContainText('Forecast from this bar');
 });
+
+test('U3: compare two symbols, the forecast tooltip and click, Go to date, palette tabs', async ({
+  page,
+}) => {
+  // Compare: two symbols as % lines, listed under the legend, saved, removable.
+  for (const symbol of ['SPY', 'MSFT']) {
+    await page.getByRole('button', { name: 'Compare with another symbol' }).click();
+    await page.keyboard.type(symbol);
+    await page.keyboard.press('Enter');
+  }
+  const compared = page.getByRole('list', { name: 'Compared symbols' });
+  await expect(compared.getByRole('listitem')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Percent scale' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.reload();
+  await expect(compared.getByRole('listitem')).toHaveCount(2);
+  await compared.getByRole('button', { name: 'Remove MSFT from the comparison' }).click();
+  await expect(compared.getByRole('listitem')).toHaveCount(1);
+
+  // The forecast: hovering a forecast candle shows its ranges; a click on the fan opens the tab.
+  const forecastIn = page.waitForResponse((r) => r.url().includes('/api/forecast'), {
+    timeout: 30_000,
+  });
+  await page.getByRole('button', { name: 'Market structure' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Forecast (next bars)' }).click();
+  await forecastIn;
+  await page.waitForTimeout(300); // drawn on the next frame
+  const box = await page.getByTestId('chart-canvas').boundingBox();
+  if (box === null) throw new Error('no chart');
+  const tooltip = page.getByRole('tooltip').filter({ hasText: 'Forecast +' });
+  // Sweep right of the last bar until a forecast candle is under the pointer.
+  let column = 0;
+  for (let x = 0.7; x < 0.98 && !(await tooltip.isVisible()); x += 0.01) {
+    column = box.x + box.width * x;
+    await page.mouse.move(column, box.y + box.height * 0.5);
+  }
+  await expect(tooltip).toContainText('Median close');
+  await expect(tooltip).toContainText('P(up)');
+  // A click inside the fan (down that column) opens the Forecast tab.
+  const forecastTab = page.getByRole('region', { name: 'Forecast vs actual' });
+  for (let y = 0.1; y < 0.9 && !(await forecastTab.isVisible()); y += 0.04) {
+    await page.mouse.click(column, box.y + box.height * y);
+  }
+  await expect(forecastTab).toBeVisible();
+
+  // Ctrl+K opens any side tab.
+  await page.keyboard.press('Escape');
+  await page.mouse.move(0, 0);
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('regime');
+  await page.getByRole('option', { name: /Show regime/ }).click();
+  await expect(page.getByRole('region', { name: 'Regime' }).first()).toBeVisible();
+
+  // Go to date: the bottom bar's calendar.
+  await page.getByRole('button', { name: 'Go to date' }).click();
+  await expect(page.getByRole('dialog', { name: 'Go to date' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Go to date' })).toHaveCount(0);
+});

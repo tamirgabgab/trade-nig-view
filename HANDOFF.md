@@ -1197,3 +1197,14 @@
     - ‏memo ל-`dayChange`.
   - ‏simplify לא הורץ: אין כפילות שכדאי להסיר.
 
+### 2026-11-26 — ‏U3: כלי הגרף, ‏Compare ורקעים מונפשים
+- ההחלטות של המשתמש: ‏Patterns ‏(XABCD, ‏ABCD, ראש וכתפיים); ‏Compare כקווים באחוזים, עד 3; זום בזמן ובמחיר; כל שלושת הרקעים המונפשים.
+- ‏Go to date: ‏`GoToDate.tsx` (‏`DatePicker` עם `iconOnly`, ‏`dayEnds` עבר ל-`calendar.ts`).
+- ‏Eraser ו-Zoom in: ‏`drawingStore.pointerTool`; המנהל מוחק עם Undo ומצייר מלבן מקווקו; ‏`ChartEngine.zoomTo`.
+- ‏Forecast: ‏`ChartEngine.onPointer`/`onClick`; ‏`ForecastTooltip`; לחיצה בתוך ה-95% פותחת את הלשונית (`uiStore.openSidebar`); קישורים לדף ההסבר; פקודות Ctrl+K לכל הלשוניות.
+- ‏Icons ו-Patterns: סוגים חדשים ב-backend וב-frontend; ‏`iconPaths.ts` (נתוני Lucide שחולצו, ISC); ‏`patterns.ts` (יחסים טהורים); ציור ב-`render.ts`; בחירת אייקון וגודל בפאנל.
+- ‏Compare: ‏`chartStore.compare` (נשמר גם ב-layouts, ה-backend מנרמל); ‏`useCompareBars`; ‏`compareLine` (רק על זמני הגרף, בלי הצצה ב-Replay); ‏`CompareLegend`.
+- רקעים מונפשים: ‏`AnimatedBackdrop` ו-`animatedScenes.ts`; ‏30fps לכל היותר, עצירה בלשונית מוסתרת וב-Replay Play, פריים סטטי ב-reduced motion; ה-ticker מוסתר ב-Replay.
+- ‏ADR 0016, ועדכונים ל-ADR 0015 ולפרופיל ה-UX.
+- באג שנמצא בהרצה המלאה (מ-G1): ‏`hurst_dfa` על תשואות כמעט שוות נתן ערך שמשתנה עם נרות נוספים. ‏hypothesis מצא את זה. עכשיו מוחזר NaN, ונוספה בדיקה.
+

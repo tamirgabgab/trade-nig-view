@@ -27,7 +27,11 @@ backgrounds, plus their own image. Animated backgrounds were proposed and not ta
   overlays primitives.
 - **The ghost history** keeps only the weeks that are over by the last shown bar, then that bar's close: a weekly
   bar carries its Friday close, which a replay in mid-week must not show.
-- **Nothing moves on its own**: the backdrop changes only with a setting, the symbol or a price.
+- **Nothing moves on its own by default.** Added later (2026-11-26, the user's choice): three opt-in animated
+  backgrounds on their own canvas in the backdrop (`AnimatedBackdrop`, pure scenes in `animatedScenes.ts`): faint
+  candles drifting up or down by colour, a ticker tape of the watchlist (hidden during a replay: today's quotes would
+  give its future away), and three slow aurora lights. At most 30 fps; paused while the tab is hidden or a replay
+  plays; one still frame under `prefers-reduced-motion`.
 - **Snapshots** fill the theme background under the transparent canvas; the watermark is in the image, the other
   backdrop layers are not.
 - **Quiet volume** (the default): the bottom 15 % of the price pane at 0.2 opacity (was 20 % at 0.35).

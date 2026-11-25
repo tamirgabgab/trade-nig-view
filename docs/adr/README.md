@@ -20,3 +20,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0013](0013-value-at-risk.md) | VaR and ES: standardised real h-bar returns, four methods, backtests with simulated p-values | Accepted |
 | [0014](0014-market-regime.md) | Market regime: Chow–Denning variance ratios with a wild bootstrap, DFA, and a background tint | Accepted |
 | [0015](0015-appearance.md) | Appearance: theme presets, a transparent chart over a static backdrop | Accepted |
+| [0016](0016-chart-tools.md) | Chart tools: compare, patterns, icons, eraser, zoom box, forecast pointer | Accepted |
