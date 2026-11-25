@@ -2,7 +2,8 @@
   position: fixed;
   top: var(--size-topbar);
   right: 0;
-  bottom: var(--size-bottombar);
+  /* Down to the window's bottom: the sidebar runs that far, so nothing of it peeks out below. */
+  bottom: 0;
   z-index: 5;
   display: flex;
   flex-direction: column;

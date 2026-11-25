@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
-import { useThemeStore } from '../store/themeStore.ts';
+import { isLightTheme, useThemeStore } from '../store/themeStore.ts';
 import { PAGE_PREFIX, useUiStore } from '../store/uiStore.ts';
 import type { Command } from './commands.ts';
 import { addIndicator, removeIndicator } from './indicatorActions.ts';
@@ -165,7 +165,7 @@ export function usePaletteCommands(): Command[] {
     {
       id: 'theme',
       group: 'View',
-      label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
+      label: `Switch to ${isLightTheme(theme) ? 'dark' : 'light'} theme`,
       keywords: 'dark light mode colors',
       run: toggleTheme,
     },

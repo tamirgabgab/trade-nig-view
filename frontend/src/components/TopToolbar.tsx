@@ -18,7 +18,7 @@ import { useSymbols } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useHistoryStore } from '../store/historyStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
-import { useThemeStore } from '../store/themeStore.ts';
+import { isLightTheme, useThemeStore } from '../store/themeStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
@@ -118,9 +118,9 @@ export function TopToolbar({ className }: TopToolbarProps) {
       <span className={styles.spacer} />
       <LayoutMenu />
       <IconButton
-        label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        label={isLightTheme(theme) ? 'Switch to dark theme' : 'Switch to light theme'}
         tooltipSide="bottom-end"
-        icon={theme === 'dark' ? <Sun size={ICON_SIZE} /> : <Moon size={ICON_SIZE} />}
+        icon={isLightTheme(theme) ? <Moon size={ICON_SIZE} /> : <Sun size={ICON_SIZE} />}
         onClick={toggleTheme}
       />
       <IconButton

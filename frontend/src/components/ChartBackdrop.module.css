@@ -1,0 +1,77 @@
+/* Behind the chart's transparent canvas, inside its isolated host (ChartView). */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--color-bg);
+  pointer-events: none;
+}
+
+.gradient {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-accent) 9%, var(--color-bg)),
+    var(--color-bg) 70%
+  );
+}
+
+.image {
+  position: absolute;
+  inset: -24px; /* the blur's soft edge stays outside */
+  background-position: center;
+  background-size: cover;
+}
+
+/* Keeps the bars readable on any picture. */
+.dim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.topo {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  opacity: 0.13;
+  vector-effect: non-scaling-stroke;
+}
+
+.ghost {
+  fill: var(--color-text-muted);
+  opacity: 0.08;
+}
+
+/* Market pulse: a soft wash from the top, green or red by the day's change (opacity set inline). */
+.pulse {
+  position: absolute;
+  inset: 0;
+}
+
+.pulse[data-pulse='up'] {
+  background: radial-gradient(ellipse at 50% 0%, var(--color-up), transparent 70%);
+}
+
+.pulse[data-pulse='down'] {
+  background: radial-gradient(ellipse at 50% 0%, var(--color-down), transparent 70%);
+}
+
+.watermark {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  color: var(--color-text-strong);
+  font-size: clamp(40px, 8vw, 128px);
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0.05;
+  transform: translate(-50%, -50%);
+}

@@ -26,6 +26,7 @@ import { ChartView, type FocusRequest } from './ChartView.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
+import { ChartBackdrop } from './ChartBackdrop.tsx';
 import { ChartContextMenu } from './ChartContextMenu.tsx';
 import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
 import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
@@ -125,9 +126,19 @@ export function ChartArea({ className }: ChartAreaProps) {
   const downColor = useSettingsStore((s) => s.downColor);
   const lastPriceLine = useSettingsStore((s) => s.lastPriceLine);
   const showVolume = useSettingsStore((s) => s.volume);
+  const quietVolume = useSettingsStore((s) => s.quietVolume);
+  const textScale = useSettingsStore((s) => s.textScale);
+  const accent = useSettingsStore((s) => s.accent);
   const display = useMemo(
-    () => ({ upColor, downColor, lastPriceLine, volume: showVolume }),
-    [upColor, downColor, lastPriceLine, showVolume],
+    () => ({
+      upColor,
+      downColor,
+      lastPriceLine,
+      volume: showVolume,
+      quietVolume,
+      fontSize: Math.round(12 * textScale),
+    }),
+    [upColor, downColor, lastPriceLine, showVolume, quietVolume, textScale],
   );
   const legendFocus = useUiStore((s) => s.legendFocus);
   const emphasis = useUiStore((s) => s.emphasis);
@@ -450,6 +461,20 @@ export function ChartArea({ className }: ChartAreaProps) {
     status = 'Cached data (refresh failed)';
   }
 
+  const watermark = `${info?.display ?? shownSymbol} · ${shownInterval}`;
+  const backdrop = useMemo(
+    () => (
+      <ChartBackdrop
+        bars={bars}
+        symbol={shownSymbol}
+        label={watermark}
+        adjusted={adjusted}
+        zone={timeZone}
+      />
+    ),
+    [bars, shownSymbol, watermark, adjusted, timeZone],
+  );
+
   return (
     <main
       className={[styles.area, className].join(' ')}
@@ -526,7 +551,8 @@ export function ChartArea({ className }: ChartAreaProps) {
           const i = engineRef.current?.barIndexAtClientX(at.x) ?? -1;
           setMenuAt({ ...at, bar: bars[i] ?? null, index: i });
         }}
-        theme={theme}
+        theme={`${theme}/${accent}`}
+        backdrop={backdrop}
       />
       {offLatest && (
         <IconButton

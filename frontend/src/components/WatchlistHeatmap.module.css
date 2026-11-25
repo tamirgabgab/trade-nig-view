@@ -1,0 +1,53 @@
+.heatmap {
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 3px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile:hover {
+  border-color: var(--color-border-strong);
+}
+
+.tile[aria-current='true'] {
+  border-color: var(--color-accent);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.symbol {
+  font-weight: 600;
+}
+
+.change {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}

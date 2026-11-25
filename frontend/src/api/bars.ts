@@ -1,4 +1,9 @@
-import { keepPreviousData, useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import type { BarTransform } from '../chart/chartTypes.ts';
@@ -185,4 +190,16 @@ export function useBarHistory(query: BarsQuery): BarHistory {
       void refetch();
     },
   };
+}
+
+/** The weekly bars of a symbol's whole history (the ghost history backdrop); off when disabled. */
+export function useWeeklyHistory(symbol: string, adjusted: boolean, enabled: boolean) {
+  const query: BarsQuery = { symbol, interval: '1W', adjusted, transform: 'none' };
+  return useQuery({
+    queryKey: ['bars-weekly', symbol, adjusted],
+    queryFn: ({ signal }) =>
+      apiGet(barsPath(query, { limit: OLDER_PAGE_LIMIT }), parseBars, { signal }),
+    enabled,
+    staleTime: 3_600_000,
+  });
 }

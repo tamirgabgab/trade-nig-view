@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { groupSymbols, parseQuotes, parseSymbols } from '../api/market.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { useWatchlistStore } from '../store/watchlistStore.ts';
 import {
@@ -25,6 +26,10 @@ async function rowFor(display: string): Promise<HTMLElement> {
   if (!row) throw new Error(`No row for ${display}`);
   return row;
 }
+
+beforeEach(() => {
+  useSettingsStore.setState({ heatmap: false }); // rows are found by their symbol's text
+});
 
 describe('Watchlist', () => {
   it('shows last, change and change % with direction colors', async () => {

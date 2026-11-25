@@ -16,15 +16,21 @@ import { TopToolbar } from './components/TopToolbar.tsx';
 import { useAppHotkeys } from './components/useAppHotkeys.ts';
 import { recordHistory } from './store/historyStore.ts';
 import { startLayoutSync } from './store/layoutSync.ts';
+import { useSettingsStore } from './store/settingsStore.ts';
 import { useThemeStore } from './store/themeStore.ts';
 
 /** Application shell: five regions laid out like a desktop charting terminal. */
 export function App() {
   const theme = useThemeStore((s) => s.theme);
+  const accent = useSettingsStore((s) => s.accent);
+  const textScale = useSettingsStore((s) => s.textScale);
   // Before paint, so the chart (a child) reads the new tokens when it repaints.
   useLayoutEffect(() => {
-    document.documentElement.dataset['theme'] = theme;
-  }, [theme]);
+    const root = document.documentElement;
+    root.dataset['theme'] = theme;
+    root.dataset['accent'] = accent;
+    root.style.setProperty('--text-scale', String(textScale));
+  }, [theme, accent, textScale]);
   useAppHotkeys();
   // Undo/redo records every chart change from here on.
   useEffect(() => recordHistory(), []);

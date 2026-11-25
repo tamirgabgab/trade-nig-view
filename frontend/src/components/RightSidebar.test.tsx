@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { Gap } from '../api/analysis.ts';
 import { useChartDataStore } from '../store/chartDataStore.ts';
 import { useStructureStore } from '../store/structureStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { QUOTES, renderWithQuery, stubApi, SYMBOLS } from '../test/render.tsx';
 import { RightSidebar } from './RightSidebar.tsx';
@@ -22,6 +23,7 @@ function stubWindow(narrow: boolean) {
 
 beforeEach(() => {
   useUiStore.setState(useUiStore.getInitialState());
+  useSettingsStore.setState({ heatmap: false }); // rows are found by their symbol's text
   useStructureStore.setState({ gaps: true, gapMinPct: 1, gapPartial: false });
   stubApi({ '/api/symbols': { body: SYMBOLS }, '/api/quotes': { body: QUOTES } });
 });

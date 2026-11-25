@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { useChartStore } from '../store/chartStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 import { engines, liveEngine } from '../test/fakeChartEngine.ts';
 import {
   AAPL_BARS,
@@ -46,6 +47,7 @@ beforeEach(() => {
   requested.length = 0;
   localStorage.clear();
   useChartStore.setState(useChartStore.getInitialState());
+  useSettingsStore.setState({ heatmap: false }); // rows are found by their symbol's text
 });
 
 afterEach(() => {

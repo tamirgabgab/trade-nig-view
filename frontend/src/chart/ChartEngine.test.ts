@@ -257,7 +257,7 @@ describe('ChartEngine', () => {
       priceFormat: { type: 'volume' },
     });
     expect(lwc.state.priceScaleOptions.get('volume')).toEqual({
-      scaleMargins: { top: 0.8, bottom: 0 },
+      scaleMargins: { top: 0.85, bottom: 0 }, // quiet volume, the default
     });
   });
 
@@ -273,8 +273,8 @@ describe('ChartEngine', () => {
     });
     const volumeData = volume.setData.mock.calls[0]?.[0] as { color: string }[];
     expect(volumeData).toHaveLength(200);
-    expect(volumeData[0]?.color).toBe('rgba(8, 153, 129, 0.35)');
-    expect(volumeData[1]?.color).toBe('rgba(242, 54, 69, 0.35)');
+    expect(volumeData[0]?.color).toBe('rgba(8, 153, 129, 0.2)');
+    expect(volumeData[1]?.color).toBe('rgba(242, 54, 69, 0.2)');
     expect(lwc.state.setVisibleLogicalRange).toHaveBeenCalledWith({ from: 50, to: 204 });
   });
 
@@ -378,11 +378,15 @@ describe('ChartEngine', () => {
   it('repaints with another theme, keeping the bars', () => {
     const { engine: chart, candles } = engine();
     chart.setBars(BARS.slice(0, 3), { decimals: 2, hasVolume: true, resetView: true });
-    const light = { ...FALLBACK_THEME, background: '#ffffff', up: '#00aa00' };
+    const light = { ...FALLBACK_THEME, textMuted: '#123456', up: '#00aa00' };
     chart.setTheme(light);
 
-    const applied = lwc.state.appliedOptions as { layout?: { background?: { color?: string } } }[];
-    expect(applied.map((o) => o.layout?.background?.color)).toContain('#ffffff');
+    // The canvas stays transparent (the backdrop shows the theme's background behind it).
+    const applied = lwc.state.appliedOptions as {
+      layout?: { textColor?: string; background?: { color?: string } };
+    }[];
+    expect(applied.map((o) => o.layout?.textColor)).toContain('#123456');
+    expect(applied.map((o) => o.layout?.background?.color)).toContain('transparent');
     expect(lwc.state.removed).toContain(candles);
     const main = lwc.state.series.at(-1);
     expect(main?.options).toMatchObject({ upColor: '#00aa00' });

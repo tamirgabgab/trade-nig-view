@@ -196,7 +196,7 @@ describe('App shell', () => {
     });
     renderWithQuery(<App />);
     await user.click(screen.getByRole('button', { name: 'Open chart settings' }));
-    const dialog = screen.getByRole('dialog', { name: 'Chart settings' });
+    const dialog = screen.getByRole('dialog', { name: 'Settings' });
 
     await user.selectOptions(within(dialog).getByLabelText('Time zone'), 'UTC');
     expect(screen.getByTitle('Chart time zone: UTC')).toBeInTheDocument();
@@ -208,6 +208,8 @@ describe('App shell', () => {
       downColor: null,
       lastPriceLine: false,
       volume: false,
+      quietVolume: true,
+      fontSize: 12,
     });
     await user.click(within(dialog).getByRole('button', { name: 'Reset colors' }));
     expect(liveEngine().display?.upColor).toBeNull();

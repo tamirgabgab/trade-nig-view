@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, type ReactNode } from 'react';
 
 import type { Bar } from '../api/bars.ts';
 import {
@@ -48,6 +48,9 @@ interface ChartViewProps {
   display: ChartDisplay;
   /** IANA zone intraday bars are shown in. */
   timeZone: string;
+  /** Drawn behind the (transparent) chart, inside its isolated box. Memoise it: a new element
+   *  re-renders the view. */
+  backdrop: ReactNode;
 }
 
 /** Hosts one ChartEngine in a div. Re-renders only when its props change (memo). */
@@ -70,6 +73,7 @@ export const ChartView = memo(function ChartView({
   theme,
   display,
   timeZone,
+  backdrop,
 }: ChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<ChartEngine | null>(null);
@@ -162,6 +166,8 @@ export const ChartView = memo(function ChartView({
           price: engineRef.current?.priceAt(event.clientY - top) ?? null,
         });
       }}
-    />
+    >
+      {backdrop}
+    </div>
   );
 });

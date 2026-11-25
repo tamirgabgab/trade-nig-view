@@ -127,7 +127,7 @@ test('half a screen: the watchlist floats over the chart and picks a symbol', as
   await expect(watchlist).toBeHidden();
 
   await page.getByRole('button', { name: 'Show watchlist' }).click();
-  await watchlist.getByText('NVDA', { exact: true }).click();
+  await watchlist.locator('tr[data-symbol="NVDA"]').click();
   await expect(legend(page)).toContainText('NVIDIA');
   await page.keyboard.press('Escape');
   await expect(watchlist).toBeHidden();
@@ -208,4 +208,51 @@ test('the side panel and the learn panel widen by a drag on their left edge, and
   await expect
     .poll(async () => (await panel.boundingBox())?.width ?? 0)
     .toBeCloseTo(before + 200, -1);
+});
+
+test('appearance: theme, accent, text size, chart backgrounds with an image, heatmap; kept on reload', async ({
+  page,
+}) => {
+  await expect(field(page, 'C')).toBeVisible();
+  const html = page.locator('html');
+  const backdrop = page.getByTestId('chart-backdrop');
+  // On by default: the watermark and the watchlist heatmap.
+  await expect(backdrop).toContainText('AAPL · 1D');
+  const heatmap = page.getByRole('region', { name: "Day's change heatmap" });
+  await heatmap.getByRole('button', { name: /NVDA/ }).click();
+  await expect(legend(page)).toContainText('NVIDIA');
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Appearance' }).click();
+  await page.locator('label', { hasText: 'Midnight' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'midnight');
+  await page.locator('label', { hasText: 'Purple' }).click();
+  await expect(html).toHaveAttribute('data-accent', 'purple');
+  await page.getByLabel('Text size').selectOption('1.25');
+  await page.getByLabel('Chart background').selectOption('topo');
+  await expect(backdrop).toHaveAttribute('data-backdrop', 'topo');
+  await expect(backdrop.locator('path').first()).toBeAttached();
+
+  // The user's image: shrunk, stored in this browser, drawn dimmed behind the chart.
+  await page.getByLabel('Chart background').selectOption('image');
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  await page.getByLabel('Choose a background image').setInputFiles({
+    name: 'wall.png',
+    mimeType: 'image/png',
+    buffer: png,
+  });
+  await expect(page.getByRole('button', { name: 'Remove image' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.reload();
+  await expect(html).toHaveAttribute('data-theme', 'midnight');
+  await expect(html).toHaveAttribute('data-accent', 'purple');
+  await expect(backdrop).toHaveAttribute('data-backdrop', 'image');
+  await expect(backdrop.locator('[style*="data:image/jpeg"]')).toBeAttached();
+  expect(
+    await html.evaluate((el) => getComputedStyle(el).getPropertyValue('--text-scale').trim()),
+  ).toBe('1.25');
 });

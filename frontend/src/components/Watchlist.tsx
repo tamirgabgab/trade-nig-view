@@ -2,6 +2,7 @@ import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSymbols, useUniverseQuotes, type Quote, type SymbolInfo } from '../api/market.ts';
 import { useChartStore } from '../store/chartStore.ts';
+import { useSettingsStore } from '../store/settingsStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { useWatchlistStore } from '../store/watchlistStore.ts';
 import { ActionMenu, type MenuItem } from './ActionMenu.tsx';
@@ -9,6 +10,7 @@ import { usePresence } from './usePresence.ts';
 import { useWatchlistEditor } from './useWatchlistEditor.ts';
 import { moveSymbol, removeSection, removeSymbol } from './watchlistEdit.ts';
 import { WatchlistHeader } from './WatchlistHeader.tsx';
+import { WatchlistHeatmap } from './WatchlistHeatmap.tsx';
 import { direction, formatPercent, formatPrice } from './formatNumber.ts';
 import styles from './RightSidebar.module.css';
 import { Sparkline } from './Sparkline.tsx';
@@ -79,6 +81,7 @@ export function Watchlist() {
     () => new Map((symbolsQuery.data ?? []).map((info) => [info.symbol, info])),
     [symbolsQuery.data],
   );
+  const heatmap = useSettingsStore((s) => s.heatmap);
   const quotesQuery = useUniverseQuotes();
   const quotes = useMemo(
     () => new Map((quotesQuery.data ?? []).map((q) => [q.symbol, q])),
@@ -263,6 +266,26 @@ export function Watchlist() {
           ))}
         </tbody>
       </table>
+      {heatmap && (
+        <WatchlistHeatmap
+          tiles={sections.flatMap((section) =>
+            section.symbols.flatMap((symbol) => {
+              const info = universe.get(symbol);
+              return info === undefined
+                ? []
+                : [
+                    {
+                      symbol,
+                      display: info.display,
+                      changePct: quotes.get(symbol)?.changePct ?? null,
+                    },
+                  ];
+            }),
+          )}
+          active={activeSymbol}
+          onPick={setSymbol}
+        />
+      )}
       {menu.shown !== null && (
         <ActionMenu
           key={menu.key}

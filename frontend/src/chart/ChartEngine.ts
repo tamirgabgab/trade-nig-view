@@ -64,11 +64,15 @@ import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
 import { barSeconds } from './visibleRange.ts';
 import { DISPLAY_TIME_ZONE } from './timeZone.ts';
 
-/** Price pane margins: the main series keeps the top 75%, leaving room for volume below. */
+/** Price pane margins: the main series keeps the top, leaving room for volume below. */
 const MAIN_MARGINS = { top: 0.08, bottom: 0.22 };
 /** Volume uses the bottom 20% of the price pane, on its own hidden scale. */
 const VOLUME_MARGINS = { top: 0.8, bottom: 0 };
 const VOLUME_ALPHA = 0.35;
+/** Quiet volume (the default): the bottom 15 %, fainter, so price stays the hero. */
+const QUIET_MAIN_MARGINS = { top: 0.08, bottom: 0.17 };
+const QUIET_VOLUME_MARGINS = { top: 0.85, bottom: 0 };
+const QUIET_VOLUME_ALPHA = 0.2;
 /** Opacity of the shaded band between two levels (RSI 30–70). */
 const LEVEL_FILL_ALPHA = 0.08;
 const SEPARATOR_HOVER_ALPHA = 0.35;
@@ -153,6 +157,9 @@ export interface ChartDisplay {
   downColor: string | null;
   lastPriceLine: boolean;
   volume: boolean;
+  quietVolume: boolean;
+  /** Axis and label text, px. */
+  fontSize: number;
 }
 
 const DEFAULT_DISPLAY: ChartDisplay = {
@@ -160,6 +167,8 @@ const DEFAULT_DISPLAY: ChartDisplay = {
   downColor: null,
   lastPriceLine: true,
   volume: true,
+  quietVolume: true,
+  fontSize: 12,
 };
 
 /** Top of each own-pane indicator's pane (by group), in px from the top of the chart. */
@@ -185,7 +194,8 @@ interface LineEntry {
 function themeOptions(theme: ChartTheme) {
   return {
     layout: {
-      background: { type: ColorType.Solid, color: theme.background },
+      // Transparent: the chart backdrop (colour, pulse, watermark, image) is drawn behind it.
+      background: { type: ColorType.Solid, color: 'transparent' },
       textColor: theme.textMuted,
       fontFamily: theme.fontFamily,
       // Pane separators: a hairline that lights up on hover, to show the panes can be resized.
@@ -307,7 +317,8 @@ export class ChartEngine {
       },
       localization: { locale: 'en-US' },
       crosshair: { ...colors.crosshair, mode: CrosshairMode.Normal },
-      rightPriceScale: { ...colors.rightPriceScale, scaleMargins: MAIN_MARGINS },
+      // The default display: quiet volume (setDisplay switches the margins).
+      rightPriceScale: { ...colors.rightPriceScale, scaleMargins: QUIET_MAIN_MARGINS },
       timeScale: { ...colors.timeScale, rightOffset: RIGHT_OFFSET, secondsVisible: false },
     });
 
@@ -317,7 +328,7 @@ export class ChartEngine {
       lastValueVisible: false,
       priceLineVisible: false,
     });
-    this.chart.priceScale(VOLUME_SCALE_ID).applyOptions({ scaleMargins: VOLUME_MARGINS });
+    this.chart.priceScale(VOLUME_SCALE_ID).applyOptions({ scaleMargins: QUIET_VOLUME_MARGINS });
     this.main = this.createMainSeries(this.chartType);
     this.main.attachPrimitive(this.backgroundLayer);
     this.main.attachPrimitive(this.gapLayer);
@@ -643,19 +654,27 @@ export class ChartEngine {
     if (same) return;
     this.display = display;
     this.volume.applyOptions({ visible: this.hasVolume && display.volume });
+    this.chart.applyOptions({
+      layout: { fontSize: display.fontSize },
+      rightPriceScale: { scaleMargins: display.quietVolume ? QUIET_MAIN_MARGINS : MAIN_MARGINS },
+    });
+    this.chart
+      .priceScale(VOLUME_SCALE_ID)
+      .applyOptions({ scaleMargins: display.quietVolume ? QUIET_VOLUME_MARGINS : VOLUME_MARGINS });
     this.setTheme(this.baseTheme);
   }
 
   /** Volume bars coloured by candle direction (the colours come from the theme). */
   private renderVolume(): void {
+    const alpha = this.display.quietVolume ? QUIET_VOLUME_ALPHA : VOLUME_ALPHA;
     this.volume.setData(
       this.hasVolume
         ? withTime(
             toVolume(
               this.bars,
               this.times,
-              withAlpha(this.theme.up, VOLUME_ALPHA),
-              withAlpha(this.theme.down, VOLUME_ALPHA),
+              withAlpha(this.theme.up, alpha),
+              withAlpha(this.theme.down, alpha),
             ),
           )
         : [],
@@ -690,9 +709,19 @@ export class ChartEngine {
     };
   }
 
-  /** The chart as an image (panes, axes, drawings; no crosshair). */
+  /** The chart as an image (panes, axes, drawings; no crosshair) on the theme's background (the
+   *  canvas is transparent; the backdrop is not part of the image). */
   snapshot(): HTMLCanvasElement {
-    return this.chart.takeScreenshot();
+    const shot = this.chart.takeScreenshot();
+    const out = document.createElement('canvas');
+    out.width = shot.width;
+    out.height = shot.height;
+    const context = out.getContext('2d');
+    if (context === null) return shot;
+    context.fillStyle = this.theme.background;
+    context.fillRect(0, 0, out.width, out.height);
+    context.drawImage(shot, 0, 0);
+    return out;
   }
 
   /** Back to the opening view: the latest bars and an auto-fitted price axis. */
