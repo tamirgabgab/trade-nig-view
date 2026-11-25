@@ -33,16 +33,19 @@ export interface Regime {
   symbol: string;
   lastTime: string | number;
   window: number;
-  ratios: { q: number; vr: number; z: number | null }[];
-  cd: number;
+  ratios: { q: number; vr: number | null; z: number | null }[];
+  cd: number | null;
   pBootstrap: number;
   pAsymptotic: number;
   hurstWindow: number | null;
-  hurstNull: [number, number];
+  hurstNull: [number | null, number | null];
   hurstHistory: number | null;
   spectrumWindow: Spectrum | null;
   spectrumHistory: Spectrum | null;
+  /** By the bootstrap test. */
   label: RegimeLabel;
+  /** By the 2.49 test of the chart's tint, the map and the event study (null: no value). */
+  tint: RegimeLabel | null;
   highVolatility: boolean | null;
   cells: { regime: RegimeLabel; highVolatility: boolean; share: number }[];
   forward: number;
@@ -71,7 +74,8 @@ export function parseRegime(body: unknown): Regime {
   if (!isRecord(body)) throw new Error('Unexpected regime response');
   const f = fieldsOf<Schemas['RegimeResponse']>(body);
   const last = f('last_time');
-  const band = list(f('hurst_null')).map(num);
+  const band = list(f('hurst_null')).map(numOrNull);
+  const tint = f('tint');
   const high = f('high_volatility');
   return {
     symbol: String(f('symbol')),
@@ -79,17 +83,18 @@ export function parseRegime(body: unknown): Regime {
     window: num(f('window')),
     ratios: records(f('ratios')).map((item) => {
       const g = fieldsOf<Schemas['RegimeRatio']>(item);
-      return { q: num(g('q')), vr: num(g('vr')), z: numOrNull(g('z')) };
+      return { q: num(g('q')), vr: numOrNull(g('vr')), z: numOrNull(g('z')) };
     }),
-    cd: num(f('cd')),
+    cd: numOrNull(f('cd')),
     pBootstrap: num(f('p_bootstrap')),
     pAsymptotic: num(f('p_asymptotic')),
     hurstWindow: numOrNull(f('hurst_window')),
-    hurstNull: [band[0] ?? Number.NaN, band[1] ?? Number.NaN],
+    hurstNull: [band[0] ?? null, band[1] ?? null],
     hurstHistory: numOrNull(f('hurst_history')),
     spectrumWindow: spectrum(f('spectrum_window')),
     spectrumHistory: spectrum(f('spectrum_history')),
     label: label(f('label')),
+    tint: tint === null || tint === undefined ? null : label(tint),
     highVolatility: typeof high === 'boolean' ? high : null,
     cells: records(f('cells')).map((item) => {
       const g = fieldsOf<Schemas['RegimeCell']>(item);

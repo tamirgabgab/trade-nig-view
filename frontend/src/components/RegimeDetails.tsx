@@ -33,7 +33,7 @@ export function RegimeDetails({ regime }: { regime: Regime }) {
           {LABELS[r.label]} over the last {r.window} bars
         </h3>
         <p className={styles.summary}>
-          Chow-Denning z = {r.cd.toFixed(2)}, bootstrap p = {r.pBootstrap.toFixed(3)} (normal{' '}
+          Chow-Denning z = {f2(r.cd)}, bootstrap p = {r.pBootstrap.toFixed(3)} (normal{' '}
           {r.pAsymptotic.toFixed(3)}).{' '}
           {r.label === 'random'
             ? 'No significant memory in the returns.'
@@ -53,7 +53,7 @@ export function RegimeDetails({ regime }: { regime: Regime }) {
             {r.ratios.map((x) => (
               <tr key={x.q}>
                 <th scope="row">{x.q}</th>
-                <td>{x.vr.toFixed(2)}</td>
+                <td>{f2(x.vr)}</td>
                 <td>{f2(x.z)}</td>
               </tr>
             ))}
@@ -100,6 +100,10 @@ export function RegimeDetails({ regime }: { regime: Regime }) {
       </section>
       <section className={styles.section} aria-label="Regime map">
         <h3 className={styles.heading}>Regime and volatility: share of the history</h3>
+        <p className={styles.note}>
+          As the chart&apos;s tint: the 2.49 test on each bar&apos;s past year (the verdict above
+          uses the bootstrap).
+        </p>
         <table className={styles.table} aria-label="Regime map">
           <thead>
             <tr>
@@ -114,7 +118,7 @@ export function RegimeDetails({ regime }: { regime: Regime }) {
                 <th scope="row">{LABELS[label]}</th>
                 {[false, true].map((high) => {
                   const cell = r.cells.find((c) => c.regime === label && c.highVolatility === high);
-                  const now = r.label === label && r.highVolatility === high;
+                  const now = r.tint === label && r.highVolatility === high;
                   return (
                     <td key={String(high)} aria-current={now}>
                       {cell === undefined ? '—' : `${(cell.share * 100).toFixed(0)}%`}

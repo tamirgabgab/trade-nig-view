@@ -53,6 +53,6 @@ SPEC = IndicatorSpec(
     warmup=lambda p: int(p["length"]),
     compute=compute,
     learn_slug="market-regime",
-    description="Tints the chart: blue = trending, orange = mean-reverting (5 % test, a year).",
+    description="Tints the chart: blue = trending, orange = mean-reverting (5 % test, 252 bars).",
     lookback=lambda p: max(MIN_LOOKBACK, int(p["length"]) + 2),
 )

@@ -17,6 +17,7 @@ export const REGIME_BODY = {
   spectrum_window: { qs: [-2, 4], h: [0.6, 0.5], width: 0.1 },
   spectrum_history: { qs: [-2, 4], h: [0.55, null], width: null },
   label: 'trend',
+  tint: 'trend',
   high_volatility: true,
   cells: [
     { regime: 'trend', high_volatility: true, share: 0.2 },

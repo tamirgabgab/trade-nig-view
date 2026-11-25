@@ -34,7 +34,8 @@ import numpy.typing as npt
 
 from app.indicators import hurst, regime, variance_ratio
 from app.indicators.catalog import CATALOG
-from app.indicators.hv import bars_per_year, returns
+from app.indicators.hv import bars_per_year, returns, rolling_variance
+from app.indicators.hv_percentile import percent_rank
 from app.models.bars import BarFrame, FloatArray
 
 Label = Literal["trend", "random", "reversion"]
@@ -91,7 +92,8 @@ class Report:
     hurst_history: float
     spectrum_window: Spectrum | None
     spectrum_history: Spectrum | None
-    label: Label
+    label: Label  # by the bootstrap test
+    tint: Label | None  # by the 2.49 test of the chart's tint, the map and the event study
     high_volatility: bool | None
     cells: dict[tuple[Label, bool], float]  # share of the history's bars
     rules: tuple[RuleStats, ...]
@@ -123,23 +125,33 @@ def scales_for(n: int) -> tuple[int, ...]:
     return tuple(out)
 
 
+#: Largest MF-DFA scale (bars): longer ones hold too few boxes to add information.
+MF_MAX_SCALE = 256
+
+
+def box_f2(r: FloatArray, s: int) -> FloatArray:
+    """Per non-overlapping box of s returns, counted back from the end: the mean squared
+    residual of a straight line fitted to the profile in the box."""
+    nb = len(r) // s
+    profile = np.cumsum(r - r.mean())[len(r) - nb * s :].reshape(nb, s)
+    y = profile - profile.mean(axis=1, keepdims=True)
+    x = np.arange(s) - (s - 1) / 2
+    sxy = y @ x
+    return ((y * y).sum(axis=1) - sxy * sxy / (x @ x)) / s
+
+
 def mfdfa(r: FloatArray) -> Spectrum | None:
-    """H(q) of MF-DFA over non-overlapping boxes from the end of ``r``."""
-    scales = scales_for(len(r))
+    """H(q) of MF-DFA over non-overlapping boxes from the end of ``r`` (scales 8..256)."""
+    scales = tuple(s for s in scales_for(len(r)) if s <= MF_MAX_SCALE)
     if len(scales) < 3:  # noqa: PLR2004 - a slope needs at least three scales here
         return None
-    profile = np.concatenate(([0.0], np.cumsum(r - r.mean())))
-    logs = np.log(np.asarray(scales, dtype=np.float64))
+    f2s = [np.maximum(box_f2(r, s), 1e-300) for s in scales]  # once per scale, every q
+    x = np.log(np.asarray(scales, dtype=np.float64))
+    x = x - x.mean()
     hs: list[float] = []
     for q in MF_QS:
-        lf: list[float] = []
-        for s in scales:
-            rss = hurst.box_rss(profile, s)
-            ends = np.arange(len(profile) - 1, s - 2, -s)[: len(r) // s]
-            f2 = np.maximum(rss[ends] / s, 1e-300)
-            lf.append(math.log(float(np.mean(f2 ** (q / 2)))) / q)
-        x = logs - logs.mean()
-        hs.append(float(x @ (np.asarray(lf) - np.mean(lf)) / (x @ x)))
+        lf = np.array([math.log(float(np.mean(f2 ** (q / 2)))) / q for f2 in f2s])
+        hs.append(float(x @ (lf - lf.mean()) / (x @ x)))
     return Spectrum(MF_QS, tuple(hs), hs[0] - hs[-1])
 
 
@@ -211,12 +223,15 @@ def report(frame: BarFrame, seed: int = 0) -> Report | None:
     window = round(float(bars_per_year(frame.time)[-1])) if len(frame) > 1 else 0
     window = max(window, MIN_WINDOW)
     r_all = returns(frame)[1:]
-    if len(r_all) < window or not np.isfinite(r_all).all():
-        return None
     r = r_all[-window:]
+    if len(r) < window or not np.isfinite(r).all():
+        return None
+    r_all = r_all[np.isfinite(r_all)]  # an old bad close must not void the whole history
     rng = np.random.default_rng(seed)
     vr_rows, z_rows = variance_ratio.vr_stats(r[None, :])
     vr, z = vr_rows[0], z_rows[0]
+    if not np.isfinite(z).any():  # a flat window: no returns to test
+        return None
     pick = int(np.nanargmax(np.abs(z)))
     cd = float(z[pick])
     p_boot = wild_bootstrap(r, cd, rng)
@@ -225,7 +240,9 @@ def report(frame: BarFrame, seed: int = 0) -> Report | None:
     scales = tuple(s for s in hurst.SCALES if s <= window // 4)
     shuffled = [dfa_h(rng.permutation(r), scales) for _ in range(SHUFFLES)]
     labels = regime.label(variance_ratio.rolling_z(frame, window))
-    rank = CATALOG["hv_percentile"].run(frame, {"lookback": window})["rank"]
+    # The month volatility's percentile among the window (direct: a year of 24-hour hourly bars
+    # is above the indicator's parameter range).
+    rank = percent_rank(rolling_variance(frame, "yang_zhang", 21), window)
     high: npt.NDArray[np.bool_] = rank >= 50  # noqa: PLR2004 - above the last year's median
     ok = np.isfinite(labels) & np.isfinite(rank)
     cells: dict[tuple[Label, bool], float] = {}
@@ -244,10 +261,11 @@ def report(frame: BarFrame, seed: int = 0) -> Report | None:
         p_asymptotic=float(p_asym),
         hurst_window=dfa_h(r, scales),
         hurst_null=(float(np.quantile(shuffled, 0.05)), float(np.quantile(shuffled, 0.95))),
-        hurst_history=dfa_h(r_all, scales_for(len(r_all))[:6]),
+        hurst_history=dfa_h(r_all, tuple(x for x in scales_for(len(r_all)) if x <= MF_MAX_SCALE)),
         spectrum_window=mfdfa(r),
         spectrum_history=mfdfa(r_all),
         label=label,
+        tint=LABELS.get(float(labels[-1])) if np.isfinite(labels[-1]) else None,
         high_volatility=bool(high[-1]) if np.isfinite(rank[-1]) else None,
         cells=cells,
         rules=event_study(frame, labels),

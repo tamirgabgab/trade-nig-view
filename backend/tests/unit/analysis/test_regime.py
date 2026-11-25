@@ -4,6 +4,8 @@ halves, a random walk's false alarms, and the event study's bookkeeping."""
 
 from __future__ import annotations
 
+import time
+
 import numpy as np
 import pytest
 
@@ -103,3 +105,33 @@ def test_event_study_bookkeeping() -> None:
 
 def test_too_short_is_none() -> None:
     assert rg.report(synthetic_bars(Scenario.RANDOM_WALK, 1, 200)) is None
+
+
+def test_flat_and_bad_histories() -> None:
+    assert rg.report(frame_of(np.zeros(400))) is None  # flat: nothing to test, no crash
+    r = ar1(0.0, 2000, 6)
+    bad = frame_of(r)
+    close = bad.close.copy()
+    close[10] = np.nan  # one bad close long before the window
+    damaged = BarFrame.from_columns(time=bad.time, open=close, high=close, low=close, close=close)
+    report = rg.report(damaged)
+    assert report is not None
+    assert np.isfinite(report.hurst_history)  # the bad return is dropped, not the history
+
+
+def test_a_year_of_24_5_hourly_bars_and_a_long_history_are_fast() -> None:
+    # Forex hours: 24 bars a day, 5 days a week: about 6,260 bars a year, above the indicator's
+    # parameter range for the volatility percentile.
+    n = 2 * 6260
+    days = np.arange(n) // 24
+    weeks, weekday = days // 5, days % 5
+    t = (weeks * 7 + weekday) * 86_400 + (np.arange(n) % 24) * 3600
+    close = 100 * np.exp(np.cumsum(ar1(0.0, n, 7)))
+    hourly = BarFrame.from_columns(time=t, open=close, high=close, low=close, close=close)
+    report = rg.report(hourly)
+    assert report is not None
+    assert report.window > 6000
+    start = time.perf_counter()
+    spectrum = rg.mfdfa(ar1(0.0, 25_000, 8))
+    assert time.perf_counter() - start < 1.0
+    assert spectrum is not None

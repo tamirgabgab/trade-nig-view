@@ -33,7 +33,9 @@ def _num(x: float) -> float | None:
 
 class RegimeRatio(BaseModel):
     q: int
-    vr: float = Field(description="Variance ratio: 1 = random walk, > 1 trend, < 1 reversion")
+    vr: float | None = Field(
+        description="Variance ratio: 1 = random walk, > 1 trend, < 1 reversion"
+    )
     z: float | None = Field(description="Heteroskedasticity-robust z*")
 
 
@@ -66,15 +68,18 @@ class RegimeResponse(BaseModel):
     last_time: str | int
     window: int = Field(description="Bars in the tested window (a calendar year)")
     ratios: list[RegimeRatio]
-    cd: float = Field(description="Signed Chow-Denning statistic: the z* of largest modulus")
+    cd: float | None = Field(description="Signed Chow-Denning statistic: the z* of largest modulus")
     p_bootstrap: float = Field(description="Wild-bootstrap p-value of max |z*| (999 runs)")
     p_asymptotic: float = Field(description="Sidak p-value of max |z*| (normal)")
     hurst_window: float | None
-    hurst_null: list[float] = Field(description="5 and 95 % of H on 199 shuffles of the window")
+    hurst_null: list[float | None] = Field(description="5 and 95 % of H on 199 shuffles")
     hurst_history: float | None
     spectrum_window: RegimeSpectrum | None
     spectrum_history: RegimeSpectrum | None
-    label: Label
+    label: Label = Field(description="By the bootstrap test")
+    tint: Label | None = Field(
+        description="By the 2.49 test of the chart's tint, the map and the event study"
+    )
     high_volatility: bool | None = Field(description="Volatility percentile >= 50 now")
     cells: list[RegimeCell]
     forward: int = Field(description="Bars of the event study's forward return")
@@ -90,23 +95,26 @@ def _spectrum(s: rg.Spectrum | None) -> RegimeSpectrum | None:
 def regime_response(frame: BarFrame, interval: Interval, symbol: str) -> RegimeResponse:
     r = rg.report(frame)
     if r is None:
-        raise NotEnoughHistoryError(f"{symbol}: a regime needs a year of bars, got {len(frame)}")
+        raise NotEnoughHistoryError(
+            f"{symbol}: a regime needs a year of bars with price changes, got {len(frame)} bars"
+        )
     last = frame.time[-1:]
     return RegimeResponse(
         symbol=symbol,
         interval=interval,
         last_time=int(last[0]) if interval.is_intraday else ts_to_iso_dates(last)[0],
         window=r.window,
-        ratios=[RegimeRatio(q=x.q, vr=x.vr, z=_num(x.z)) for x in r.ratios],
-        cd=r.cd,
+        ratios=[RegimeRatio(q=x.q, vr=_num(x.vr), z=_num(x.z)) for x in r.ratios],
+        cd=_num(r.cd),
         p_bootstrap=r.p_bootstrap,
         p_asymptotic=r.p_asymptotic,
         hurst_window=_num(r.hurst_window),
-        hurst_null=list(r.hurst_null),
+        hurst_null=[_num(x) for x in r.hurst_null],
         hurst_history=_num(r.hurst_history),
         spectrum_window=_spectrum(r.spectrum_window),
         spectrum_history=_spectrum(r.spectrum_history),
         label=r.label,
+        tint=r.tint,
         high_volatility=r.high_volatility,
         cells=[
             RegimeCell(regime=name, high_volatility=vol, share=share)

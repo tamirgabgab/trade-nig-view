@@ -1744,7 +1744,7 @@ export interface components {
              * Vr
              * @description Variance ratio: 1 = random walk, > 1 trend, < 1 reversion
              */
-            vr: number;
+            vr: number | null;
             /**
              * Z
              * @description Heteroskedasticity-robust z*
@@ -1769,7 +1769,7 @@ export interface components {
              * Cd
              * @description Signed Chow-Denning statistic: the z* of largest modulus
              */
-            cd: number;
+            cd: number | null;
             /**
              * P Bootstrap
              * @description Wild-bootstrap p-value of max |z*| (999 runs)
@@ -1784,18 +1784,24 @@ export interface components {
             hurst_window: number | null;
             /**
              * Hurst Null
-             * @description 5 and 95 % of H on 199 shuffles of the window
+             * @description 5 and 95 % of H on 199 shuffles
              */
-            hurst_null: number[];
+            hurst_null: (number | null)[];
             /** Hurst History */
             hurst_history: number | null;
             spectrum_window: components["schemas"]["RegimeSpectrum"] | null;
             spectrum_history: components["schemas"]["RegimeSpectrum"] | null;
             /**
              * Label
+             * @description By the bootstrap test
              * @enum {string}
              */
             label: "trend" | "random" | "reversion";
+            /**
+             * Tint
+             * @description By the 2.49 test of the chart's tint, the map and the event study
+             */
+            tint: ("trend" | "random" | "reversion") | null;
             /**
              * High Volatility
              * @description Volatility percentile >= 50 now

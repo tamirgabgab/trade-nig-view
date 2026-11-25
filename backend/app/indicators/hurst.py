@@ -90,7 +90,7 @@ SPEC = IndicatorSpec(
     warmup=lambda p: int(p["length"]),
     compute=compute,
     learn_slug="market-regime",
-    description="Persistence of returns: H > 0.5 trending, H < 0.5 mean-reverting (DFA, a year).",
+    description="Persistence of returns: H > 0.5 trending, H < 0.5 mean-reverting (DFA, 252 bars).",
     levels=(0.5,),
     lookback=lambda p: max(MIN_LOOKBACK, int(p["length"]) + 2),
 )

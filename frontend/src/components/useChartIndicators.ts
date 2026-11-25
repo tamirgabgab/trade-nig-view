@@ -45,9 +45,10 @@ export interface IndicatorView {
   isFetching: boolean;
 }
 
-/** Outputs with a value per bar (legend values, style rows); markers have neither. */
+/** Outputs with a value per bar (legend values, style rows); markers and background tints (their
+ *  colours are the style's up / down, the value only a code) have neither. */
 export function valueOutputs(view: IndicatorView): OutputView[] {
-  return view.outputs.filter((output) => output.plot !== 'markers');
+  return view.outputs.filter((output) => output.plot !== 'markers' && output.plot !== 'background');
 }
 
 const NO_VALUES: Record<string, (number | null)[]> = {};

@@ -4680,7 +4680,14 @@
             "title": "Q"
           },
           "vr": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Vr",
             "description": "Variance ratio: 1 = random walk, > 1 trend, < 1 reversion"
           },
@@ -4738,7 +4745,14 @@
             "title": "Ratios"
           },
           "cd": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Cd",
             "description": "Signed Chow-Denning statistic: the z* of largest modulus"
           },
@@ -4765,11 +4779,18 @@
           },
           "hurst_null": {
             "items": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "type": "array",
             "title": "Hurst Null",
-            "description": "5 and 95 % of H on 199 shuffles of the window"
+            "description": "5 and 95 % of H on 199 shuffles"
           },
           "hurst_history": {
             "anyOf": [
@@ -4809,7 +4830,25 @@
               "random",
               "reversion"
             ],
-            "title": "Label"
+            "title": "Label",
+            "description": "By the bootstrap test"
+          },
+          "tint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "trend",
+                  "random",
+                  "reversion"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint",
+            "description": "By the 2.49 test of the chart's tint, the map and the event study"
           },
           "high_volatility": {
             "anyOf": [
@@ -4859,6 +4898,7 @@
           "spectrum_window",
           "spectrum_history",
           "label",
+          "tint",
           "high_volatility",
           "cells",
           "forward",
