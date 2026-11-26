@@ -140,9 +140,25 @@ Notes:
   - Tests check two symmetries: reflection, (u, v) → (1 − u, 1 − v) gives 1 − value; and time reversal, swapping u
     and v with t → 1 − t.
   - A bar with H = L (old close-only data) falls back to its close.
-- **Fill options:** the close [default]; the open (realistic for an order placed in Israel before the US opens); a
-  known time of day (the finest bar, then the (u, v, t) table); the expected price at an unknown time (the (u, v)
-  table); a random time (a draw from the conditional law, new in every realization).
+- **Fill options (the user picks one; speed first, 2026-11-26).** Every option costs O(1) per deposit: no
+  simulation runs while the user waits.
+
+  | Option | The fill price at time t in the bar (or its average over the purchase window) |
+  |---|---|
+  | **Close** [default] | C |
+  | **Open** | O (realistic for an order placed in Israel before the US opens) |
+  | **Mid-range** | (H + L)/2 |
+  | **Linear O → C** | O + t (C − O) |
+  | **Piecewise O → H → L → C or O → L → H → C** | straight lines through the four points, at t = 0, ⅓, ⅔, 1. The order is either by direction (an up bar goes O → L → H → C, a down bar O → H → L → C, the common backtester convention) or random (50/50, drawn anew in every realization) |
+  | **Estimated (the ABC table)** | m(t) from the precomputed table, averaged over the window; in the statistics a draw from the stored quantiles instead of the mean |
+
+  - **The granularity parameter** applies to the estimated option. It picks one of three committed tables, all
+    precomputed offline:
+    - coarse: a 10 × 10 (u, v) grid × 13 t points;
+    - medium [default]: 20 × 20 × 27;
+    - fine: 40 × 40 × 79, where 79 points means every 5 minutes of a US session.
+  - A finer table means less interpolation error, more memory, and a lookup that is still microseconds.
+  - With a known time, the finest bar that contains it (1m / 5m / 1h / 1D) is used first, whatever the option.
 
 **Mortgage (up to 3 tracks)**
 - Each track has an amount, a term, an **interest type** (fixed unlinked, fixed CPI-linked, prime = BoI rate +
@@ -256,7 +272,7 @@ Notes:
 | Round | What | Size |
 |---|---|---|
 | **H0** | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
-| **H1** | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the fill model and its (u, v, t) table, the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, the fill table's symmetries, the CPI generator's mean, σ and autocorrelation. | L |
+| **H1** | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
 | **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0019. | L |
 | **H3** | Scenarios and statistics: modes A, B and A+B, mirrored cash flows, rolling windows, block bootstrap, Monte Carlo, every metric above, histograms and P(a ≤ X ≤ b) with its interval. Tests: known answers (constant returns), bootstrap reproducibility by seed, the effective-sample count, P(A > B) = 0.5 for identical sides. | L |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
