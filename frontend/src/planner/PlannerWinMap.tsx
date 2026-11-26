@@ -17,7 +17,8 @@ function gap(cell: Cell): number | null {
 
 function tint(cell: Cell): string | undefined {
   const value = gap(cell);
-  if (value === null || value === 0) return undefined;
+  // A gap that shows as 0.00 is a tie: no winner's colour.
+  if (value === null || points(value) === '0.00') return undefined;
   const level = STEPS.filter((step) => Math.abs(value) >= step).length;
   return (value > 0 ? WIN : LOSE)[level];
 }
@@ -54,7 +55,11 @@ export function PlannerWinMap({ map, names }: PlannerWinMapProps) {
               {row.cells.map((cell, index) => {
                 const value = cell === null ? null : gap(cell);
                 return cell === null || value === null ? (
-                  <td key={index} className={styles.empty} title="Cannot run on the data">
+                  <td
+                    key={index}
+                    className={styles.empty}
+                    title={cell === null ? 'Cannot run on the data' : 'No money was put in'}
+                  >
                     —
                   </td>
                 ) : (

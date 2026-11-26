@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DEFAULT_HOME, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
@@ -53,6 +53,11 @@ describe('PlannerCompare', () => {
     expect(card('Rent')).toHaveTextContent('₪8,250 a month');
     expect(screen.getByText('After the last published CPI it is held flat')).toBeVisible();
     expect(screen.queryByRole('table', { name: 'Win map' })).not.toBeInTheDocument();
+    // A later edit of the apartment's rent does not rescale the result that is on screen.
+    act(() => {
+      usePlannerHomeStore.getState().update({ rent: { ...DEFAULT_HOME.rent, monthly: 9_000 } });
+    });
+    expect(card('Rent')).toHaveTextContent('₪8,250 a month');
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
       x: { home: { start: '2015-01-15', price: 2_000_000 }, market: null },

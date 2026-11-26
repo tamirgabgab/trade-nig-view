@@ -282,6 +282,16 @@ def taxes_of(body: MarketOptionIn) -> Taxes:
     return Taxes(body.taxes.gains_pct / 100, body.taxes.dividend_pct / 100, body.taxes.base)
 
 
+def official_rate_note(fx: FxSeries | None, first: int) -> list[str]:
+    """A warning when a plan that starts on day ``first`` runs before Yahoo's market rate."""
+    if fx is None or fx.market_from is None or first >= fx.market_from:
+        return []
+    return [
+        f"USD/ILS before {_to_date(fx.market_from)} is the Bank of Israel's official rate, "
+        "not Yahoo's market rate"
+    ]
+
+
 def load_mix(
     body: MarketOptionIn,
     service: BarService,
@@ -298,11 +308,7 @@ def load_mix(
         fx = None
     if fx is not None:
         warnings.extend(fx.warnings)
-        if fx.market_from is not None and first < fx.market_from:
-            warnings.append(
-                f"USD/ILS before {_to_date(fx.market_from)} is the Bank of Israel's official rate, "
-                "not Yahoo's market rate"
-            )
+        warnings.extend(official_rate_note(fx, first))
     warnings.extend(
         f"{a.info.symbol} has no dividends in its prices: its return leaves them out "
         "(set an assumed dividend yield, or use a fund such as SPY)"

@@ -89,6 +89,8 @@ class Average:
     x: float
     y: float
     points: list[Point]
+    #: Exit months that could not run, and so are not in the average.
+    skipped: int
 
 
 def win_probability(x: FloatArray, y: FloatArray) -> float:
@@ -127,6 +129,8 @@ def summarize(windows: Sequence[Window], term_months: int) -> Summary:
     """The layer-1 numbers of a set of windows of a plan that runs ``term_months``."""
     if not windows:
         raise PlanError("No window of the plan can run on this data")
+    if term_months < 1:
+        raise PlanError("A plan must run for at least a month to be studied over history")
     x = np.array([w.result.x.wealth for w in windows])
     y = np.array([w.result.y.wealth for w in windows])
     real = [w.result.x.wealth_real - w.result.y.wealth_real for w in windows]
@@ -187,14 +191,19 @@ def win_map(
 def time_average(run: Callable[[int], PairResult], months: Iterable[int]) -> Average:
     """The end values averaged over the exit months that can run."""
     points: list[Point] = []
+    skipped = 0
     for held in months:
         try:
             result = run(held)
         except PlanError:
+            skipped += 1
             continue
         points.append(Point(held, result.end, result.x.wealth, result.y.wealth))
     if not points:
         raise PlanError("The plan cannot run over any of the exit months")
     return Average(
-        float(np.mean([p.x for p in points])), float(np.mean([p.y for p in points])), points
+        float(np.mean([p.x for p in points])),
+        float(np.mean([p.y for p in points])),
+        points,
+        skipped,
     )

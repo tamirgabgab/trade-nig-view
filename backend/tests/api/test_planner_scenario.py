@@ -135,6 +135,19 @@ def test_scenarios_that_cannot_run_say_why(client: TestClient) -> None:
     assert any("50,000 more than the larger plan alone" in note for note in notes)
 
 
+def test_what_a_run_leaves_out_is_said(client: TestClient) -> None:
+    # A deposit after the apartment is sold (a month date before the end) is not in the plan.
+    late = {**MARKET, "deposits": [{"date": "2020-01-11", "amount": 50_000}]}
+    body = post(client, "run", x={"home": HOME, "market": late}, y={}, end="2020-01-12")
+    assert body["end"] == "2019-12-15"
+    assert "Deposits on or after the day everything is sold are left out" in body["warnings"]
+    assert body["x"]["account"] is None
+    # An apartment bought two years in cannot be sold in the first two: fewer exit months.
+    second = {"home": {**HOME, "start": "2012-01-15"}, "market": MARKET}
+    notes = post(client, "run", y=second)["warnings"]
+    assert "The net worth is averaged over 48 of 60 exit months" in " ".join(notes)
+
+
 # ---------------------------------------------------------------- rolling windows
 
 
@@ -193,3 +206,26 @@ def test_the_study_range_and_step_are_the_requests(client: TestClient) -> None:
     )
     assert response.status_code == 422
     assert "No window" in response.json()["detail"]
+    # Any dates are a request, not a crash: the range is cut to history.
+    wide = study(client, first_start="0001-01-01", last_start="9999-12-31", step_months=12)
+    assert wide["summary"]["windows"] == 15
+    far = client.post("/api/planner/run", json={**BASE, "end": "9000-01-15"})
+    assert (far.status_code, "Dates after 2200" in far.json()["detail"]) == (422, True)
+
+
+def test_a_study_needs_a_term_and_says_what_its_windows_leave_out(client: TestClient) -> None:
+    saver = {**MARKET, "deposits": [{"date": "2012-01-05", "amount": 1_000}]}
+    body = {"x": {"market": saver}, "y": {}, "end": "2012-01-25", "last_start": "2013-01-01"}
+    assert client.post("/api/planner/run", json=body).json()["months"] == 0
+    response = client.post("/api/planner/study", json=body)
+    assert response.status_code == 422
+    assert "at least a month" in response.json()["detail"]
+    # The warnings of the windows are the study's: the deposits after each sale, and the
+    # prime track's rate held flat in the years of the schedule after the latest sales.
+    long = {**MARKET, "recurring": [{"start": "2010-01-15", "amount": 500, "count": 240}]}
+    notes = study(client, x={"home": {**HOME, **HISTORICAL}, "market": long}, y={})["warnings"]
+    assert sorted(notes) == [
+        "Deposits on or after the day everything is sold are left out",
+        "The schedule after the sale holds the Bank of Israel rate flat past its last "
+        "published value",
+    ]

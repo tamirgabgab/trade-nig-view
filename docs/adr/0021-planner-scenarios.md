@@ -31,6 +31,8 @@ dates, in two options, for one plan and over history. The user's choices before 
   and this keeps it unchanged.
 - **The return** is the XIRR of the budget going out and the end value coming in. The outflows are equal, so the
   higher end value is the higher return. Real results divide every flow by the CPI's rise since the first day.
+  An option that ends with nothing or with a debt (an apartment sold below its loan) has no such rate: its return
+  is reported as −100 %, so a wiped-out window counts as a loss in the medians and in the win map.
 - **One CPI path per realization** serves the linked tracks, the indexed costs, the real tax bases and the real
   results of both options.
 - **Layer 1 of the metrics** (`app/planner/study.py`) takes a callable that runs one pair, so rolling history now
@@ -64,6 +66,9 @@ dates, in two options, for one plan and over history. The user's choices before 
   - The market and the apartment requests share their option models (`MarketOptionIn`, `HomeOptionIn`); a macro
     series is loaded once per request.
   - Deposit times of day are not used in a comparison (a warning says so): each deposit buys by its day's bar.
+  - Nothing is left out silently: deposits on or after the sale, exit months the time average could not run, and
+    the warnings of every window of a study are in the response's warnings.
+  - A study's starts are cut to history (1900 to today); a plan shorter than a month cannot be studied.
 - **The page.** A third tab, Compare: the Apartment tab's apartment against the same money in the Market tab's mix,
   with a switch that gives the apartment's side the Market tab's deposits too (A+B). Two forms for two free options
   wait for H4. The win map tints each cell by the gap of the yearly returns; the sign carries the winner too.

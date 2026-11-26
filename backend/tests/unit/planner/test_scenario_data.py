@@ -125,6 +125,9 @@ def test_another_horizon_moves_the_sale_and_drops_the_deposits_after_it() -> Non
     assert x.home is not None
     assert (x.home.months, end) == (36, date(2013, 3, 15))
     assert len(y.deposits) == 36
+    left_out = "Deposits on or after the day everything is sold are left out"
+    assert build(spec, MACRO, Change(months=36))[4] == [left_out]
+    assert build(spec, MACRO)[4] == []
     with pytest.raises(PlanError, match="at least a month"):
         build(spec, MACRO, Change(months=0))
     # Without an apartment the term runs from the first deposit to the end.

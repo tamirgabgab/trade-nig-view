@@ -99,6 +99,8 @@ def test_windows_that_cannot_run_are_counted_not_hidden() -> None:
     assert skipped == [(1, "no data here"), (3, "no data here"), (5, "no data here")]
     with pytest.raises(PlanError, match="No window"):
         summarize([], term_months=120)
+    with pytest.raises(PlanError, match="at least a month"):
+        summarize(windows, term_months=0)
 
 
 # ---------------------------------------------------------------- breakeven rates
@@ -160,4 +162,5 @@ def test_the_time_averaged_net_worth_by_hand() -> None:
             raise PlanError("past the data")
         return plan(0.0, 0.0, 0, months)
 
-    assert time_average(partial, range(1, 13)).x == pytest.approx(3_500.0)
+    half = time_average(partial, range(1, 13))
+    assert (half.x, half.skipped, average.skipped) == (pytest.approx(3_500.0), 6, 0)

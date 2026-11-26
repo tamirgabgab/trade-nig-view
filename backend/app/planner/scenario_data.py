@@ -220,12 +220,15 @@ def build(
         if account is not None and option.fill_seed is not None:
             rng = np.random.default_rng(option.fill_seed)
             account = replace(account, fill=replace(account.fill, rng=rng))  # noqa: PLW2901
+        kept = [d for d in deposits if d.day < end]
+        if len(kept) < len(deposits):
+            warnings.append("Deposits on or after the day everything is sold are left out")
         sides.append(
             Side(
                 home=None if home is None else home.plan,
                 series=series,
                 account=account,
-                deposits=[d for d in deposits if d.day < end],
+                deposits=kept,
             )
         )
     return sides[0], sides[1], end, cpi, list(dict.fromkeys(warnings))

@@ -35,5 +35,21 @@ describe('PlannerWinMap', () => {
     };
     render(<PlannerWinMap map={map} names={['Apartment', 'Market']} />);
     expect(screen.getByRole('cell')).toHaveTextContent('—');
+    expect(screen.getByRole('cell')).toHaveAttribute('title', 'No money was put in');
+  });
+
+  it('shows a gap that rounds to nothing as a tie, without a winner’s tint', () => {
+    const cells = [
+      { x_xirr: 0.05, y_xirr: 0.05003, difference: -40 },
+      { x_xirr: 0.05, y_xirr: 0.0499, difference: 90 },
+    ];
+    const map = { horizons_years: [5, 10], rows: [{ start: '2002-01-15', cells }] };
+    render(<PlannerWinMap map={map} names={['Apartment', 'Market']} />);
+    const [tie, win] = screen.getAllByRole('cell');
+    expect(tie).toHaveTextContent('0.00');
+    expect(tie).not.toHaveTextContent(/[+−]/);
+    expect(tie?.className).toBe('');
+    expect(win).toHaveTextContent('+0.01');
+    expect(win).toHaveClass(styles.win1 ?? '');
   });
 });

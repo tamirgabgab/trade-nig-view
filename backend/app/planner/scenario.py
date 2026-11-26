@@ -34,9 +34,10 @@ with the apartment's net worth after the selling costs, the loan and the betterm
 account's value after the sell commission and the capital-gains tax.
 
 **The return** of an option is the XIRR of :math:`-b(d)` on each day and :math:`+W` at the end.
-The outflows are equal on both sides, so the higher :math:`W` is the higher return. Real results
-are in shekels of the first day: every flow is divided by :math:`\\text{CPI}(d) /
-\\text{CPI}(d_{\\text{first}})`.
+The outflows are equal on both sides, so the higher :math:`W` is the higher return. An option
+that ends with nothing or with a debt (:math:`W \\le 0`, an apartment sold below its loan) has
+no such rate: its return is reported as -100 %, the floor. Real results are in shekels of the
+first day: every flow is divided by :math:`\\text{CPI}(d) / \\text{CPI}(d_{\\text{first}})`.
 """
 
 from __future__ import annotations
@@ -127,6 +128,12 @@ def _own_flows(side: Side, end_day: int) -> tuple[dict[int, float], HomeResult |
     return flows, result
 
 
+def _return(days: IntArray, flows: FloatArray) -> float | None:
+    """The XIRR of a ledger; -100 % when money went in and nothing came back."""
+    rate = xirr(days, flows)
+    return -1.0 if rate is None and flows[-1] <= 0 and np.any(flows[:-1] < 0) else rate
+
+
 def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
     """Run both options on the same money (see the module docstring)."""
     end_day = day_number(end)
@@ -182,8 +189,8 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
             top_up=top_up,
             wealth=wealth,
             wealth_real=wealth * float(deflate[-1]),
-            xirr=xirr(ledger_days, ledger),
-            xirr_real=xirr(ledger_days, ledger * deflate),
+            xirr=_return(ledger_days, ledger),
+            xirr_real=_return(ledger_days, ledger * deflate),
         )
 
     return PairResult(

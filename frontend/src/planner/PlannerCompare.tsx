@@ -12,10 +12,16 @@ import { usePlannerHomeStore } from '../store/plannerHomeStore.ts';
 import { usePlannerStore } from '../store/plannerStore.ts';
 import { toScenario } from './compare.ts';
 import styles from './Planner.module.css';
-import { PlannerScenario, PlannerStudy } from './PlannerCompareResults.tsx';
+import { PlannerScenario } from './PlannerScenario.tsx';
+import { PlannerStudy } from './PlannerStudy.tsx';
 import { useHomeTaxes } from './useHomeTaxes.ts';
 
 type Status = 'idle' | 'comparing' | 'studying';
+/** The names of the two options and the apartment's monthly rent, as a comparison ran. */
+interface Shown {
+  names: [string, string];
+  rent: number;
+}
 const STEPS = [1, 3, 6, 12];
 /** The win map's columns, in years. */
 const HORIZONS = [5, 10, 15, 20, 25, 30];
@@ -38,21 +44,18 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
   const [scenario, setScenario] = useState<ScenarioResult | null>(null);
   const [study, setStudy] = useState<StudyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // The names the results were made under: a later tick of the box must not rename them.
-  const [names, setNames] = useState<[string, string]>(['Apartment', 'Market']);
+  // What the results were made under: a later edit of the forms must not relabel them.
+  const [shown, setShown] = useState<Shown>({ names: ['Apartment', 'Market'], rent: 0 });
 
   const ready = taxes !== null && home.start !== '' && home.end !== '';
-  const start = (
-    next: Status,
-    work: (request: ScenarioRequest, names: [string, string]) => Promise<void>,
-  ) => {
+  const start = (next: Status, work: (request: ScenarioRequest, next: Shown) => Promise<void>) => {
     if (taxes === null || !ready) return;
     setStatus(next);
     setError(null);
-    work(toScenario(form, home, taxes, ownAccount), [
-      ownAccount ? 'Apartment and account' : 'Apartment',
-      'Market',
-    ])
+    work(toScenario(form, home, taxes, ownAccount), {
+      names: [ownAccount ? 'Apartment and account' : 'Apartment', 'Market'],
+      rent: home.rent.monthly,
+    })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'The request failed');
         // Never an error above the results of an earlier, different comparison.
@@ -67,7 +70,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
     start('comparing', async (request, next) => {
       setScenario(await runScenario(request));
       setStudy(null);
-      setNames(next);
+      setShown(next);
     });
   };
   const runStudy = () => {
@@ -85,7 +88,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
       ]);
       setScenario(one);
       setStudy(many);
-      setNames(next);
+      setShown(next);
     });
   };
 
@@ -209,9 +212,9 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
           </p>
         )}
         {scenario !== null && (
-          <PlannerScenario result={scenario} names={names} rent={home.rent.monthly} />
+          <PlannerScenario result={scenario} names={shown.names} rent={shown.rent} />
         )}
-        {study !== null && <PlannerStudy result={study} names={names} />}
+        {study !== null && <PlannerStudy result={study} names={shown.names} />}
       </div>
     </div>
   );

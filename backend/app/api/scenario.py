@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_bar_service, get_macro_service, get_universe
-from app.api.home import HomeOptionIn, home_spec
+from app.api.home import MAX_YEAR, HomeOptionIn, home_spec
 from app.api.planner import (
     InflationIn,
     InvalidPlanError,
@@ -18,6 +18,7 @@ from app.api.planner import (
     fees_of,
     inflation_spec,
     load_mix,
+    official_rate_note,
     schedule,
     taxes_of,
 )
@@ -25,7 +26,7 @@ from app.data.bar_service import BarService
 from app.data.universe import Universe
 from app.macro.service import MacroService
 from app.planner import study
-from app.planner.data import Macro, MacroMemo
+from app.planner.data import FxSeries, Macro, MacroMemo
 from app.planner.deposits import add_months, day_number
 from app.planner.home import RentMode
 from app.planner.market import FillSpec, PlanError
@@ -44,8 +45,8 @@ from app.planner.scenario_data import (
 
 router = APIRouter(tags=["planner"])
 
-#: The first start a study tries when the request names none.
-EARLIEST_START = dt.date(1950, 1, 1)
+#: The first start a study ever tries (and the one it tries when the request names none).
+EARLIEST_START = dt.date(1900, 1, 1)
 MAX_WINDOWS = 2000
 #: The ranges the breakeven rates are searched in, and their tolerance.
 APPRECIATION = (-0.2, 0.5)
@@ -200,9 +201,13 @@ class StudyResponse(BaseModel):
 
 def _spec(
     body: ScenarioRequest, service: BarService, macro: Macro, universe: Universe
-) -> tuple[ScenarioSpec, list[str]]:
+) -> tuple[ScenarioSpec, list[str], list[FxSeries | None]]:
+    """The scenario of a request, its warnings, and the USD/ILS series its accounts use."""
+    if body.end.year > MAX_YEAR:
+        raise PlanError(f"Dates after {MAX_YEAR} are not supported")
     warnings: list[str] = []
     options: list[OptionSpec] = []
+    rates: list[FxSeries | None] = []
     starts = [
         date
         for option in (body.x, body.y)
@@ -220,8 +225,9 @@ def _spec(
         if market is None:
             options.append(OptionSpec(home=home))
             continue
-        assets, _, notes = load_mix(market, service, macro, universe, day_number(min(starts)))
+        assets, fx, notes = load_mix(market, service, macro, universe, day_number(min(starts)))
         warnings.extend(notes)
+        rates.append(fx)
         one_off, recurring = schedule(market)
         if any(d.at is not None for d in one_off) or any(r.at is not None for r in recurring):
             warnings.append(
@@ -242,7 +248,7 @@ def _spec(
             )
         )
     spec = ScenarioSpec(options[0], options[1], body.end, inflation_spec(body.inflation))
-    return spec, warnings
+    return spec, warnings, rates
 
 
 def _option(side: SideResult) -> OptionOut:
@@ -300,7 +306,7 @@ def _breakevens(spec: ScenarioSpec, macro: Macro) -> BreakevenOut:
 def _run(
     body: ScenarioRequest, service: BarService, macro: Macro, universe: Universe
 ) -> RunResponse:
-    spec, warnings = _spec(body, service, macro, universe)
+    spec, warnings, _ = _spec(body, service, macro, universe)
     x, y, end, cpi, notes = build(spec, macro)
     result = run_pair(x, y, end, cpi)
     warnings.extend(notes)
@@ -315,6 +321,11 @@ def _run(
     step = max(1, -(-term // AVERAGE_POINTS))
     exits = sorted({*range(step, term + 1, step), term})
     average = study.time_average(lambda months: run(spec, macro, Change(months=months)), exits)
+    if average.skipped:
+        warnings.append(
+            f"The net worth is averaged over {len(average.points)} of {len(exits)} exit months: "
+            "the plan cannot run over the others"
+        )
     return RunResponse(
         start=first_day(spec),
         end=end,
@@ -350,28 +361,39 @@ def _shifts(base: dt.date, first: dt.date, last: dt.date, step: int) -> list[int
 def _study(
     body: StudyRequest, service: BarService, macro: Macro, universe: Universe
 ) -> StudyResponse:
-    spec, warnings = _spec(body, service, macro, universe)
+    spec, warnings, rates = _spec(body, service, macro, universe)
     base = first_day(spec)
-    first = body.first_start or EARLIEST_START
-    last = body.last_start or dt.datetime.now(dt.UTC).date()
-    if last < first:
+    today = dt.datetime.now(dt.UTC).date()
+    if body.first_start and body.last_start and body.last_start < body.first_start:
         raise PlanError("The last start must not be before the first start")
-    shifts = _shifts(base, first, last, body.step_months)
-    if len(shifts) > MAX_WINDOWS:
+    # History is what a study runs on: no start before the data could begin or after today.
+    first = max(body.first_start or EARLIEST_START, EARLIEST_START)
+    last = min(body.last_start or today, today)
+
+    def shifts(step: int) -> list[int]:
+        return [] if last < first else _shifts(base, first, last, step)
+
+    if len(shifts(body.step_months)) > MAX_WINDOWS:
         raise PlanError(f"At most {MAX_WINDOWS} starts in a study: narrow the range")
+    notes: dict[str, None] = {}
 
     def window(shift: int, months: int | None = None) -> PairResult:
         change = Change(shift=shift, months=months, historical=True, follow_rates=body.follow_rates)
-        return run(spec, macro, change)
+        x, y, end, cpi, found = build(spec, macro, change)
+        notes.update(dict.fromkeys(found))
+        return run_pair(x, y, end, cpi)
 
-    windows, skipped = study.rolling(window, shifts)
+    windows, skipped = study.rolling(window, shifts(body.step_months))
     term = term_months(spec)
     summary = study.summarize(windows, term)
+    earliest = day_number(windows[0].start)
+    for fx in rates:
+        warnings.extend(official_rate_note(fx, earliest))
     reasons = dict(skipped)
     horizons = sorted(set(body.horizons_years))
     cells = study.win_map(
         window,
-        _shifts(base, first, last, 12),
+        shifts(12),
         [12 * years for years in horizons],
     )
     rows: list[MapRow] = []
@@ -412,7 +434,7 @@ def _study(
             for w in windows
         ],
         win_map=WinMap(horizons_years=horizons, rows=rows),
-        warnings=list(dict.fromkeys(warnings)),
+        warnings=list(dict.fromkeys([*warnings, *notes])),
     )
 
 

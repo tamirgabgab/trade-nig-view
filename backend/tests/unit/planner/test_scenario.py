@@ -145,6 +145,19 @@ def test_real_results_are_in_shekels_of_the_first_day() -> None:
     assert result.y.xirr_real == pytest.approx(1.07 / 1.03 - 1, abs=2e-4)
 
 
+def test_an_option_that_ends_with_a_debt_lost_everything() -> None:
+    # Bought with 5 % of equity; the value halves, so the sale does not cover the loan.
+    owner = home(equity=50_000)
+    assert owner.home is not None
+    fallen = HomeSeries(
+        np.concatenate(([1.0], np.full(240, 0.5))), np.ones(241), np.full(241, 0.04), np.ones(241)
+    )
+    result = run_pair(Side(home=owner.home, series=fallen), Side(account=account()), END, FLAT_CPI)
+    assert result.x.wealth < 0
+    assert (result.x.xirr, result.x.xirr_real) == (-1.0, -1.0)
+    assert result.y.xirr == pytest.approx(0.0, abs=1e-9)
+
+
 def test_pairs_that_cannot_run_say_why() -> None:
     with pytest.raises(PlanError, match="asset mix"):
         run_pair(home(price=1_840_000), home(), END, FLAT_CPI)
