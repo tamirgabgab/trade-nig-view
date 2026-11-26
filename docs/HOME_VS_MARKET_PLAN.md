@@ -271,7 +271,7 @@ Notes:
 ## Rounds
 | Round | What | Size |
 |---|---|---|
-| **H0** | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
+| **H0** ✅ 2026-11-26 | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
 | **H1** | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
 | **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0019. | L |
 | **H3** | Scenarios and statistics: modes A, B and A+B, mirrored cash flows, rolling windows, block bootstrap, Monte Carlo, every metric above, histograms and P(a ≤ X ≤ b) with its interval. Tests: known answers (constant returns), bootstrap reproducibility by seed, the effective-sample count, P(A > B) = 0.5 for identical sides. | L |
@@ -287,6 +287,15 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H0 results (2026-11-26)
+- The USD/ILS rate for the planner is **Yahoo's market rate** (`ILS=X`, in the universe; the user's choice). The BoI
+  official rate (`usd_ils_boi`, daily from 1976) is the fallback before Yahoo's first bar, marked in the results.
+- The district dwelling indices start in **2017-10** (the national one in 1994-01). The average rates of new fixed
+  mortgages (unlinked and CPI-linked) start in 2011-07; the variable-rate series are not mapped (ambiguous codes).
+- The Benchmarks group (`^SP500TR`, `^XNDX`, `^TA125.TA`) is in the universe. Its depth on Yahoo is read on the
+  user's machine: open each symbol and press All, or read `history_start` from
+  `/api/bars?symbol=^SP500TR&limit=1`.
 
 ## Decisions (the user, 2026-11-26)
 - Rent: a switch, live in it or rent it out. The mortgage: a mix of up to three tracks. The apartment value: both the

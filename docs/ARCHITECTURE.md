@@ -36,6 +36,7 @@ flowchart LR
     BarSvc["data/BarService<br/>validate · resample · adjust · truncate(until)"]
     Cache["data/cache<br/>SQLite bars.db"]
     Prov["data/providers<br/>Yahoo · Tiingo · Fixtures"]
+    Macro["macro/<br/>Bank of Israel series · cache · fixtures"]
     Ind["indicators/<br/>pure functions + registry"]
     Ana["analysis/<br/>gaps · filter response · transforms"]
     Store2["storage/<br/>SQLite app.db (watchlists, layouts, drawings)"]
@@ -208,6 +209,7 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 | `GET /regime` | `symbol`, `interval=1D`, `adjusted=true`, `origin?` (replay: at this bar) | `{symbol, interval, last_time, window, ratios:[{q, vr, z}], cd, p_bootstrap, p_asymptotic, hurst_window, hurst_null:[5 %, 95 %], hurst_history, spectrum_window/spectrum_history:{qs, h, width}\|null, label:"trend"\|"random"\|"reversion", high_volatility, cells:[{regime, high_volatility, share}], forward, rules:[{rule, family, regime, n, mean, edge, t, hit_rate}]}`; ADR 0014; 422 `not_enough_history` | P3 G1 |
 | `GET /drawings/{symbol}` / `PUT` | PUT body `{revision, drawings}` (`DrawingsUpdate`, at most 500 drawings, unique ids) | drawings document (§5.2) with `revision`; GET returns revision 0 and no drawings when none was saved | R4 |
 | `GET /layouts` · `GET/PUT/DELETE /layouts/{name}` | PUT body `{revision, symbol, interval, chart_type, ...}` (layout fields, §5.3; revision 0 = create); DELETE `?revision=` | `GET /layouts` → `{layouts:[{name, revision, updated_at, symbol, interval}]}` (newest first); GET/PUT → layout document; DELETE → 204 | R6 |
+| `GET /macro/series` · `GET /macro/series/{id}` | `start?`, `end?` (inclusive dates) | list → `[{id, name, unit, frequency:"daily"\|"monthly", source_series}]`; one → the same plus `{source:"boi"\|"fixtures", stale, warnings, points:[{date, value}]}` (a monthly value is dated the 1st); 404 `series_not_found`, 503 `data_unavailable`; ADR 0018 | H0 |
 | `GET /watchlists` · `PUT/DELETE /watchlists/{name}` | PUT body `{revision, sections:[{title, symbols:[...]}]}` (revision 0 = create); DELETE `?revision=` | `GET /watchlists` → `{watchlists:[{schema_version, name, revision, updated_at, sections}]}` (newest first; one unsaved `Default` from the universe when none is saved); PUT → watchlist document; DELETE → 204 | R2 (read default) / R6 (edit) |
 
 Concurrency for PUT/DELETE documents: optimistic, `revision` integer; a stale `revision` → `409 Conflict`
@@ -418,6 +420,9 @@ A shared `check_no_lookahead(spec, bars, k)` helper (`tests/golden/harness.py`) 
 - **Offline**: `OFFLINE=1` → only the `fixtures` provider is registered. It reads CSV snapshots from
   `backend/fixtures/{daily,1h}/` (and `5m/`, `1m/` where present; the intraday window does not apply offline), which `scripts/make-fixtures.ps1` (`make_fixtures.py`) generates and commits on the
   user's machine; until that has run, only the small synthetic test fixtures in `backend/tests/fixtures/` are committed.
+- **Macro series** (ADR 0018): `MacroService` keeps Bank of Israel series in `bars.db` (`macro`, `macro_fetch`), serves
+  them for 6 h, then downloads the whole series again; the same rate limit, backoff, circuit breaker and
+  stale-while-error rules as the bars; `OFFLINE=1` reads `backend/fixtures/macro/` (`scripts/make_macro_fixtures.py`).
 - **Symbol universe**: `backend/config/universe.toml` (order = watchlist order; `group` = section).
 
 ## 9. Error handling

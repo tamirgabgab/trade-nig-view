@@ -329,6 +329,8 @@ Phase-2 plan.
   the net XIRR, P(a ≤ X ≤ b), P(A > B), CVaR, drawdown, certainty equivalent.
 - Data from the Bank of Israel (USD/ILS daily from 1980, CPI from 1951, the CBS dwelling index from 1994, mortgage
   rates by track). The round plan is in [HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md) (H0–H5).
+- [x] H0: macro series from the Bank of Israel (`app/macro`, `/api/macro`, ADR 0018), the Benchmarks group and
+  USD/ILS in the universe (2026-11-26).
 
 ### Phase 4 — Strategies & backtesting
 - Organised by **four trader profiles** set by trade frequency (Day ≤ 10 a day, Swing ≤ 10 a week, Position ≤ 10 a
