@@ -27,7 +27,7 @@
 | U3 | Chart tools: compare, patterns, icons, eraser, zoom box, Go to date, forecast pointer, animated backgrounds (ADR 0016) | L | ✅ (2026-11-26) |
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
-| PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0, H1, H2 ✅ (2026-11-26); H3a, H3b, H3c, H4, H5 planned |
+| PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0, H1, H2, H3a ✅ (2026-11-26); H3b, H3c, H4, H5 planned |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -329,6 +329,10 @@ Phase-2 plan.
   the net XIRR, P(a ≤ X ≤ b), P(A > B), CVaR, drawdown, certainty equivalent.
 - Data from the Bank of Israel (USD/ILS daily from 1976, CPI from 1951, the CBS dwelling index from 1994, mortgage
   rates by track). The round plan is in [HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md) (H0–H5).
+- [x] H3a: scenarios (ADR 0021): two options on the same money (an apartment, a market account or both on each
+  side), rolling windows of history with the effective-sample count, layer 1 of the metrics (P(A > B), XIRR,
+  breakeven rates, the win map, time-averaged net worth), `/api/planner/run` and `/api/planner/study`, and the
+  Compare tab of the Planner (2026-11-26).
 - [x] H2: the mortgage and the apartment (ADR 0020): tracks and amortization tables, the purchase, owner and sale
   costs, rent, the value path, purchase and betterment taxes with saved tables, `/api/planner/home`, and the
   Apartment tab of the Planner (2026-11-26).

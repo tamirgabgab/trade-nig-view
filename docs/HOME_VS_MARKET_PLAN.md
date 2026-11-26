@@ -296,7 +296,7 @@ discipline).
 | **H0** ✅ 2026-11-26 | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
 | **H1** ✅ 2026-11-26 | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
 | **H2** ✅ 2026-11-26 | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0020. | L |
-| **H3a** | Scenarios: modes A, B and A+B, mirrored cash flows (with an independent golden model), rolling historical windows with the effective-sample count, and layer 1 of the metrics (P(A > B) and the median difference, XIRR, breakeven rates, the win map, time-averaged net worth). Tests: known answers (constant returns), P(A > B) = 0.5 for identical sides, a breakeven rate that reproduces equality. | L |
+| **H3a** ✅ 2026-11-26 | Scenarios: modes A, B and A+B, mirrored cash flows (with an independent golden model), rolling historical windows with the effective-sample count, and layer 1 of the metrics (P(A > B) and the median difference, XIRR, breakeven rates, the win map, time-averaged net worth). Tests: known answers (constant returns), P(A > B) = 0.5 for identical sides, a breakeven rate that reproduces equality. | L |
 | **H3b** | Statistics: block bootstrap and Monte Carlo on paired realizations, histograms, percentiles, P(a ≤ X ≤ b) with its interval, and layer 2 (the bad tail, regret, path risks, stochastic dominance, certainty equivalent). Tests: reproducibility by seed, zero regret for identical sides, dominance of X + c over X, the correlations kept by the blocks. | L |
 | **H3c** | Layer 3: the decomposition of the apartment's return, sensitivity, breakeven time, liquidity, the benefit of combining. | M |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
@@ -312,6 +312,18 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H3a results (2026-11-26, ADR 0021)
+- The user's choices before H3a: a general engine (each option holds an apartment, a market account, both or
+  neither) with the difference invested in the market; the tracks' rates following the Bank of Israel rate in
+  windows of history, as a switch; the linear rule off in the windows; a Compare tab with a coloured win map.
+- The mirror's rule in one line: on every day both options spend max(f_X, f_Y, 0), and each invests the rest.
+- The day of the sale pays its own bills in cash, so the H1 engine did not change.
+- One pair of a 20-year plan takes about 8 ms; a study over all of history a few seconds.
+- The Planner page has three tabs (Market, Apartment, Compare), so H4 shrinks again: the forms of a free second
+  option, the charts (net-worth paths, histograms with handles) and saved scenarios.
+- Limits stated on the page: the same amounts and the same rent in every window; overlapping windows.
+- Still open: a comparison on real data on the user's machine (the tests run on synthetic series).
 
 ## H2 results (2026-11-26, ADR 0020)
 - The user's choices before H2: a variable-rate track, linked or not; the Bank of Israel rate both from history and

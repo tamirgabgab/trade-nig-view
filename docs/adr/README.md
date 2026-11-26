@@ -25,3 +25,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0018](0018-macro-series.md) | Macro series from the Bank of Israel | Accepted |
 | [0019](0019-planner-market-account.md) | The planner's market account and fill model | Accepted |
 | [0020](0020-planner-mortgage-apartment.md) | The planner's mortgage and apartment | Accepted |
+| [0021](0021-planner-scenarios.md) | The planner's scenarios: two options on the same money | Accepted |
