@@ -156,7 +156,6 @@ def test_the_study_runs_every_month_the_data_allows(client: TestClient) -> None:
     wins = sum(w["x_wealth"] > w["y_wealth"] for w in body["windows"])
     assert summary["p_win"] == pytest.approx(wins / 176)
     assert body["windows"][0]["start"] == "2002-01-15"
-    assert body["skipped"] > 0
 
 
 def test_the_win_map_has_a_row_per_start_year(client: TestClient) -> None:
@@ -188,7 +187,7 @@ def test_the_study_range_and_step_are_the_requests(client: TestClient) -> None:
     starts = [w["start"] for w in body["windows"]]
     assert starts[:2] == ["2005-01-15", "2005-04-15"]
     assert (starts[-1], len(starts)) == ("2009-10-15", 20)
-    assert (body["before"], body["after"], body["skipped"]) == (None, None, 0)
+    assert (body["before"], body["after"]) == (None, None)
     response = client.post(
         "/api/planner/study", json={**BASE, "first_start": "2030-01-01", "last_start": "2031-01-01"}
     )

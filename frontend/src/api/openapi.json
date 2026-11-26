@@ -8065,11 +8065,6 @@
           "summary": {
             "$ref": "#/components/schemas/SummaryOut"
           },
-          "skipped": {
-            "type": "integer",
-            "title": "Skipped",
-            "description": "Starts in the range that cannot run"
-          },
           "before": {
             "anyOf": [
               {
@@ -8115,7 +8110,6 @@
         "required": [
           "months",
           "summary",
-          "skipped",
           "before",
           "after",
           "windows",

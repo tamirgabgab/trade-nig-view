@@ -3422,11 +3422,6 @@ export interface components {
             months: number;
             summary: components["schemas"]["SummaryOut"];
             /**
-             * Skipped
-             * @description Starts in the range that cannot run
-             */
-            skipped: number;
-            /**
              * Before
              * @description Why the start before the first window cannot run
              */

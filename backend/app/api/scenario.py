@@ -191,7 +191,6 @@ class WinMap(BaseModel):
 class StudyResponse(BaseModel):
     months: int
     summary: SummaryOut
-    skipped: int = Field(description="Starts in the range that cannot run")
     before: str | None = Field(description="Why the start before the first window cannot run")
     after: str | None
     windows: list[WindowOut]
@@ -400,7 +399,6 @@ def _study(
         summary=SummaryOut(
             **{name: getattr(summary, name) for name in SummaryOut.model_fields},
         ),
-        skipped=len(skipped),
         before=reasons.get(windows[0].shift - body.step_months),
         after=reasons.get(windows[-1].shift + body.step_months),
         windows=[

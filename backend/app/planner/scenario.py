@@ -86,8 +86,6 @@ class SideResult:
     #: Per ledger day: the option's own spending, and what it invests to match the budget.
     own: FloatArray
     top_up: FloatArray
-    #: Its own spending on the end day (settled in cash).
-    last_flow: float
     wealth: float
     wealth_real: float
     xirr: float | None
@@ -170,11 +168,10 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
                 fill=account.fill,
                 cpi=cpi,
             )
-        last_flow = flows.get(end_day, 0.0)
         wealth = (
             (0.0 if home is None else float(home.net_worth[-1]))
             + (0.0 if market is None else market.net_value)
-            - last_flow
+            - flows.get(end_day, 0.0)  # the end day's own bills, settled in cash
         )
         ledger = np.append(-budget, wealth)
         ledger_days = np.append(days, end_day)
@@ -183,7 +180,6 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
             market=market,
             own=own,
             top_up=top_up,
-            last_flow=last_flow,
             wealth=wealth,
             wealth_real=wealth * float(deflate[-1]),
             xirr=xirr(ledger_days, ledger),

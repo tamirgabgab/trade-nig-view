@@ -6,6 +6,14 @@ import { PlannerWinMap } from './PlannerWinMap.tsx';
 
 const NONE = 'None in range';
 
+/** Where an option's end value comes from (all in cash, after every cost and tax). */
+function parts(option: ScenarioResult['x']): string {
+  const home = option.home ? `the apartment ${shekels(option.home.net_worth)}` : null;
+  const account = option.account ? `the account ${shekels(option.account.net_value)}` : null;
+  const held = [home, account].filter((part) => part !== null).join(', ');
+  return `In cash, after every cost and tax: ${held}, less the bills of the last day. Of the money put in, ${shekels(option.topped_up)} matched the other option.`;
+}
+
 interface ScenarioProps {
   result: ScenarioResult;
   names: [string, string];
@@ -19,8 +27,8 @@ export function PlannerScenario({ result, names, rent }: ScenarioProps) {
   const b = result.breakeven;
   const cards: PlannerCard[] = [
     ['Put in by each', shekels(result.spent), 'Both options spend it, on the same days'],
-    [`${x}: worth at the end`, shekels(result.x.wealth), 'In cash, after every cost and tax'],
-    [`${y}: worth at the end`, shekels(result.y.wealth), 'In cash, after every cost and tax'],
+    [`${x}: worth at the end`, shekels(result.x.wealth), parts(result.x)],
+    [`${y}: worth at the end`, shekels(result.y.wealth), parts(result.y)],
     [`${x} minus ${y.toLowerCase()}`, shekels(result.difference)],
     [
       `${x} minus ${y.toLowerCase()}, real`,

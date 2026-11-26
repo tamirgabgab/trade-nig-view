@@ -184,12 +184,11 @@ def test_a_window_refuses_data_that_is_not_there() -> None:
     with pytest.raises(PlanError, match="RETURN has no data before 2000-01-03"):
         run(spec, MACRO, Change(shift=-123, historical=True))
     # The actual CPI must reach the end too; one plan alone only warns and holds it flat.
-    real = ScenarioSpec(spec.y, OptionSpec(), date(2020, 3, 15), InflationSpec("historical"))
     real = ScenarioSpec(
         OptionSpec(account=MARKET, one_off=[Deposit(START, 100.0)]),
         OptionSpec(),
-        real.end,
-        real.inflation,
+        date(2020, 3, 15),
+        InflationSpec("historical"),
     )
     assert run(real, MACRO, Change(shift=74, historical=True)).end == date(2026, 5, 15)
     with pytest.raises(PlanError, match="CPI is published until 2026-06-01"):

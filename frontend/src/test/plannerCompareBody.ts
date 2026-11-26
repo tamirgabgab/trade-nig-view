@@ -47,7 +47,6 @@ export const STUDY_RESULT = {
     x_xirr_real: 0.03,
     y_xirr_real: 0.05,
   },
-  skipped: 12,
   before: 'AAPL has no data before 2001-12-24',
   after: null,
   windows: [],
