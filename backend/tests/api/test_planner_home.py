@@ -216,3 +216,44 @@ def test_plans_that_cannot_run_are_422(
 def test_historical_rates_need_the_bank_of_israel_series(client: TestClient) -> None:
     response = client.post("/api/planner/home", json={**BASE, "rates": {"mode": "historical"}})
     assert (response.status_code, response.json()["code"]) == (503, "data_unavailable")
+
+
+# ---------------------------------------------------------------- the interest stress test
+
+
+def test_a_higher_bank_of_israel_rate_moves_a_prime_track_from_the_second_month(
+    client: TestClient,
+) -> None:
+    prime = {"months": 240, "kind": "prime", "rate_pct": -0.5}
+    body = run(client, tracks=[prime], rates={"base_pct": 4})
+    # Prime: 4 % + 1.5 % - 0.5 % = 5 % quoted, known at the start of each month.
+    first = annuity(600_000, 0.05 / 12, 240)
+    assert body["summary"]["first_payment"] == pytest.approx(first)
+    after_first = 600_000 * (1 + 0.05 / 12) - first
+    assert [row["rise"] for row in body["stress"]] == pytest.approx([0.01, 0.02, 0.03])
+    for row in body["stress"]:
+        # The rate of month 1 was already set; from month 2 the annuity is on what is left.
+        moved = annuity(after_first, (0.05 + row["rise"]) / 12, 239)
+        assert row["highest_payment"] == pytest.approx(moved)
+        assert row["paid"] == pytest.approx(first + 23 * moved)
+    two = body["stress"][1]
+    assert two["highest_payment"] - first == pytest.approx(686.52, abs=0.005)
+
+
+def test_a_variable_track_moves_only_at_its_reset_so_the_whole_term_is_stressed(
+    client: TestClient,
+) -> None:
+    variable = {"months": 240, "kind": "variable", "rate_pct": 4, "reset_years": 5}
+    body = run(client, tracks=[variable])
+    summary, (one, _, three) = body["summary"], body["stress"]
+    # Sold after two years, before the first reset: nothing paid until the sale changes ...
+    assert one["paid"] == pytest.approx(summary["paid"])
+    # ... but the loan's highest payment does, and a later sale would meet it.
+    assert summary["highest_payment"] < one["highest_payment"] < three["highest_payment"]
+    at_reset = 600_000 * (1 + R) ** 60 - annuity(600_000, R, 240) * ((1 + R) ** 60 - 1) / R
+    assert one["highest_payment"] == pytest.approx(annuity(at_reset, 0.05 / 12, 180))
+
+
+def test_fixed_tracks_have_nothing_to_stress(client: TestClient) -> None:
+    assert run(client)["stress"] == []
+    assert run(client, equity=1_000_000, tracks=[])["stress"] == []
