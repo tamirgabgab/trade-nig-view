@@ -75,6 +75,19 @@ measures how risky each option is. The user's choices before the round:
   are set exactly from two fields. The axis is the middle 99 %; the tails are in the end bars, and a handle on an
   end counts its tail.
 
+- **What the review settled.**
+  - An option with an apartment is followed on the apartment's month dates from the purchase, its account's value
+    on each being that of the last month end; an account alone is followed on its month ends.
+  - The estimated market includes a price-only asset's assumed dividend yield.
+  - The income of the payment stress rises from the scenario's first day; a partial last year is left out of the
+    yearly returns.
+  - Half a market model (a mean without a volatility) is refused; a modelled market warns about the "currency" tax
+    base, and a correlation with no assumed apartment value to tie warns that it has no effect.
+  - The block length is shown under both methods: it cuts whatever is historical.
+  - An estimate fills the mean and volatility fields, so editing starts from it.
+  - Where the two handles meet, a drag to the left moves a (b is on top and cannot go left); the handles keep
+    their place in the document, so a focused one stays focused.
+
 ## Verification
 - **Each metric before its code**, against arithmetic done by hand: percentiles, CVaR, the shortfall, regret (zero
   for identical options), dominance of X + c over X and of the same mean with less spread, the harmonic and
@@ -91,7 +104,8 @@ measures how risky each option is. The user's choices before the round:
   Playwright run that drags a handle.
 
 ## Consequences
-- A world of a 10-year plan takes about 6 ms: 1,000 worlds are several seconds, with no progress report yet.
+- The default request (1,000 worlds, three tracks) takes about 6.5 s for a 10-year plan and 9 s for 20 years on
+  the e2e data; the page waits without a timeout and without a progress report yet.
 - The e2e dwelling index and CPI grow at a constant rate, so joint variation is tested on built panels, not
   through the API.
 - H3c changes one input at a time against the same worlds (decomposition, sensitivity); H4 adds charts of the

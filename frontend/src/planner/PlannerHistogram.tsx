@@ -45,6 +45,8 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
     quantile(pooled, 0.75),
   ]);
   const svg = useRef<SVGSVGElement>(null);
+  /** The handle the current drag moves (null until its first move decides). */
+  const dragged = useRef<0 | 1 | null>(null);
   const px = scale([lo, hi], [SIDE, W - SIDE]);
   const counts = [bins(x, lo, hi, BINS), bins(y, lo, hi, BINS)] as const;
   const tallest = Math.max(...counts[0], ...counts[1], 1);
@@ -59,7 +61,10 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
     const box = svg.current?.getBoundingClientRect();
     if (box === undefined || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
     const at = ((event.clientX - box.left) / box.width) * W;
-    move(which, lo + ((at - SIDE) / (W - 2 * SIDE)) * (hi - lo));
+    const value = lo + ((at - SIDE) / (W - 2 * SIDE)) * (hi - lo);
+    // Where the two handles meet, b is the one on top: a drag to the left is meant for a.
+    dragged.current ??= which === 1 && a >= b && value < a ? 0 : which;
+    move(dragged.current, value);
   };
   const keys = (which: 0 | 1, value: number) => (event: KeyboardEvent<SVGGElement>) => {
     const unit = ((hi - lo) / STEPS) * (event.shiftKey ? 10 : 1);
@@ -97,6 +102,7 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
       aria-valuetext={format(value)}
       transform={`translate(${px(clamp(value)).toFixed(1)} 0)`}
       onPointerDown={(event) => {
+        dragged.current = null;
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={drag(which)}
@@ -174,10 +180,8 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
             {format(tick)}
           </text>
         ))}
-        {/* Where the two meet, the one that can still move is on top: a at the right end. */}
-        {a >= hi ? null : handle(0, a, 'Lower bound a')}
+        {handle(0, a, 'Lower bound a')}
         {handle(1, b, 'Upper bound b')}
-        {a >= hi ? handle(0, a, 'Lower bound a') : null}
       </svg>
       <div className={styles.grid}>
         <PlannerField

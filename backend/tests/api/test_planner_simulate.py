@@ -138,3 +138,10 @@ def test_simulations_that_cannot_run_say_why(client: TestClient) -> None:
     assert "correlation" in refused(correlation=2)
     notes = simulate(client, correlation=0.5)["warnings"]
     assert any("applies only to a modelled market" in note for note in notes)
+    # A modelled market, but the apartment's value is the resampled index: nothing to tie.
+    notes = simulate(client, correlation=0.5, method="monte_carlo", runs=10)["warnings"]
+    assert any("The correlation has no effect" in note for note in notes)
+    tied = simulate(client, correlation=0.5, method="monte_carlo", runs=10, x={"home": HOME})[
+        "warnings"
+    ]
+    assert not any("correlation" in note for note in tied)

@@ -209,6 +209,11 @@ def _warnings(body: SimulateRequest, spec: ScenarioSpec) -> list[str]:
         notes.append("Inflation has no spread: it is the same in every world")
     if body.method == "bootstrap" and body.correlation != 0:
         notes.append("The correlation applies only to a modelled market (Monte Carlo)")
+    elif body.correlation != 0 and all(h.value_mode != "assumed" for h in homes):
+        notes.append(
+            "The correlation has no effect: no apartment has an assumed value for it to tie "
+            "to the market"
+        )
     if body.method == "monte_carlo" and any(a.taxes.dividend > 0 for a in accounts):
         notes.append("A modelled market pays no dividend tax: its growth is the mix's total return")
     if body.method == "monte_carlo" and any(a.taxes.base is TaxBase.CURRENCY for a in accounts):

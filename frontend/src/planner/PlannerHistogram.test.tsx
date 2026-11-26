@@ -57,14 +57,18 @@ describe('PlannerHistogram', () => {
     expect(Number(b.getAttribute('aria-valuenow')) - before).toBeCloseTo(10 * step, 9);
   });
 
-  it('keeps the handle that can still move on top when the two meet at the right end', () => {
+  it('keeps the focus on a handle that reaches the other one', () => {
     const { a, b } = chart();
-    const order = () => screen.getAllByRole('slider').map((s) => s.getAttribute('aria-label'));
-    expect(order()).toEqual(['Lower bound a', 'Upper bound b']);
     fireEvent.keyDown(b, { key: 'End' });
+    a.focus();
     fireEvent.keyDown(a, { key: 'End' });
-    // b cannot go left of a, so a must be the one the pointer reaches.
-    expect(order()).toEqual(['Upper bound b', 'Lower bound a']);
+    expect(a).toHaveAttribute('aria-valuenow', b.getAttribute('aria-valuenow'));
+    // The same element, still focused: the keys go on working from where it stands.
+    expect(document.activeElement).toBe(a);
+    fireEvent.keyDown(a, { key: 'ArrowLeft' });
+    expect(Number(a.getAttribute('aria-valuenow'))).toBeLessThan(
+      Number(b.getAttribute('aria-valuenow')),
+    );
   });
 
   it('sets a handle exactly from its field', () => {

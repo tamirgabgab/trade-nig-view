@@ -88,17 +88,16 @@ export function PlannerSimulationForm({ settings, onChange }: PlannerSimulationF
               }}
             />
           </>
-        ) : (
-          <PlannerField
-            label="Block length (months)"
-            value={settings.blockMonths}
-            min={1}
-            max={120}
-            onChange={(blockMonths) => {
-              set({ blockMonths });
-            }}
-          />
-        )}
+        ) : null}
+        <PlannerField
+          label="Block length (months)"
+          value={settings.blockMonths}
+          min={1}
+          max={120}
+          onChange={(blockMonths) => {
+            set({ blockMonths });
+          }}
+        />
         <PlannerField
           label="Monthly net income ₪"
           value={settings.income}
@@ -123,7 +122,7 @@ export function PlannerSimulationForm({ settings, onChange }: PlannerSimulationF
         what it marks “assumed” is drawn from its mean and spread, whatever its “draw a path” box
         says. The Bank of Israel rate comes with its block, so it jumps where two blocks meet.{' '}
         {modelled
-          ? 'The market is one modelled asset in shekels in place of the mix; the correlation ties a modelled apartment value to it.'
+          ? 'The market is one modelled asset in shekels in place of the mix; the correlation ties an apartment value marked “assumed” to it. The blocks still cut whatever is historical.'
           : 'The market is the mix’s own history, in the same blocks.'}{' '}
         The income rises with the CPI; leave it at 0 to skip the payment stress.
       </p>

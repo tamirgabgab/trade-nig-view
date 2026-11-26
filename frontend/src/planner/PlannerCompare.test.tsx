@@ -130,13 +130,13 @@ describe('PlannerCompare', () => {
     await vi.waitFor(() => {
       expect(simulate).toBeEnabled();
     });
-    // A bootstrap has a block length; a Monte Carlo has a market model and a correlation.
+    // Both methods cut what is historical in blocks; a Monte Carlo adds a market model.
     expect(screen.getByRole('spinbutton', { name: 'Block length (months)' })).toBeVisible();
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Simulation method' }),
       'monte_carlo',
     );
-    expect(screen.queryByRole('spinbutton', { name: 'Block length (months)' })).toBeNull();
+    expect(screen.getByRole('spinbutton', { name: 'Block length (months)' })).toBeVisible();
     const mean = screen.getByRole('spinbutton', { name: 'Market mean % a year' });
     expect(mean).toBeDisabled();
     await user.click(screen.getByRole('checkbox', { name: /^Estimate the market/ }));
@@ -157,6 +157,23 @@ describe('PlannerCompare', () => {
     });
     expect(screen.getByRole('slider', { name: 'Lower bound a' })).toBeVisible();
     expect(screen.getByRole('table', { name: 'Risk' })).toBeVisible();
+    // An estimated market fills the two fields, ready to be edited.
+    await user.click(screen.getByRole('checkbox', { name: /^Estimate the market/ }));
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': { body: SCENARIO_RESULT },
+      '/api/planner/simulate': {
+        body: { ...SIMULATION_RESULT, market: { mean: 0.0912, sd: 0.1834, estimated: true } },
+      },
+    });
+    await user.click(simulate);
+    await vi.waitFor(() => {
+      expect(mean).toHaveValue(9.12);
+    });
+    expect(screen.getByRole('spinbutton', { name: 'Market volatility % a year' })).toHaveValue(
+      18.34,
+    );
+    expect(mean).toBeDisabled();
     // The plan as entered is shown with it; a plain Compare afterwards drops the simulation.
     expect(card('Put in by each')).toHaveTextContent('₪900,000');
     await user.click(screen.getByRole('button', { name: 'Compare' }));

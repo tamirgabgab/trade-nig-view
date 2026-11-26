@@ -30,6 +30,8 @@ interface Shown {
   run: number;
 }
 const STEPS = [1, 3, 6, 12];
+/** A fraction as a percentage with two decimals, for a number field. */
+const percentOf = (fraction: number) => Math.round(fraction * 10_000) / 100;
 /** The win map's columns, in years. */
 const HORIZONS = [5, 10, 15, 20, 25, 30];
 
@@ -114,6 +116,11 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
       setStudy(null);
       setSimulation(many);
       setShown(next);
+      // The estimate goes into its fields, so unticking the box starts from it.
+      const model = many.market;
+      if (model?.estimated) {
+        setSettings((s) => ({ ...s, mean: percentOf(model.mean), sd: percentOf(model.sd) }));
+      }
     });
   };
 

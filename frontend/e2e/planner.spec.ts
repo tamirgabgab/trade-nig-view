@@ -243,6 +243,20 @@ test('planner: a simulation of the comparison, its distribution and the handles 
   await page.mouse.up();
   expect(Number(await b.getAttribute('aria-valuenow'))).toBeLessThan(wide);
   await expect(compare.getByLabel('Upper bound b', { exact: true }).last()).not.toHaveValue('');
+  // Both handles on the right end: b is on top and cannot go left, so the drag moves a.
+  await b.focus();
+  await page.keyboard.press('End');
+  await a.focus();
+  await page.keyboard.press('End');
+  const top = Number(await a.getAttribute('aria-valuenow'));
+  const end = await b.boundingBox();
+  if (end === null) throw new Error('The handle is not on the page');
+  await page.mouse.move(end.x + end.width / 2, end.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(end.x - 150, end.y + 30, { steps: 5 });
+  await page.mouse.up();
+  expect(Number(await a.getAttribute('aria-valuenow'))).toBeLessThan(top);
+  expect(Number(await b.getAttribute('aria-valuenow'))).toBe(top);
 
   // Another measure, and a modelled market in place of the mix.
   await compare.getByLabel('Measure').selectOption('xirr_real');
