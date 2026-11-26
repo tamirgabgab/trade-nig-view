@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { adjusted, dailyRows, freshStart, intradayCloses, present, price } from './fixtures.ts';
+import { adjusted, dailyRows, freshStart, intradayColumn, present, price } from './fixtures.ts';
 
 const legend = (page: Page) => page.getByLabel('Price legend');
 const field = (page: Page, name: string) => legend(page).locator(`[data-field="${name}"]`);
@@ -107,7 +107,7 @@ test('the minutes menu picks 15m bars built from 5m and notes how far back they 
   // The last 15m bar (15:45-16:00) closes with the session's last 5m bar.
   await page.mouse.move(0, 0);
   await expect(field(page, 'C')).toHaveText(
-    price(present(intradayCloses('5m', 'AAPL.csv').at(-1), '5m')),
+    price(present(intradayColumn('5m', 'AAPL.csv', 'close').at(-1), '5m')),
   );
   await expect(legend(page)).toContainText(
     /15m data since 2026-10-26 \(\d+ days\)/, // offline: no provider window
@@ -117,8 +117,12 @@ test('the minutes menu picks 15m bars built from 5m and notes how far back they 
   await page.getByRole('menuitemradio', { name: /10 minutes/ }).click();
   await expect(legend(page)).toContainText('Apple Inc. · 10m · NASDAQ');
   await page.mouse.move(0, 0);
+  // The last 10m bar (15:50-16:00) opens with the 15:50 5m bar, the second to last.
+  await expect(field(page, 'O')).toHaveText(
+    price(present(intradayColumn('5m', 'AAPL.csv', 'open').at(-2), '5m')),
+  );
   await expect(field(page, 'C')).toHaveText(
-    price(present(intradayCloses('5m', 'AAPL.csv').at(-1), '5m')),
+    price(present(intradayColumn('5m', 'AAPL.csv', 'close').at(-1), '5m')),
   );
   // Daily bars carry no note.
   await page

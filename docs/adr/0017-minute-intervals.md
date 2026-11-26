@@ -5,7 +5,7 @@
 ## Context
 The user wants bars shorter than an hour (for the Day trader profile of Phase 4), with a note where the history is
 short. Yahoo serves 1m bars for the last 30 days (8 days per request), 2m to 90m for the last 60 days and 1h for 730
-days; it has no 10m bars. The user chose: only the intervals Yahoo offers (1m, 2m, 5m, 10m, 15m, 30m, 90m), downloaded as
+days; it has no 10m bars. The user chose: only the intervals Yahoo offers (1m, 2m, 5m, 15m, 30m, 90m), downloaded as
 two bases and resampled, history accumulated in the cache with a daily collector, and the depth noted in the
 interval menu and on the chart. Afterwards the user asked for 10m as well: Yahoo has none, so it is built from two
 5m bars (39 a regular session).

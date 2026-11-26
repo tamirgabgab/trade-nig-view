@@ -32,7 +32,7 @@ SPECS = [
 ]
 HOURLY_SESSIONS = 40
 HOURLY_STARTS = [time(9, 30), *(time(h, 30) for h in range(10, 16))]  # 7 bars a session
-# AAPL's minute bases (2m and 15m ... 90m are resampled from them): sessions and bar minutes.
+# AAPL's minute bases (2m and 10m ... 90m are resampled from them): sessions and bar minutes.
 MINUTE_BASES = [("5m", 20, 5), ("1m", 5, 1)]
 
 
