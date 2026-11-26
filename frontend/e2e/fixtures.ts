@@ -38,6 +38,15 @@ export function dailyRows(file: string): DailyRow[] {
   });
 }
 
+/** The closes of an intraday fixture (`folder` is its base interval, e.g. '5m'), oldest first. */
+export function intradayCloses(folder: string, file: string): number[] {
+  const lines = readFileSync(join(DATA, folder, file), 'utf8')
+    .trim()
+    .split(/\r?\n/)
+    .slice(1);
+  return lines.map((line) => Number(line.split(',')[4]));
+}
+
 /** Dividend-adjusted OHLC of a row (the default ADJ mode): every price times adj_close / close. */
 export function adjusted(row: DailyRow): Pick<DailyRow, 'open' | 'high' | 'low' | 'close'> {
   const k = row.adjClose / row.close;

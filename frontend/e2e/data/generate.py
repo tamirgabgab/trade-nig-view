@@ -32,6 +32,8 @@ SPECS = [
 ]
 HOURLY_SESSIONS = 40
 HOURLY_STARTS = [time(9, 30), *(time(h, 30) for h in range(10, 16))]  # 7 bars a session
+# AAPL's minute bases (2m and 15m ... 90m are resampled from them): sessions and bar minutes.
+MINUTE_BASES = [("5m", 20, 5), ("1m", 5, 1)]
 
 
 def business_days(count: int) -> list[date]:
@@ -93,6 +95,28 @@ def write_hourly(stem: str, days: list[date], rng: np.random.Generator, last_clo
                 i += 1
 
 
+def write_minutes(stem: str, days: list[date], last_close: float) -> None:
+    """Regular-hours 1m and 5m bars of the last sessions (their own generator: the daily and 1h
+    files stay as they are)."""
+    rng = np.random.default_rng(20261126)
+    for folder, count, minutes in MINUTE_BASES:
+        path = ROOT / folder / f"{stem}.csv"
+        path.parent.mkdir(exist_ok=True)
+        per_session = 390 // minutes
+        sessions = days[-count:]
+        bars = len(sessions) * per_session
+        close = walk(rng, bars, last_close, 0.0, 0.25 / np.sqrt(per_session))
+        rows = ohlc(rng, close, 0.05)
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            out = csv.writer(handle, lineterminator="\n")
+            out.writerow(["time", "open", "high", "low", "close", "volume"])
+            for i, (o, h, lo, c) in enumerate(rows):
+                day, k = sessions[i // per_session], i % per_session
+                start = datetime.combine(day, time(9, 30), NEW_YORK) + timedelta(minutes=minutes * k)
+                out.writerow([start.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), o, h, lo, c,
+                              float(rng.integers(5_000, 50_000))])  # fmt: skip
+
+
 def main() -> None:
     rng = np.random.default_rng(20261122)
     for symbol, stem, count, start, drift, vol, dividend in SPECS:
@@ -106,6 +130,7 @@ def main() -> None:
         write_daily(stem, days, ohlc(rng, close, vol), volume, dividend)
         if symbol == "AAPL":
             write_hourly(stem, days, rng, float(close[-1]))
+            write_minutes(stem, days, float(close[-1]))
 
 
 if __name__ == "__main__":

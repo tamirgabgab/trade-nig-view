@@ -125,3 +125,14 @@
   top: calc(100% + 6px);
   right: 0;
 }
+
+/* Narrow windows: buttons with an icon drop their text and become square (the tooltip names them). */
+@media (max-width: 1099px) {
+  .withLabel:has(> svg) {
+    padding: 0 var(--space-1);
+  }
+
+  .withLabel > svg + .label {
+    display: none;
+  }
+}

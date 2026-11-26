@@ -14,6 +14,12 @@ import { apiGet, fieldsOf, isRecord, type Schemas } from './client.ts';
 
 /** Bar intervals the chart offers, shortest first. */
 export const INTERVALS = [
+  '1m',
+  '2m',
+  '5m',
+  '15m',
+  '30m',
+  '90m',
   '1h',
   '4h',
   '1D',
@@ -26,9 +32,12 @@ export function isInterval(value: unknown): value is Interval {
   return typeof value === 'string' && (INTERVALS as readonly string[]).includes(value);
 }
 
+/** The minute intervals: their history is short (the provider keeps weeks), and they refresh. */
+export const isMinuteInterval = (interval: Interval) => interval.endsWith('m');
+
 /**
  * One OHLCV bar. Daily and longer bars carry the session date as 'YYYY-MM-DD'; intraday bars
- * (1h, 4h) carry UTC epoch seconds of the bar start.
+ * (1m … 4h) carry UTC epoch seconds of the bar start.
  */
 export type Bar = Schemas['Bar'];
 
@@ -43,6 +52,10 @@ export interface BarsData {
   stale: boolean;
   hasMoreBefore: boolean;
   warnings: string[];
+  /** UTC seconds of the oldest bar of this interval that exists (before paging), or null. */
+  historyStart: number | null;
+  /** Intraday: days of this interval the provider keeps (older bars only where collected). */
+  providerWindowDays: number | null;
   bars: Bar[];
 }
 
@@ -84,6 +97,8 @@ export function parseBars(body: unknown): BarsData {
   const symbol = field('symbol');
   const source = field('source');
   const timezone = field('timezone');
+  const historyStart = field('history_start');
+  const windowDays = field('provider_window_days');
   return {
     symbol: typeof symbol === 'string' ? symbol : '',
     interval,
@@ -95,9 +110,14 @@ export function parseBars(body: unknown): BarsData {
     warnings: Array.isArray(warnings)
       ? (warnings as unknown[]).filter((w): w is string => typeof w === 'string')
       : [],
+    historyStart: typeof historyStart === 'number' ? historyStart : null,
+    providerWindowDays: typeof windowDays === 'number' ? windowDays : null,
     bars: (bars as unknown[]).map(parseBar),
   };
 }
+
+/** How often minute charts re-fetch their bars (the backend refreshes them after 60 s). */
+export const MINUTE_REFRESH_MS = 60_000;
 
 /** Bars requested per older page when the user scrolls left. */
 export const OLDER_PAGE_LIMIT = 5000;
@@ -150,9 +170,10 @@ export interface BarHistory {
 /**
  * Bars of one symbol and interval, newest page first; `loadOlder` fetches the page before the
  * oldest loaded bar. The previous chart stays on screen while the next one loads
- * (`keepPreviousData`), so switching symbols does not flash an empty chart.
+ * (`keepPreviousData`), so switching symbols does not flash an empty chart. With `live`, minute
+ * charts re-fetch every minute (the forming bar moves).
  */
-export function useBarHistory(query: BarsQuery): BarHistory {
+export function useBarHistory(query: BarsQuery, live = false): BarHistory {
   const result = useInfiniteQuery({
     queryKey: ['bars', query.symbol, query.interval, query.adjusted, query.transform],
     queryFn: ({ signal, pageParam }) =>
@@ -168,6 +189,7 @@ export function useBarHistory(query: BarsQuery): BarHistory {
     getNextPageParam: olderCursor,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    refetchInterval: live && isMinuteInterval(query.interval) ? MINUTE_REFRESH_MS : false,
   });
   const pages = (result.data as InfiniteData<BarsData, number | undefined> | undefined)?.pages;
   const bars = useMemo(() => (pages === undefined ? [] : mergePages(pages)), [pages]);

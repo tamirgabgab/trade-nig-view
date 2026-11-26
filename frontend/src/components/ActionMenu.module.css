@@ -87,3 +87,10 @@
   color: var(--color-text-muted);
   border-color: var(--color-border);
 }
+
+.hint {
+  margin-left: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}

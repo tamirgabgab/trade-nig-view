@@ -10,11 +10,20 @@ describe('parseBars', () => {
     expect(data.timezone).toBe('America/New_York');
     expect(data.bars).toHaveLength(3);
     expect(data.bars[2]).toEqual(AAPL_BARS[2]);
+    // No depth fields (an older backend): null, no note.
+    expect([data.historyStart, data.providerWindowDays]).toEqual([null, null]);
+  });
+
+  it('reads the history depth of minute bars', () => {
+    const body = { ...barsBody('AAPL', '5m', []), history_start: 1_764_000_000 };
+    const data = parseBars({ ...body, provider_window_days: 60 });
+    expect(data.interval).toBe('5m');
+    expect([data.historyStart, data.providerWindowDays]).toEqual([1_764_000_000, 60]);
   });
 
   it('rejects malformed bodies and bars', () => {
     expect(() => parseBars(null)).toThrow('Unexpected /api/bars response');
-    expect(() => parseBars(barsBody('AAPL', '5m', []))).toThrow('interval');
+    expect(() => parseBars(barsBody('AAPL', '7m', []))).toThrow('interval');
     expect(() => parseBars(barsBody('AAPL', '1D', [{ time: '2026-11-20' }]))).toThrow('open');
     expect(() =>
       parseBars(barsBody('AAPL', '1D', [{ ...AAPL_BARS[0], close: Number.NaN }])),
@@ -76,7 +85,9 @@ describe('isInterval', () => {
   it('accepts only the chart intervals', () => {
     expect(isInterval('1M')).toBe(true);
     expect(isInterval('4h')).toBe(true);
-    expect(isInterval('5m')).toBe(false);
+    expect(isInterval('5m')).toBe(true);
+    expect(isInterval('90m')).toBe(true);
+    expect(isInterval('7m')).toBe(false);
     expect(isInterval(7)).toBe(false);
   });
 });

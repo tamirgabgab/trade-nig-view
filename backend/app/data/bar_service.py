@@ -191,6 +191,7 @@ class BarService:
         tail_days: int = 10,
         hourly_tail_days: int = 5,
         minute_tail_days: int = 2,
+        provider_limits: bool = True,
         retry_sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._universe = universe
@@ -199,6 +200,8 @@ class BarService:
         self._clock = clock
         self._today = today
         self._ttl_s = {Interval.MIN1: minute_ttl_s, Interval.MIN5: minute_ttl_s}
+        # Off for OFFLINE=1: a fixture snapshot has no "last N days" (they would age out).
+        self._provider_limits = provider_limits
         self._refresh_ttl_s = refresh_ttl_s
         self._tail_days = {
             Interval.D1: tail_days,
@@ -242,7 +245,7 @@ class BarService:
             return self._locks.setdefault(key, threading.Lock())
 
     def _history_start(self, base: Interval, today: date) -> date:
-        if base.is_intraday:
+        if base.is_intraday and self._provider_limits:
             return today - timedelta(days=INTRADAY_MAX_DAYS[base])
         return HISTORY_START
 

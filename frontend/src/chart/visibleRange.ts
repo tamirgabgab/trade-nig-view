@@ -14,12 +14,12 @@ export function isRangeId(value: unknown): value is RangeId {
 
 /**
  * Interval each range switches to, as TradingView does (it picks a bar size that fits the span).
- * Our shortest bar is 1h, so the short ranges share it; 6M uses 4h, 5Y weekly, All monthly.
+ * 1D shows 1m bars, 5D 5m, 1M 30m, 3M 1h, 6M 4h, 5Y weekly and All monthly.
  */
 export const RANGE_INTERVAL: Record<RangeId, Interval> = {
-  '1D': '1h',
-  '5D': '1h',
-  '1M': '1h',
+  '1D': '1m',
+  '5D': '5m',
+  '1M': '30m',
   '3M': '1h',
   '6M': '4h',
   YTD: '1D',

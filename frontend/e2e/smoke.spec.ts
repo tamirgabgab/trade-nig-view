@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { adjusted, dailyRows, freshStart, present, price } from './fixtures.ts';
+import { adjusted, dailyRows, freshStart, intradayCloses, present, price } from './fixtures.ts';
 
 const legend = (page: Page) => page.getByLabel('Price legend');
 const field = (page: Page, name: string) => legend(page).locator(`[data-field="${name}"]`);
@@ -54,7 +54,7 @@ test('range buttons switch interval and chart types redraw', async ({ page }) =>
   await expect(legend(page)).toContainText('Apple Inc. · 1D · NASDAQ');
 
   await page.getByRole('button', { name: '5 days' }).click();
-  await expect(legend(page)).toContainText('Apple Inc. · 1h · NASDAQ');
+  await expect(legend(page)).toContainText('Apple Inc. · 5m · NASDAQ');
   await expect(page.getByRole('button', { name: '5 days' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -79,6 +79,33 @@ test('range buttons switch interval and chart types redraw', async ({ page }) =>
   await page.getByRole('menuitemradio', { name: 'Line' }).click();
   await page.mouse.move(0, 0);
   await expect(field(page, 'C')).toHaveText(price(last.close));
+});
+
+test('the minutes menu picks 15m bars built from 5m and notes how far back they go', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Minute intervals' }).click();
+  await expect(page.getByRole('menuitemradio', { name: /1 minute/ })).toContainText('~30 days');
+  await page.getByRole('menuitemradio', { name: /15 minutes/ }).click();
+  await expect(legend(page)).toContainText('Apple Inc. · 15m · NASDAQ');
+  await expect(page.getByRole('button', { name: 'Minute intervals: 15 minutes' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  // The last 15m bar (15:45-16:00) closes with the session's last 5m bar.
+  await page.mouse.move(0, 0);
+  await expect(field(page, 'C')).toHaveText(
+    price(present(intradayCloses('5m', 'AAPL.csv').at(-1), '5m')),
+  );
+  await expect(legend(page)).toContainText(
+    /15m data since 2026-10-26 \(\d+ days\); the provider keeps ~60 days/,
+  );
+  // Daily bars carry no note.
+  await page
+    .getByRole('group', { name: 'Interval' })
+    .getByRole('button', { name: '1 day' })
+    .click();
+  await expect(legend(page)).not.toContainText('the provider keeps');
 });
 
 test('scrolling back to the oldest loaded bar loads older history', async ({ page }) => {

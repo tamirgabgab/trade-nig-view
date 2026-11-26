@@ -10,7 +10,7 @@ import { isLightTheme, useThemeStore } from '../store/themeStore.ts';
 import { PAGE_PREFIX, useUiStore } from '../store/uiStore.ts';
 import type { Command } from './commands.ts';
 import { addIndicator, removeIndicator } from './indicatorActions.ts';
-import { INTERVALS } from './intervals.ts';
+import { INTERVALS, MINUTE_INTERVALS } from './intervals.ts';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery.ts';
 import { useLearnIndex } from '../api/lab.ts';
 
@@ -79,7 +79,7 @@ export function usePaletteCommands(): Command[] {
       },
     );
   }
-  for (const option of INTERVALS) {
+  for (const option of [...MINUTE_INTERVALS, ...INTERVALS]) {
     commands.push({
       id: `interval-${option.interval}`,
       group: 'Chart',

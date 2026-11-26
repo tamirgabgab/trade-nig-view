@@ -17,6 +17,8 @@ export interface MenuItem {
   onSelect: () => void;
   /** Shown on the right, e.g. "Alt+S". */
   shortcut?: string;
+  /** Muted text on the right, e.g. "~30 days". */
+  hint?: string;
   /** A toggle (log scale) or, with `radio`, the current choice: a tick when true. */
   checked?: boolean;
   /** One choice of several (chart type): a radio item. */
@@ -129,6 +131,7 @@ export function ActionMenu({
           {item.icon}
           <span className={styles.itemLabel}>{item.label}</span>
           {item.checked === true && <Check size={14} className={styles.check} aria-hidden="true" />}
+          {item.hint !== undefined && <span className={styles.hint}>{item.hint}</span>}
           {item.shortcut !== undefined && <kbd className={styles.shortcut}>{item.shortcut}</kbd>}
         </button>
       ))}

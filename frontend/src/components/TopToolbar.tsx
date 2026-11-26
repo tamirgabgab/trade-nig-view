@@ -23,6 +23,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import { ChartTypeMenu } from './ChartTypeMenu.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IntervalSwitcher } from './IntervalSwitcher.tsx';
+import { MinuteIntervalMenu } from './MinuteIntervalMenu.tsx';
 import { LayoutMenu } from './LayoutMenu.tsx';
 import { useFullscreen } from './useFullscreen.ts';
 import { SnapshotMenu } from './SnapshotMenu.tsx';
@@ -74,6 +75,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
         }}
       />
       <span className={styles.separator} aria-hidden="true" />
+      <MinuteIntervalMenu />
       <IntervalSwitcher />
       <span className={styles.separator} aria-hidden="true" />
       <ChartTypeMenu />

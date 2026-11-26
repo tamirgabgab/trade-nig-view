@@ -618,3 +618,16 @@ def test_rescaled_before_needs_common_bars() -> None:
     assert len(rescaled_before(old, new)) == 0
     assert len(rescaled_before(BarFrame.empty(), new)) == 0
     assert len(rescaled_before(old, BarFrame.empty())) == 0
+
+
+def test_offline_snapshots_ignore_the_provider_window(tmp_path: Path) -> None:
+    provider = FakeProvider("p", history(), minutes={Interval.MIN5: five_minute_history()})
+    service = BarService(
+        Universe([AAA]),
+        BarCache(tmp_path / "bars.db"),
+        [provider],
+        today=lambda: TODAY + timedelta(days=400),  # long after the snapshot
+        provider_limits=False,
+    )
+    assert len(service.history(AAA, Interval.MIN5).frame) == len(five_minute_history())
+    assert provider.minute_calls[0][1] == HISTORY_START

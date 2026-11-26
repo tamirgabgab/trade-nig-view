@@ -40,7 +40,7 @@ describe('sanitizePersisted', () => {
   it('falls back to defaults for missing or malformed values', () => {
     expect(sanitizePersisted(undefined)).toEqual(DEFAULTS);
     expect(
-      sanitizePersisted({ symbol: '', interval: '5m', chartType: 'renko', scaleMode: 'ln' }),
+      sanitizePersisted({ symbol: '', interval: '7m', chartType: 'renko', scaleMode: 'ln' }),
     ).toEqual(DEFAULTS);
     expect(sanitizePersisted({ symbol: 'X'.repeat(21), interval: 3 })).toEqual(DEFAULTS);
   });

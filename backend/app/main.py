@@ -92,6 +92,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         BarCache(settings.chartlab_data_dir / "bars.db"),
         build_providers(settings),
         refresh_ttl_s=settings.refresh_ttl_s,
+        provider_limits=not settings.offline,
     )
     app_db = settings.chartlab_data_dir / "app.db"
     app.state.drawings = DrawingsRepository(app_db)

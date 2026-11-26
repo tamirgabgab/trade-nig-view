@@ -24,6 +24,7 @@ import { useThemeStore } from '../store/themeStore.ts';
 import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
+import { HistoryNote } from './HistoryNote.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
@@ -84,7 +85,9 @@ export function ChartArea({ className }: ChartAreaProps) {
   const setSymbol = useChartStore((s) => s.setSymbol);
   const symbols = useSymbols().data;
   const transform = transformFor(chartType);
-  const history = useBarHistory({ symbol, interval, adjusted, transform });
+  // Minute charts follow the market; a replay shows a fixed past.
+  const live = useReplayStore((s) => s.mode === 'off');
+  const history = useBarHistory({ symbol, interval, adjusted, transform }, live);
   const hoverIndex = useChartDataStore((s) => s.hoverIndex);
   const setHoverIndex = useChartDataStore((s) => s.setHoverIndex);
   const [paneLayout, setPaneLayout] = useState<PaneLayout>({});
@@ -587,6 +590,15 @@ export function ChartArea({ className }: ChartAreaProps) {
           barCount={bars.length}
           decimals={decimals}
         />
+        {data !== undefined && data.providerWindowDays !== null && (
+          <HistoryNote
+            interval={data.interval}
+            start={data.historyStart}
+            windowDays={data.providerWindowDays}
+            last={bars.at(-1)?.time}
+            zone={timeZone}
+          />
+        )}
         {firstRun && bars.length > 0 && (
           <p className={styles.hint}>
             Press <kbd>/</kbd> to add an indicator
