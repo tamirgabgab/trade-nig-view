@@ -67,9 +67,13 @@ sale costs, and whether holding both lowers the risk. The user's choices before 
   - The forced sale's label shows the discount as typed; the lead chart marks whole years (months on a plan under
     four years), keeps the two names apart, and only the chart with handles takes the touch for itself.
   - The parsers reject a response without the new fields, so an older backend gives an error, not a blank page.
+  - On the page: the shares add up "to the rounding shown"; the lead chart has a value scale; the years and the
+    interval of the correlation and the step of the exit months are in visible text, not only on hover; the
+    tornado uses one hue at two strengths, since the two series colours name the options in the chart below it.
 
 ## Verification
-- **All the round's tests were committed before its code** (`892c80f`), hand arithmetic first: the Shapley value of
+- **The round's tests were committed before its code** (`892c80f`, hand arithmetic first; the tests of the review's
+  fixes came with their fixes): the Shapley value of
   a two-player game by hand; everything off earns nothing; an apartment bought outright earns its appreciation and
   the other three exactly nothing; the four add up to `run_home`'s return to 1e-12; a forced sale without a
   discount is the sale, and with one loses the discount less the tax saved; the lead by hand, with a tie; a
@@ -77,8 +81,11 @@ sale costs, and whether holding both lowers the risk. The user's choices before 
 - **Moves:** a drift on a historical index gives exactly (1 + d)^10 over ten years; a market drift exactly
   (1 + d)^years on one deposit; a rent that follows the value follows the drift; the tax shift moves both taxes by
   hand; the rate floor makes a move down smaller.
-- Three expectations were corrected after the code ran: a sign claimed for the mortgage's share (it has none, see
-  above), and two fixtures that did not describe what their test meant.
+- Four expectations were corrected after the code ran: a sign claimed for the mortgage's share (it has none, see
+  above), a rent share claimed equal with and without a rising rent (the two sources share the rise), and two
+  fixtures that did not describe what their test meant.
+- The correlation is checked with a value through the whole chain (a dwelling series and an asset built to the
+  hand example): the synthetic series of the other tests never leave their trend, so they only ever gave none.
 - **API and page:** the response adds up against itself; Vitest for the tornado, the lead chart and the tables; a
   Playwright run through the new section with the discount set to zero.
 

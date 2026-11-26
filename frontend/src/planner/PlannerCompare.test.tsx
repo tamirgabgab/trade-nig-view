@@ -82,6 +82,11 @@ describe('PlannerCompare', () => {
       '—',
     ]);
     expect(card('Dwelling prices and the market')).toHaveTextContent('0.12');
+    // The years behind the correlation, its interval and the exit step are on the page itself.
+    expect(screen.getByText(/^An exit is checked every 40 months/)).toHaveTextContent(
+      /over 30 years; its 95% interval is −0.25 to 0.46/,
+    );
+    expect(screen.getByText(/add up to the return, to the rounding shown/)).toBeVisible();
     // A later edit of the apartment's rent does not rescale the result that is on screen.
     act(() => {
       usePlannerHomeStore.getState().update({ rent: { ...DEFAULT_HOME.rent, monthly: 9_000 } });
@@ -210,6 +215,26 @@ describe('PlannerCompare', () => {
     await vi.waitFor(() => {
       expect(screen.queryByRole('table', { name: 'Risk' })).not.toBeInTheDocument();
     });
+  });
+
+  it('says why an apartment bought with nothing down has no return to share out', async () => {
+    const user = userEvent.setup();
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': { body: { ...SCENARIO_RESULT, decomposition: null, correlation: null } },
+    });
+    renderWithQuery(<PlannerCompare hidden={false} />);
+    const compare = screen.getByRole('button', { name: 'Compare' });
+    await vi.waitFor(() => {
+      expect(compare).toBeEnabled();
+    });
+    await user.click(compare);
+    expect(await screen.findByText(/cannot be shared between its sources/)).toBeVisible();
+    expect(screen.queryByRole('table', { name: 'Apartment return' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Dwelling prices and the market')).not.toBeInTheDocument();
+    expect(screen.getByText(/^An exit is checked every 40 months/)).not.toHaveTextContent(
+      'correlation',
+    );
   });
 
   it('reports a response without what the page needs, instead of breaking on it', async () => {

@@ -18,6 +18,8 @@ const SOURCES: Row<Decomposition>[] = [
   ['The apartment’s yearly return', (d) => percent(d.total)],
 ];
 const money = (value: number | null) => (value === null ? '—' : shekels(value));
+/** Two decimals, with a real minus sign. */
+const fixed = (value: number) => value.toFixed(2).replace('-', '−');
 
 /**
  * What the comparison's answer depends on: the apartment's return by source, each input moved
@@ -45,8 +47,8 @@ export function PlannerExplain({
   if (correlation) {
     cards.push([
       'Dwelling prices and the market',
-      correlation.value.toFixed(2),
-      `The correlation of their yearly returns over ${String(correlation.years)} years; 95% interval ${correlation.low.toFixed(2)} to ${correlation.high.toFixed(2)}`,
+      fixed(correlation.value),
+      `The correlation of their yearly returns over ${String(correlation.years)} years; 95% interval ${fixed(correlation.low)} to ${fixed(correlation.high)}`,
     ]);
   }
   const off = `−${plainPercent(liquidity.discount)}`;
@@ -77,11 +79,17 @@ export function PlannerExplain({
           <p className={styles.note}>
             The apartment alone, by where its return comes from. Each source’s share is what it adds
             when switched on, averaged over every order of switching the four on (the Shapley
-            value), so the four add up to the return. The mortgage’s share can be negative even when
-            borrowing pays: it also counts the orders in which the apartment does not yet earn its
-            rent or its appreciation.
+            value), so the four add up to the return, to the rounding shown. The mortgage’s share
+            can be negative even when borrowing pays: it also counts the orders in which the
+            apartment does not yet earn its rent or its appreciation, where a loan only costs.
           </p>
         </>
+      )}
+      {!decomposition && (result.x.home ?? result.y.home) && (
+        <p className={styles.note}>
+          The apartment’s return cannot be shared between its sources: with no money put down (or a
+          return beyond measure) it has no yearly rate.
+        </p>
       )}
       <h2 className={styles.heading}>One input moved</h2>
       <PlannerTornado moves={result.sensitivity} names={names} />
@@ -92,6 +100,12 @@ export function PlannerExplain({
       </p>
       <h2 className={styles.heading}>Who leads, and from when</h2>
       <PlannerCards cards={cards} />
+      <p className={styles.note}>
+        An exit is checked every {lead.step_months} month{lead.step_months === 1 ? '' : 's'}: the
+        chart shows what each option would end at if everything were sold then.
+        {correlation &&
+          ` The correlation is of the yearly returns of the dwelling price index and of the market mix in shekels over ${String(correlation.years)} years; its 95% interval is ${fixed(correlation.low)} to ${fixed(correlation.high)}, so read it as rough.`}
+      </p>
       <PlannerLeadChart
         points={result.average.points}
         lead={lead}

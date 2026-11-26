@@ -70,8 +70,8 @@ export function PlannerTornado({ moves, names }: PlannerTornadoProps) {
           {rows.map((move, row) => {
             const y = TOP + row * ROW;
             const bars = [
-              [move.down, 'down', styles.seriesY],
-              [move.up, 'up', styles.seriesX],
+              [move.down, 'down', styles.moveDown],
+              [move.up, 'up', styles.moveUp],
             ] as const;
             return (
               <g key={move.input}>
@@ -110,8 +110,8 @@ export function PlannerTornado({ moves, names }: PlannerTornadoProps) {
           ))}
         </svg>
         <figcaption className={styles.legend}>
-          <span className={styles.keyY}>Moved down</span>
-          <span className={styles.keyX}>Moved up</span>
+          <span className={styles.keyDown}>Moved down</span>
+          <span className={styles.keyUp}>Moved up</span>
         </figcaption>
       </figure>
       <PlannerTable label="Sensitivity" columns={COLUMNS} rows={rows} />

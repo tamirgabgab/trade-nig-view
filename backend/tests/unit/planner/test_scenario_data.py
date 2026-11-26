@@ -26,6 +26,7 @@ from app.planner.scenario_data import (
     ScenarioSpec,
     build,
     difference,
+    dwelling_correlation,
     first_day,
     growing_asset,
     run,
@@ -378,3 +379,38 @@ def test_the_sensitivity_leaves_out_what_the_scenario_does_not_have() -> None:
     plan = replace(no_rent.x.home.plan, rent_mode=RentMode.NONE)
     bare = replace(no_rent, x=replace(no_rent.x, home=replace(no_rent.x.home, plan=plan)))
     assert "rent" not in [m.input for m in sensitivity(bare, MACRO)]
+
+
+def test_the_correlation_of_dwelling_prices_with_the_mix_by_hand() -> None:
+    def stepped(returns: list[float]) -> np.ndarray:
+        """Levels on 49 month starts whose years grow by ``returns``, all in January."""
+        growth = np.ones(48)
+        growth[::12] = 1.0 + np.array(returns)
+        return np.concatenate(([100.0], 100.0 * np.cumprod(growth)))
+
+    firsts = np.array([day_number(add_months(date(2000, 1, 1), k)) for k in range(49)])
+    macro = FakeMacro()
+    macro.series["dwelling"] = MacroSeries(firsts, stepped([0.1, 0.2, 0.3, 0.4]))
+    close = stepped([0.2, 0.1, 0.4, 0.3])
+    ones = np.ones(49)
+    asset = AssetData("AAA", 1.0, firsts, close, close, close, close, ones, ones)
+    spec = ScenarioSpec(
+        OptionSpec(home=home()), OptionSpec(account=Account([asset])), add_months(START, 120)
+    )
+    found = dwelling_correlation(spec, macro)
+    # The same years as the hand example of the yearly correlation: 0.03 over 0.05.
+    assert found is not None
+    assert (found.value, found.years) == (pytest.approx(0.6), 4)
+    # A shekel rate that moves is part of the mix's return: it changes the answer.
+    rate = np.concatenate((np.full(25, 3.5), np.full(24, 4.5)))
+    dollars = replace(asset, fx=rate)
+    in_shekels = dwelling_correlation(
+        replace(spec, y=OptionSpec(account=Account([dollars]))), macro
+    )
+    assert in_shekels is not None
+    assert in_shekels.value != pytest.approx(0.6)
+    # Without an apartment, or without an account, there is nothing to correlate.
+    assert dwelling_correlation(replace(spec, x=OptionSpec()), macro) is None
+    assert dwelling_correlation(replace(spec, y=OptionSpec()), macro) is None
+    # The test series of the other tests never leaves its trend: no correlation.
+    assert dwelling_correlation(spec, MACRO) is None

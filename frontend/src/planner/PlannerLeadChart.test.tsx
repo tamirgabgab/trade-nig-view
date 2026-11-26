@@ -25,6 +25,8 @@ describe('PlannerLeadChart', () => {
     expect(titles).toContain(
       'Apartment, forced sale at −10% after 40 months (2018-05-15): ₪800,000',
     );
+    // A value scale beside the lines: the points themselves only show under the pointer.
+    expect(screen.getByText('₪2,000,000')).toBeInTheDocument();
     // Named at the lines' ends and in the legend, not by colour alone.
     expect(screen.getAllByText('Apartment').length).toBeGreaterThan(0);
     expect(screen.getByText('Apartment, forced sale at −10%')).toBeInTheDocument();

@@ -60,7 +60,8 @@ export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadC
   const values = drawn.flatMap((series) => points.map((p) => p[series]));
   const last = points.at(-1)?.months ?? 1;
   const px = scale([0, last], [LEFT, W - RIGHT]);
-  const py = scale(extent(values, 0.06), [H - AXIS, TOP]);
+  const [low, high] = extent(values, 0.06);
+  const py = scale([low, high], [H - AXIS, TOP]);
   const line = (series: Series) =>
     points
       .filter((p) => p[series] !== null)
@@ -96,6 +97,16 @@ export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadC
         aria-label={`End value by exit month: ${names[0]} and ${names[1]}`}
       >
         <line className={styles.baseline} x1={LEFT} x2={W - RIGHT} y1={H - AXIS} y2={H - AXIS} />
+        {niceTicks(low, high, 3)
+          .filter((value) => py(value) > TOP + 8 && py(value) < H - AXIS - 8)
+          .map((value) => (
+            <g key={value} className={styles.grid}>
+              <line x1={LEFT} x2={W - RIGHT} y1={py(value)} y2={py(value)} />
+              <text className={styles.axisTick} x={LEFT} y={py(value) - 4}>
+                {shekels(value)}
+              </text>
+            </g>
+          ))}
         {ticks.map(([months, text]) => (
           <text
             key={months}
