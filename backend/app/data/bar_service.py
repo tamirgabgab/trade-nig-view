@@ -230,10 +230,6 @@ class BarService:
         """Return the cached daily history, downloading or refreshing it when needed."""
         return self.history(info, Interval.D1)
 
-    def hourly(self, info: SymbolInfo) -> CachedBars:
-        """Return the cached 1h history, downloading or refreshing it when needed."""
-        return self.history(info, Interval.H1)
-
     def history(self, info: SymbolInfo, base: Interval) -> CachedBars:
         if base not in BASE_INTERVALS:
             raise ValueError(f"{base} is not a base interval")
@@ -278,8 +274,8 @@ class BarService:
                 cached = self._cache.read(info.symbol, base)
                 if not overlap_consistent(cached, result.frame):
                     result = self._fetch(info, base, earliest, today, require_data=True)
-                    kept = rescaled_before(cached, result.frame)
-                    if base.is_intraday and len(kept):
+                    kept = rescaled_before(cached, result.frame) if base.is_intraday else None
+                    if kept is not None and len(kept):
                         result.frame = BarFrame.concat([kept, result.frame])
                         start = ts_to_date(coverage.start_ts)
                     else:

@@ -24,7 +24,6 @@ import { useThemeStore } from '../store/themeStore.ts';
 import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
-import { HistoryNote } from './HistoryNote.tsx';
 import { IconButton } from './IconButton.tsx';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
@@ -34,6 +33,7 @@ import { CompareLegend } from './CompareLegend.tsx';
 import { DrawingFloatToolbar } from './DrawingFloatToolbar.tsx';
 import { DrawingSettingsPanel } from './DrawingSettingsPanel.tsx';
 import { localDate } from './formatClock.ts';
+import { historyDepth } from './historyDepth.ts';
 import { ForecastTooltip } from './ForecastTooltip.tsx';
 import { forecastView } from './forecastView.ts';
 import { useChartForecast } from './useChartForecast.ts';
@@ -591,13 +591,18 @@ export function ChartArea({ className }: ChartAreaProps) {
           decimals={decimals}
         />
         {data !== undefined && data.providerWindowDays !== null && (
-          <HistoryNote
-            interval={data.interval}
-            start={data.historyStart}
-            windowDays={data.providerWindowDays}
-            last={bars.at(-1)?.time}
-            zone={timeZone}
-          />
+          <p
+            className={styles.hint}
+            title="Older bars stay in the local cache once downloaded, so this history grows (scripts/install-collector.ps1 collects it daily)."
+          >
+            {historyDepth(
+              data.interval,
+              data.historyStart,
+              data.providerWindowDays,
+              bars.at(-1)?.time,
+              timeZone,
+            )}
+          </p>
         )}
         {firstRun && bars.length > 0 && (
           <p className={styles.hint}>

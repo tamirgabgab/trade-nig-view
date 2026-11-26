@@ -384,8 +384,8 @@ def test_first_hourly_request_downloads_the_provider_limit_once(make_service: Fa
     provider = FakeProvider("p", history(), hourly=hourly_history())
     service, clock = make_service(provider)
 
-    first = service.hourly(AAA)
-    service.hourly(AAA)
+    first = service.history(AAA, Interval.H1)
+    service.history(AAA, Interval.H1)
     assert provider.hourly_calls == [
         ("AAA", TODAY - timedelta(days=INTRADAY_MAX_DAYS[Interval.H1]), TODAY)
     ]
@@ -393,18 +393,18 @@ def test_first_hourly_request_downloads_the_provider_limit_once(make_service: Fa
     assert provider.calls == []  # daily history untouched
 
     clock.now += 901.0
-    service.hourly(AAA)
+    service.history(AAA, Interval.H1)
     assert provider.hourly_calls[1] == ("AAA", TODAY - timedelta(days=5), TODAY)
 
 
 def test_hourly_refresh_after_a_long_pause_stays_within_the_limit(make_service: Factory) -> None:
     provider = FakeProvider("p", history(), hourly=hourly_history())
     service, clock = make_service(provider)
-    service.hourly(AAA)
+    service.history(AAA, Interval.H1)
     today = TODAY + timedelta(days=1000)
     service._today = lambda: today  # pyright: ignore[reportPrivateUsage]
     clock.now += 901.0
-    service.hourly(AAA)
+    service.history(AAA, Interval.H1)
     assert provider.hourly_calls[1] == (
         "AAA",
         today - timedelta(days=INTRADAY_MAX_DAYS[Interval.H1]),
