@@ -45,6 +45,7 @@ from enum import StrEnum
 import numpy as np
 
 from app.models.bars import FloatArray
+from app.planner.market import PlanError
 
 PRIME_MARGIN = 0.015
 
@@ -120,9 +121,9 @@ def amortize(track: Track, anchor: FloatArray, index: FloatArray) -> Schedule:
     :math:`d_0 .. d_n` at least."""
     n = track.months
     if n < 1 or track.amount < 0:
-        raise ValueError("A track needs a positive term and a non-negative amount")
+        raise PlanError("A track needs a positive term and a non-negative amount")
     if track.repayment is Repayment.GRACE and not 0 <= track.grace_months < n:
-        raise ValueError("The grace period must be shorter than the term")
+        raise PlanError("The grace period must be shorter than the term")
     rates = track_rates(track, anchor)
     grace = {Repayment.GRACE: track.grace_months, Repayment.BALLOON: n - 1}.get(track.repayment, 0)
     out = np.zeros((5, n))

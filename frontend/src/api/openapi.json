@@ -2043,6 +2043,70 @@
           }
         }
       }
+    },
+    "/api/planner/tax-presets": {
+      "get": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Get Tax Presets",
+        "description": "The built-in purchase-tax tables and betterment-tax settings (defaults, not tax advice).",
+        "operationId": "get_tax_presets_api_planner_tax_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxPresets"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/home": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Run Home Plan",
+        "description": "An apartment bought with a mortgage and sold on ``end``: payments, costs and net worth.",
+        "operationId": "run_home_plan_api_planner_home_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2352,6 +2416,98 @@
           "bars"
         ],
         "title": "BarsResponse"
+      },
+      "BettermentIn": {
+        "properties": {
+          "rate_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Rate Pct",
+            "default": 25.0
+          },
+          "single_home": {
+            "type": "boolean",
+            "title": "Single Home",
+            "default": false
+          },
+          "ceiling": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Ceiling",
+            "default": 5008000.0
+          },
+          "linear": {
+            "type": "boolean",
+            "title": "Linear",
+            "default": true
+          },
+          "brackets": {
+            "items": {
+              "$ref": "#/components/schemas/BracketIn"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Brackets"
+          }
+        },
+        "type": "object",
+        "title": "BettermentIn"
+      },
+      "BettermentPresetOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/BettermentIn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "note",
+          "spec"
+        ],
+        "title": "BettermentPresetOut"
+      },
+      "BracketIn": {
+        "properties": {
+          "up_to": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Up To",
+            "description": "Upper bound; null: no bound"
+          },
+          "rate_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Rate Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rate_pct"
+        ],
+        "title": "BracketIn"
       },
       "Calibration": {
         "properties": {
@@ -3609,6 +3765,337 @@
           "baseline"
         ],
         "title": "Histogram"
+      },
+      "HomePoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "balance": {
+            "type": "number",
+            "title": "Balance"
+          },
+          "net_worth": {
+            "type": "number",
+            "title": "Net Worth",
+            "description": "If sold this month"
+          },
+          "payment": {
+            "type": "number",
+            "title": "Payment"
+          },
+          "costs": {
+            "type": "number",
+            "title": "Costs"
+          },
+          "rent": {
+            "type": "number",
+            "title": "Rent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value",
+          "balance",
+          "net_worth",
+          "payment",
+          "costs",
+          "rent"
+        ],
+        "title": "HomePoint"
+      },
+      "HomeRequest": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End",
+            "description": "The sale: on the last whole month from the start before it"
+          },
+          "price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Price"
+          },
+          "equity": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Equity"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/TrackIn"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Tracks"
+          },
+          "rates": {
+            "$ref": "#/components/schemas/RatesIn",
+            "default": {
+              "mode": "assumed",
+              "base_pct": 3.25,
+              "shock_pct": 0.0,
+              "shock_after_months": 0
+            }
+          },
+          "purchase": {
+            "$ref": "#/components/schemas/PurchaseIn",
+            "default": {
+              "tax_brackets": [],
+              "lawyer_pct": 0.0,
+              "broker_pct": 0.0,
+              "renovation": 0.0
+            }
+          },
+          "owner": {
+            "$ref": "#/components/schemas/OwnerIn",
+            "default": {
+              "maintenance_pct": 0.0,
+              "insurance": 0.0
+            }
+          },
+          "rent": {
+            "$ref": "#/components/schemas/RentIn",
+            "default": {
+              "mode": "none",
+              "monthly": 0.0,
+              "growth": "cpi",
+              "growth_pct": 0.0,
+              "vacancy_pct": 0.0,
+              "tax_pct": 0.0
+            }
+          },
+          "value": {
+            "$ref": "#/components/schemas/ValueIn",
+            "default": {
+              "mode": "assumed",
+              "series": "dwelling",
+              "mean_pct": 3.0,
+              "sd_pct": 0.0
+            }
+          },
+          "sale": {
+            "$ref": "#/components/schemas/SaleIn",
+            "default": {
+              "costs_pct": 0.0,
+              "early_repayment_pct": 0.0,
+              "betterment": {
+                "brackets": [],
+                "ceiling": 5008000.0,
+                "linear": true,
+                "rate_pct": 25.0,
+                "single_home": false
+              }
+            }
+          },
+          "inflation": {
+            "$ref": "#/components/schemas/InflationIn",
+            "default": {
+              "mode": "assumed",
+              "mean_pct": 2.5,
+              "sd_pct": 0.0,
+              "persistence": 0.0
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "price",
+          "equity"
+        ],
+        "title": "HomeRequest"
+      },
+      "HomeResponse": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/HomeSummary"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/TrackOut"
+            },
+            "type": "array",
+            "title": "Tracks"
+          },
+          "schedule": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRow"
+            },
+            "type": "array",
+            "title": "Schedule",
+            "description": "All tracks, the whole term"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/HomePoint"
+            },
+            "type": "array",
+            "title": "Path"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "tracks",
+          "schedule",
+          "path",
+          "warnings"
+        ],
+        "title": "HomeResponse"
+      },
+      "HomeSummary": {
+        "properties": {
+          "months": {
+            "type": "integer",
+            "title": "Months"
+          },
+          "loan": {
+            "type": "number",
+            "title": "Loan"
+          },
+          "equity": {
+            "type": "number",
+            "title": "Equity"
+          },
+          "purchase_tax": {
+            "type": "number",
+            "title": "Purchase Tax"
+          },
+          "purchase_costs": {
+            "type": "number",
+            "title": "Purchase Costs"
+          },
+          "first_payment": {
+            "type": "number",
+            "title": "First Payment"
+          },
+          "highest_payment": {
+            "type": "number",
+            "title": "Highest Payment",
+            "description": "Until the sale"
+          },
+          "paid": {
+            "type": "number",
+            "title": "Paid",
+            "description": "Mortgage payments until the sale"
+          },
+          "interest": {
+            "type": "number",
+            "title": "Interest"
+          },
+          "linkage": {
+            "type": "number",
+            "title": "Linkage"
+          },
+          "owner_costs": {
+            "type": "number",
+            "title": "Owner Costs"
+          },
+          "rent": {
+            "type": "number",
+            "title": "Rent",
+            "description": "Saved or received until the sale"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "At the sale"
+          },
+          "balance": {
+            "type": "number",
+            "title": "Balance"
+          },
+          "selling_costs": {
+            "type": "number",
+            "title": "Selling Costs"
+          },
+          "early_repayment_fee": {
+            "type": "number",
+            "title": "Early Repayment Fee"
+          },
+          "betterment_tax": {
+            "type": "number",
+            "title": "Betterment Tax"
+          },
+          "net_worth": {
+            "type": "number",
+            "title": "Net Worth"
+          },
+          "net_worth_real": {
+            "type": "number",
+            "title": "Net Worth Real",
+            "description": "In shekels of the purchase day"
+          },
+          "xirr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xirr"
+          },
+          "xirr_real": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xirr Real"
+          }
+        },
+        "type": "object",
+        "required": [
+          "months",
+          "loan",
+          "equity",
+          "purchase_tax",
+          "purchase_costs",
+          "first_payment",
+          "highest_payment",
+          "paid",
+          "interest",
+          "linkage",
+          "owner_costs",
+          "rent",
+          "value",
+          "balance",
+          "selling_costs",
+          "early_repayment_fee",
+          "betterment_tax",
+          "net_worth",
+          "net_worth_real",
+          "xirr",
+          "xirr_real"
+        ],
+        "title": "HomeSummary"
       },
       "HorizonForecast": {
         "properties": {
@@ -5292,6 +5779,27 @@
         ],
         "title": "OutputResponseInfo"
       },
+      "OwnerIn": {
+        "properties": {
+          "maintenance_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Maintenance Pct",
+            "description": "Of the value, a year",
+            "default": 0.0
+          },
+          "insurance": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Insurance",
+            "description": "Shekels a year, CPI-indexed",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "OwnerIn"
+      },
       "ParamInfo": {
         "properties": {
           "name": {
@@ -5534,6 +6042,71 @@
         "title": "ProviderStatus",
         "description": "One market-data provider in the active chain (in priority order)."
       },
+      "PurchaseIn": {
+        "properties": {
+          "tax_brackets": {
+            "items": {
+              "$ref": "#/components/schemas/BracketIn"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Tax Brackets"
+          },
+          "lawyer_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Lawyer Pct",
+            "default": 0.0
+          },
+          "broker_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Broker Pct",
+            "default": 0.0
+          },
+          "renovation": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Renovation",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "PurchaseIn"
+      },
+      "PurchasePresetOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "brackets": {
+            "items": {
+              "$ref": "#/components/schemas/BracketIn"
+            },
+            "type": "array",
+            "title": "Brackets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "note",
+          "brackets"
+        ],
+        "title": "PurchasePresetOut"
+      },
       "QuoteOut": {
         "properties": {
           "symbol": {
@@ -5670,6 +6243,53 @@
           "high_52w"
         ],
         "title": "QuoteOut"
+      },
+      "RateKind": {
+        "type": "string",
+        "enum": [
+          "fixed",
+          "prime",
+          "variable"
+        ],
+        "title": "RateKind"
+      },
+      "RatesIn": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "assumed",
+              "historical"
+            ],
+            "title": "Mode",
+            "default": "assumed"
+          },
+          "base_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Base Pct",
+            "description": "The assumed Bank of Israel rate",
+            "default": 3.25
+          },
+          "shock_pct": {
+            "type": "number",
+            "maximum": 20.0,
+            "minimum": -10.0,
+            "title": "Shock Pct",
+            "description": "It moves by this much",
+            "default": 0.0
+          },
+          "shock_after_months": {
+            "type": "integer",
+            "maximum": 480.0,
+            "minimum": 0.0,
+            "title": "Shock After Months",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "RatesIn"
       },
       "RecurringIn": {
         "properties": {
@@ -6099,6 +6719,74 @@
         ],
         "title": "RegimeSpectrum"
       },
+      "RentIn": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/RentMode",
+            "default": "none"
+          },
+          "monthly": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Monthly",
+            "description": "Shekels a month at the start",
+            "default": 0.0
+          },
+          "growth": {
+            "type": "string",
+            "enum": [
+              "cpi",
+              "value",
+              "fixed"
+            ],
+            "title": "Growth",
+            "default": "cpi"
+          },
+          "growth_pct": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": -20.0,
+            "title": "Growth Pct",
+            "description": "Yearly, for 'fixed'",
+            "default": 0.0
+          },
+          "vacancy_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Vacancy Pct",
+            "default": 0.0
+          },
+          "tax_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tax Pct",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "RentIn"
+      },
+      "RentMode": {
+        "type": "string",
+        "enum": [
+          "none",
+          "live",
+          "rent_out"
+        ],
+        "title": "RentMode"
+      },
+      "Repayment": {
+        "type": "string",
+        "enum": [
+          "spitzer",
+          "equal_principal",
+          "grace",
+          "balloon"
+        ],
+        "title": "Repayment"
+      },
       "ResponseInfo": {
         "properties": {
           "id": {
@@ -6437,6 +7125,36 @@
         ],
         "title": "RiskTail"
       },
+      "SaleIn": {
+        "properties": {
+          "costs_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Costs Pct",
+            "default": 0.0
+          },
+          "early_repayment_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Early Repayment Pct",
+            "default": 0.0
+          },
+          "betterment": {
+            "$ref": "#/components/schemas/BettermentIn",
+            "default": {
+              "rate_pct": 25.0,
+              "single_home": false,
+              "ceiling": 5008000.0,
+              "linear": true,
+              "brackets": []
+            }
+          }
+        },
+        "type": "object",
+        "title": "SaleIn"
+      },
       "Scenario": {
         "type": "string",
         "enum": [
@@ -6450,6 +7168,51 @@
           "regimes"
         ],
         "title": "Scenario"
+      },
+      "ScheduleRow": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "payment": {
+            "type": "number",
+            "title": "Payment"
+          },
+          "interest": {
+            "type": "number",
+            "title": "Interest"
+          },
+          "principal": {
+            "type": "number",
+            "title": "Principal"
+          },
+          "linkage": {
+            "type": "number",
+            "title": "Linkage"
+          },
+          "balance": {
+            "type": "number",
+            "title": "Balance"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate",
+            "description": "Balance-weighted yearly rate of the month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "payment",
+          "interest",
+          "principal",
+          "linkage",
+          "balance",
+          "rate"
+        ],
+        "title": "ScheduleRow"
       },
       "StatsBlock": {
         "properties": {
@@ -6828,6 +7591,40 @@
         ],
         "title": "TaxBase"
       },
+      "TaxPresets": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "purchase": {
+            "items": {
+              "$ref": "#/components/schemas/PurchasePresetOut"
+            },
+            "type": "array",
+            "title": "Purchase"
+          },
+          "betterment": {
+            "items": {
+              "$ref": "#/components/schemas/BettermentPresetOut"
+            },
+            "type": "array",
+            "title": "Betterment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "source",
+          "purchase",
+          "betterment"
+        ],
+        "title": "TaxPresets"
+      },
       "TaxesIn": {
         "properties": {
           "gains_pct": {
@@ -6851,6 +7648,114 @@
         },
         "type": "object",
         "title": "TaxesIn"
+      },
+      "TrackIn": {
+        "properties": {
+          "share": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Share",
+            "description": "Relative share of the loan",
+            "default": 1.0
+          },
+          "months": {
+            "type": "integer",
+            "maximum": 480.0,
+            "minimum": 1.0,
+            "title": "Months",
+            "default": 240
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RateKind",
+            "default": "fixed"
+          },
+          "rate_pct": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": -5.0,
+            "title": "Rate Pct",
+            "description": "Yearly: the rate (fixed), the first period's (variable), the spread on prime",
+            "default": 4.0
+          },
+          "linked": {
+            "type": "boolean",
+            "title": "Linked",
+            "description": "The balance follows the CPI",
+            "default": false
+          },
+          "reset_years": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Reset Years",
+            "description": "Of a variable track",
+            "default": 5
+          },
+          "repayment": {
+            "$ref": "#/components/schemas/Repayment",
+            "default": "spitzer"
+          },
+          "grace_months": {
+            "type": "integer",
+            "maximum": 479.0,
+            "minimum": 0.0,
+            "title": "Grace Months",
+            "default": 0
+          },
+          "grace_full": {
+            "type": "boolean",
+            "title": "Grace Full",
+            "description": "In the grace (or the balloon) the interest accrues, unpaid",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "TrackIn"
+      },
+      "TrackOut": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "months": {
+            "type": "integer",
+            "title": "Months"
+          },
+          "first_rate": {
+            "type": "number",
+            "title": "First Rate",
+            "description": "Yearly, as a fraction"
+          },
+          "first_payment": {
+            "type": "number",
+            "title": "First Payment"
+          },
+          "highest_payment": {
+            "type": "number",
+            "title": "Highest Payment"
+          },
+          "total_interest": {
+            "type": "number",
+            "title": "Total Interest",
+            "description": "Over the whole term"
+          },
+          "total_linkage": {
+            "type": "number",
+            "title": "Total Linkage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "months",
+          "first_rate",
+          "first_payment",
+          "highest_payment",
+          "total_interest",
+          "total_linkage"
+        ],
+        "title": "TrackOut"
       },
       "TradePlanResponse": {
         "properties": {
@@ -7148,6 +8053,55 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ValueIn": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "assumed",
+              "historical"
+            ],
+            "title": "Mode",
+            "default": "assumed"
+          },
+          "series": {
+            "type": "string",
+            "title": "Series",
+            "description": "A dwelling price index of /macro",
+            "default": "dwelling"
+          },
+          "mean_pct": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": -20.0,
+            "title": "Mean Pct",
+            "description": "Yearly mean growth",
+            "default": 3.0
+          },
+          "sd_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Sd Pct",
+            "description": "Yearly volatility",
+            "default": 0.0
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed",
+            "description": "Draw a path; null: the mean path"
+          }
+        },
+        "type": "object",
+        "title": "ValueIn"
       },
       "VisibleRange": {
         "properties": {

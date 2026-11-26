@@ -616,6 +616,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/planner/tax-presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tax Presets
+         * @description The built-in purchase-tax tables and betterment-tax settings (defaults, not tax advice).
+         */
+        get: operations["get_tax_presets_api_planner_tax_presets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Home Plan
+         * @description An apartment bought with a mortgage and sold on ``end``: payments, costs and net worth.
+         */
+        post: operations["run_home_plan_api_planner_home_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -755,6 +795,51 @@ export interface components {
             provider_window_days: number | null;
             /** Bars */
             bars: components["schemas"]["Bar"][];
+        };
+        /** BettermentIn */
+        BettermentIn: {
+            /**
+             * Rate Pct
+             * @default 25
+             */
+            rate_pct: number;
+            /**
+             * Single Home
+             * @default false
+             */
+            single_home: boolean;
+            /**
+             * Ceiling
+             * @default 5008000
+             */
+            ceiling: number;
+            /**
+             * Linear
+             * @default true
+             */
+            linear: boolean;
+            /** Brackets */
+            brackets?: components["schemas"]["BracketIn"][];
+        };
+        /** BettermentPresetOut */
+        BettermentPresetOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Note */
+            note: string;
+            spec: components["schemas"]["BettermentIn"];
+        };
+        /** BracketIn */
+        BracketIn: {
+            /**
+             * Up To
+             * @description Upper bound; null: no bound
+             */
+            up_to?: number | null;
+            /** Rate Pct */
+            rate_pct: number;
         };
         /** Calibration */
         Calibration: {
@@ -1342,6 +1427,192 @@ export interface components {
              * @description Fraction of baseline returns per bin
              */
             baseline: number[];
+        };
+        /** HomePoint */
+        HomePoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Value */
+            value: number;
+            /** Balance */
+            balance: number;
+            /**
+             * Net Worth
+             * @description If sold this month
+             */
+            net_worth: number;
+            /** Payment */
+            payment: number;
+            /** Costs */
+            costs: number;
+            /** Rent */
+            rent: number;
+        };
+        /** HomeRequest */
+        HomeRequest: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             * @description The sale: on the last whole month from the start before it
+             */
+            end: string;
+            /** Price */
+            price: number;
+            /** Equity */
+            equity: number;
+            /** Tracks */
+            tracks?: components["schemas"]["TrackIn"][];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "base_pct": 3.25,
+             *       "shock_pct": 0,
+             *       "shock_after_months": 0
+             *     }
+             */
+            rates: components["schemas"]["RatesIn"];
+            /**
+             * @default {
+             *       "tax_brackets": [],
+             *       "lawyer_pct": 0,
+             *       "broker_pct": 0,
+             *       "renovation": 0
+             *     }
+             */
+            purchase: components["schemas"]["PurchaseIn"];
+            /**
+             * @default {
+             *       "maintenance_pct": 0,
+             *       "insurance": 0
+             *     }
+             */
+            owner: components["schemas"]["OwnerIn"];
+            /**
+             * @default {
+             *       "mode": "none",
+             *       "monthly": 0,
+             *       "growth": "cpi",
+             *       "growth_pct": 0,
+             *       "vacancy_pct": 0,
+             *       "tax_pct": 0
+             *     }
+             */
+            rent: components["schemas"]["RentIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "series": "dwelling",
+             *       "mean_pct": 3,
+             *       "sd_pct": 0
+             *     }
+             */
+            value: components["schemas"]["ValueIn"];
+            /**
+             * @default {
+             *       "costs_pct": 0,
+             *       "early_repayment_pct": 0,
+             *       "betterment": {
+             *         "brackets": [],
+             *         "ceiling": 5008000,
+             *         "linear": true,
+             *         "rate_pct": 25,
+             *         "single_home": false
+             *       }
+             *     }
+             */
+            sale: components["schemas"]["SaleIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+        };
+        /** HomeResponse */
+        HomeResponse: {
+            summary: components["schemas"]["HomeSummary"];
+            /** Tracks */
+            tracks: components["schemas"]["TrackOut"][];
+            /**
+             * Schedule
+             * @description All tracks, the whole term
+             */
+            schedule: components["schemas"]["ScheduleRow"][];
+            /** Path */
+            path: components["schemas"]["HomePoint"][];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** HomeSummary */
+        HomeSummary: {
+            /** Months */
+            months: number;
+            /** Loan */
+            loan: number;
+            /** Equity */
+            equity: number;
+            /** Purchase Tax */
+            purchase_tax: number;
+            /** Purchase Costs */
+            purchase_costs: number;
+            /** First Payment */
+            first_payment: number;
+            /**
+             * Highest Payment
+             * @description Until the sale
+             */
+            highest_payment: number;
+            /**
+             * Paid
+             * @description Mortgage payments until the sale
+             */
+            paid: number;
+            /** Interest */
+            interest: number;
+            /** Linkage */
+            linkage: number;
+            /** Owner Costs */
+            owner_costs: number;
+            /**
+             * Rent
+             * @description Saved or received until the sale
+             */
+            rent: number;
+            /**
+             * Value
+             * @description At the sale
+             */
+            value: number;
+            /** Balance */
+            balance: number;
+            /** Selling Costs */
+            selling_costs: number;
+            /** Early Repayment Fee */
+            early_repayment_fee: number;
+            /** Betterment Tax */
+            betterment_tax: number;
+            /** Net Worth */
+            net_worth: number;
+            /**
+             * Net Worth Real
+             * @description In shekels of the purchase day
+             */
+            net_worth_real: number;
+            /** Xirr */
+            xirr: number | null;
+            /** Xirr Real */
+            xirr_real: number | null;
         };
         /** HorizonForecast */
         HorizonForecast: {
@@ -2068,6 +2339,21 @@ export interface components {
              */
             truncated: boolean;
         };
+        /** OwnerIn */
+        OwnerIn: {
+            /**
+             * Maintenance Pct
+             * @description Of the value, a year
+             * @default 0
+             */
+            maintenance_pct: number;
+            /**
+             * Insurance
+             * @description Shekels a year, CPI-indexed
+             * @default 0
+             */
+            insurance: number;
+        };
         /** ParamInfo */
         ParamInfo: {
             /** Name */
@@ -2180,6 +2466,37 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
+        /** PurchaseIn */
+        PurchaseIn: {
+            /** Tax Brackets */
+            tax_brackets?: components["schemas"]["BracketIn"][];
+            /**
+             * Lawyer Pct
+             * @default 0
+             */
+            lawyer_pct: number;
+            /**
+             * Broker Pct
+             * @default 0
+             */
+            broker_pct: number;
+            /**
+             * Renovation
+             * @default 0
+             */
+            renovation: number;
+        };
+        /** PurchasePresetOut */
+        PurchasePresetOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Note */
+            note: string;
+            /** Brackets */
+            brackets: components["schemas"]["BracketIn"][];
+        };
         /** QuoteOut */
         QuoteOut: {
             /** Symbol */
@@ -2215,6 +2532,37 @@ export interface components {
              * @description Highest high of the last 365 days of daily bars
              */
             high_52w: number | null;
+        };
+        /**
+         * RateKind
+         * @enum {string}
+         */
+        RateKind: "fixed" | "prime" | "variable";
+        /** RatesIn */
+        RatesIn: {
+            /**
+             * Mode
+             * @default assumed
+             * @enum {string}
+             */
+            mode: "assumed" | "historical";
+            /**
+             * Base Pct
+             * @description The assumed Bank of Israel rate
+             * @default 3.25
+             */
+            base_pct: number;
+            /**
+             * Shock Pct
+             * @description It moves by this much
+             * @default 0
+             */
+            shock_pct: number;
+            /**
+             * Shock After Months
+             * @default 0
+             */
+            shock_after_months: number;
         };
         /** RecurringIn */
         RecurringIn: {
@@ -2395,6 +2743,49 @@ export interface components {
              */
             width: number | null;
         };
+        /** RentIn */
+        RentIn: {
+            /** @default none */
+            mode: components["schemas"]["RentMode"];
+            /**
+             * Monthly
+             * @description Shekels a month at the start
+             * @default 0
+             */
+            monthly: number;
+            /**
+             * Growth
+             * @default cpi
+             * @enum {string}
+             */
+            growth: "cpi" | "value" | "fixed";
+            /**
+             * Growth Pct
+             * @description Yearly, for 'fixed'
+             * @default 0
+             */
+            growth_pct: number;
+            /**
+             * Vacancy Pct
+             * @default 0
+             */
+            vacancy_pct: number;
+            /**
+             * Tax Pct
+             * @default 0
+             */
+            tax_pct: number;
+        };
+        /**
+         * RentMode
+         * @enum {string}
+         */
+        RentMode: "none" | "live" | "rent_out";
+        /**
+         * Repayment
+         * @enum {string}
+         */
+        Repayment: "spitzer" | "equal_principal" | "grace" | "balloon";
         /** ResponseInfo */
         ResponseInfo: {
             /** Id */
@@ -2552,11 +2943,57 @@ export interface components {
             /** Exceedances */
             exceedances: number;
         };
+        /** SaleIn */
+        SaleIn: {
+            /**
+             * Costs Pct
+             * @default 0
+             */
+            costs_pct: number;
+            /**
+             * Early Repayment Pct
+             * @default 0
+             */
+            early_repayment_pct: number;
+            /**
+             * @default {
+             *       "rate_pct": 25,
+             *       "single_home": false,
+             *       "ceiling": 5008000,
+             *       "linear": true,
+             *       "brackets": []
+             *     }
+             */
+            betterment: components["schemas"]["BettermentIn"];
+        };
         /**
          * Scenario
          * @enum {string}
          */
         Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime" | "accumulation" | "regimes";
+        /** ScheduleRow */
+        ScheduleRow: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Payment */
+            payment: number;
+            /** Interest */
+            interest: number;
+            /** Principal */
+            principal: number;
+            /** Linkage */
+            linkage: number;
+            /** Balance */
+            balance: number;
+            /**
+             * Rate
+             * @description Balance-weighted yearly rate of the month
+             */
+            rate: number;
+        };
         /** StatsBlock */
         StatsBlock: {
             /** N */
@@ -2740,6 +3177,17 @@ export interface components {
          * @enum {string}
          */
         TaxBase: "nominal" | "real" | "currency";
+        /** TaxPresets */
+        TaxPresets: {
+            /** As Of */
+            as_of: string;
+            /** Source */
+            source: string;
+            /** Purchase */
+            purchase: components["schemas"]["PurchasePresetOut"][];
+            /** Betterment */
+            betterment: components["schemas"]["BettermentPresetOut"][];
+        };
         /** TaxesIn */
         TaxesIn: {
             /**
@@ -2754,6 +3202,76 @@ export interface components {
             dividend_pct: number;
             /** @default nominal */
             base: components["schemas"]["TaxBase"];
+        };
+        /** TrackIn */
+        TrackIn: {
+            /**
+             * Share
+             * @description Relative share of the loan
+             * @default 1
+             */
+            share: number;
+            /**
+             * Months
+             * @default 240
+             */
+            months: number;
+            /** @default fixed */
+            kind: components["schemas"]["RateKind"];
+            /**
+             * Rate Pct
+             * @description Yearly: the rate (fixed), the first period's (variable), the spread on prime
+             * @default 4
+             */
+            rate_pct: number;
+            /**
+             * Linked
+             * @description The balance follows the CPI
+             * @default false
+             */
+            linked: boolean;
+            /**
+             * Reset Years
+             * @description Of a variable track
+             * @default 5
+             */
+            reset_years: number;
+            /** @default spitzer */
+            repayment: components["schemas"]["Repayment"];
+            /**
+             * Grace Months
+             * @default 0
+             */
+            grace_months: number;
+            /**
+             * Grace Full
+             * @description In the grace (or the balloon) the interest accrues, unpaid
+             * @default false
+             */
+            grace_full: boolean;
+        };
+        /** TrackOut */
+        TrackOut: {
+            /** Amount */
+            amount: number;
+            /** Months */
+            months: number;
+            /**
+             * First Rate
+             * @description Yearly, as a fraction
+             */
+            first_rate: number;
+            /** First Payment */
+            first_payment: number;
+            /** Highest Payment */
+            highest_payment: number;
+            /**
+             * Total Interest
+             * @description Over the whole term
+             */
+            total_interest: number;
+            /** Total Linkage */
+            total_linkage: number;
         };
         /** TradePlanResponse */
         TradePlanResponse: {
@@ -2869,6 +3387,38 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** ValueIn */
+        ValueIn: {
+            /**
+             * Mode
+             * @default assumed
+             * @enum {string}
+             */
+            mode: "assumed" | "historical";
+            /**
+             * Series
+             * @description A dwelling price index of /macro
+             * @default dwelling
+             */
+            series: string;
+            /**
+             * Mean Pct
+             * @description Yearly mean growth
+             * @default 3
+             */
+            mean_pct: number;
+            /**
+             * Sd Pct
+             * @description Yearly volatility
+             * @default 0
+             */
+            sd_pct: number;
+            /**
+             * Seed
+             * @description Draw a path; null: the mean path
+             */
+            seed?: number | null;
         };
         /**
          * VisibleRange
@@ -4253,6 +4803,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tax_presets_api_planner_tax_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxPresets"];
+                };
+            };
+        };
+    };
+    run_home_plan_api_planner_home_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeResponse"];
                 };
             };
             /** @description Validation Error */

@@ -18,6 +18,7 @@ from app.api import (
     drawings,
     forecast,
     health,
+    home,
     indicators,
     layouts,
     learn,
@@ -127,6 +128,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         regime.router,
         macro.router,
         planner.router,
+        home.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app
