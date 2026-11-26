@@ -137,3 +137,19 @@ the hit rates, the two distributions. At most one signal counts per $h + 1$ bars
 counted one is skipped), so the counted forward windows do not overlap: a one-bar trigger (a cross) counts once, a state
 that stays true (close above the line) is sampled every $h + 1$ bars. It is one rule on one sample: not a backtest (no costs, no position sizing), sensitive to multiple testing,
 and not investment advice. Pages must say so where they draw conclusions.
+
+## Planner pages (Phase H, ADR 0025)
+
+The eight concept pages of the Planner (`xirr`, `mortgage-tracks`, `rent-or-buy`, `same-money`,
+`overlapping-windows`, `simulated-worlds`, `risk-metrics`, `what-the-answer-depends-on`) have their own section
+order: **What it answers**, **Formula**, **Worked example**, **How to read it**, **Where it comes from**, **Limits**.
+`backend/tests/unit/test_learn_pages.py` checks it for every page in `PLANNER_PAGES`, and also that:
+
+- every `$$` formula is followed by a `| Symbol | Meaning | Units / typical range |` table before the next heading
+  (the worked example and the derivation reuse the symbols above them);
+- a percent sign inside math is written `\%` (a bare one starts a TeX comment and the rest of the formula vanishes);
+- no math in a table row contains `|` (it would end the cell: write `\lvert K \rvert`).
+
+A letter means one thing in all eight pages; the table is in ADR 0025. Every number of a worked example is checked
+against the engine in `backend/tests/unit/planner/test_learn_examples.py`: change the example there and in the page
+together. Keep a formula narrow enough for the drawer (stack parts with `aligned`).

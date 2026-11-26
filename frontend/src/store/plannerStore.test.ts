@@ -164,3 +164,24 @@ describe('two options', () => {
     expect([same.same, same.slot, same.form, same.other]).toEqual([true, 'a', DEFAULT_FORM, B]);
   });
 });
+
+describe('the one-time upgrade of a stored planner', () => {
+  it('reads a version-1 entry from the browser as option A, with option B the same', async () => {
+    const old: PlannerForm = { ...DEFAULT_FORM, end: '2031-01-02', useFx: false };
+    localStorage.setItem('chartlab.planner', JSON.stringify({ state: { form: old }, version: 1 }));
+    await usePlannerStore.persist.rehydrate();
+    const state = usePlannerStore.getState();
+    expect([state.same, state.slot, state.form, state.other]).toEqual([true, 'a', old, old]);
+    expect(state.contents.a).toEqual({ home: true, deposits: false });
+    // What is written back is the new shape: the next load needs no upgrade.
+    const stored = JSON.parse(localStorage.getItem('chartlab.planner') ?? '{}') as {
+      version: number;
+      state: { same: boolean; other: PlannerForm };
+    };
+    expect([stored.version, stored.state.same, stored.state.other.end]).toEqual([
+      2,
+      true,
+      '2031-01-02',
+    ]);
+  });
+});

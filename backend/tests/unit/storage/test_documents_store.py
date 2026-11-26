@@ -87,3 +87,23 @@ def test_migrate_keeps_v1_and_refuses_a_newer_schema() -> None:
     assert migrate({"sections": []}) == {"sections": [], "schema_version": 1}
     with pytest.raises(ValueError, match="unsupported"):
         migrate({"schema_version": 99})
+
+
+def test_a_new_kind_opens_beside_the_tables_an_older_database_has(tmp_path: Path) -> None:
+    """An ``app.db`` from before the planner's scenarios: its layouts stay, and the new kind
+    saves and reads back in the same file."""
+    layouts = store(tmp_path)
+    layouts.put("Main", 0, {"symbol": "AAA"})
+    layouts.close()
+
+    scenarios = store(tmp_path, "scenarios")
+    assert scenarios.list() == []
+    revision, _ = scenarios.put("Haifa", 0, {"state": {"version": 1}})
+    scenarios.close()
+
+    found = store(tmp_path, "scenarios").get("Haifa")
+    assert found is not None
+    assert found[:2] == (revision, {"state": {"version": 1}, "schema_version": 1})
+    kept = store(tmp_path).get("Main")
+    assert kept is not None
+    assert kept[1]["symbol"] == "AAA"

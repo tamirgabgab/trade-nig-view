@@ -11,7 +11,7 @@ import {
   usePlannerHomeStore,
   type HomeForm,
 } from './plannerHomeStore.ts';
-import { DEFAULT_FORM } from './plannerStore.ts';
+import { DEFAULT_FORM, sanitizePersisted, usePlannerStore } from './plannerStore.ts';
 
 const PRESETS = TAX_PRESETS as TaxPresets;
 const NO_SAVED = { purchase: {}, betterment: {} };
@@ -221,5 +221,48 @@ describe('two apartments', () => {
     expect(toHomeRequest(home, DEFAULT_FORM.inflation, taxes).value).toMatchObject({
       own_sd_pct: 8,
     });
+  });
+});
+
+describe('the one-time upgrade of a stored apartment', () => {
+  it('keeps a version-1 form and its saved tax tables, as option A', async () => {
+    const old: HomeForm = {
+      ...DEFAULT_HOME,
+      price: 3_000_000,
+      purchaseTax: { preset: savedKey('Mine'), edited: null },
+    };
+    // As version 1 stored it: one form, without the fields added since.
+    const value: Record<string, unknown> = { ...old.value };
+    delete value['ownSd'];
+    const saved = { purchase: { Mine: SINGLE ?? [] }, betterment: {} };
+    localStorage.setItem(
+      'chartlab.planner.home',
+      JSON.stringify({ state: { home: { ...old, value }, saved }, version: 1 }),
+    );
+    // The Market tab's store says which option is on screen.
+    usePlannerStore.setState({ ...sanitizePersisted(null) });
+    await usePlannerHomeStore.persist.rehydrate();
+    const state = usePlannerHomeStore.getState();
+    expect([state.slot, state.home, state.other, state.saved]).toEqual(['a', old, old, saved]);
+    expect(resolveTaxes(state.home, state.saved, PRESETS)?.purchase).toEqual(SINGLE);
+  });
+
+  it('shows the option the Market tab shows, whatever slot was stored here', async () => {
+    const b: HomeForm = { ...DEFAULT_HOME, price: 3_000_000 };
+    localStorage.setItem(
+      'chartlab.planner.home',
+      JSON.stringify({
+        state: { slot: 'b', home: b, other: DEFAULT_HOME, saved: NO_SAVED },
+        version: 2,
+      }),
+    );
+    usePlannerStore.setState({ ...sanitizePersisted(null) }); // option A on screen
+    await usePlannerHomeStore.persist.rehydrate();
+    const state = usePlannerHomeStore.getState();
+    expect([state.slot, state.home.price, state.other.price]).toEqual([
+      'a',
+      DEFAULT_HOME.price,
+      3_000_000,
+    ]);
   });
 });

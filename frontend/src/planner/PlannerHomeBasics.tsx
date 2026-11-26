@@ -128,7 +128,7 @@ export function PlannerHomeBasics() {
         is used by a simulation only: there this apartment moves around its index by that much a
         year, since one apartment moves more than the average of all of them.
       </p>
-      <PlannerLearn page="rent-or-buy">The apartment’s ledger</PlannerLearn>
+      <PlannerLearn page="rent-or-buy">Rent or buy: the apartment’s ledger</PlannerLearn>
     </fieldset>
   );
 }

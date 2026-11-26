@@ -49,7 +49,7 @@ CONCEPT_PAGES: dict[str, str] = {
     # The planner (Phase H, ADR 0025).
     "xirr": "Yearly return (XIRR)",
     "mortgage-tracks": "Mortgage tracks",
-    "rent-or-buy": "The apartment's ledger",
+    "rent-or-buy": "Rent or buy: the apartment's ledger",
     "same-money": "The same money rule",
     "overlapping-windows": "Overlapping windows",
     "simulated-worlds": "Simulated worlds",

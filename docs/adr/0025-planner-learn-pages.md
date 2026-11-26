@@ -19,7 +19,7 @@ price and a probability; `m`, `s`, `a`, `b` and `X` each mean two or three thing
   |---|---|---|
   | `xirr` | Yearly return (XIRR) | the return of dated cash flows, and the planner's three kinds of yearly rate |
   | `mortgage-tracks` | Mortgage tracks | rates, linkage, the four repayments, the stress test |
-  | `rent-or-buy` | The apartment's ledger | purchase, monthly flows, value, sale, taxes, net worth |
+  | `rent-or-buy` | Rent or buy: the apartment's ledger | purchase, monthly flows, value, sale, taxes, net worth, and why a saved rent counts as income |
   | `same-money` | The same money rule | how two options are made comparable day by day |
   | `overlapping-windows` | Overlapping windows | history as many starts, and how few independent terms it holds |
   | `simulated-worlds` | Simulated worlds | block bootstrap and the modelled market |

@@ -1,4 +1,4 @@
-# The apartment's ledger
+# Rent or buy: the apartment's ledger
 
 The Apartment tab follows one apartment from the day it is bought to the day it is sold: what goes out, what comes
 in, and what the owner would be left with if it were sold in any month on the way.
