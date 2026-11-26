@@ -12,6 +12,8 @@ export function toScenario(
   home: HomeForm,
   taxes: { purchase: TaxBracket[]; betterment: BettermentSpec },
   ownAccount: boolean,
+  /** Off the apartment's value in a forced sale, in %. */
+  forcedDiscount = 10,
 ): ScenarioRequest {
   const { end, inflation, ...apartment } = toHomeRequest(home, form.inflation, taxes);
   const market = toRequest(form);
@@ -28,5 +30,6 @@ export function toScenario(
     y: { market: mix },
     end,
     inflation,
+    forced_discount_pct: forcedDiscount,
   };
 }

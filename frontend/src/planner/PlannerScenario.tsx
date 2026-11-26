@@ -1,6 +1,7 @@
 import type { ScenarioResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
+import { PlannerExplain } from './PlannerExplain.tsx';
 import { percent, points, shekels } from './plannerFormat.ts';
 
 const NONE = 'None in range';
@@ -73,6 +74,7 @@ export function PlannerScenario({ result, names, rent }: ScenarioProps) {
         The value of one input at which the two options end equal, everything else as entered.
         Compare each with what you expect: no forecast is made here.
       </p>
+      <PlannerExplain result={result} names={names} />
     </>
   );
 }

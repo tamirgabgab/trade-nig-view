@@ -7,6 +7,7 @@ from datetime import date
 
 import numpy as np
 import pytest
+
 from app.planner.explain import (
     COMPONENTS,
     decompose,
@@ -17,7 +18,6 @@ from app.planner.explain import (
     without,
     yearly_correlation,
 )
-
 from app.planner.home import Betterment, Bracket, HomePlan, HomeSeries, RentMode, run_home
 from app.planner.mortgage import Track
 from app.planner.risk import split
@@ -74,7 +74,12 @@ def mortgaged() -> tuple[HomePlan, HomeSeries]:
 
 
 def test_shapley_shares_a_hand_game_and_adds_up() -> None:
-    worth = {frozenset(): 0.0, frozenset("a"): 1.0, frozenset("b"): 2.0, frozenset("ab"): 4.0}
+    worth: dict[frozenset[str], float] = {
+        frozenset[str](): 0.0,
+        frozenset("a"): 1.0,
+        frozenset("b"): 2.0,
+        frozenset("ab"): 4.0,
+    }
     shares = shapley(worth.__getitem__, ("a", "b"))
     # a adds 1 when it comes first and 2 when it comes second: 1.5 on average; b, 2 and 3.
     assert shares == pytest.approx({"a": 1.5, "b": 2.5})

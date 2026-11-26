@@ -135,6 +135,22 @@ export function PlannerSimulation({
         how little history there is to draw them from. The values outside the middle 99% are in the
         first and the last bar.
       </p>
+      <h2 className={styles.heading}>The same money in both</h2>
+      <PlannerTable
+        label="Split"
+        columns={[
+          [`Share in ${x.toLowerCase()}`, (row) => `${String(Math.round(row.weight * 100))}%`],
+          ['Median end value, real', (row) => shekels(row.p50)],
+          ['5% percentile', (row) => shekels(row.p5)],
+          ['CVaR 5%', (row) => shekels(row.cvar5)],
+        ]}
+        rows={result.split}
+      />
+      <p className={styles.note}>
+        Both options put in the same money, so a share of it in each ends at that share of each end
+        value, world by world. A middle row with a higher 5% percentile than both ends means holding
+        both lowers the risk. An indication only: half an apartment cannot be bought.
+      </p>
       <h2 className={styles.heading}>Risk</h2>
       <div className={styles.scroll}>
         <PlannerTable label="Risk" columns={columns} rows={ROWS} />

@@ -1,11 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
 
+import { parseScenario } from '../api/planner.ts';
 import { SCENARIO_RESULT } from '../test/plannerCompareBody.ts';
 import { PlannerTornado } from './PlannerTornado.tsx';
 
+const MOVES = parseScenario(SCENARIO_RESULT).sensitivity;
+
 describe('PlannerTornado', () => {
   it('lists each input’s two moves, the largest effect first', () => {
-    render(<PlannerTornado moves={SCENARIO_RESULT.sensitivity} names={['Apartment', 'Market']} />);
+    render(<PlannerTornado moves={MOVES} names={['Apartment', 'Market']} />);
     const table = screen.getByRole('table', { name: 'Sensitivity' });
     const rows = within(table)
       .getAllByRole('row')
@@ -26,7 +29,7 @@ describe('PlannerTornado', () => {
   });
 
   it('draws a bar for every move that ran, named for the move', () => {
-    render(<PlannerTornado moves={SCENARIO_RESULT.sensitivity} names={['Apartment', 'Market']} />);
+    render(<PlannerTornado moves={MOVES} names={['Apartment', 'Market']} />);
     const chart = screen.getByRole('img', {
       name: 'How apartment minus market changes when one input moves',
     });

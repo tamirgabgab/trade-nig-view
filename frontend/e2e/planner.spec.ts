@@ -141,7 +141,8 @@ test('planner: the apartment against the same money in the market, for one plan 
   await expect(
     compare.getByRole('heading', { name: 'Apartment against market: 2015-01-15 to 2025-01-15' }),
   ).toBeVisible();
-  const card = (label: string) => compare.getByText(label, { exact: true }).locator('..');
+  const card = (label: string) =>
+    compare.locator('dl').getByText(label, { exact: true }).locator('..');
   // Both options put in the same money: the equity and the purchase costs, then every month.
   await expect(card('Put in by each')).toContainText('₪');
   await expect(card('Apartment: worth at the end')).toContainText('₪');
@@ -228,7 +229,8 @@ test('planner: a simulation of the comparison, its distribution and the handles 
   await expect(
     compare.getByRole('heading', { name: 'Simulation: 60 worlds, block bootstrap' }),
   ).toBeVisible();
-  const card = (label: string) => compare.getByText(label, { exact: true }).locator('..');
+  const card = (label: string) =>
+    compare.locator('dl').getByText(label, { exact: true }).locator('..');
   await expect(card('P(apartment > market)')).toContainText('%');
   await expect(card('History resampled')).toContainText('295 months');
   await expect(card('Independent terms in it, about')).toContainText('2.5');

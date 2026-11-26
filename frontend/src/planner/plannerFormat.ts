@@ -23,3 +23,9 @@ export function points(value: number): string {
   const shown = Math.abs(value * 100).toFixed(2);
   return shown === '0.00' ? shown : `${value < 0 ? '−' : '+'}${shown}`;
 }
+
+/** A change in shekels with its sign: `+₪300,000`, `−₪340,000`; nothing stays `₪0`. */
+export function signedShekels(value: number): string {
+  const text = shekels(value);
+  return value >= 0.5 ? `+${text}` : text;
+}

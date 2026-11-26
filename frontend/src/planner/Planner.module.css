@@ -445,6 +445,88 @@
   margin: var(--space-2) 0 0;
 }
 
+/* The tornado and the lead chart: the two series colours, the forced sale dashed. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.legend span::before {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  margin-right: var(--space-1);
+  background: currentcolor;
+  content: '';
+  vertical-align: middle;
+}
+
+.keyX::before,
+.keyLineX::before,
+.keyXForced::before {
+  color: var(--color-series-1);
+}
+
+.keyY::before,
+.keyLineY::before,
+.keyYForced::before {
+  color: var(--color-series-2);
+}
+
+.keyXForced::before,
+.keyYForced::before {
+  opacity: 0.55;
+}
+
+.lineX,
+.lineXForced {
+  color: var(--color-series-1);
+}
+
+.lineY,
+.lineYForced {
+  color: var(--color-series-2);
+}
+
+.lineX polyline,
+.lineY polyline,
+.lineXForced polyline,
+.lineYForced polyline {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+}
+
+.lineXForced polyline,
+.lineYForced polyline {
+  stroke-dasharray: 5 4;
+  stroke-width: 1.5;
+}
+
+/* Hit targets on the points, shown only under the pointer. */
+.histogram circle {
+  fill: currentcolor;
+  opacity: 0;
+}
+
+.histogram circle:hover {
+  opacity: 1;
+}
+
+.mark line {
+  stroke: var(--color-text-muted);
+  stroke-dasharray: 2 3;
+}
+
+.mark text {
+  fill: var(--color-text);
+  font-size: 12px;
+}
+
 @media (max-width: 899px) {
   .page {
     grid-template-columns: minmax(0, 1fr);

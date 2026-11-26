@@ -1,11 +1,13 @@
 import { render, screen } from '@testing-library/react';
 
+import { parseScenario } from '../api/planner.ts';
 import { SCENARIO_RESULT } from '../test/plannerCompareBody.ts';
 import { PlannerLeadChart } from './PlannerLeadChart.tsx';
 
-const POINTS = SCENARIO_RESULT.average.points;
+const RESULT = parseScenario(SCENARIO_RESULT);
+const POINTS = RESULT.average.points;
 
-function chart(lead = SCENARIO_RESULT.lead, points = POINTS) {
+function chart(lead = RESULT.lead, points = POINTS) {
   render(
     <PlannerLeadChart points={points} lead={lead} names={['Apartment', 'Market']} discount={0.1} />,
   );

@@ -14,6 +14,7 @@ import { usePlannerHomeStore } from '../store/plannerHomeStore.ts';
 import { usePlannerStore } from '../store/plannerStore.ts';
 import { toScenario } from './compare.ts';
 import styles from './Planner.module.css';
+import { PlannerField } from './PlannerField.tsx';
 import { PlannerScenario } from './PlannerScenario.tsx';
 import { PlannerSimulation } from './PlannerSimulation.tsx';
 import { PlannerSimulationForm } from './PlannerSimulationForm.tsx';
@@ -46,6 +47,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
   const { taxes } = useHomeTaxes();
   const [ownAccount, setOwnAccount] = useState(false);
   const [followRates, setFollowRates] = useState(true);
+  const [discount, setDiscount] = useState(10);
   const [firstStart, setFirstStart] = useState('');
   const [lastStart, setLastStart] = useState('');
   const [step, setStep] = useState(1);
@@ -63,7 +65,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
     if (taxes === null || !ready) return;
     setStatus(next);
     setError(null);
-    work(toScenario(form, home, taxes, ownAccount), {
+    work(toScenario(form, home, taxes, ownAccount, discount), {
       names: [ownAccount ? 'Apartment and account' : 'Apartment', 'Market'],
       rent: home.rent.monthly,
       run: shown.run + 1,
@@ -154,6 +156,12 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
               />
               The apartment’s side also makes the Market tab’s deposits
             </label>
+            <PlannerField
+              label="Forced sale discount %"
+              value={discount}
+              max={100}
+              onChange={setDiscount}
+            />
           </div>
         </fieldset>
         <fieldset className={styles.section}>
