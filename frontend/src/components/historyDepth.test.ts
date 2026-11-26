@@ -18,6 +18,13 @@ describe('historyDepth', () => {
     );
   });
 
+  it('leaves out the provider window when there is none (offline fixtures)', () => {
+    const last = OCT_1_1330_UTC + 2 * 86_400;
+    expect(historyDepth('1h', OCT_1_1330_UTC, null, last, NY)).toBe(
+      '1h data since 2026-10-01 (2 days)',
+    );
+  });
+
   it('uses the display time zone for the date', () => {
     const lateEvening = Date.UTC(2026, 9, 2, 2, 0) / 1000; // 22:00 on Oct 1 in New York
     expect(historyDepth('1m', lateEvening, 30, lateEvening + 86_400, NY)).toContain('2026-10-01');

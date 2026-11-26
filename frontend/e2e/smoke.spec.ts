@@ -98,14 +98,14 @@ test('the minutes menu picks 15m bars built from 5m and notes how far back they 
     price(present(intradayCloses('5m', 'AAPL.csv').at(-1), '5m')),
   );
   await expect(legend(page)).toContainText(
-    /15m data since 2026-10-26 \(\d+ days\); the provider keeps ~60 days/,
+    /15m data since 2026-10-26 \(\d+ days\)/, // offline: no provider window
   );
   // Daily bars carry no note.
   await page
     .getByRole('group', { name: 'Interval' })
     .getByRole('button', { name: '1 day' })
     .click();
-  await expect(legend(page)).not.toContainText('the provider keeps');
+  await expect(legend(page)).not.toContainText('data since');
 });
 
 test('scrolling back to the oldest loaded bar loads older history', async ({ page }) => {

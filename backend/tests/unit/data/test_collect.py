@@ -51,12 +51,13 @@ def test_collects_each_base_of_every_watchlist_symbol(
     monkeypatch.setattr(collect, "get_settings", lambda: settings(tmp_path))
     monkeypatch.setattr(collect, "build_providers", providers)
 
-    assert collect.main() == 1  # AAA has no 1m bars, IDX no intraday, BBB nothing
+    # AAA has no 1m bars, IDX no intraday, BBB nothing: reported, but something was collected.
+    assert collect.main() == 0
     out = capsys.readouterr().out
     assert "OK   AAA        5m " in out
     assert "OK   AAA        1h " in out
     assert "FAIL AAA        1m " in out
-    assert "3 symbols" in out
+    assert "3 symbols, 2 collected, 7 failed" in out
 
 
 def test_offline_has_nothing_to_collect(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

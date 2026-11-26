@@ -46,6 +46,14 @@ def session_days(times: IntArray, timezone: str, session_start: int | None = Non
     return (wall + shift) // SECONDS_PER_DAY
 
 
+def session_offsets(times: IntArray, timezone: str, session_start: int | None = None) -> IntArray:
+    """Seconds of each intraday bar since the start of its session's day (local midnight, or
+    the session start for sessions that span midnight): 09:30 New York is 34,200."""
+    wall = local_wall_seconds(times, timezone)
+    shift = 0 if session_start is None else (MINUTES_PER_DAY - session_start) * 60
+    return (wall + shift) % SECONDS_PER_DAY
+
+
 def session_first_index(days: IntArray) -> IntArray:
     """For each bar, the index of the first bar of its session (bars sorted by time)."""
     n = len(days)

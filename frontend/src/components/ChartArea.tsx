@@ -1,7 +1,7 @@
 import { ChevronsRight } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useBarHistory, useCompareBars, type Bar } from '../api/bars.ts';
+import { isIntraday, useBarHistory, useCompareBars, type Bar } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
@@ -590,7 +590,7 @@ export function ChartArea({ className }: ChartAreaProps) {
           barCount={bars.length}
           decimals={decimals}
         />
-        {data !== undefined && data.providerWindowDays !== null && (
+        {data !== undefined && isIntraday(data.interval) && (
           <p
             className={styles.hint}
             title="Older bars stay in the local cache once downloaded, so this history grows (scripts/install-collector.ps1 collects it daily)."

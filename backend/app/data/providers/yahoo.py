@@ -45,6 +45,7 @@ def _yfinance_history(ticker: str, start: date, end_exclusive: date, interval: s
     # yfinance ships no type information: this function is the typed boundary around it.
     import yfinance  # noqa: PLC0415  # pyright: ignore[reportMissingTypeStubs]
     from yfinance.exceptions import (  # noqa: PLC0415  # pyright: ignore[reportMissingTypeStubs]
+        YFPricesMissingError,
         YFRateLimitError,
     )
 
@@ -60,6 +61,10 @@ def _yfinance_history(ticker: str, start: date, end_exclusive: date, interval: s
         )
     except YFRateLimitError as exc:
         raise RateLimitedError(f"Yahoo rate limit for {ticker}") from exc
+    except YFPricesMissingError:
+        # No bars in the range (a weekend, a holiday, before the open): an empty answer, so one
+        # empty 1m chunk does not fail the whole download. No data at all is caught upstream.
+        return pd.DataFrame()
     except Exception as exc:  # yfinance raises many ad-hoc exception types
         raise ProviderError(f"Yahoo request for {ticker} failed: {exc}") from exc
     return history

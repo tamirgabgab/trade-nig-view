@@ -1,5 +1,5 @@
 import { AAPL_BARS, barsBody } from '../test/render.tsx';
-import { barsPath, isInterval, mergePages, olderCursor, parseBars } from './bars.ts';
+import { barsPath, isInterval, mergePages, olderCursor, parseBars, withLatest } from './bars.ts';
 
 describe('parseBars', () => {
   it('maps the snake_case response to camelCase', () => {
@@ -102,5 +102,25 @@ describe('parseBars (intraday)', () => {
     const bar = { open: 1, high: 2, low: 0.5, close: 1.5, volume: 10 };
     expect(() => parseBars(barsBody('AAPL', '1h', [{ ...bar, time: 1.5 }]))).toThrow('bar time');
     expect(() => parseBars(barsBody('AAPL', '1h', [bar]))).toThrow('bar time');
+  });
+});
+
+describe('withLatest', () => {
+  const bar = (time: number) => ({ time, open: 1, high: 1, low: 1, close: time, volume: 0 });
+  const page = (times: number[]) => parseBars(barsBody('AAPL', '1m', times.map(bar)));
+
+  it('replaces the newest page from its first bar on, keeping the older pages', () => {
+    const old = {
+      pages: [page([300, 360, 420]), page([120, 180, 240])],
+      pageParams: [undefined, 300],
+    };
+    const next = withLatest(old, page([240, 300, 360, 420, 480]));
+    expect(mergePages(next.pages).map((b) => b.time)).toEqual([120, 180, 240, 300, 360, 420, 480]);
+    expect(next.pageParams).toBe(old.pageParams);
+  });
+
+  it('leaves an empty history alone', () => {
+    const old = { pages: [page([])], pageParams: [undefined] };
+    expect(withLatest(old, page([60]))).toBe(old);
   });
 });

@@ -16,6 +16,7 @@ from app.data.sessions import (
     local_wall_seconds,
     session_days,
     session_first_index,
+    session_offsets,
 )
 from app.models.bars import BarFrame, IntArray, Interval, date_to_ts
 from app.models.symbols import SymbolInfo, parse_session_start
@@ -336,3 +337,23 @@ def test_minute_resampling_counts_totals_and_no_lookahead(
         prefix = resample_intraday(frame.take(slice(0, k)), days[:k], interval)
         completed = len(prefix) - 1
         assert prefix.take(slice(0, completed)).equals(full.take(slice(0, completed)))
+
+
+def test_a_session_missing_its_opening_bars_keeps_the_grid() -> None:
+    """No trades at 09:30 on the second day: its 2m bars still start at 09:30, 09:32, ..."""
+    frame = minute_bars(Interval.MIN1, sessions=3)
+    second_open = ny(2026, 1, 6, 9, 30)
+    frame = frame.take(frame.time != second_open)  # the 09:30 bar of Jan 6 is missing
+    days = session_days(frame.time, NEW_YORK)
+    offsets = session_offsets(frame.time, NEW_YORK)
+    out = resample_intraday(frame, days, Interval.MIN2, offsets)
+    jan6 = out.time[(out.time >= second_open) & (out.time < ny(2026, 1, 6, 16, 0))]
+    assert len(jan6) == 195
+    assert jan6[0] == second_open + 60  # the first block (09:30-09:32) holds only the 09:31 bar
+    assert np.all((jan6[1:] - second_open) % 120 == 0)
+    # Without offsets the second day's blocks start at its first bar, off the grid.
+    shifted = resample_intraday(frame, days, Interval.MIN2)
+    jan6_shifted = shifted.time[
+        (shifted.time >= second_open) & (shifted.time < ny(2026, 1, 6, 16, 0))
+    ]
+    assert np.all((jan6_shifted - second_open) % 120 == 60)

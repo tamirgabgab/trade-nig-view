@@ -45,7 +45,7 @@ from app.data.providers.base import DataProvider, ProviderError, RateLimitedErro
 from app.data.providers.yahoo import INTRADAY_MAX_DAYS
 from app.data.ratelimit import CircuitBreaker, retry_with_backoff
 from app.data.resample import resample, resample_intraday
-from app.data.sessions import daily_factor_per_session, session_days
+from app.data.sessions import daily_factor_per_session, session_days, session_offsets
 from app.data.universe import Universe
 from app.data.validate import validate_bars
 from app.errors import DataUnavailableError, SymbolNotFoundError
@@ -62,6 +62,9 @@ from app.models.symbols import SymbolInfo
 
 HISTORY_START = date(1970, 1, 1)
 OVERLAP_RTOL = 1e-5
+#: Intraday closes that moved less than this on the overlap are late-print corrections (the fresh
+#: bars simply replace them), not a split (a full re-download and rescale).
+SPLIT_MIN_CHANGE = 0.01
 QUOTE_WORKERS = 4
 DIVIDEND_TYPES = frozenset({"stock", "etf"})
 """Symbol types whose adjusted close can differ from the close (pay dividends)."""
@@ -149,21 +152,28 @@ def overlap_consistent(cached: BarFrame, fresh: BarFrame, *, rtol: float = OVERL
     )
 
 
+def overlap_ratio(cached: BarFrame, fresh: BarFrame) -> float | None:
+    """:math:`\\operatorname{median}(C^{fresh}_t / C^{cached}_t)` over the common bars (the newest
+    cached bar excluded, as in :func:`overlap_consistent`); None without common bars."""
+    if len(cached) == 0 or len(fresh) == 0:
+        return None
+    _, i_cached, i_fresh = np.intersect1d(cached.time[:-1], fresh.time, return_indices=True)
+    if len(i_cached) == 0:
+        return None
+    return float(np.median(fresh.close[i_fresh] / cached.close[i_cached]))
+
+
 def rescaled_before(cached: BarFrame, fresh: BarFrame) -> BarFrame:
     """The cached bars older than ``fresh``, brought to ``fresh``'s adjustment (a split since).
 
-    With :math:`r = \\operatorname{median}(C^{fresh}_t / C^{cached}_t)` over the common bars
-    (the newest cached bar excluded, as in :func:`overlap_consistent`), prices are multiplied by
-    :math:`r` and volume divided by it, so price times volume is unchanged. Without common bars
-    the two cannot be linked and nothing is kept.
+    With :math:`r` = :func:`overlap_ratio`, prices are multiplied by :math:`r` and volume divided
+    by it, so price times volume is unchanged. Without common bars the two cannot be linked and
+    nothing is kept.
     """
-    if len(cached) == 0 or len(fresh) == 0:
+    r = overlap_ratio(cached, fresh)
+    old = cached.take(cached.time < fresh.time[0]) if len(fresh) else BarFrame.empty()
+    if r is None or len(old) == 0:
         return BarFrame.empty()
-    old = cached.take(cached.time < fresh.time[0])
-    _, i_cached, i_fresh = np.intersect1d(cached.time[:-1], fresh.time, return_indices=True)
-    if len(old) == 0 or len(i_cached) == 0:
-        return BarFrame.empty()
-    r = float(np.median(fresh.close[i_fresh] / cached.close[i_cached]))
     return BarFrame(
         old.time,
         old.open * r,
@@ -272,7 +282,11 @@ class BarService:
             result = self._fetch(info, base, start, today, require_data=full)
             if coverage is not None:
                 cached = self._cache.read(info.symbol, base)
-                if not overlap_consistent(cached, result.frame):
+                ratio = overlap_ratio(cached, result.frame)
+                corrected = (
+                    base.is_intraday and ratio is not None and abs(ratio - 1.0) < SPLIT_MIN_CHANGE
+                )
+                if not corrected and not overlap_consistent(cached, result.frame):
                     result = self._fetch(info, base, earliest, today, require_data=True)
                     kept = rescaled_before(cached, result.frame) if base.is_intraday else None
                     if kept is not None and len(kept):
@@ -425,7 +439,8 @@ class BarService:
             frame, applied = self._adjust_intraday(info, frame, sessions, warnings)
         frame_sessions = sessions
         if interval is not interval.base:
-            frame = resample_intraday(frame, sessions, interval)
+            offsets = session_offsets(frame.time, info.timezone, info.session_start_minutes)
+            frame = resample_intraday(frame, sessions, interval, offsets)
             frame_sessions = session_days(frame.time, info.timezone, info.session_start_minutes)
         frame = apply_transform(frame, transform).with_session(frame_sessions)
         history_start = int(frame.time[0]) if len(frame) else None
@@ -440,7 +455,9 @@ class BarService:
             stale=base.stale,
             warnings=tuple(warnings),
             history_start=history_start,
-            provider_window_days=INTRADAY_MAX_DAYS[interval.base] + 1,
+            provider_window_days=INTRADAY_MAX_DAYS[interval.base] + 1
+            if self._provider_limits
+            else None,
         )
 
     def _adjust_intraday(

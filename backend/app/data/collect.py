@@ -45,7 +45,7 @@ def main() -> int:
         dict.fromkeys(s for w in lists for section in w.sections for s in section.symbols)
     )
 
-    failures = 0
+    failures = collected = 0
     for symbol in symbols:
         info = universe.resolve(symbol)
         if info is None:
@@ -57,10 +57,12 @@ def main() -> int:
                 failures += 1
                 print(f"FAIL {symbol:10} {base:3} {exc.detail}")
                 continue
+            collected += 1
             since = ts_to_date(int(frame.time[0])) if len(frame) else "-"
             print(f"OK   {symbol:10} {base:3} {len(frame):7} bars since {since}")
-    print(f"\n{len(symbols)} symbols, {failures} failures")
-    return 1 if failures else 0
+    print(f"\n{len(symbols)} symbols, {collected} collected, {failures} failed")
+    # Some symbols never have minute bars (Yahoo serves none): fail only when nothing came.
+    return 0 if collected else 1
 
 
 if __name__ == "__main__":

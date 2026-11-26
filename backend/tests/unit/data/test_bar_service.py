@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -11,6 +12,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pytest
 
+from app.config import REPO_ROOT
 from app.data.bar_service import (
     HISTORY_START,
     SPARK_BARS,
@@ -631,3 +633,39 @@ def test_offline_snapshots_ignore_the_provider_window(tmp_path: Path) -> None:
     )
     assert len(service.history(AAA, Interval.MIN5).frame) == len(five_minute_history())
     assert provider.minute_calls[0][1] == HISTORY_START
+
+
+def test_a_small_intraday_correction_is_not_a_split(make_service: Factory) -> None:
+    """A late-print correction of a recent bar replaces that bar; nothing is re-downloaded."""
+    five = five_minute_history()
+    provider = FakeProvider("p", history(), minutes={Interval.MIN5: five})
+    service, clock = make_service(provider)
+    service.history(AAA, Interval.MIN5)
+    close = five.close.copy()
+    close[-3] += 0.01  # 1e-4 of the price: above the overlap tolerance, far below a split
+    provider.minutes[Interval.MIN5] = BarFrame(
+        five.time, five.open, five.high, five.low, close, close.copy(), five.volume
+    )
+    clock.now += 61.0
+    cached = service.history(AAA, Interval.MIN5)
+    assert not any("adjustment changed" in w for w in cached.warnings)
+    assert len(provider.minute_calls) == 2  # the tail only
+    assert cached.frame.close[-3] == close[-3]
+    np.testing.assert_array_equal(cached.frame.close[:-3], five.close[:-3])
+
+
+def test_offline_reports_no_provider_window(tmp_path: Path) -> None:
+    provider = FakeProvider("p", history(), minutes={Interval.MIN5: five_minute_history()})
+    service = BarService(
+        Universe([AAA]), BarCache(tmp_path / "bars.db"), [provider], provider_limits=False
+    )
+    assert service.get_bars("AAA", Interval.MIN15, adjusted=False).provider_window_days is None
+
+
+def test_the_minutes_menu_states_the_provider_windows() -> None:
+    """The frontend's "~30 days" hints match INTRADAY_MAX_DAYS (+1: the request stays inside)."""
+    text = (REPO_ROOT / "frontend" / "src" / "components" / "intervals.ts").read_text("utf-8")
+    menu = {m[0]: int(m[1]) for m in re.findall(r"interval: '(\w+)',.*keepsDays: (\d+)", text)}
+    assert len(menu) == 6
+    for interval, days in menu.items():
+        assert days == INTRADAY_MAX_DAYS[Interval(interval).base] + 1, interval

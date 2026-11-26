@@ -3,9 +3,10 @@ import {
   useInfiniteQuery,
   useQueries,
   useQuery,
+  useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import type { BarTransform } from '../chart/chartTypes.ts';
 import { barSeconds } from '../chart/visibleRange.ts';
@@ -34,6 +35,9 @@ export function isInterval(value: unknown): value is Interval {
 
 /** The minute intervals: their history is short (the provider keeps weeks), and they refresh. */
 export const isMinuteInterval = (interval: Interval) => interval.endsWith('m');
+/** Bars shorter than a day (minutes and hours): their history is limited. */
+export const isIntraday = (interval: Interval) =>
+  isMinuteInterval(interval) || interval.endsWith('h');
 
 /**
  * One OHLCV bar. Daily and longer bars carry the session date as 'YYYY-MM-DD'; intraday bars
@@ -116,8 +120,24 @@ export function parseBars(body: unknown): BarsData {
   };
 }
 
-/** How often minute charts re-fetch their bars (the backend refreshes them after 60 s). */
+/** How often minute charts re-fetch their newest bars (the backend refreshes them after 60 s). */
 export const MINUTE_REFRESH_MS = 60_000;
+/** Extra bars asked for on a refresh: more than a minute can add, so nothing is skipped. */
+const REFRESH_EXTRA = 100;
+
+type BarPages = InfiniteData<BarsData, number | undefined>;
+
+/**
+ * The newest page after a refresh: `latest` (the newest bars, from at least the old page's first
+ * bar) cut to start at that first bar, so it meets the older pages without a gap or an overlap.
+ */
+export function withLatest(old: BarPages, latest: BarsData): BarPages {
+  const first = old.pages[0]?.bars[0];
+  if (first === undefined) return old;
+  const from = barSeconds(first.time);
+  const page = { ...latest, bars: latest.bars.filter((bar) => barSeconds(bar.time) >= from) };
+  return { ...old, pages: [page, ...old.pages.slice(1)] };
+}
 
 /** Bars requested per older page when the user scrolls left. */
 export const OLDER_PAGE_LIMIT = 5000;
@@ -171,11 +191,12 @@ export interface BarHistory {
  * Bars of one symbol and interval, newest page first; `loadOlder` fetches the page before the
  * oldest loaded bar. The previous chart stays on screen while the next one loads
  * (`keepPreviousData`), so switching symbols does not flash an empty chart. With `live`, minute
- * charts re-fetch every minute (the forming bar moves).
+ * charts refresh their newest page every minute (the forming bar moves).
  */
 export function useBarHistory(query: BarsQuery, live = false): BarHistory {
+  const queryKey = ['bars', query.symbol, query.interval, query.adjusted, query.transform];
   const result = useInfiniteQuery({
-    queryKey: ['bars', query.symbol, query.interval, query.adjusted, query.transform],
+    queryKey,
     queryFn: ({ signal, pageParam }) =>
       apiGet(
         barsPath(query, {
@@ -189,9 +210,32 @@ export function useBarHistory(query: BarsQuery, live = false): BarHistory {
     getNextPageParam: olderCursor,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
-    refetchInterval: live && isMinuteInterval(query.interval) ? MINUTE_REFRESH_MS : false,
   });
-  const pages = (result.data as InfiniteData<BarsData, number | undefined> | undefined)?.pages;
+  // A minute chart refreshes only its newest page (a refetch would reload every older page).
+  const client = useQueryClient();
+  const { symbol, interval, adjusted, transform } = query;
+  useEffect(() => {
+    if (!live || !isMinuteInterval(interval)) return;
+    const key = ['bars', symbol, interval, adjusted, transform];
+    const timer = setInterval(() => {
+      const newest = client.getQueryData<BarPages>(key)?.pages[0];
+      if (newest === undefined) return;
+      const path = barsPath(
+        { symbol, interval, adjusted, transform },
+        { limit: newest.bars.length + REFRESH_EXTRA },
+      );
+      apiGet(path, parseBars).then(
+        (latest) => {
+          client.setQueryData<BarPages>(key, (old) => old && withLatest(old, latest));
+        },
+        () => undefined, // the next tick tries again; the chart keeps its bars
+      );
+    }, MINUTE_REFRESH_MS);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [client, live, symbol, interval, adjusted, transform]);
+  const pages = (result.data as BarPages | undefined)?.pages;
   const bars = useMemo(() => (pages === undefined ? [] : mergePages(pages)), [pages]);
   const { fetchNextPage, refetch } = result;
   return {
