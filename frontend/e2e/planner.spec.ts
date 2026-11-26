@@ -306,19 +306,18 @@ test('planner: two options of their own, a saved scenario and a CSV file', async
   const market = planner.getByRole('tabpanel', { name: 'Market' });
   await market.getByLabel('Ticker 1').fill('aapl');
   await market.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
-  // Option B starts as a copy of A; here it becomes a dearer apartment.
-  await market.getByRole('button', { name: 'Copy to option B' }).click();
+  // Apart from option A, option B starts as a copy of it; here it becomes a dearer apartment.
+  await expect(market.getByRole('radio', { name: 'Option B' })).toBeDisabled();
+  await market.getByLabel('Option B is the same as option A').uncheck();
   await planner.getByRole('tab', { name: 'Apartment' }).click();
   const home = planner.getByRole('tabpanel', { name: 'Apartment' });
+  await expect(home.getByLabel('Option B is the same as option A')).not.toBeChecked();
   await home.getByRole('radio', { name: 'Option B' }).click();
   await home.getByLabel('Price ₪').fill('3000000');
   await home.getByLabel('Equity ₪').fill('900000');
   // The switch is one for both tabs: the Market tab now shows option B's mix too.
   await planner.getByRole('tab', { name: 'Market' }).click();
-  await expect(market.getByRole('radio', { name: 'Option B' })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
+  await expect(market.getByRole('radio', { name: 'Option B' })).toBeChecked();
   await expect(market.getByLabel('Ticker 1')).toHaveValue('AAPL');
 
   await planner.getByRole('tab', { name: 'Compare' }).click();
@@ -326,7 +325,7 @@ test('planner: two options of their own, a saved scenario and a CSV file', async
   await compare.getByLabel('Option B: apartment').check();
   await compare.getByRole('button', { name: 'Compare' }).click();
   await expect(
-    compare.getByRole('heading', { name: /^Apartment A against apartment b: 2015-01-15/ }),
+    compare.getByRole('heading', { name: /^Apartment A against apartment B: 2015-01-15/ }),
   ).toBeVisible();
   const card = (label: string) =>
     compare.locator('dl').getByText(label, { exact: true }).locator('..');
@@ -343,10 +342,7 @@ test('planner: two options of their own, a saved scenario and a CSV file', async
   await compare.getByRole('button', { name: 'Load scenario' }).click();
   await expect(compare.getByRole('status')).toContainText('Loaded “Two apartments”');
   await planner.getByRole('tab', { name: 'Apartment' }).click();
-  await expect(home.getByRole('radio', { name: 'Option A' })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
+  await expect(home.getByRole('radio', { name: 'Option A' })).toBeChecked();
   await home.getByRole('radio', { name: 'Option B' }).click();
   await expect(home.getByLabel('Price ₪')).toHaveValue('3000000');
   // It survives a reload: it is kept by the backend, not by the browser.
@@ -368,11 +364,15 @@ test('planner: two options of their own, a saved scenario and a CSV file', async
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(chunk as Buffer);
-  const lines = Buffer.concat(chunks).toString('utf8').trim().split('\r\n');
-  expect(lines[0]).toBe('\uFEFFmonths,date,x,y,x_forced,y_forced');
+  const file = Buffer.concat(chunks);
+  // The byte-order mark, then the rows (it would be lost by trimming the text).
+  expect([...file.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+  const lines = file.subarray(3).toString('utf8').trimEnd().split('\r\n');
+  expect(lines[0]).toBe('months,date,x,y,x_forced,y_forced');
   expect(lines).toHaveLength(61);
   expect(lines[60]).toMatch(/^120,2025-01-15,\d+\.?\d*,\d+\.?\d*,/);
 
+  await compare.getByLabel('Saved scenario').selectOption('Two apartments');
   await compare.getByRole('button', { name: 'Delete scenario' }).click();
   await compare.getByRole('button', { name: 'Delete “Two apartments”' }).click();
   await expect(compare.getByText('No saved scenario yet.')).toBeVisible();

@@ -2,7 +2,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { BettermentSpec, HomeRequest, TaxBracket, TaxPresets } from '../api/planner.ts';
-import type { PlannerForm } from './plannerStore.ts';
+import {
+  bySlot,
+  isRecord,
+  readSlot,
+  usePlannerStore,
+  type PlannerForm,
+  type Slot,
+} from './plannerStore.ts';
 
 type TrackRequest = NonNullable<HomeRequest['tracks']>[number];
 type Repayment = NonNullable<TrackRequest['repayment']>;
@@ -59,6 +66,8 @@ export interface HomeForm {
     mean: number;
     sd: number;
     random: boolean;
+    /** Yearly %: this apartment's own volatility on top of a historical index. */
+    ownSd: number;
   };
   rent: {
     mode: 'none' | 'live' | 'rent_out';
@@ -110,7 +119,7 @@ export const DEFAULT_HOME: HomeForm = {
   equity: 600_000,
   tracks: [newTrack('fixed', 34), newTrack('prime', 33), newTrack('variable_linked', 33)],
   rates: { mode: 'assumed', base: 4, shock: 0, shockAfterMonths: 24 },
-  value: { mode: 'assumed', series: 'dwelling', mean: 3, sd: 0, random: false },
+  value: { mode: 'assumed', series: 'dwelling', mean: 3, sd: 0, random: false, ownSd: 0 },
   rent: { mode: 'live', monthly: 5500, growth: 'cpi', growthPct: 3, vacancy: 4, tax: 10 },
   costs: {
     lawyer: 0.6,
@@ -223,6 +232,7 @@ export function toHomeRequest(
       series: home.value.series,
       mean_pct: home.value.mean,
       sd_pct: home.value.sd,
+      own_sd_pct: home.value.ownSd,
       seed: home.value.random ? VALUE_SEED : null,
     },
     sale: {
@@ -240,11 +250,25 @@ export function toHomeRequest(
   };
 }
 
-interface HomeState {
+interface HomeData {
+  /** The option the Apartment tab shows (the Market tab's, see `swap`). */
+  slot: Slot;
+  /** The apartment of the option on screen. */
   home: HomeForm;
+  /** The apartment of the other option. */
+  other: HomeForm;
+  /** One list of saved tables for both options. */
   saved: SavedTaxes;
-  /** Replace part of the form. */
+}
+
+interface HomeState extends HomeData {
+  /** Replace part of the form on screen. */
   update: (changes: Partial<HomeForm>) => void;
+  /** Show another option's apartment. */
+  swap: (slot: Slot) => void;
+  /** Overwrite the other option's apartment with the one on screen. */
+  copyToOther: () => void;
+  /** The defaults, for the apartment on screen only. */
   reset: () => void;
   /** Keep the form's current purchase-tax table under a name and select it. */
   savePurchaseTax: (name: string, table: TaxBracket[]) => void;
@@ -253,23 +277,39 @@ interface HomeState {
   deleteSaved: (kind: keyof SavedTaxes, name: string) => void;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
+export const homesOf = (s: Pick<HomeData, 'slot' | 'home' | 'other'>) =>
+  bySlot(s.slot, s.home, s.other);
 
 const NO_SAVED: SavedTaxes = { purchase: {}, betterment: {} };
 
-/** A saved state from an older version (or a damaged one) falls back to the defaults. */
-export function sanitizeHome(persisted: unknown): { home: HomeForm; saved: SavedTaxes } {
-  const home = isRecord(persisted) ? persisted['home'] : null;
-  const saved = isRecord(persisted) ? persisted['saved'] : null;
-  const homeOk =
+/**
+ * An apartment form as it was stored, with the fields a later version added to its value, or
+ * null for one of an older version or a damaged one.
+ */
+export function readHome(home: unknown): HomeForm | null {
+  const ok =
     isRecord(home) &&
     Array.isArray(home['tracks']) &&
+    isRecord(home['value']) &&
     (Object.keys(DEFAULT_HOME) as (keyof HomeForm)[]).every((key) => key in home);
+  if (!ok) return null;
+  const form = home as unknown as HomeForm;
+  return { ...form, value: { ...DEFAULT_HOME.value, ...form.value } };
+}
+
+/**
+ * A stored state, each damaged part replaced by its default. One of before there were two
+ * options (version 1: one apartment) becomes option A, and option B starts as a copy of it.
+ */
+export function sanitizeHome(persisted: unknown): HomeData {
+  const from = isRecord(persisted) ? persisted : {};
+  const saved = from['saved'];
+  const home = readHome(from['home']) ?? DEFAULT_HOME;
   const savedOk = isRecord(saved) && isRecord(saved['purchase']) && isRecord(saved['betterment']);
   return {
-    home: homeOk ? (home as unknown as HomeForm) : DEFAULT_HOME,
+    slot: readSlot(from['slot']),
+    home,
+    other: 'other' in from ? (readHome(from['other']) ?? DEFAULT_HOME) : home,
     saved: savedOk ? (saved as unknown as SavedTaxes) : NO_SAVED,
   };
 }
@@ -277,10 +317,15 @@ export function sanitizeHome(persisted: unknown): { home: HomeForm; saved: Saved
 export const usePlannerHomeStore = create<HomeState>()(
   persist(
     (set) => ({
-      home: DEFAULT_HOME,
-      saved: NO_SAVED,
+      ...sanitizeHome(null),
       update: (changes) => {
         set((s) => ({ home: { ...s.home, ...changes } }));
+      },
+      swap: (slot) => {
+        set((s) => (s.slot === slot ? s : { slot, home: s.other, other: s.home }));
+      },
+      copyToOther: () => {
+        set((s) => ({ other: s.home }));
       },
       reset: () => {
         set({ home: DEFAULT_HOME });
@@ -303,21 +348,37 @@ export const usePlannerHomeStore = create<HomeState>()(
             Object.entries(s.saved[kind]).filter(([key]) => key !== name),
           );
           const field = kind === 'purchase' ? 'purchaseTax' : 'betterment';
-          const used = s.home[field].preset === savedKey(name);
+          const without = (home: HomeForm) =>
+            home[field].preset === savedKey(name)
+              ? { ...home, [field]: DEFAULT_HOME[field] }
+              : home;
           return {
             saved: { ...s.saved, [kind]: rest },
-            home: used ? { ...s.home, [field]: DEFAULT_HOME[field] } : s.home,
+            home: without(s.home),
+            other: without(s.other),
           };
         });
       },
     }),
     {
       name: 'chartlab.planner.home',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ home: s.home, saved: s.saved }),
+      partialize: ({ slot, home, other, saved }) => ({ slot, home, other, saved }),
       migrate: (persisted) => sanitizeHome(persisted),
-      merge: (persisted, current) => ({ ...current, ...sanitizeHome(persisted) }),
+      merge: (persisted, current) => {
+        const state = sanitizeHome(persisted);
+        // The two tabs show one option: the Market tab's store says which, whatever was kept here.
+        const { slot } = usePlannerStore.getState();
+        const { a, b } = homesOf(state);
+        return {
+          ...current,
+          ...state,
+          slot,
+          home: slot === 'a' ? a : b,
+          other: slot === 'a' ? b : a,
+        };
+      },
     },
   ),
 );

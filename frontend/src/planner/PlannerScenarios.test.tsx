@@ -41,10 +41,11 @@ function backend(saved: Record<string, { revision: number; state: unknown }>) {
     '/api/planner/tax-presets': { body: TAX_PRESETS },
     [URL]: () =>
       jsonResponse({
-        scenarios: Object.keys(saved).map((name) => {
-          const { state: _state, ...summary } = doc(name);
-          return summary;
-        }),
+        scenarios: Object.keys(saved).map((name) => ({
+          name,
+          revision: saved[name]?.revision,
+          updated_at: '2026-11-26T10:00:00Z',
+        })),
       }),
     [`${URL}/Haifa`]: one('Haifa'),
     [`${URL}/New%20one`]: one('New one'),
@@ -120,9 +121,9 @@ describe('PlannerScenarios', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete scenario' }));
     expect(calls.some(([method]) => method === 'DELETE')).toBe(false);
-    const confirm = screen.getByRole('button', { name: 'Delete “Haifa”' });
+    expect(screen.getByRole('button', { name: 'Delete “Haifa”' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Keep it' }));
-    expect(confirm).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete “Haifa”' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete scenario' }));
     await user.click(screen.getByRole('button', { name: 'Delete “Haifa”' }));
     expect(await screen.findByText('No saved scenario yet.')).toBeVisible();

@@ -97,6 +97,16 @@ export function PlannerHomeBasics() {
             update({ value: { ...value, sd } });
           }}
         />
+        <PlannerField
+          label="Own volatility % a year"
+          value={value.ownSd}
+          max={100}
+          step={0.5}
+          disabled={assumed}
+          onChange={(ownSd) => {
+            update({ value: { ...value, ownSd } });
+          }}
+        />
         <label className={panel.check}>
           <input
             type="checkbox"
@@ -113,7 +123,9 @@ export function PlannerHomeBasics() {
         {loan >= 0
           ? `The loan: ${shekels(loan)} (${percent(loan / price)} of the price). `
           : 'The equity is more than the price. '}
-        The sale is on the last whole month from the purchase before “Sold on”.
+        The sale is on the last whole month from the purchase before “Sold on”. The own volatility
+        is used by a simulation only: there this apartment moves around its index by that much a
+        year, since one apartment moves more than the average of all of them.
       </p>
     </fieldset>
   );

@@ -2,8 +2,9 @@ import { useState } from 'react';
 
 import type { OptionRisk, SimulationResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
+import { CsvButton } from './CsvButton.tsx';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
-import { percent, shekels } from './plannerFormat.ts';
+import { inline, percent, shekels } from './plannerFormat.ts';
 import { PlannerHistogram } from './PlannerHistogram.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
@@ -16,13 +17,24 @@ const MEASURES: readonly (readonly [Measure, string])[] = [
   ['xirr', 'Yearly return'],
 ];
 const DOMINANCE: Record<SimulationResult['dominance'], (x: string, y: string) => string> = {
-  x_first: (x, y) => `${x} over ${y.toLowerCase()}, first order`,
-  y_first: (x, y) => `${y} over ${x.toLowerCase()}, first order`,
-  x_second: (x, y) => `${x} over ${y.toLowerCase()}, second order`,
-  y_second: (x, y) => `${y} over ${x.toLowerCase()}, second order`,
+  x_first: (x, y) => `${x} over ${inline(y)}, first order`,
+  y_first: (x, y) => `${y} over ${inline(x)}, first order`,
+  x_second: (x, y) => `${x} over ${inline(y)}, second order`,
+  y_second: (x, y) => `${y} over ${inline(x)}, second order`,
   equal: () => 'The two are the same',
   none: () => 'Neither dominates',
 };
+/** The columns of the worlds' file: what each option ends at, world by world. */
+const SAMPLES = [
+  'x_wealth',
+  'y_wealth',
+  'x_wealth_real',
+  'y_wealth_real',
+  'x_xirr',
+  'y_xirr',
+  'x_xirr_real',
+  'y_xirr_real',
+] as const satisfies readonly (keyof SimulationResult['samples'])[];
 const share = (value: number | null) => (value === null ? '—' : percent(value));
 const ratio = (value: number | null) => (value === null ? '—' : value.toFixed(2));
 
@@ -67,8 +79,8 @@ export function PlannerSimulation({
   const model = result.market;
   const history = result.history;
   const cards: PlannerCard[] = [
-    [`P(${x.toLowerCase()} > ${y.toLowerCase()})`, percent(result.p_win), 'A tie counts as half'],
-    ['Median difference', shekels(result.median_difference), `${x} minus ${y.toLowerCase()}`],
+    [`P(${inline(x)} > ${inline(y)})`, percent(result.p_win), 'A tie counts as half'],
+    ['Median difference', shekels(result.median_difference), `${x} minus ${inline(y)}`],
     ['Median difference, real', shekels(result.median_difference_real)],
     [
       'Dominance',
@@ -116,7 +128,19 @@ export function PlannerSimulation({
           {warning}
         </p>
       ))}
-      <h2 className={styles.heading}>Distribution</h2>
+      <div className={styles.headingRow}>
+        <h2 className={styles.heading}>Distribution</h2>
+        <CsvButton
+          name="simulation samples"
+          headers={['world', ...SAMPLES]}
+          rows={() =>
+            samples.x_wealth.map((_, world) => [
+              world + 1,
+              ...SAMPLES.map((field) => samples[field][world] ?? null),
+            ])
+          }
+        />
+      </div>
       <div className={styles.grid}>
         <PlannerSelect label="Measure" value={measure} options={MEASURES} onChange={setMeasure} />
       </div>
@@ -139,7 +163,7 @@ export function PlannerSimulation({
       <PlannerTable
         label="Split"
         columns={[
-          [`Share in ${x.toLowerCase()}`, (row) => `${String(Math.round(row.weight * 100))}%`],
+          [`Share in ${inline(x)}`, (row) => `${String(Math.round(row.weight * 100))}%`],
           ['Median end value, real', (row) => shekels(row.p50)],
           ['5% percentile', (row) => shekels(row.p5)],
           ['CVaR 5%', (row) => shekels(row.cvar5)],

@@ -1,6 +1,6 @@
 import type { StudyResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
-import { percent, points, shekels } from './plannerFormat.ts';
+import { inline, percent, points, shekels } from './plannerFormat.ts';
 
 type WinMap = StudyResult['win_map'];
 type Cell = NonNullable<WinMap['rows'][number]['cells'][number]>;
@@ -77,9 +77,9 @@ export function PlannerWinMap({ map, names }: PlannerWinMapProps) {
         </tbody>
       </table>
       <p className={styles.note}>
-        Each cell: the yearly return of {x.toLowerCase()} minus that of {y.toLowerCase()}, in
-        percentage points, for a plan that starts in that year and runs that long. Green and a plus
-        sign: {x.toLowerCase()} wins. Hover a cell for both returns.
+        Each cell: the yearly return of {inline(x)} minus that of {inline(y)}, in percentage points,
+        for a plan that starts in that year and runs that long. Green and a plus sign: {inline(x)}{' '}
+        wins. Hover a cell for both returns.
       </p>
     </>
   );

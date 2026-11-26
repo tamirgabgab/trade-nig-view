@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   runScenario,
@@ -10,64 +11,80 @@ import {
   type StudyResult,
 } from '../api/planner.ts';
 import panel from '../components/IndicatorSettingsPanel.module.css';
-import { usePlannerHomeStore } from '../store/plannerHomeStore.ts';
-import { usePlannerStore } from '../store/plannerStore.ts';
-import { toScenario } from './compare.ts';
+import { homesOf, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
+import { formsOf, linked, usePlannerStore, type Slot } from '../store/plannerStore.ts';
+import { optionNames, toScenario } from './compare.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { PlannerScenario } from './PlannerScenario.tsx';
+import { PlannerScenarios } from './PlannerScenarios.tsx';
 import { PlannerSimulation } from './PlannerSimulation.tsx';
 import { PlannerSimulationForm } from './PlannerSimulationForm.tsx';
 import { PlannerStudy } from './PlannerStudy.tsx';
-import { DEFAULT_SIMULATION, toSimulation } from './simulation.ts';
+import { toSimulation } from './simulation.ts';
 import { useHomeTaxes } from './useHomeTaxes.ts';
 
 type Status = 'idle' | 'comparing' | 'studying' | 'simulating';
-/** The names of the two options and the apartment's monthly rent, as a comparison ran. */
+/** The names of the two options and the rents of their apartments, as a comparison ran. */
 interface Shown {
   names: [string, string];
-  rent: number;
+  rents: number[];
   /** Counts the requests, so each simulation's chart starts fresh. */
   run: number;
 }
 const STEPS = [1, 3, 6, 12];
+const SLOTS: readonly Slot[] = ['a', 'b'];
+/** What an option can contain, with the checkbox of each. */
+const CONTENTS = [
+  ['home', 'apartment'],
+  ['deposits', 'its own market deposits'],
+] as const;
 /** A fraction as a percentage with two decimals, for a number field. */
 const percentOf = (fraction: number) => Math.round(fraction * 10_000) / 100;
 /** The win map's columns, in years. */
 const HORIZONS = [5, 10, 15, 20, 25, 30];
 
 /**
- * The planner's comparison: the Apartment tab's apartment against the same money in the Market
- * tab's mix, for the plan as entered (POST /api/planner/run), for every start history allows
- * (POST /api/planner/study) and over many simulated worlds (POST /api/planner/simulate).
+ * The planner's comparison of its two options, each made of its own tabs: for the plan as
+ * entered (POST /api/planner/run), for every start history allows (POST /api/planner/study) and
+ * over many simulated worlds (POST /api/planner/simulate).
  */
 export function PlannerCompare({ hidden }: { hidden: boolean }) {
-  const form = usePlannerStore((s) => s.form);
-  const home = usePlannerHomeStore((s) => s.home);
-  const { taxes } = useHomeTaxes();
-  const [ownAccount, setOwnAccount] = useState(false);
-  const [followRates, setFollowRates] = useState(true);
-  const [discount, setDiscount] = useState(10);
-  const [firstStart, setFirstStart] = useState('');
-  const [lastStart, setLastStart] = useState('');
-  const [step, setStep] = useState(1);
+  // While option B is the same as option A, both are read from A's forms.
+  const same = usePlannerStore((s) => s.same);
+  const market = linked(same, usePlannerStore(useShallow(formsOf)));
+  const homes = linked(same, usePlannerHomeStore(useShallow(homesOf)));
+  const contents = usePlannerStore((s) => s.contents);
+  const {
+    discount,
+    firstStart,
+    lastStart,
+    step,
+    followRates,
+    simulation: settings,
+  } = usePlannerStore((s) => s.compare);
+  const { setContents, setCompare } = usePlannerStore.getState();
+  const { both } = useHomeTaxes();
+  const taxes = both && linked(same, both);
   const [status, setStatus] = useState<Status>('idle');
   const [scenario, setScenario] = useState<ScenarioResult | null>(null);
   const [study, setStudy] = useState<StudyResult | null>(null);
-  const [settings, setSettings] = useState(DEFAULT_SIMULATION);
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   // What the results were made under: a later edit of the forms must not relabel them.
-  const [shown, setShown] = useState<Shown>({ names: ['Apartment', 'Market'], rent: 0, run: 0 });
+  const [shown, setShown] = useState<Shown>({ names: ['Apartment', 'Market'], rents: [], run: 0 });
 
-  const ready = taxes !== null && home.start !== '' && home.end !== '';
+  const bought = SLOTS.filter((slot) => contents[slot].home).map((slot) => homes[slot]);
+  const request =
+    taxes === null ? null : toScenario({ market, home: homes, taxes, contents, discount });
+  const ready = request !== null && request.end !== '' && bought.every((h) => h.start !== '');
   const start = (next: Status, work: (request: ScenarioRequest, next: Shown) => Promise<void>) => {
-    if (taxes === null || !ready) return;
+    if (!ready) return;
     setStatus(next);
     setError(null);
-    work(toScenario(form, home, taxes, ownAccount, discount), {
-      names: [ownAccount ? 'Apartment and account' : 'Apartment', 'Market'],
-      rent: home.rent.monthly,
+    work(request, {
+      names: optionNames(contents),
+      rents: bought.filter((h) => h.rent.mode !== 'none').map((h) => h.rent.monthly),
       run: shown.run + 1,
     })
       .catch((cause: unknown) => {
@@ -121,7 +138,9 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
       // The estimate goes into its fields, so unticking the box starts from it.
       const model = many.market;
       if (model?.estimated) {
-        setSettings((s) => ({ ...s, mean: percentOf(model.mean), sd: percentOf(model.sd) }));
+        setCompare({
+          simulation: { ...settings, mean: percentOf(model.mean), sd: percentOf(model.sd) },
+        });
       }
     });
   };
@@ -136,31 +155,40 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
           compare();
         }}
       >
-        <h1 className={styles.title}>Planner: apartment against market</h1>
+        <h1 className={styles.title}>Planner: compare two options</h1>
         <fieldset className={styles.section}>
           <legend>The two options</legend>
           <p className={styles.note}>
-            The apartment of the Apartment tab, against the same money in the Market tab’s mix: the
-            market side invests the equity and the purchase costs on the purchase day, and every
-            month what the apartment costs (the payment and the owner costs, less the rent). A month
-            in which the rent exceeds the costs is invested by the apartment’s side.
+            {same
+              ? 'Both options are made of the Market and the Apartment tabs as they are; untick “Option B is the same as option A” there to give option B forms of its own.'
+              : 'Each option is made of its own Market and Apartment tabs.'}{' '}
+            Both spend the same money on the same days: what one option pays and the other does not
+            (an apartment’s equity and purchase costs, then every month its payment and owner costs
+            less the rent, or a deposit), the other invests in its own mix. Everything is sold on
+            one day: the sale of the first apartment ticked, or option A’s market end with none.
           </p>
           <div className={styles.grid}>
-            <label className={styles.wide}>
-              <input
-                type="checkbox"
-                checked={ownAccount}
-                onChange={(event) => {
-                  setOwnAccount(event.target.checked);
-                }}
-              />
-              The apartment’s side also makes the Market tab’s deposits
-            </label>
+            {SLOTS.map((slot) =>
+              CONTENTS.map(([part, name]) => (
+                <label key={`${slot}:${part}`} className={styles.wide}>
+                  <input
+                    type="checkbox"
+                    checked={contents[slot][part]}
+                    onChange={(event) => {
+                      setContents(slot, { [part]: event.target.checked });
+                    }}
+                  />
+                  Option {slot.toUpperCase()}: {name}
+                </label>
+              )),
+            )}
             <PlannerField
               label="Forced sale discount %"
               value={discount}
               max={100}
-              onChange={setDiscount}
+              onChange={(next) => {
+                setCompare({ discount: next });
+              }}
             />
           </div>
         </fieldset>
@@ -174,7 +202,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
                 className={panel.control}
                 value={firstStart}
                 onChange={(event) => {
-                  setFirstStart(event.target.value);
+                  setCompare({ firstStart: event.target.value });
                 }}
               />
             </label>
@@ -185,7 +213,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
                 className={panel.control}
                 value={lastStart}
                 onChange={(event) => {
-                  setLastStart(event.target.value);
+                  setCompare({ lastStart: event.target.value });
                 }}
               />
             </label>
@@ -195,7 +223,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
                 className={panel.control}
                 value={step}
                 onChange={(event) => {
-                  setStep(Number(event.target.value));
+                  setCompare({ step: Number(event.target.value) });
                 }}
               >
                 {STEPS.map((months) => (
@@ -210,7 +238,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
                 type="checkbox"
                 checked={followRates}
                 onChange={(event) => {
-                  setFollowRates(event.target.checked);
+                  setCompare({ followRates: event.target.checked });
                 }}
               />
               Move the tracks’ rates with the Bank of Israel rate of each start
@@ -225,7 +253,13 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
             Apartment tab.
           </p>
         </fieldset>
-        <PlannerSimulationForm settings={settings} onChange={setSettings} />
+        <PlannerSimulationForm
+          settings={settings}
+          onChange={(simulation) => {
+            setCompare({ simulation });
+          }}
+        />
+        <PlannerScenarios />
         <div className={styles.actions}>
           <button type="submit" className={panel.primary} disabled={status !== 'idle' || !ready}>
             {status === 'comparing' ? 'Comparing…' : 'Compare'}
@@ -256,13 +290,13 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
         )}
         {scenario === null && error === null && (
           <p className={styles.note}>
-            Set the apartment and the market mix in their tabs, then press Compare for the plan as
+            Set each option in the Market and the Apartment tabs, then press Compare for the plan as
             entered, Run history for every start the data allows, or Simulate for many possible
             worlds. The numbers are a model, not advice.
           </p>
         )}
         {scenario !== null && (
-          <PlannerScenario result={scenario} names={shown.names} rent={shown.rent} />
+          <PlannerScenario result={scenario} names={shown.names} rents={shown.rents} />
         )}
         {study !== null && <PlannerStudy result={study} names={shown.names} />}
         {simulation !== null && (

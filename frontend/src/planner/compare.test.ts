@@ -6,7 +6,10 @@ const TAXES = {
   purchase: [{ up_to: null, rate_pct: 8 }],
   betterment: { rate_pct: 25, single_home: false, ceiling: 5_008_000, linear: true, brackets: [] },
 };
-const QQQ = { ...DEFAULT_FORM, assets: [{ ...DEFAULT_FORM.assets[0]!, symbol: 'QQQ' }] };
+const QQQ = {
+  ...DEFAULT_FORM,
+  assets: [{ symbol: 'QQQ', weight: 100, currency: 'USD' as const, dividendYield: 0 }],
+};
 const contents = (
   a: Partial<OptionContents>,
   b: Partial<OptionContents>,

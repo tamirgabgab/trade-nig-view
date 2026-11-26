@@ -25,6 +25,11 @@ export function stubFetchJson(status: number, body: unknown): void {
   );
 }
 
+const DEFAULTS: Record<string, () => Route> = {
+  '/api/watchlists': () => ({ body: defaultWatchlists() }),
+  '/api/planner/scenarios': () => ({ body: { scenarios: [] } }),
+};
+
 type Route =
   | { status?: number; body: unknown }
   | ((url: URL, init: RequestInit | undefined) => Promise<Response>);
@@ -39,10 +44,9 @@ export function stubApi(routes: Record<string, Route>): void {
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const parsed = new URL(url, 'http://localhost');
-      // The built-in Default watchlist (the universe's groups) unless a test stubs its own.
-      const route =
-        routes[parsed.pathname] ??
-        (parsed.pathname === '/api/watchlists' ? { body: defaultWatchlists() } : undefined);
+      // The built-in Default watchlist (the universe's groups) and no saved planner scenario,
+      // unless a test stubs its own.
+      const route = routes[parsed.pathname] ?? DEFAULTS[parsed.pathname]?.();
       if (route === undefined) {
         return Promise.resolve(new Response('{"detail":"no stub"}', { status: 404 }));
       }

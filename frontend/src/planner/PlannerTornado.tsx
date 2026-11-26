@@ -1,7 +1,7 @@
 import type { ScenarioResult } from '../api/planner.ts';
 import { scale } from '../components/plotScale.ts';
 import styles from './Planner.module.css';
-import { signedShekels } from './plannerFormat.ts';
+import { inline, signedShekels } from './plannerFormat.ts';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
 
 type Move = ScenarioResult['sensitivity'][number];
@@ -58,7 +58,7 @@ export function PlannerTornado({ moves, names }: PlannerTornadoProps) {
   const widest = Math.max(...rows.map(effect), 1);
   const px = scale([-widest, widest], [LABEL, W - SIDE]);
   const height = TOP + rows.length * ROW + AXIS;
-  const what = `${names[0].toLowerCase()} minus ${names[1].toLowerCase()}`;
+  const what = `${inline(names[0])} minus ${inline(names[1])}`;
   return (
     <>
       <figure className={styles.histogram}>

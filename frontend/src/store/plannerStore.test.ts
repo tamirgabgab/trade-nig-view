@@ -1,6 +1,7 @@
 import {
   DEFAULT_FORM,
   formsOf,
+  linked,
   sanitizePersisted,
   toRequest,
   usePlannerStore,
@@ -122,15 +123,27 @@ describe('two options', () => {
     expect(state.compare.simulation.runs).toBe(1000);
   });
 
-  it('reads a form saved before there were two options as option A, and copies it to B', () => {
+  it('starts with option B the same as option A, a comparison reading A twice', () => {
+    const state = usePlannerStore.getState();
+    expect(state.same).toBe(true);
+    usePlannerStore.setState({ other: B });
+    const forms = formsOf(usePlannerStore.getState());
+    expect(linked(true, forms)).toEqual({ a: DEFAULT_FORM, b: DEFAULT_FORM });
+    expect(linked(false, forms)).toEqual({ a: DEFAULT_FORM, b: B });
+    state.setSame(false);
+    expect(usePlannerStore.getState().same).toBe(false);
+  });
+
+  it('reads a form saved before there were two options as option A, with B the same', () => {
     const old = sanitizePersisted({ form: B });
-    expect([old.slot, old.form, old.other]).toEqual(['a', B, B]);
+    expect([old.same, old.slot, old.form, old.other]).toEqual([true, 'a', B, B]);
     expect(old.contents.a).toEqual({ home: true, deposits: false });
     expect(old.compare.discount).toBe(10);
   });
 
   it('keeps every good part of a saved state and replaces only what is damaged', () => {
     const kept = sanitizePersisted({
+      same: false,
       slot: 'b',
       form: B,
       other: 'broken',
@@ -144,5 +157,8 @@ describe('two options', () => {
     });
     expect([kept.compare.discount, kept.compare.step]).toEqual([25, 1]);
     expect(sanitizePersisted({ slot: 'c', form: B }).slot).toBe('a');
+    // While the two are the same, option A is the one on screen: B's form goes aside.
+    const same = sanitizePersisted({ slot: 'b', form: B, other: DEFAULT_FORM });
+    expect([same.same, same.slot, same.form, same.other]).toEqual([true, 'a', DEFAULT_FORM, B]);
   });
 });

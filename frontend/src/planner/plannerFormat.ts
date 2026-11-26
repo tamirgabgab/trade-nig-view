@@ -32,3 +32,6 @@ export function signedShekels(value: number): string {
 
 /** A share as a plain percentage, with only the decimals it has: `10%`, `7.5%`, `0%`. */
 export const plainPercent = (fraction: number) => `${String(Number((fraction * 100).toFixed(2)))}%`;
+
+/** An option's name inside a sentence: `Apartment A` → `apartment A`. */
+export const inline = (name: string) => name.charAt(0).toLowerCase() + name.slice(1);

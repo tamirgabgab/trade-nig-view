@@ -13,7 +13,7 @@ const PRESETS = TAX_PRESETS as TaxPresets;
 const MINE = [{ up_to: null, rate_pct: 6 }];
 
 beforeEach(() => {
-  usePlannerStore.setState({ ...sanitizePersisted(null) });
+  usePlannerStore.setState({ ...sanitizePersisted(null), same: false });
   usePlannerHomeStore.setState({ ...sanitizeHome(null) });
 });
 
@@ -25,7 +25,7 @@ describe('a saved scenario', () => {
     usePlannerHomeStore.getState().swap('b');
     usePlannerHomeStore.getState().update({ price: 3_000_000 });
     const state = captureScenario(PRESETS);
-    expect(state.version).toBe(1);
+    expect([state.version, state.same]).toEqual([1, false]);
     expect([state.market.a.end, state.market.b.end]).toEqual(['2030-01-01', DEFAULT_FORM.end]);
     expect([state.home.a.price, state.home.b.price]).toEqual([DEFAULT_HOME.price, 3_000_000]);
     expect(state.contents.b).toEqual({ home: true, deposits: false });
@@ -53,9 +53,23 @@ describe('a saved scenario', () => {
     applyScenario(parseScenarioState(saved));
     const market = usePlannerStore.getState();
     const home = usePlannerHomeStore.getState();
-    expect([market.slot, home.slot]).toEqual(['a', 'a']);
+    expect([market.same, market.slot, home.slot]).toEqual([false, 'a', 'a']);
     expect([market.form.useFx, market.other.useFx]).toEqual([true, false]);
     expect([home.home.price, home.other.price]).toEqual([DEFAULT_HOME.price, 3_000_000]);
+  });
+
+  it('holds option A twice while option B is the same as it', () => {
+    usePlannerStore.setState({ same: true, other: { ...DEFAULT_FORM, useFx: false } });
+    usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, price: 3_000_000 } });
+    const state = captureScenario(PRESETS);
+    expect([state.same, state.market.b.useFx, state.home.b.price]).toEqual([
+      true,
+      true,
+      DEFAULT_HOME.price,
+    ]);
+    usePlannerStore.setState({ same: false });
+    applyScenario(parseScenarioState(JSON.parse(JSON.stringify(state))));
+    expect(usePlannerStore.getState().same).toBe(true);
   });
 
   it('refuses what is not a scenario of this version', () => {

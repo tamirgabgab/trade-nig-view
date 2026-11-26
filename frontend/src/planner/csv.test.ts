@@ -10,7 +10,7 @@ describe('toCsv', () => {
       ],
     );
     // A byte-order mark so Excel reads UTF-8, and CRLF line ends.
-    expect(csv).toBe('﻿date,amount,note\r\n2020-01-15,1234.5,first\r\n2020-02-15,-62.25,\r\n');
+    expect(csv).toBe('\uFEFFdate,amount,note\r\n2020-01-15,1234.5,first\r\n2020-02-15,-62.25,\r\n');
   });
 
   it('quotes what would break a cell', () => {
@@ -26,7 +26,7 @@ describe('toCsv', () => {
   it('never lets a cell start a formula', () => {
     // A cell that starts with =, +, - or @ would run in a spreadsheet: text gets an apostrophe.
     expect(toCsv(['x'], [['=1+1'], ['@cmd'], [-5], ['-5 as text']])).toBe(
-      "﻿x\r\n'=1+1\r\n'@cmd\r\n-5\r\n'-5 as text\r\n",
+      "\uFEFFx\r\n'=1+1\r\n'@cmd\r\n-5\r\n'-5 as text\r\n",
     );
   });
 });

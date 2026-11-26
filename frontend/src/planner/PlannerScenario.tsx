@@ -2,7 +2,7 @@ import type { ScenarioResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
 import { PlannerExplain } from './PlannerExplain.tsx';
-import { percent, points, shekels } from './plannerFormat.ts';
+import { inline, percent, points, shekels } from './plannerFormat.ts';
 
 const NONE = 'None in range';
 
@@ -17,21 +17,24 @@ function parts(option: ScenarioResult['x']): string {
 interface ScenarioProps {
   result: ScenarioResult;
   names: [string, string];
-  /** The apartment's monthly rent, for the breakeven rent. */
-  rent: number;
+  /** The monthly rent of each apartment that has one, for the breakeven rent. */
+  rents: number[];
 }
 
 /** One scenario: what each option is worth at the end, and the breakeven rates. */
-export function PlannerScenario({ result, names, rent }: ScenarioProps) {
+export function PlannerScenario({ result, names, rents }: ScenarioProps) {
   const [x, y] = names;
   const b = result.breakeven;
+  // A breakeven input is moved in every apartment (or account) there is.
+  const two = Boolean(result.x.home && result.y.home);
+  const scale = b.rent_scale;
   const cards: PlannerCard[] = [
     ['Put in by each', shekels(result.spent), 'Both options spend it, on the same days'],
     [`${x}: worth at the end`, shekels(result.x.wealth), parts(result.x)],
     [`${y}: worth at the end`, shekels(result.y.wealth), parts(result.y)],
-    [`${x} minus ${y.toLowerCase()}`, shekels(result.difference)],
+    [`${x} minus ${inline(y)}`, shekels(result.difference)],
     [
-      `${x} minus ${y.toLowerCase()}, real`,
+      `${x} minus ${inline(y)}, real`,
       shekels(result.difference_real),
       'In shekels of the first day',
     ],
@@ -48,6 +51,9 @@ export function PlannerScenario({ result, names, rent }: ScenarioProps) {
     [
       'Apartment appreciation',
       b.appreciation === null ? NONE : `${percent(b.appreciation)} a year`,
+      two
+        ? 'A constant yearly growth of both apartments’ values alike'
+        : 'A constant yearly growth of the apartment’s value',
     ],
     ['Market return', b.market_return === null ? NONE : `${percent(b.market_return)} a year`],
     [
@@ -55,12 +61,16 @@ export function PlannerScenario({ result, names, rent }: ScenarioProps) {
       b.mortgage_shift === null ? NONE : `${points(b.mortgage_shift)} points`,
       'Added to the rate of every track',
     ],
-    ['Rent', b.rent_scale === null ? NONE : `${shekels(rent * b.rent_scale)} a month`],
+    [
+      'Rent',
+      scale === null ? NONE : `${rents.map((rent) => shekels(rent * scale)).join(' and ')} a month`,
+      rents.length > 1 ? 'Both rents multiplied alike' : 'The rent of the first month',
+    ],
   ];
   return (
     <>
       <h2 className={styles.heading}>
-        {x} against {y.toLowerCase()}: {result.start} to {result.end}
+        {x} against {inline(y)}: {result.start} to {result.end}
       </h2>
       <PlannerCards cards={cards} />
       {result.warnings.map((warning) => (

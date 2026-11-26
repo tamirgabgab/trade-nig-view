@@ -1,6 +1,7 @@
 import type { HomeResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
+import { PlannerHeading } from './PlannerHeading.tsx';
 import { percent, shekels } from './plannerFormat.ts';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
 
@@ -94,15 +95,25 @@ export function PlannerHomeResults({ result }: { result: HomeResult }) {
           <PlannerTable label="Mortgage tracks" columns={TRACKS} rows={result.tracks} />
         </>
       )}
-      <h2 className={styles.heading}>Until the sale ({s.months} months)</h2>
+      <PlannerHeading
+        csv="apartment path"
+        rows={result.path}
+        fields={['date', 'value', 'balance', 'payment', 'costs', 'rent', 'net_worth']}
+      >
+        Until the sale ({s.months} months)
+      </PlannerHeading>
       <div className={styles.scroll}>
         <PlannerTable label="Until the sale" columns={PATH} rows={result.path} />
       </div>
       {result.schedule.length > 0 && (
         <>
-          <h2 className={styles.heading}>
+          <PlannerHeading
+            csv="mortgage schedule"
+            rows={result.schedule}
+            fields={['date', 'payment', 'principal', 'interest', 'linkage', 'balance', 'rate']}
+          >
             Mortgage schedule, the whole term ({result.schedule.length} months)
-          </h2>
+          </PlannerHeading>
           <div className={styles.scroll}>
             <PlannerTable label="Mortgage schedule" columns={SCHEDULE} rows={result.schedule} />
           </div>

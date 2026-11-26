@@ -563,3 +563,99 @@
     overflow: visible;
   }
 }
+
+/* The option switch of the Market and the Apartment tabs. */
+.slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.slot .note {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.segments {
+  display: inline-flex;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segments label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.segments label:has(input:checked) {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.segments:has(input:disabled) {
+  opacity: 0.5;
+}
+
+.segments label:has(input:disabled),
+.segments input:disabled {
+  cursor: not-allowed;
+}
+
+.segments label:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* The radio itself is unseen and covers its label, which shows its state. */
+.segments input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* A button on the row of a labelled field: level with the field, not with its label. */
+.beside {
+  align-self: end;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.section .beside,
+.section .buttons button {
+  margin-bottom: 0;
+}
+
+/* A results heading with the download of its table. */
+.headingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.headingRow .heading {
+  margin: 0;
+}
+
+.slot > label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}

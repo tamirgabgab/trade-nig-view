@@ -2,7 +2,7 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DEFAULT_HOME, sanitizeHome, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
-import { sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
+import { DEFAULT_FORM, sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
 import { SCENARIO_RESULT, SIMULATION_RESULT, STUDY_RESULT } from '../test/plannerCompareBody.ts';
 import { TAX_PRESETS } from '../test/plannerHomeBody.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
@@ -15,6 +15,7 @@ beforeEach(() => {
 
 const body = (init: RequestInit | undefined): unknown =>
   JSON.parse(typeof init?.body === 'string' ? init.body : '{}');
+const ASSET = { symbol: 'SPY', weight: 100, currency: 'USD' as const, dividendYield: 0 };
 const card = (label: string) => screen.getByText(label, { selector: 'dt' }).parentElement;
 
 describe('PlannerCompare', () => {
@@ -31,7 +32,7 @@ describe('PlannerCompare', () => {
     renderWithQuery(<PlannerCompare hidden={false} />);
     const compare = screen.getByRole('button', { name: 'Compare' });
     expect(compare).toBeDisabled();
-    await screen.findByText(/^Set the apartment and the market mix/);
+    await screen.findByText(/^Set each option in the Market and the Apartment tabs/);
     await vi.waitFor(() => {
       expect(compare).toBeEnabled();
     });
@@ -260,6 +261,7 @@ describe('PlannerCompare', () => {
   it('compares two apartments when both options contain one, each from its own form', async () => {
     const user = userEvent.setup();
     const sent: unknown[] = [];
+    usePlannerStore.setState({ same: false });
     usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, price: 3_000_000 } });
     stubApi({
       '/api/planner/tax-presets': { body: TAX_PRESETS },
@@ -284,7 +286,7 @@ describe('PlannerCompare', () => {
     await user.click(compare);
     expect(
       await screen.findByRole('heading', {
-        name: 'Apartment A against apartment b: 2015-01-15 to 2025-01-15',
+        name: 'Apartment A against apartment B: 2015-01-15 to 2025-01-15',
       }),
     ).toBeInTheDocument();
     expect(sent[0]).toMatchObject({
@@ -293,6 +295,62 @@ describe('PlannerCompare', () => {
     });
     expect(card('Apartment A: worth at the end')).toHaveTextContent('₪2,100,000');
     expect(usePlannerStore.getState().contents.b.home).toBe(true);
+  });
+
+  it('reads option B from option A’s forms while the two are the same, however A changed', async () => {
+    const user = userEvent.setup();
+    const sent: { y: { home: Record<string, unknown>; market: Record<string, unknown> } }[] = [];
+    // Forms of option B left from an earlier time apart: they must not be read.
+    usePlannerStore.setState({
+      other: { ...DEFAULT_FORM, assets: [{ ...ASSET, symbol: 'OLD' }] },
+    });
+    usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, price: 9_999_999 } });
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': (_url, init) => {
+        sent.push(body(init) as (typeof sent)[number]);
+        return jsonResponse(SCENARIO_RESULT);
+      },
+    });
+    renderWithQuery(<PlannerCompare hidden={false} />);
+    const compare = screen.getByRole('button', { name: 'Compare' });
+    await vi.waitFor(() => {
+      expect(compare).toBeEnabled();
+    });
+    await user.click(screen.getByRole('checkbox', { name: 'Option B: apartment' }));
+    const run = async () => {
+      await user.click(compare);
+      await vi.waitFor(() => {
+        expect(compare).toBeEnabled();
+      });
+      return sent.at(-1)?.y;
+    };
+    // A field edited, in each tab.
+    act(() => {
+      usePlannerStore.getState().update({ assets: [{ ...ASSET, symbol: 'QQQ' }] });
+      usePlannerHomeStore.getState().update({ price: 2_500_000 });
+    });
+    expect(await run()).toMatchObject({
+      home: { price: 2_500_000 },
+      market: { assets: [{ symbol: 'QQQ' }] },
+    });
+    // A tax table saved under a name and chosen.
+    act(() => {
+      usePlannerHomeStore.getState().savePurchaseTax('Mine', [{ up_to: null, rate_pct: 6 }]);
+    });
+    expect((await run())?.home['purchase']).toMatchObject({
+      tax_brackets: [{ up_to: null, rate_pct: 6 }],
+    });
+    // The forms reset.
+    act(() => {
+      usePlannerStore.getState().reset();
+      usePlannerHomeStore.getState().reset();
+    });
+    expect(await run()).toMatchObject({
+      home: { price: DEFAULT_HOME.price },
+      market: { assets: [{ symbol: 'SPY' }] },
+    });
+    expect(sent).toHaveLength(3);
   });
 
   it('shows why a comparison cannot run and drops the earlier results', async () => {

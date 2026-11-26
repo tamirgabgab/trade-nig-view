@@ -11,6 +11,7 @@ import { PlannerHomeResults } from './PlannerHomeResults.tsx';
 import { PlannerHomeTaxes } from './PlannerHomeTaxes.tsx';
 import { PlannerHomeTracks } from './PlannerHomeTracks.tsx';
 import { PlannerInflation } from './PlannerInflation.tsx';
+import { PlannerSlot } from './PlannerSlot.tsx';
 import { useHomeTaxes } from './useHomeTaxes.ts';
 
 /**
@@ -55,6 +56,7 @@ export function PlannerHome({ hidden }: { hidden: boolean }) {
         }}
       >
         <h1 className={styles.title}>Planner: apartment</h1>
+        <PlannerSlot />
         <PlannerHomeBasics />
         <PlannerHomeTracks />
         <PlannerHomeCosts />

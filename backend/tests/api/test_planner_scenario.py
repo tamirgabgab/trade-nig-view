@@ -301,3 +301,26 @@ def test_a_study_needs_a_term_and_says_what_its_windows_leave_out(client: TestCl
         "The schedule after the sale holds the Bank of Israel rate flat past its last "
         "published value",
     ]
+
+
+# ---------------------------------------------------------------- the planner page's request
+
+
+@pytest.mark.parametrize(
+    ("path", "extra"),
+    [("run", {}), ("study", {"step_months": 12}), ("simulate", {"runs": 20, "seed": 1})],
+)
+@pytest.mark.parametrize("surplus", [False, True])
+def test_an_option_naming_the_mix_it_would_get_anyway_changes_nothing(
+    client: TestClient, path: str, extra: dict[str, Any], surplus: bool
+) -> None:
+    """The page sends each option its own mix, with no deposits; an apartment option used to
+    send none and take the other option's. With the same mix both give one answer, also when
+    the rent leaves a surplus to invest."""
+    home = {**HOME, "equity": 1_400_000, "rent": {"mode": "rent_out", "monthly": 9_000}}
+    x = {"home": home if surplus else HOME}
+    alone = post(client, path, x=x, **extra)
+    named = post(client, path, x={**x, "market": MARKET}, **extra)
+    assert named == alone
+    if path == "run":
+        assert (alone["x"]["account"] is not None) is surplus

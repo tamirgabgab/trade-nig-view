@@ -1,7 +1,8 @@
 import type { ScenarioResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
-import { percent, plainPercent, points, shekels } from './plannerFormat.ts';
+import { inline, percent, plainPercent, points, shekels } from './plannerFormat.ts';
+import { PlannerHeading } from './PlannerHeading.tsx';
 import { PlannerLeadChart } from './PlannerLeadChart.tsx';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
 import { PlannerTornado } from './PlannerTornado.tsx';
@@ -42,7 +43,7 @@ export function PlannerExplain({
       lead.since_months === null ? '—' : `Month ${String(lead.since_months)}`,
       `Sold in any later month checked (one every ${String(lead.step_months)}), it is still ahead`,
     ],
-    [`Exit months ${x.toLowerCase()} leads`, percent(lead.x_share), 'A tie counts as half'],
+    [`Exit months ${inline(x)} leads`, percent(lead.x_share), 'A tie counts as half'],
   ];
   if (correlation) {
     cards.push([
@@ -77,11 +78,12 @@ export function PlannerExplain({
             rows={SOURCES}
           />
           <p className={styles.note}>
-            The apartment alone, by where its return comes from. Each source’s share is what it adds
-            when switched on, averaged over every order of switching the four on (the Shapley
-            value), so the four add up to the return, to the rounding shown. The mortgage’s share
-            can be negative even when borrowing pays: it also counts the orders in which the
-            apartment does not yet earn its rent or its appreciation, where a loan only costs.
+            {result.x.home && result.y.home ? `Of ${inline(x)} only: the` : 'The'} apartment alone,
+            by where its return comes from. Each source’s share is what it adds when switched on,
+            averaged over every order of switching the four on (the Shapley value), so the four add
+            up to the return, to the rounding shown. The mortgage’s share can be negative even when
+            borrowing pays: it also counts the orders in which the apartment does not yet earn its
+            rent or its appreciation, where a loan only costs.
           </p>
         </>
       )}
@@ -91,14 +93,26 @@ export function PlannerExplain({
           return beyond measure) it has no yearly rate.
         </p>
       )}
-      <h2 className={styles.heading}>One input moved</h2>
+      <PlannerHeading
+        csv="sensitivity"
+        rows={result.sensitivity}
+        fields={['input', 'step', 'down', 'up']}
+      >
+        One input moved
+      </PlannerHeading>
       <PlannerTornado moves={result.sensitivity} names={names} />
       <p className={styles.note}>
-        The change of {x.toLowerCase()} minus {y.toLowerCase()} at the end when one input moves and
-        the rest stay as entered. The path in use is tilted, not replaced; a rate does not go below
-        zero, so a move down can be smaller than the move up.
+        The change of {inline(x)} minus {inline(y)} at the end when one input moves and the rest
+        stay as entered. The path in use is tilted, not replaced; a rate does not go below zero, so
+        a move down can be smaller than the move up.
       </p>
-      <h2 className={styles.heading}>Who leads, and from when</h2>
+      <PlannerHeading
+        csv="exit months"
+        rows={result.average.points}
+        fields={['months', 'date', 'x', 'y', 'x_forced', 'y_forced']}
+      >
+        Who leads, and from when
+      </PlannerHeading>
       <PlannerCards cards={cards} />
       <p className={styles.note}>
         An exit is checked every {lead.step_months} month{lead.step_months === 1 ? '' : 's'}: the

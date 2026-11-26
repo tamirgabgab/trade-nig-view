@@ -1,7 +1,8 @@
 import type { StudyResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
-import { percent, shekels } from './plannerFormat.ts';
+import { PlannerHeading } from './PlannerHeading.tsx';
+import { inline, percent, shekels } from './plannerFormat.ts';
 import { PlannerWinMap } from './PlannerWinMap.tsx';
 
 /** The same scenario over every start history allows, and the win map. */
@@ -15,17 +16,21 @@ export function PlannerStudy({ result, names }: { result: StudyResult; names: [s
       s.effective.toFixed(1),
       'Overlapping windows share most of their history: this is how many separate terms it holds',
     ],
-    [`P(${x.toLowerCase()} > ${y.toLowerCase()})`, percent(s.p_win), 'A tie counts as half'],
-    ['Median difference', shekels(s.median_difference), `${x} minus ${y.toLowerCase()}`],
+    [`P(${inline(x)} > ${inline(y)})`, percent(s.p_win), 'A tie counts as half'],
+    ['Median difference', shekels(s.median_difference), `${x} minus ${inline(y)}`],
     ['Median difference, real', shekels(s.median_difference_real), 'In shekels of each start'],
     [`${x}: median yearly return`, percent(s.x_xirr), `Real: ${percent(s.x_xirr_real)}`],
     [`${y}: median yearly return`, percent(s.y_xirr), `Real: ${percent(s.y_xirr_real)}`],
   ];
   return (
     <>
-      <h2 className={styles.heading}>
+      <PlannerHeading
+        csv="history windows"
+        rows={result.windows}
+        fields={['start', 'x_wealth', 'y_wealth', 'x_xirr', 'y_xirr']}
+      >
         History: {s.windows} starts, {s.first} to {s.last}
-      </h2>
+      </PlannerHeading>
       <PlannerCards cards={cards} />
       <p className={styles.note}>
         The {s.windows} windows overlap, so they hold only about {s.effective.toFixed(1)}{' '}

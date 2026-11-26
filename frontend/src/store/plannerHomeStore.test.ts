@@ -148,11 +148,16 @@ describe('sanitizeHome', () => {
     const kept = sanitizeHome({ home: { ...DEFAULT_HOME, price: 3_000_000 }, saved });
     expect(kept.home.price).toBe(3_000_000);
     expect(kept.saved).toBe(saved);
-    expect(sanitizeHome(null)).toEqual({ home: DEFAULT_HOME, saved: NO_SAVED });
+    expect(sanitizeHome(null)).toEqual({
+      slot: 'a',
+      home: DEFAULT_HOME,
+      other: DEFAULT_HOME,
+      saved: NO_SAVED,
+    });
     // A form saved before a section existed keeps the saved tables.
     const older: Record<string, unknown> = { ...DEFAULT_HOME };
     delete older['rent'];
-    expect(sanitizeHome({ home: older, saved })).toEqual({ home: DEFAULT_HOME, saved });
+    expect(sanitizeHome({ home: older, saved })).toMatchObject({ home: DEFAULT_HOME, saved });
   });
 });
 
@@ -203,7 +208,8 @@ describe('two apartments', () => {
   });
 
   it('gives an older form the fields it lacks', () => {
-    const { ownSd: _ownSd, ...value } = DEFAULT_HOME.value;
+    const value: Record<string, unknown> = { ...DEFAULT_HOME.value };
+    delete value['ownSd'];
     const old = sanitizeHome({ home: { ...B, value }, saved: NO_SAVED });
     expect(old.home.value.ownSd).toBe(0);
     expect(old.home.price).toBe(3_000_000);

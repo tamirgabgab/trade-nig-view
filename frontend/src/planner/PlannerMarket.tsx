@@ -8,8 +8,10 @@ import { PlannerAssets } from './PlannerAssets.tsx';
 import { PlannerAssetsTable } from './PlannerAssetsTable.tsx';
 import { PlannerDeposits } from './PlannerDeposits.tsx';
 import { PlannerDepositsTable } from './PlannerDepositsTable.tsx';
+import { PlannerHeading } from './PlannerHeading.tsx';
 import { PlannerInflation } from './PlannerInflation.tsx';
 import { PlannerOptions } from './PlannerOptions.tsx';
+import { PlannerSlot } from './PlannerSlot.tsx';
 import { PlannerSummary } from './PlannerSummary.tsx';
 
 type Status = 'idle' | 'running' | 'checking';
@@ -65,6 +67,7 @@ export function PlannerMarket({ hidden }: { hidden: boolean }) {
         }}
       >
         <h1 className={styles.title}>Planner: market account</h1>
+        <PlannerSlot />
         <PlannerAssets />
         <PlannerDeposits />
         <PlannerOptions />
@@ -123,7 +126,13 @@ export function PlannerMarket({ hidden }: { hidden: boolean }) {
         )}
         {result !== null && depths === null && (
           <>
-            <h2 className={styles.heading}>Deposits ({result.deposits.length})</h2>
+            <PlannerHeading
+              csv="deposits"
+              rows={result.deposits}
+              fields={['date', 'amount', 'value', 'proceeds', 'gross_gain', 'tax', 'net_gain']}
+            >
+              Deposits ({result.deposits.length})
+            </PlannerHeading>
             <div className={styles.scroll}>
               <PlannerDepositsTable deposits={result.deposits} />
             </div>
