@@ -2,9 +2,11 @@ import { useState } from 'react';
 
 import {
   runScenario,
+  simulateScenario,
   studyScenario,
   type ScenarioRequest,
   type ScenarioResult,
+  type SimulationResult,
   type StudyResult,
 } from '../api/planner.ts';
 import panel from '../components/IndicatorSettingsPanel.module.css';
@@ -13,10 +15,13 @@ import { usePlannerStore } from '../store/plannerStore.ts';
 import { toScenario } from './compare.ts';
 import styles from './Planner.module.css';
 import { PlannerScenario } from './PlannerScenario.tsx';
+import { PlannerSimulation } from './PlannerSimulation.tsx';
+import { PlannerSimulationForm } from './PlannerSimulationForm.tsx';
 import { PlannerStudy } from './PlannerStudy.tsx';
+import { DEFAULT_SIMULATION, toSimulation } from './simulation.ts';
 import { useHomeTaxes } from './useHomeTaxes.ts';
 
-type Status = 'idle' | 'comparing' | 'studying';
+type Status = 'idle' | 'comparing' | 'studying' | 'simulating';
 /** The names of the two options and the apartment's monthly rent, as a comparison ran. */
 interface Shown {
   names: [string, string];
@@ -28,8 +33,8 @@ const HORIZONS = [5, 10, 15, 20, 25, 30];
 
 /**
  * The planner's comparison: the Apartment tab's apartment against the same money in the Market
- * tab's mix, for the plan as entered (POST /api/planner/run) and for every start history
- * allows (POST /api/planner/study).
+ * tab's mix, for the plan as entered (POST /api/planner/run), for every start history allows
+ * (POST /api/planner/study) and over many simulated worlds (POST /api/planner/simulate).
  */
 export function PlannerCompare({ hidden }: { hidden: boolean }) {
   const form = usePlannerStore((s) => s.form);
@@ -43,6 +48,8 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
   const [status, setStatus] = useState<Status>('idle');
   const [scenario, setScenario] = useState<ScenarioResult | null>(null);
   const [study, setStudy] = useState<StudyResult | null>(null);
+  const [settings, setSettings] = useState(DEFAULT_SIMULATION);
+  const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   // What the results were made under: a later edit of the forms must not relabel them.
   const [shown, setShown] = useState<Shown>({ names: ['Apartment', 'Market'], rent: 0 });
@@ -61,6 +68,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
         // Never an error above the results of an earlier, different comparison.
         setScenario(null);
         setStudy(null);
+        setSimulation(null);
       })
       .finally(() => {
         setStatus('idle');
@@ -70,6 +78,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
     start('comparing', async (request, next) => {
       setScenario(await runScenario(request));
       setStudy(null);
+      setSimulation(null);
       setShown(next);
     });
   };
@@ -88,6 +97,19 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
       ]);
       setScenario(one);
       setStudy(many);
+      setSimulation(null);
+      setShown(next);
+    });
+  };
+  const simulate = () => {
+    start('simulating', async (request, next) => {
+      const [one, many] = await Promise.all([
+        runScenario(request),
+        simulateScenario({ ...request, ...toSimulation(settings, followRates) }),
+      ]);
+      setScenario(one);
+      setStudy(null);
+      setSimulation(many);
       setShown(next);
     });
   };
@@ -185,6 +207,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
             Apartment tab.
           </p>
         </fieldset>
+        <PlannerSimulationForm settings={settings} onChange={setSettings} />
         <div className={styles.actions}>
           <button type="submit" className={panel.primary} disabled={status !== 'idle' || !ready}>
             {status === 'comparing' ? 'Comparing…' : 'Compare'}
@@ -197,6 +220,14 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
           >
             {status === 'studying' ? 'Running history…' : 'Run history'}
           </button>
+          <button
+            type="button"
+            className={panel.secondary}
+            disabled={status !== 'idle' || !ready}
+            onClick={simulate}
+          >
+            {status === 'simulating' ? 'Simulating…' : 'Simulate'}
+          </button>
         </div>
       </form>
       <div className={styles.results} aria-live="polite" aria-busy={status !== 'idle'}>
@@ -208,14 +239,15 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
         {scenario === null && error === null && (
           <p className={styles.note}>
             Set the apartment and the market mix in their tabs, then press Compare for the plan as
-            entered, or Run history for every start the data allows. The numbers are a model, not
-            advice.
+            entered, Run history for every start the data allows, or Simulate for many possible
+            worlds. The numbers are a model, not advice.
           </p>
         )}
         {scenario !== null && (
           <PlannerScenario result={scenario} names={shown.names} rent={shown.rent} />
         )}
         {study !== null && <PlannerStudy result={study} names={shown.names} />}
+        {simulation !== null && <PlannerSimulation result={simulation} names={shown.names} />}
       </div>
     </div>
   );

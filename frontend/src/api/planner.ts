@@ -143,3 +143,27 @@ export const runScenario = (request: ScenarioRequest) =>
 
 export const studyScenario = (request: StudyRequest) =>
   apiPost('/planner/study', request, parseStudy);
+
+/** POST /api/planner/simulate: the scenario over many simulated worlds. */
+export type SimulateRequest = Schemas['SimulateRequest'];
+export type SimulationResult = Schemas['SimulateResponse'];
+export type OptionRisk = Schemas['OptionRisk'];
+
+/** Checks the shape the page relies on (both options and the samples of every measure). */
+export function parseSimulation(body: unknown): SimulationResult {
+  const samples = isRecord(body) ? body['samples'] : null;
+  if (
+    !isRecord(body) ||
+    !isRecord(body['x']) ||
+    !isRecord(body['y']) ||
+    !isRecord(samples) ||
+    !Object.values(samples).every(Array.isArray) ||
+    !Array.isArray(body['warnings'])
+  ) {
+    throw new Error('Unexpected /api/planner/simulate response');
+  }
+  return body as unknown as SimulationResult;
+}
+
+export const simulateScenario = (request: SimulateRequest) =>
+  apiPost('/planner/simulate', request, parseSimulation);

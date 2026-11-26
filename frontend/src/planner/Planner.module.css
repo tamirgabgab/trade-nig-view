@@ -41,7 +41,7 @@
 }
 
 .heading {
-  margin: var(--space-5) 0 var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
   color: var(--color-text-strong);
   font-size: var(--font-size-md);
   font-weight: 600;
@@ -368,6 +368,81 @@
 
 .lose4 {
   background: color-mix(in srgb, var(--color-down) 54%, transparent);
+}
+
+/* The simulation's histogram: two panels on one axis, and the handles a and b over both. */
+.histogram {
+  max-width: 760px;
+  margin: var(--space-3) 0 0;
+}
+
+.histogram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+}
+
+.seriesX rect {
+  fill: var(--color-series-1);
+}
+
+.seriesY rect {
+  fill: var(--color-series-2);
+}
+
+.histogram .baseline {
+  stroke: var(--color-border-strong);
+}
+
+.histogram .seriesName {
+  fill: var(--color-text);
+  font-size: 12px;
+}
+
+.histogram .axisTick {
+  fill: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.between {
+  fill: var(--color-accent-soft);
+}
+
+.handle {
+  cursor: ew-resize;
+  outline: none;
+}
+
+.handle line {
+  stroke: var(--color-text-strong);
+  stroke-width: 1.5;
+}
+
+.handle .grip {
+  fill: var(--color-surface-raised);
+  stroke: var(--color-text-strong);
+}
+
+.handle text {
+  fill: var(--color-text-strong);
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.handle:focus-visible .grip {
+  stroke: var(--color-accent);
+  stroke-width: 2.5;
+}
+
+.handle:focus-visible line {
+  stroke: var(--color-accent);
+}
+
+.chance {
+  margin: var(--space-2) 0 0;
 }
 
 @media (max-width: 899px) {

@@ -65,3 +65,60 @@ export const STUDY_RESULT = {
   },
   warnings: [],
 };
+
+const SPREAD = { p5: 1_000_000, p25: 1_500_000, p50: 2_000_000, p75: 2_500_000, p95: 3_200_000 };
+const RETURNS = { p5: -0.01, p25: 0.02, p50: 0.04, p75: 0.06, p95: 0.09, mean: 0.04, cvar5: -0.03 };
+const OPTION_RISK = {
+  wealth: { ...SPREAD, mean: 2_050_000, cvar5: 800_000 },
+  wealth_real: { ...SPREAD, mean: 2_050_000, cvar5: 800_000 },
+  xirr: RETURNS,
+  xirr_real: RETURNS,
+  shortfall: 0.1,
+  regret_mean: 150_000,
+  regret_p95: 900_000,
+  certainty_equivalent: 1_800_000,
+  ruin: 0,
+  negative_equity: 0.05,
+  stress: 0.25,
+  stress_median: 0.31,
+  under_water: null,
+  drawdown_median: 0.12,
+  drawdown_p95: 0.4,
+  sharpe: 0.8,
+  sortino: 1.4,
+};
+
+/** POST /api/planner/simulate: four worlds of a block bootstrap. */
+export const SIMULATION_RESULT = {
+  method: 'bootstrap',
+  runs: 4,
+  months: 120,
+  market: null,
+  history: { first: '2002-01-01', last: '2026-08-01', months: 295, effective: 2.46 },
+  p_win: 0.25,
+  median_difference: -300_000,
+  median_difference_real: -250_000,
+  dominance: 'y_second',
+  x: OPTION_RISK,
+  y: {
+    ...OPTION_RISK,
+    certainty_equivalent: null,
+    ruin: 0.02,
+    negative_equity: null,
+    stress: null,
+    stress_median: null,
+    under_water: 0.3,
+    sharpe: null,
+  },
+  samples: {
+    x_wealth: [1_000_000, 2_000_000, 3_000_000, 4_000_000],
+    y_wealth: [1_500_000, 2_500_000, 3_500_000, 3_900_000],
+    x_wealth_real: [900_000, 1_800_000, 2_700_000, 3_600_000],
+    y_wealth_real: [1_300_000, 2_200_000, 3_100_000, 3_500_000],
+    x_xirr: [0.01, 0.03, 0.05, 0.07],
+    y_xirr: [0.02, 0.04, 0.06, 0.065],
+    x_xirr_real: [-0.01, 0.01, 0.03, 0.05],
+    y_xirr_real: [0, 0.02, 0.04, 0.045],
+  },
+  warnings: ['Inflation has no spread: it is the same in every world'],
+};

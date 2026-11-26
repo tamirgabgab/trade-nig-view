@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { DEFAULT_HOME, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
 import { DEFAULT_FORM, usePlannerStore } from '../store/plannerStore.ts';
-import { SCENARIO_RESULT, STUDY_RESULT } from '../test/plannerCompareBody.ts';
+import { SCENARIO_RESULT, SIMULATION_RESULT, STUDY_RESULT } from '../test/plannerCompareBody.ts';
 import { TAX_PRESETS } from '../test/plannerHomeBody.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
 import { PlannerCompare } from './PlannerCompare.tsx';
@@ -112,6 +112,57 @@ describe('PlannerCompare', () => {
     const map = screen.getByRole('table', { name: 'Win map' });
     expect(within(map).getAllByRole('row')).toHaveLength(3);
     expect(card('Apartment and account: worth at the end')).toHaveTextContent('₪2,100,000');
+  });
+
+  it('simulates with the form’s settings and shows the distribution', async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': { body: SCENARIO_RESULT },
+      '/api/planner/simulate': (_url, init) => {
+        sent.push(body(init));
+        return jsonResponse(SIMULATION_RESULT);
+      },
+    });
+    renderWithQuery(<PlannerCompare hidden={false} />);
+    const simulate = screen.getByRole('button', { name: 'Simulate' });
+    await vi.waitFor(() => {
+      expect(simulate).toBeEnabled();
+    });
+    // A bootstrap has a block length; a Monte Carlo has a market model and a correlation.
+    expect(screen.getByRole('spinbutton', { name: 'Block length (months)' })).toBeVisible();
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Simulation method' }),
+      'monte_carlo',
+    );
+    expect(screen.queryByRole('spinbutton', { name: 'Block length (months)' })).toBeNull();
+    const mean = screen.getByRole('spinbutton', { name: 'Market mean % a year' });
+    expect(mean).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: /^Estimate the market/ }));
+    expect(mean).toBeEnabled();
+    await user.click(simulate);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Simulation: 4 worlds, block bootstrap' }),
+    ).toBeInTheDocument();
+    expect(sent[0]).toMatchObject({
+      method: 'monte_carlo',
+      runs: 1000,
+      market_mean_pct: 7,
+      market_sd_pct: 16,
+      income: null,
+      x: { home: { start: '2015-01-15' } },
+      end: '2025-01-15',
+    });
+    expect(screen.getByRole('slider', { name: 'Lower bound a' })).toBeVisible();
+    expect(screen.getByRole('table', { name: 'Risk' })).toBeVisible();
+    // The plan as entered is shown with it; a plain Compare afterwards drops the simulation.
+    expect(card('Put in by each')).toHaveTextContent('₪900,000');
+    await user.click(screen.getByRole('button', { name: 'Compare' }));
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('table', { name: 'Risk' })).not.toBeInTheDocument();
+    });
   });
 
   it('shows why a comparison cannot run and drops the earlier results', async () => {

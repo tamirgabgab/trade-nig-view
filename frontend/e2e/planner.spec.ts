@@ -184,3 +184,76 @@ test('planner: the apartment against the same money in the market, for one plan 
   await expect(compare.getByRole('alert')).toContainText('The equity cannot exceed the price');
   await expect(compare.getByRole('heading', { name: 'Breakeven rates' })).toBeHidden();
 });
+
+test('planner: a simulation of the comparison, its distribution and the handles a and b', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  await planner.getByLabel('Ticker 1').fill('aapl');
+  await planner.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
+  await planner.getByRole('tab', { name: 'Apartment' }).click();
+  const home = planner.getByRole('tabpanel', { name: 'Apartment' });
+  await home.getByLabel('Value path', { exact: true }).selectOption('historical');
+  await home.getByLabel('Bank of Israel rate', { exact: true }).selectOption('historical');
+  await planner.getByRole('tab', { name: 'Compare' }).click();
+  const compare = planner.getByRole('tabpanel', { name: 'Compare' });
+
+  // A block bootstrap of the history AAPL, the dwelling index and the rate share.
+  await compare.getByLabel('Worlds').fill('60');
+  await compare.getByLabel('Monthly net income ₪').fill('25000');
+  await compare.getByRole('button', { name: 'Simulate' }).click();
+  await expect(
+    compare.getByRole('heading', { name: 'Simulation: 60 worlds, block bootstrap' }),
+  ).toBeVisible();
+  const card = (label: string) => compare.getByText(label, { exact: true }).locator('..');
+  await expect(card('P(apartment > market)')).toContainText('%');
+  await expect(card('History resampled')).toContainText('295 months');
+  await expect(card('Independent terms in it, about')).toContainText('2.5');
+  const risk = compare.getByRole('table', { name: 'Risk' });
+  const row = (label: string) => risk.getByRole('row').filter({ hasText: label });
+  // The apartment has a loan and a payment; the market side has an account.
+  await expect(row('A payment above the share of income').getByRole('cell').nth(1)).toHaveText(
+    /%$/,
+  );
+  await expect(row('A payment above the share of income').getByRole('cell').nth(2)).toHaveText('—');
+  await expect(row('Time the account is below its deposits').getByRole('cell').nth(1)).toHaveText(
+    '—',
+  );
+
+  // The handles: sliders that move with the keyboard and by dragging; the share follows.
+  const a = compare.getByRole('slider', { name: 'Lower bound a' });
+  const b = compare.getByRole('slider', { name: 'Upper bound b' });
+  const chance = compare.getByText(/^Market: .* of the worlds end/);
+  await expect(chance).toContainText('95% interval of the simulation');
+  const before = Number(await a.getAttribute('aria-valuenow'));
+  await a.focus();
+  await page.keyboard.press('Home');
+  expect(Number(await a.getAttribute('aria-valuenow'))).toBeLessThan(before);
+  await b.focus();
+  await page.keyboard.press('End');
+  // From the first bar to the last one, about every world is inside.
+  await expect(chance).toContainText(/Market: (9\d|100)\.\d\d% of the worlds/);
+  const box = await b.boundingBox();
+  if (box === null) throw new Error('The handle is not on the page');
+  const wide = Number(await b.getAttribute('aria-valuenow'));
+  await page.mouse.move(box.x + box.width / 2, box.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 200, box.y + 30, { steps: 5 });
+  await page.mouse.up();
+  expect(Number(await b.getAttribute('aria-valuenow'))).toBeLessThan(wide);
+  await expect(compare.getByLabel('Upper bound b', { exact: true }).last()).not.toHaveValue('');
+
+  // Another measure, and a modelled market in place of the mix.
+  await compare.getByLabel('Measure').selectOption('xirr_real');
+  await expect(chance).toContainText('% and');
+  await compare.getByLabel('Simulation method').selectOption('monte_carlo');
+  await compare.getByLabel('Estimate the market from the mix’s history').uncheck();
+  await compare.getByLabel('Market mean % a year').fill('6');
+  await compare.getByLabel('Market volatility % a year').fill('15');
+  await compare.getByRole('button', { name: 'Simulate' }).click();
+  await expect(
+    compare.getByRole('heading', { name: 'Simulation: 60 worlds, Monte Carlo' }),
+  ).toBeVisible();
+  await expect(card('Modelled market')).toContainText('6.00% a year, σ 15.00%');
+});
