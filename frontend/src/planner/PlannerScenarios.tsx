@@ -37,11 +37,15 @@ export function PlannerScenarios() {
       .then(setDone)
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'The request failed');
+        // A save on top of a stale revision fails: the next try starts from the list as it is.
+        void client.invalidateQueries({ queryKey: KEY });
       })
       .finally(() => {
         setBusy(false);
       });
   };
+  // The tax tables go into the scenario and the list gives the revision: it waits for both.
+  const canSave = !busy && typed !== '' && presets !== undefined && list.isSuccess;
   const save = () => {
     // The name is the scenario's address: the backend takes no "/" and no name of dots only.
     if (typed.includes('/') || /^\.+$/.test(typed)) {
@@ -86,13 +90,18 @@ export function PlannerScenarios() {
             onChange={(event) => {
               setName(event.target.value);
             }}
+            onKeyDown={(event) => {
+              // Enter in a form's text field submits the form: here it saves, not compares.
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              if (canSave) save();
+            }}
           />
         </label>
         <button
           type="button"
           className={`${panel.secondary ?? ''} ${styles.beside ?? ''}`}
-          // The tax tables go into the scenario, so it waits for the built-in ones.
-          disabled={busy || typed === '' || presets === undefined}
+          disabled={!canSave}
           onClick={save}
         >
           {existing ? `Replace “${typed}”` : 'Save scenario'}

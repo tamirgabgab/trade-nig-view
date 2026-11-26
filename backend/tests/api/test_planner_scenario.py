@@ -324,3 +324,30 @@ def test_an_option_naming_the_mix_it_would_get_anyway_changes_nothing(
     assert named == alone
     if path == "run":
         assert (alone["x"]["account"] is not None) is surplus
+
+
+def test_two_mixes_that_differ_only_by_the_shekel_rate_are_different_mixes(
+    client: TestClient,
+) -> None:
+    in_shekels = {"market": {**MARKET, "use_fx": True}}
+    late = {"x": {"home": {**HOME, "start": "2016-01-15"}, "market": MARKET}, "end": "2021-01-15"}
+    assert any(
+        "different mixes" in note for note in post(client, "run", y=in_shekels, **late)["warnings"]
+    )
+    assert not any("different mixes" in note for note in post(client, "run", **late)["warnings"])
+
+
+def test_two_apartments_bought_in_different_months_share_one_sale_day(client: TestClient) -> None:
+    later = {**HOME, "start": "2012-03-15", "price": 2_000_000}
+    body = post(
+        client, "run", y={"home": later, "market": MARKET}, x={"home": HOME, "market": MARKET}
+    )
+    assert (body["start"], body["end"]) == ("2010-01-15", "2020-01-15")
+    # Until it buys, the later buyer holds in its mix what the earlier one has spent.
+    assert body["y"]["home"] is not None
+    assert body["y"]["account"]["deposited"] > 0
+    # Another day of the month cannot land on the one sale day: said, not computed around.
+    other_day = {"home": {**later, "start": "2012-03-20"}, "market": MARKET}
+    response = client.post("/api/planner/run", json={**BASE, "y": other_day})
+    assert response.status_code == 422
+    assert "Every apartment must be sold on the end date" in response.json()["detail"]

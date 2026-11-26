@@ -321,6 +321,7 @@ whole page works.
   with their steps unchanged.
 - The page now names each option's mix in the request. A backend test holds that equal to the old request (an
   apartment option that takes the other's mix) on all three endpoints.
+- Two apartments must be bought on the same day of the month (one sale day, whole months each): the page says so.
 - Left out: a chart of the net-worth paths of two market accounts (the lead chart already shows both options by
   exit month), and loading a scenario does not rerun the comparison.
 - H5 keeps: the learn pages, the interest stress test, polish.

@@ -76,7 +76,10 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
   const bought = SLOTS.filter((slot) => contents[slot].home).map((slot) => homes[slot]);
   const request =
     taxes === null ? null : toScenario({ market, home: homes, taxes, contents, discount });
-  const ready = request !== null && request.end !== '' && bought.every((h) => h.start !== '');
+  // Two apartments are sold on one day, each after whole months: so bought on one day of a month.
+  const apart = bought.length > 1 && bought[0]?.start.slice(8) !== bought[1]?.start.slice(8);
+  const ready =
+    request !== null && request.end !== '' && bought.every((h) => h.start !== '') && !apart;
   const start = (next: Status, work: (request: ScenarioRequest, next: Shown) => Promise<void>) => {
     if (!ready) return;
     setStatus(next);
@@ -137,8 +140,10 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
       // The estimate goes into its fields, so unticking the box starts from it.
       const model = many.market;
       if (model?.estimated) {
+        // The settings as they are now: they may have changed while the simulation ran.
+        const { simulation: now } = usePlannerStore.getState().compare;
         setCompare({
-          simulation: { ...settings, mean: percentOf(model.mean), sd: percentOf(model.sd) },
+          simulation: { ...now, mean: percentOf(model.mean), sd: percentOf(model.sd) },
         });
       }
     });
@@ -180,6 +185,13 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
                   Option {slot.toUpperCase()}: {name}
                 </label>
               )),
+            )}
+            {apart && (
+              <p className={`${styles.error ?? ''} ${styles.wide ?? ''}`} role="alert">
+                Two apartments must be bought on the same day of the month: both are sold on one day
+                (option A’s “Sold on”; option B’s is not used), each after a whole number of months.
+                Change a “Bought on” date.
+              </p>
             )}
             <PlannerField
               label="Forced sale discount %"

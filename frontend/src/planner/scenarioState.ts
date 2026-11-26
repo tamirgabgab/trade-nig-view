@@ -3,6 +3,7 @@ import {
   homesOf,
   readHome,
   resolveTaxes,
+  savedName,
   usePlannerHomeStore,
   type HomeForm,
 } from '../store/plannerHomeStore.ts';
@@ -34,8 +35,9 @@ export interface ScenarioState {
 }
 
 /**
- * The planner as it stands. Each apartment carries its two tax tables themselves (as an edit of
- * the table it names): a saved table can change or go later, and a scenario must not with it.
+ * The planner as it stands. An apartment that names a saved tax table carries the table itself
+ * (as an edit of it): a saved table can change or go later, and a scenario must not with it.
+ * A built-in table is named only: its id says which year's it is.
  */
 export function captureScenario(presets: TaxPresets | undefined): ScenarioState {
   const market = usePlannerStore.getState();
@@ -43,10 +45,12 @@ export function captureScenario(presets: TaxPresets | undefined): ScenarioState 
   const withTables = (home: HomeForm): HomeForm => {
     const taxes = resolveTaxes(home, homes.saved, presets);
     if (taxes === null) return home;
+    const own = <T>(choice: HomeForm['purchaseTax' | 'betterment'], table: T) =>
+      savedName(choice.preset) === null ? choice : { preset: choice.preset, edited: table };
     return {
       ...home,
-      purchaseTax: { preset: home.purchaseTax.preset, edited: taxes.purchase },
-      betterment: { preset: home.betterment.preset, edited: taxes.betterment },
+      purchaseTax: own(home.purchaseTax, taxes.purchase) as HomeForm['purchaseTax'],
+      betterment: own(home.betterment, taxes.betterment) as HomeForm['betterment'],
     };
   };
   const { a, b } = linked(market.same, homesOf(homes));
@@ -88,13 +92,14 @@ export function parseScenarioState(value: unknown): ScenarioState {
 
 /** Put a scenario into the three tabs, option A on screen. */
 export function applyScenario(state: ScenarioState): void {
-  usePlannerStore.setState({
+  usePlannerStore.setState((s) => ({
+    loads: s.loads + 1,
     same: state.same,
     slot: 'a',
     form: state.market.a,
     other: state.market.b,
     contents: state.contents,
     compare: state.compare,
-  });
+  }));
   usePlannerHomeStore.setState({ slot: 'a', home: state.home.a, other: state.home.b });
 }

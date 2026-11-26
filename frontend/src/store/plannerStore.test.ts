@@ -100,6 +100,8 @@ describe('two options', () => {
     usePlannerStore.setState({ form: B });
     usePlannerStore.getState().copyToOther();
     expect(formsOf(usePlannerStore.getState()).b).toEqual(B);
+    // The inflation is shared: a reset takes it back to its default in both options.
+    usePlannerStore.getState().update({ inflation: { ...DEFAULT_FORM.inflation, mean: 6 } });
     usePlannerStore.getState().reset();
     const { a, b } = formsOf(usePlannerStore.getState());
     expect([a, b]).toEqual([DEFAULT_FORM, B]);

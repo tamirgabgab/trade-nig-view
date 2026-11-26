@@ -37,8 +37,12 @@ describe('a saved scenario', () => {
     const state = captureScenario(PRESETS);
     // The saved table can be edited or deleted later: the scenario keeps what it was run with.
     expect(state.home.a.purchaseTax).toEqual({ preset: savedKey('Mine'), edited: MINE });
-    expect(state.home.a.betterment.edited).toEqual(PRESETS.betterment[0]?.spec);
-    expect(state.home.b.purchaseTax.edited).toEqual(PRESETS.purchase[0]?.brackets);
+    // A built-in table is named only, so a loaded scenario does not read as changed.
+    expect(state.home.a.betterment).toEqual(DEFAULT_HOME.betterment);
+    expect(state.home.b.purchaseTax).toEqual(DEFAULT_HOME.purchaseTax);
+    const edited = { preset: 'single_home_2026', edited: MINE };
+    usePlannerHomeStore.getState().update({ purchaseTax: edited });
+    expect(captureScenario(PRESETS).home.a.purchaseTax).toEqual(edited);
   });
 
   it('comes back as it was saved, through JSON, with option A in front', () => {

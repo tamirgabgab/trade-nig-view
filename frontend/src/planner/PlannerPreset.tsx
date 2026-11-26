@@ -34,8 +34,10 @@ export function PlannerPreset({
   const [name, setName] = useState('');
   const own = savedName(preset);
   const note = builtIn.find((p) => p.id === preset)?.note;
-  // A table of an older version, or a saved one that was lost: the first one stands in for it.
+  // A table of an older version, or a saved one that was lost: the first one stands in for it
+  // (not when the plan carries its own edit of it, as a loaded scenario does).
   const lost =
+    !edited &&
     note === undefined &&
     !(own !== null && saved.includes(own)) &&
     !(allowNone && preset === NO_TAX);

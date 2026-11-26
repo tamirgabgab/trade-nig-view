@@ -178,6 +178,8 @@ interface PlannerData {
 }
 
 interface PlannerState extends PlannerData {
+  /** Counts the scenarios loaded: the tabs drop the results of the forms that were replaced. */
+  loads: number;
   /** Replace part of the form on screen (the inflation is one for both options). */
   update: (changes: Partial<PlannerForm>) => void;
   /** Show another option's form. */
@@ -269,6 +271,7 @@ export const usePlannerStore = create<PlannerState>()(
   persist(
     (set) => ({
       ...sanitizePersisted(null),
+      loads: 0,
       update: (changes) => {
         set((s) => ({
           form: { ...s.form, ...changes },
@@ -285,7 +288,11 @@ export const usePlannerStore = create<PlannerState>()(
         set({ same });
       },
       reset: () => {
-        set((s) => ({ form: { ...DEFAULT_FORM, inflation: s.other.inflation } }));
+        // The inflation is one for both options, so it goes back to its default in both.
+        set((s) => ({
+          form: DEFAULT_FORM,
+          other: { ...s.other, inflation: DEFAULT_FORM.inflation },
+        }));
       },
       setContents: (slot, changes) => {
         set((s) => ({ contents: { ...s.contents, [slot]: { ...s.contents[slot], ...changes } } }));

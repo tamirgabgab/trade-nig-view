@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import settings from '../components/SettingsDialog.module.css';
+import { usePlannerStore } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerCompare } from './PlannerCompare.tsx';
 import { PlannerHome } from './PlannerHome.tsx';
@@ -18,6 +19,9 @@ const TABS = [
  */
 export function PlannerPage({ className }: { className: string | undefined }) {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('market');
+  // The results of a tab belong to the forms they were run with: another option on screen, or a
+  // loaded scenario, starts the two tabs again.
+  const forms = usePlannerStore((s) => `${s.slot}:${String(s.loads)}`);
   return (
     <section className={[styles.shell, className].join(' ')} aria-label="Planner">
       <div className={settings.tabs} role="tablist" aria-label="Planner sides">
@@ -36,8 +40,8 @@ export function PlannerPage({ className }: { className: string | undefined }) {
           </button>
         ))}
       </div>
-      <PlannerMarket hidden={tab !== 'market'} />
-      <PlannerHome hidden={tab !== 'home'} />
+      <PlannerMarket key={`market:${forms}`} hidden={tab !== 'market'} />
+      <PlannerHome key={`home:${forms}`} hidden={tab !== 'home'} />
       <PlannerCompare hidden={tab !== 'compare'} />
     </section>
   );

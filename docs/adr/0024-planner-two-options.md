@@ -59,5 +59,22 @@ round:
 - The basic comparison is unchanged for someone who never unticks the box; the general one costs one click.
 - A saved scenario is tied to the planner's state shape. A change of that shape needs a version bump and a reader
   for the old one.
-- Two apartments with different purchase days start the comparison on the earlier one; the later option holds its
-  money in its mix until it buys.
+- Two apartments may be bought in different months: the comparison starts on the earlier purchase and the later
+  buyer holds its money in its mix until it buys. They must be bought on the same day of the month, because the
+  engine sells every apartment on the one end day after a whole number of months (option B's "Sold on" is not
+  used). The page says so and does not send such a comparison; selling the second apartment on its own day is
+  left for a later round.
+
+## What the review settled
+- Two apartments on different days of the month ended in a 422 with no field to fix it: now explained on the page.
+- The estimated mean and volatility of a Monte Carlo are written into the settings as they are when the answer
+  arrives, not as they were at the click.
+- Mixes that differ only by the USD/ILS conversion (or by an assumed dividend yield) count as different mixes.
+- After a save on a stale revision the list is read again, so the next try can succeed; Save waits for the list.
+- Enter in the scenario's name saves it (it used to submit the Compare form around it).
+- "Reset inputs" in the Market tab resets the shared inflation again, in both options.
+- A scenario names a built-in tax table and carries only a saved one, so a loaded scenario does not read as
+  "changed"; a table that travels with the plan is no longer reported as lost.
+- The Market and the Apartment tabs drop their results when another option comes on screen or a scenario is loaded.
+- The CSV link is clicked inside the page and its URL is kept for a second, for browsers that start the download
+  late.

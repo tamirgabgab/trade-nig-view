@@ -80,6 +80,12 @@ describe('PlannerScenarios', () => {
       state: { version: 1, market: { a: { end: '2030-01-01' } } },
     });
     expect(screen.getByRole('status')).toHaveTextContent('Saved “New one”');
+    // Enter in the name field saves too (it would submit the Compare form around it).
+    await user.type(field, '{Enter}');
+    await vi.waitFor(() => {
+      expect(calls).toHaveLength(2);
+    });
+    expect(calls.at(-1)?.[2]).toMatchObject({ revision: 1 });
   });
 
   it('replaces a scenario of the same name, from the revision it read', async () => {

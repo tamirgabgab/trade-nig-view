@@ -18,8 +18,14 @@ export function CsvButton({ name, headers, rows }: CsvButtonProps) {
     const link = document.createElement('a');
     link.href = url;
     link.download = `${name}.csv`;
+    // In the page for the click, and the URL kept until the browser has taken it: some
+    // browsers start the download after this handler returns.
+    document.body.append(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
   };
   return (
     <button

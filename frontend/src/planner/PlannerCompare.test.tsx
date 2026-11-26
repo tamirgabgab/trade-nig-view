@@ -295,6 +295,19 @@ describe('PlannerCompare', () => {
     });
     expect(card('Apartment A: worth at the end')).toHaveTextContent('₪2,100,000');
     expect(usePlannerStore.getState().contents.b.home).toBe(true);
+    // One sale day for both, each after whole months: another day of the month cannot run.
+    act(() => {
+      usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, start: '2016-03-20' } });
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Two apartments must be bought on the same day of the month',
+    );
+    expect(compare).toBeDisabled();
+    act(() => {
+      usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, start: '2016-03-15' } });
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(compare).toBeEnabled();
   });
 
   it('reads option B from option A’s forms while the two are the same, however A changed', async () => {

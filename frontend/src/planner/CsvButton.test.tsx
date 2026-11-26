@@ -37,7 +37,14 @@ describe('CsvButton', () => {
     const bytes = new Uint8Array((await blobs[0]?.arrayBuffer()) ?? new ArrayBuffer(0));
     expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(await blobs[0]?.text()).toBe('date,amount\r\n2020-01-15,1000\r\n2020-02-15,1500.5\r\n');
-    expect(revoke).toHaveBeenCalledWith('blob:test');
+    // The URL lives until the browser has started the download.
+    expect(revoke).not.toHaveBeenCalled();
+    await vi.waitFor(
+      () => {
+        expect(revoke).toHaveBeenCalledWith('blob:test');
+      },
+      { timeout: 2000 },
+    );
     click.mockRestore();
   });
 });

@@ -589,9 +589,13 @@ def sensitivity(spec: ScenarioSpec, macro: Macro) -> list[Move]:
 
 
 def mixes_differ(spec: ScenarioSpec) -> bool:
-    """Whether the two options name accounts that hold different assets or weights."""
+    """Whether the two options name accounts that hold different assets: another ticker, another
+    weight, another assumed dividend yield, or the same ticker with and without USD/ILS."""
     mixes = [
-        sorted((a.symbol, a.weight / sum(b.weight for b in account.assets)) for a in account.assets)
+        sorted(
+            (asset_key(a), a.dividend_yield, a.weight / sum(b.weight for b in account.assets))
+            for a in account.assets
+        )
         for account in _accounts(spec)
     ]
     return len(mixes) == 2 and mixes[0] != mixes[1]  # noqa: PLR2004 - the two options
