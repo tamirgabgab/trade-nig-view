@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { parseSimulation } from '../api/planner.ts';
@@ -11,7 +11,7 @@ const card = (label: string) => screen.getByText(label, { selector: 'dt' }).pare
 describe('PlannerSimulation', () => {
   it('shows who wins, the history behind the worlds and the risk of each option', () => {
     const result = parseSimulation(SIMULATION_RESULT);
-    render(<PlannerSimulation result={result} names={['Apartment', 'Market']} />);
+    render(<PlannerSimulation result={result} names={['Apartment', 'Market']} run={1} />);
     expect(
       screen.getByRole('heading', { name: 'Simulation: 4 worlds, block bootstrap' }),
     ).toBeVisible();
@@ -38,12 +38,14 @@ describe('PlannerSimulation', () => {
 
   it('switches the measure of the distribution, returns in percent', async () => {
     const user = userEvent.setup();
-    render(
+    const view = (run: number) => (
       <PlannerSimulation
         result={parseSimulation(SIMULATION_RESULT)}
         names={['Apartment', 'Market']}
-      />,
+        run={run}
+      />
     );
+    const { rerender } = render(view(1));
     const a = () => screen.getByRole('slider', { name: 'Lower bound a' });
     expect(Number(a().getAttribute('aria-valuenow'))).toBeGreaterThan(1_000_000);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Measure' }), 'xirr_real');
@@ -52,6 +54,12 @@ describe('PlannerSimulation', () => {
     expect(screen.getByText(/^Apartment:/, { selector: 'p' })).toHaveTextContent(
       /end between \d\.\d% and \d\.\d%/,
     );
+    // The same numbers from a new simulation: the handles start again at the quartiles.
+    const start = a().getAttribute('aria-valuenow');
+    fireEvent.keyDown(a(), { key: 'Home' });
+    expect(a().getAttribute('aria-valuenow')).not.toBe(start);
+    rerender(view(2));
+    expect(a().getAttribute('aria-valuenow')).toBe(start);
   });
 });
 

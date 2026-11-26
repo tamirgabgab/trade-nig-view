@@ -20,7 +20,7 @@ from app.models.bars import FloatArray
 from app.planner import risk, study
 from app.planner.data import Macro, MacroMemo
 from app.planner.deposits import EPOCH
-from app.planner.market import PlanError
+from app.planner.market import PlanError, TaxBase
 from app.planner.paths import make_world
 from app.planner.scenario import run_pair
 from app.planner.scenario_data import (
@@ -211,6 +211,11 @@ def _warnings(body: SimulateRequest, spec: ScenarioSpec) -> list[str]:
         notes.append("The correlation applies only to a modelled market (Monte Carlo)")
     if body.method == "monte_carlo" and any(a.taxes.dividend > 0 for a in accounts):
         notes.append("A modelled market pays no dividend tax: its growth is the mix's total return")
+    if body.method == "monte_carlo" and any(a.taxes.base is TaxBase.CURRENCY for a in accounts):
+        notes.append(
+            "A modelled market is priced in shekels: the tax base 'currency' taxes the "
+            "nominal gain there"
+        )
     return notes
 
 
@@ -221,13 +226,14 @@ def _simulate(
     term = term_months(spec)
     model = None
     if body.method == "monte_carlo":
-        missing = body.market_mean_pct is None or body.market_sd_pct is None
-        mean, sd = estimate_market(spec) if missing else (0.0, 0.0)
-        if body.market_mean_pct is not None:
-            mean = body.market_mean_pct / 100
-        if body.market_sd_pct is not None:
-            sd = body.market_sd_pct / 100
-        model = MarketModel(mean=mean, sd=sd, estimated=missing)
+        mean, sd = body.market_mean_pct, body.market_sd_pct
+        if mean is None and sd is None:
+            mean, sd = estimate_market(spec)
+            model = MarketModel(mean=mean, sd=sd, estimated=True)
+        elif mean is None or sd is None:
+            raise PlanError("Give both the market's mean and its volatility, or neither")
+        else:
+            model = MarketModel(mean=mean / 100, sd=sd / 100, estimated=False)
     worlds = world_spec(
         spec,
         macro,

@@ -77,6 +77,13 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
     event.preventDefault();
     move(which, next);
   };
+  // The end bars also hold everything beyond the axis.
+  const span = (index: number, from: number) =>
+    index === 0
+      ? `at ${format(from + width)} or below`
+      : index === BINS - 1
+        ? `at ${format(from)} or above`
+        : `from ${format(from)} to ${format(from + width)}`;
   const handle = (which: 0 | 1, value: number, name: string) => (
     <g
       className={styles.handle}
@@ -151,7 +158,7 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
                     height={bar(count)}
                     rx={1}
                   >
-                    <title>{`${names[row] ?? ''}: ${String(count)} worlds from ${format(from)} to ${format(from + width)}`}</title>
+                    <title>{`${names[row] ?? ''}: ${String(count)} worlds ${span(index, from)}`}</title>
                   </rect>
                 );
               })}
@@ -167,8 +174,10 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
             {format(tick)}
           </text>
         ))}
-        {handle(0, a, 'Lower bound a')}
+        {/* Where the two meet, the one that can still move is on top: a at the right end. */}
+        {a >= hi ? null : handle(0, a, 'Lower bound a')}
         {handle(1, b, 'Upper bound b')}
+        {a >= hi ? handle(0, a, 'Lower bound a') : null}
       </svg>
       <div className={styles.grid}>
         <PlannerField

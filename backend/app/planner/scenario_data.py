@@ -389,8 +389,9 @@ def history_panel(spec: ScenarioSpec, macro: Macro, *, assets: bool) -> Panel | 
 
 
 def estimate_market(spec: ScenarioSpec) -> tuple[float, float]:
-    """The yearly mean growth and volatility, in shekels and with dividends, of the first
-    account's mix over its assets' shared history (the weights restored every month)."""
+    """The yearly mean growth and volatility, in shekels and with dividends (those in the
+    prices, and a price-only asset's assumed yield), of the first account's mix over its
+    assets' shared history (the weights restored every month)."""
     accounts = _accounts(spec)
     if not accounts:
         raise PlanError("A modelled market needs an asset mix to stand for")
@@ -406,6 +407,7 @@ def estimate_market(spec: ScenarioSpec) -> tuple[float, float]:
         * ratios[f"{asset_key(a)}/close"]
         * ratios[f"{asset_key(a)}/factor"]
         * ratios[f"{asset_key(a)}/fx"]
+        * (1.0 + a.dividend_yield) ** (1.0 / 12.0)
         for a in mix
     )
     return estimate(np.asarray(growth))

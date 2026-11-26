@@ -130,7 +130,8 @@ def home_series(
                 f"The schedule after the sale holds the {what} flat past its last published value"
             )
 
-    held_flat("CPI", int(path.days[-1]), any(t.linked for t in plan.tracks))
+    if value is None:  # a world's CPI ends with the plan by design: nothing was unpublished
+        held_flat("CPI", int(path.days[-1]), any(t.linked for t in plan.tracks))
     cpi = path.at(days)
     if anchor is not None:
         pass

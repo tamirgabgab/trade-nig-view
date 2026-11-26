@@ -26,6 +26,8 @@ type Status = 'idle' | 'comparing' | 'studying' | 'simulating';
 interface Shown {
   names: [string, string];
   rent: number;
+  /** Counts the requests, so each simulation's chart starts fresh. */
+  run: number;
 }
 const STEPS = [1, 3, 6, 12];
 /** The win map's columns, in years. */
@@ -52,7 +54,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   // What the results were made under: a later edit of the forms must not relabel them.
-  const [shown, setShown] = useState<Shown>({ names: ['Apartment', 'Market'], rent: 0 });
+  const [shown, setShown] = useState<Shown>({ names: ['Apartment', 'Market'], rent: 0, run: 0 });
 
   const ready = taxes !== null && home.start !== '' && home.end !== '';
   const start = (next: Status, work: (request: ScenarioRequest, next: Shown) => Promise<void>) => {
@@ -62,6 +64,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
     work(toScenario(form, home, taxes, ownAccount), {
       names: [ownAccount ? 'Apartment and account' : 'Apartment', 'Market'],
       rent: home.rent.monthly,
+      run: shown.run + 1,
     })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'The request failed');
@@ -247,7 +250,9 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
           <PlannerScenario result={scenario} names={shown.names} rent={shown.rent} />
         )}
         {study !== null && <PlannerStudy result={study} names={shown.names} />}
-        {simulation !== null && <PlannerSimulation result={simulation} names={shown.names} />}
+        {simulation !== null && (
+          <PlannerSimulation result={simulation} names={shown.names} run={shown.run} />
+        )}
       </div>
     </div>
   );

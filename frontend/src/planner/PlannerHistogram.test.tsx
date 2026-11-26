@@ -57,6 +57,16 @@ describe('PlannerHistogram', () => {
     expect(Number(b.getAttribute('aria-valuenow')) - before).toBeCloseTo(10 * step, 9);
   });
 
+  it('keeps the handle that can still move on top when the two meet at the right end', () => {
+    const { a, b } = chart();
+    const order = () => screen.getAllByRole('slider').map((s) => s.getAttribute('aria-label'));
+    expect(order()).toEqual(['Lower bound a', 'Upper bound b']);
+    fireEvent.keyDown(b, { key: 'End' });
+    fireEvent.keyDown(a, { key: 'End' });
+    // b cannot go left of a, so a must be the one the pointer reaches.
+    expect(order()).toEqual(['Upper bound b', 'Lower bound a']);
+  });
+
   it('sets a handle exactly from its field', () => {
     const { b, chance } = chart();
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Upper bound b' }), {
@@ -77,5 +87,9 @@ describe('PlannerHistogram', () => {
         .filter((t) => t.startsWith(name))
         .reduce((sum, t) => sum + Number(/: (\d+) worlds/.exec(t)?.[1]), 0);
     expect([worlds('Apartment'), worlds('Market')]).toEqual([100, 100]);
+    // The end bars say that they hold the tails.
+    expect(titles[0]).toMatch(/^Apartment: \d+ worlds at \d+ or below$/);
+    expect(titles[39]).toMatch(/^Apartment: \d+ worlds at \d+ or above$/);
+    expect(titles[1]).toMatch(/^Apartment: \d+ worlds from \d+ to \d+$/);
   });
 });

@@ -55,9 +55,12 @@ const ROWS: Row[] = [
 export function PlannerSimulation({
   result,
   names,
+  run,
 }: {
   result: SimulationResult;
   names: [string, string];
+  /** The number of the simulation that gave `result`: a new one restarts the handles. */
+  run: number;
 }) {
   const [x, y] = names;
   const [measure, setMeasure] = useState<Measure>('wealth_real');
@@ -119,7 +122,7 @@ export function PlannerSimulation({
       </div>
       <PlannerHistogram
         // New data or another measure: the handles start again at the quartiles.
-        key={`${measure}:${String(result.runs)}:${String(samples.x_wealth[0])}`}
+        key={`${measure}:${String(run)}`}
         x={shown(samples[`x_${measure}`])}
         y={shown(samples[`y_${measure}`])}
         names={names}
@@ -140,7 +143,7 @@ export function PlannerSimulation({
         Net worth on the way is before any exit cost or tax: the apartment’s value less its loan,
         plus the account’s market value. Regret, dominance and the certainty equivalent are on the
         real end values. Sharpe and Sortino are against a return of zero, on yearly returns of the
-        net worth with the money put in taken out.
+        net worth with the money put in taken out; a last part of a year is left out.
       </p>
     </>
   );

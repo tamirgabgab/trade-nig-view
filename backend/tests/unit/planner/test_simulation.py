@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from app.planner.deposits import Deposit, Recurring, add_months, day_number
-from app.planner.home import HomeSeries
+from app.planner.home import HomeSeries, RentMode
 from app.planner.inflation import assumed_cpi
 from app.planner.market import AssetData, PlanError, Taxes
 from app.planner.paths import make_world
@@ -18,6 +18,7 @@ from app.planner.scenario_data import (
     Change,
     OptionSpec,
     ScenarioSpec,
+    build,
     estimate_market,
     history_panel,
     run,
@@ -222,3 +223,56 @@ def test_yearly_returns_charge_the_purchase_costs_to_the_first_year() -> None:
     # A lawyer at 1 % of the price: 10,000 gone in the first year, on 410,000 and half the year's.
     costly = outcome(run_pair(owner(lawyer=0.01), Side(account=account()), END, FLAT_CPI), FLAT_CPI)
     assert costly.x.returns == pytest.approx([-10_000 / (410_000 + 15_000), 0.0], abs=1e-12)
+
+
+def long_asset() -> AssetData:
+    """A flat price with a bar a day from 2019, for a deposit before the apartment."""
+    days = np.arange(day_number(date(2019, 1, 1)), day_number(END) + 5, dtype=np.int64)
+    ones = np.ones(len(days))
+    return AssetData("MKT", 1.0, days, ones, ones, ones, ones, ones, ones)
+
+
+def test_an_apartment_with_an_account_is_followed_from_the_purchase() -> None:
+    # Rented out above its payment, so the owner's account starts in the second month; the
+    # value halves at once. The fall from the 400,000 of equity must not start at the account.
+    landlord = owner(rent_mode=RentMode.RENT_OUT, rent=4_000.0)
+    assert landlord.home is not None
+    fallen = HomeSeries(
+        np.concatenate(([1.0], np.full(240, 0.5))), np.ones(241), np.full(241, 0.04), np.ones(241)
+    )
+    result = run_pair(
+        Side(home=landlord.home, series=fallen), Side(account=account()), END, FLAT_CPI
+    )
+    assert result.x.market is not None
+    side = outcome(result, FLAT_CPI).x
+    assert (side.negative_equity, side.drawdown) == (True, pytest.approx(1.0))
+    # The first year loses more than the equity; the second starts below zero, with nothing
+    # to earn on, so it has no return.
+    assert len(side.returns) == 1
+    assert side.returns[0] < -1.0
+
+
+def test_the_income_of_the_payment_stress_rises_from_the_first_day() -> None:
+    # A deposit a year before the purchase: by the first payment the income rose for 13 months.
+    early = Side(account=account(), deposits=[Deposit(add_months(date(2020, 1, 15), -12), 100.0)])
+    cpi = assumed_cpi(day_number(date(2019, 1, 15)) - 60, day_number(END), mu=0.03)
+    pair = run_pair(
+        owner(), replace(early, account=replace(account(), assets=[long_asset()])), END, cpi
+    )
+    stress = outcome(pair, cpi, income=10_000.0).x.stress
+    assert stress == pytest.approx(0.25 / 1.03 ** (13 / 12), rel=1e-3)
+
+
+def test_an_assumed_dividend_yield_is_part_of_the_estimated_market() -> None:
+    spec = scenario()
+    assert spec.y.account is not None
+    paying = [replace(a, dividend_yield=0.03) for a in spec.y.account.assets]
+    with_yield = replace(spec, y=replace(spec.y, account=replace(spec.y.account, assets=paying)))
+    mean, _ = estimate_market(with_yield)
+    assert mean == pytest.approx(1.06 * 1.03 - 1, abs=1e-3)
+
+
+def test_a_world_does_not_warn_about_a_cpi_that_ends_with_the_plan() -> None:
+    spec = scenario()  # a linked track of 240 months, held for 120
+    world = make_world(world_spec(spec, MACRO, market=(0.06, 0.1)), 0)
+    assert build(spec, MACRO, Change(world=world))[4] == []

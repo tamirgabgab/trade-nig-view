@@ -128,6 +128,13 @@ def test_simulations_that_cannot_run_say_why(client: TestClient) -> None:
         y={"market": {**MARKET, "assets": [{"symbol": "SPY"}]}}, block_months=120
     )
     assert "runs" in refused(runs=5)
+    # Half a market model is not a model: no guessing which half was meant.
+    assert "both the market's mean and its volatility" in refused(
+        method="monte_carlo", market_mean_pct=6
+    )
+    dollars = {**MARKET, "taxes": {"base": "currency"}}
+    notes = simulate(client, method="monte_carlo", y={"market": dollars}, runs=10)["warnings"]
+    assert any("taxes the nominal gain" in note for note in notes)
     assert "correlation" in refused(correlation=2)
     notes = simulate(client, correlation=0.5)["warnings"]
     assert any("applies only to a modelled market" in note for note in notes)
