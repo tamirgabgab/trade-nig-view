@@ -299,7 +299,7 @@ discipline).
 | **H3a** ✅ 2026-11-26 | Scenarios: modes A, B and A+B, mirrored cash flows (with an independent golden model), rolling historical windows with the effective-sample count, and layer 1 of the metrics (P(A > B) and the median difference, XIRR, breakeven rates, the win map, time-averaged net worth). Tests: known answers (constant returns), P(A > B) = 0.5 for identical sides, a breakeven rate that reproduces equality. | L |
 | **H3b** ✅ 2026-11-26 | Statistics: block bootstrap and Monte Carlo on paired realizations, histograms, percentiles, P(a ≤ X ≤ b) with its interval, and layer 2 (the bad tail, regret, path risks, stochastic dominance, certainty equivalent). Tests: reproducibility by seed, zero regret for identical sides, dominance of X + c over X, the correlations kept by the blocks. | L |
 | **H3c** ✅ 2026-11-26 | Layer 3: the decomposition of the apartment's return, sensitivity, breakeven time, liquidity, the benefit of combining. | M |
-| **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
+| **H4** ✅ 2026-11-26 | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
 | **H5** | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
 
 Order: H0 → H1 → H2 → H3a → H3b → H3c → H4 → H5. H3 is split in three (the user, 2026-11-26) so each round runs at
@@ -312,6 +312,18 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H4 results (2026-11-26, ADR 0024)
+- The user's choices before H4: two options with full forms each, scenarios saved by the local backend.
+- The two options share one set of forms until "Option B is the same as option A" is unticked. This was chosen
+  without asking, after two always-separate options broke the basic comparison: the mix edited in the Market tab
+  was option A's and the market side read option B's. The existing end-to-end tests of the basic comparison pass
+  with their steps unchanged.
+- The page now names each option's mix in the request. A backend test holds that equal to the old request (an
+  apartment option that takes the other's mix) on all three endpoints.
+- Left out: a chart of the net-worth paths of two market accounts (the lead chart already shows both options by
+  exit month), and loading a scenario does not rerun the comparison.
+- H5 keeps: the learn pages, the interest stress test, polish.
 
 ## H3c results (2026-11-26, ADR 0023)
 - The user's choices before H3c: the apartment's return shared by the Shapley value, so the four sources add up

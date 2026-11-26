@@ -28,3 +28,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0021](0021-planner-scenarios.md) | The planner's scenarios: two options on the same money | Accepted |
 | [0022](0022-planner-simulation.md) | The planner's simulation: worlds, block bootstrap and the risk metrics | Accepted |
 | [0023](0023-planner-explain.md) | The planner's layer 3: what the answer depends on | Accepted |
+| [0024](0024-planner-two-options.md) | The planner's two options, saved scenarios and CSV | Accepted |
