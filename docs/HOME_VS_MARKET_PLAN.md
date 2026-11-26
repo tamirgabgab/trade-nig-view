@@ -120,6 +120,20 @@ Notes:
   Phase 4 Day profile, which reuses the same table.
 - **Limits:** a constant volatility, no drift, and time weighting. Real intraday volatility and volume are U-shaped,
   and a volume-weighted fill would sit closer to the open and the close.
+- **The generator (the user's algorithm, reviewed 2026-11-26):** Monte Carlo with rejection (ABC). Simulate random
+  walks of n = 390 steps, normalise each to [0, 1], keep the paths whose start and end lie within δ = 0.025 of
+  (u, v), average them over the purchase window. On (1/3, 2/3) it gives 0.5006 for the whole day, with m(t) = 0.333,
+  0.375, 0.501, 0.622, 0.667 at t = 0, ¼, ½, ¾, 1. It needs 1.5 million paths and 24 s for one bar (1 path in 500
+  is kept), too slow per deposit and per realization. So the same estimator is **amortised**:
+  - one large offline simulation where every path is binned into its own (u, v) cell instead of being rejected;
+  - the symmetries double or quadruple the samples;
+  - m(t) and the quantiles are stored per cell;
+  - a lookup with bilinear interpolation over (u, v) (a first-order correction like the user's step 4, without
+    clipping) and prefix sums over t for any window costs microseconds.
+- **Validation on real data:** daily and hourly bars rebuilt from real 1m bars (the collector's cache), the
+  estimator against the true time-average of the 1m prices, scored together with (H+L)/2, OHLC4 and the close. The
+  same data gives the intraday volatility profile σ(t) (U-shaped). The table can be built with steps of size σ(t):
+  the shape stays scale-free, so it is still one table per profile.
 - **Implementation:**
   - The table is computed offline with a fixed seed (a 20 × 20 (u, v) grid × 21 t points: the mean and the 5/25/50/75/95 %
     quantiles) and committed.
