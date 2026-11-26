@@ -4,23 +4,22 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status:** Phase 1 (R0–R7) complete — 29 indicators: the moving-average family plus Bollinger Bands, RSI, MACD,
-> Stochastic, ATR, OBV, VWAP, Volume SMA, previous-period levels and pivots, oscillators in their own panes, each
-> verified like a DUT against scalar golden models, TA-Lib and property tests. Learn drawer with derived formulas and
-> measured filter responses (L1).
-> U1a done: quiet motion (sliding pills, exit animations, price flashes), undo for removals, legend focus,
-> RSI/Stochastic band shading, half-screen layout and a `?` shortcuts map. U1b done: watchlist sparklines and
-> symbol card with market status, `Ctrl+K` command palette, chart context menu, light/dark theme, chart snapshot.
-> U1c (structural cleanup), R4a and R4b done: drawing tools (lines, rectangle, text, Fib retracement and extension,
-> parallel channel, price/date ranges) with magnet, floating toolbar, settings panel, per-symbol persistence and a
-> trash menu. R5 done: market structure (gaps, previous-period levels, pivots, Data window). R6 done: layouts with autosave, watchlist editing, one undo/redo history, chart settings,
-> object tree. R7 done: bar replay. Phase 1 is complete; next: the Phase-1 review.
-> See [HANDOFF.md](HANDOFF.md) for the live status, [PLAN.md](PLAN.md) for the next sessions and
-> [docs/ROADMAP.md](docs/ROADMAP.md) for the full round specs.
+> **Status (2026-11-26):** Phases 1–3 are complete and the Phase-1 review is done; **Phase 4 (backtesting) is
+> planned** in [docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md).
+> - **Charting:** candles and other chart types, 35 indicators (each verified like a DUT against scalar golden
+>   models, TA-Lib and property tests incl. no lookahead), 20+ drawing tools (lines, Fib, channels, measuring and
+>   statistics tools, the trade plan, patterns, icons), market structure, compare, layouts, undo/redo, bar replay.
+> - **Learning:** a learn page for every indicator with live widgets, event studies and guided replay exercises.
+> - **Research tools:** OHLC forecast with walk-forward validation and forecast-vs-actual, volatility cone, trade
+>   plan probabilities, VaR/ES with backtests, market regime tests.
+> - **Look:** six theme presets, accents, text size, chart backgrounds (static and animated).
+>
+> See [HANDOFF.md](HANDOFF.md) for the live status (Hebrew), [PLAN.md](PLAN.md) for the sequencing and
+> [docs/ROADMAP.md](docs/ROADMAP.md) for the rounds.
 
-![ChartLab shell (R0)](docs/img/shell-r0.png)
+![ChartLab: AAPL daily with Bollinger Bands, RSI and the forecast fan](docs/img/chartlab.png)
 
-The screenshot above still shows the empty R0 shell; a screenshot of the current app (real data) has not been added yet.
+The screenshot uses the synthetic end-to-end fixtures; real data comes from Yahoo (or Tiingo) on the user's machine.
 
 ## Features
 

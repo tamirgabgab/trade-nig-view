@@ -10,6 +10,40 @@
 
 ---
 
+## 00. Review 2 and the Phase-4 plan (2026-11-26)
+
+Since the Phase-1 review: Phase 2 (a learn page for every indicator, labs, glossary, exercises) and Phase 3
+(Return, Statistics, Forecast with forecast-vs-actual and calibration, Volatility, Trade plan, VaR/ES, Regime) are
+complete, plus two UX rounds: U2 appearance (ADR 0015) and U3 chart tools (ADR 0016). 35 indicators, 20+ drawing
+tools.
+
+### 00.1 Review outcome
+- **Versions:** `lightweight-charts` 5.3 (the current v5 line), `yfinance` pinned at 1.8 (ADR 0006: upgrade
+  deliberately), React 19, TypeScript 6.0, Vite 8. No change needed.
+- **Providers:** Yahoo still publishes no limits (429s reported by users; our 2 req/s bucket, backoff, circuit breaker
+  and cache stay). Tiingo free is still 50 requests an hour, 1,000 a day.
+- **Drawings (ADR 0004):** second review: our framework now covers the long tail too; decision unchanged, no further
+  review planned.
+- **Docs:** README (status, a current screenshot), ROADMAP (all rounds since the Phase-1 review), ARCHITECTURE (the
+  analysis engines, stores, chart modules, the hooks for Phases 4–5) and the ADR index updated.
+
+### 00.2 Next: Phase 4
+The round-by-round plan is in [docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md): B0 strategy model and signals, B1 the
+backtest engine, B2 the Strategy tab and trades on the chart, B3 costs and sizing, B4 honest evaluation, B5 watchlist
+runs and screener, B6 learn pages and the replay link. Six questions for the user come before B0.
+
+### 00.3 Open items
+| # | Item | Status |
+|---|---|---|
+| O1 | Real Yahoo fixtures (`.\scripts\make-fixtures.ps1`) | open (user) |
+| O2 | `nvda_gaps.json` hand check, `tv_crosscheck.json` values | open (user, after O1) |
+| O5 | Deferred frontend upgrades (lucide-react, typescript-eslint, react-query) | after 2026-12-07 |
+| O6 | The 1h fixture window leaves Yahoo's 730 days in mid-2028 | calendar |
+| O7 | Known UX debt: `%` mode with indicators, MACD/MA Cross legend dimming, RSI pane labels, chart type per symbol | backlog |
+| O8 | Alerts and the Calendar tab (the last "coming" buttons) | later |
+
+---
+
 ## 0. Phase-1 review and the Phase-2 plan (2026-11-23)
 
 Phase 1 (R0–R7, plus L1 and the UX rounds U1a–U1c) is complete: 29 indicators verified as DUTs, 14 drawing tools,

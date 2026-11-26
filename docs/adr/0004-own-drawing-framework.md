@@ -36,3 +36,10 @@ As built (differs from the Decision text above): **one** series primitive, `char
 renders all drawings through its `paneViews`; there is no primitive per drawing, no primitive `hitTest` and no
 price/time axis views. Hit-testing is pure TS (`drawings/shapes.ts` `hitTest`, called by `DrawingManager`), shared with
 the canvas renderer. Phase 1 ships 14 tools (not ~12). Sources: github.com/deepentropy/lightweight-charts-drawing/releases, pkgstats.com.
+
+## Second review (2026-11-26)
+Our framework now holds 20+ tools, the long tail included (XABCD, ABCD, head and shoulders, icons), an eraser and a
+zoom box, all through `DrawingManager` with pure, unit-tested geometry (`shapes.ts`, `patterns.ts`). Adopting a
+library would now replace working code rather than add tools. **Decision unchanged; no further review planned**
+unless a needed tool (e.g. Gann) turns out to be expensive to build.
+

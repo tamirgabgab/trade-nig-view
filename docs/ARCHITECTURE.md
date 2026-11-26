@@ -75,8 +75,8 @@ flowchart LR
 | `data/providers/` | `DataProvider` protocol + implementations (`yahoo.py`, `tiingo.py`, `fixtures.py`) |
 | `data/cache/` | `BarCache` (SQLite), coverage bookkeeping (what was requested, when, from which provider) |
 | `data/` (`bar_service.py`, `resample.py`, `sessions.py`, `validate.py`, `adjust.py`, `ratelimit.py`, `universe.py`) | Orchestration: cache → provider → validate; per request: truncate(`until`) → adjust → resample (session-anchored for intraday, `sessions.py`) → transform → window(`before`, `limit`) |
-| `indicators/` | One file per indicator (pure function) + `registry.py` (spec dataclasses, param validation) + `catalog.py` (the 29 registered specs) + `ma.py` (`MA_TYPES` dispatcher) + `core.py` (sources, filters and rolling primitives) |
-| `analysis/` | Filter response of an indicator (`response.py`, L1), Heikin Ashi transform, gaps (`gaps.py`, R5). Pivots and previous-period levels are registry indicators (`indicators/pivots.py`, `prev_hlc.py`); an indicator's `display_shift` draws its outputs left of their (causal) bar |
+| `indicators/` | One file per indicator (pure function) + `registry.py` (spec dataclasses, param validation) + `catalog.py` (the 35 registered specs) + `ma.py` (`MA_TYPES` dispatcher) + `core.py` (sources, filters and rolling primitives) |
+| `analysis/` | Filter response (`response.py`, L1), Heikin Ashi (`transforms.py`), gaps (`gaps.py`, R5); the learn lab: synthetic scenarios (`synthetic.py`), rule conditions (`conditions.py`) and event studies (`events.py`); the Phase-3 engines: OHLC forecast (`forecast.py`, ADR 0010), volatility (`volatility.py`, ADR 0011), trade plan (`trade_plan.py`, ADR 0012), VaR/ES (`risk.py`, ADR 0013), market regime (`regime.py`, ADR 0014). Pivots and previous-period levels are registry indicators (`indicators/pivots.py`, `prev_hlc.py`); an indicator's `display_shift` draws its outputs left of their (causal) bar |
 | `storage/` | SQLite repositories for watchlists, layouts, drawings (`app.db`), schema migrations |
 
 ### Frontend modules (`frontend/src/`)
@@ -84,11 +84,11 @@ flowchart LR
 | Module | Responsibility |
 |---|---|
 | `api/` | Fetch client, generated TS types from the backend OpenAPI schema (`openapi-typescript`), query hooks |
-| `chart/` | `ChartEngine` (create/destroy chart, panes, series, scale modes, crosshair events, time conversion), `theme.ts`; primitives and helpers: `drawingLayer`, `gapLayer`, `replayLayer`, `bandFill`, `timeZone`, `visibleRange`, `seriesData`, `chartTypes`, `rafLatest` |
+| `chart/` | `ChartEngine` (create/destroy chart, panes, series, scale modes, crosshair and pointer events, time conversion, compare lines, watermark, zoom box), `theme.ts` (canvas colours from the CSS tokens); primitives and helpers: `drawingLayer`, `gapLayer`, `replayLayer`, `forecastLayer`, `backgroundLayer`, `bandFill`, `timeZone`, `visibleRange`, `seriesData`, `chartTypes`, `rafLatest`. The canvas is transparent over a DOM `ChartBackdrop` (ADR 0015) |
 | (indicators) | No folder of its own: `components/IndicatorsDialog`, `IndicatorLegend`, `IndicatorSettingsPanel` (generated from the registry `params` schema), `useChartIndicators`, `indicatorActions`; `api/indicators.ts`; `store/indicatorStore.ts` |
-| `drawings/` | Pure TS, unit-tested: `anchors`, `fib`, `geometry`, `manager` (`DrawingManager`), `measure`, `render`, `shapes` (hit-testing), `snap`, `types`. Tool definitions live in `components/drawingTools.ts`; properties UI = `DrawingFloatToolbar`, `DrawingSettingsPanel`, `FibLevelsTable` |
-| `components/` | Shell: `TopToolbar`, `DrawingToolbar`, `RightSidebar`, `Watchlist`, `BottomBar`, `SymbolSearchDialog`, `CommandPalette`, `DataWindow`, `GapsPanel`, `ObjectTree`, `ReplayBar`, `LayoutMenu`, `SettingsDialog`, other dialogs; `LearnDrawer` (lazy-loaded: `LearnPage` renders Markdown + KaTeX, `FilterView` + `ResponsePlot` draw the measured response as SVG) |
-| `store/` | Zustand stores: `chartStore` (symbol, interval, chart type, scale; persisted to localStorage), `chartDataStore` (what the chart shows, published for the side panels), `indicatorStore`, `drawingStore`, `historyStore` (undo/redo), `layoutStore` + `layoutSync`, `replayStore`, `settingsStore`, `structureStore`, `themeStore`, `uiStore`, `watchlistStore` |
+| `drawings/` | Pure TS, unit-tested: `anchors`, `fib`, `geometry`, `manager` (`DrawingManager`: tools, eraser, zoom box), `measure`, `returnStats`, `patterns` (XABCD/ABCD ratios), `iconPaths` (Lucide paths), `render`, `shapes` (hit-testing), `snap`, `types`. Tool definitions live in `components/drawingTools.ts`; properties UI = `DrawingFloatToolbar`, `DrawingSettingsPanel`, `FibLevelsTable` |
+| `components/` | Shell: `TopToolbar`, `DrawingToolbar`, `RightSidebar` (Watchlist, Object tree, Data window, Gaps, Statistics, Forecast, Volatility, Trade plan, Risk, Regime tabs), `BottomBar`, `SymbolSearchDialog` (also Compare and watchlist add), `CommandPalette`, `ReplayBar` + `DatePicker`, `LayoutMenu`, `SettingsDialog` (Chart and Appearance), `ChartBackdrop` + `AnimatedBackdrop`, other dialogs; `LearnDrawer` (lazy-loaded: `LearnPage` renders Markdown + KaTeX; `lab/` holds the live widgets: filter view, event studies, the forecast, volatility, risk and regime labs) |
+| `store/` | Zustand stores: `chartStore` (symbol, interval, chart type, scale, compare; persisted to localStorage), `chartDataStore` (what the chart shows, published for the side panels), `indicatorStore`, `drawingStore`, `historyStore` (undo/redo), `layoutStore` + `layoutSync`, `replayStore`, `settingsStore` (chart and appearance settings), `structureStore` (gaps, forecast), `forecastOriginStore`, `volatilityStore`, `themeStore` (presets), `panelWidthStore`, `backdropImageStore`, `uiStore`, `watchlistStore` |
 | `styles/` | CSS custom properties (design tokens), global reset; component styles are CSS Modules |
 
 ## 3. Data flow
@@ -438,11 +438,16 @@ A shared `check_no_lookahead(spec, bars, k)` helper (`tests/golden/harness.py`) 
 - No broker integration, no order routing, no real money — the P5 agent is paper-only by construction (no broker
   adapter interface exists).
 
-## 11. Extensibility hooks for Phases 2–5
+## 11. Extensibility hooks for Phases 4–5
 
-| Phase | Hook already present in Phase 1 |
+Phases 2 (learn pages) and 3 (built-in indicators and tools designed with the user) are complete. What Phase 4
+(backtesting, plan in `docs/PHASE4_PLAN.md`) and Phase 5 (paper agent) build on:
+
+| Need | Already present |
 |---|---|
-| P2 Learn pages | `IndicatorSpec.learn_slug`, `docs/indicators/<slug>.md` pages served by `GET /learn/{slug}`, the learn drawer and `POST /indicators/response` (L1), compute endpoint with arbitrary params |
-| P3 Custom indicators | The registry is a plain dict (`CATALOG` in `indicators/catalog.py`); a plugin loader would add entries to it; same `IndicatorSpec` + same golden harness |
-| P4 Backtester | `BarService.get_bars(until=...)`, pure indicator functions over numpy arrays, `markers` output type, prefix-invariance tests |
-| P5 Paper agent | Replay cursor semantics shared with the backtester clock; no broker interface by design |
+| No lookahead | `BarService.get_bars(until=...)` truncates before adjusting and resampling; every indicator passes `check_no_lookahead` (value at bar t uses bars ≤ t); the replay cursor is the same clock |
+| Signals | Pure indicator functions over numpy arrays (one implementation for chart, learn pages, backtester, agent); `analysis/conditions.py` already evaluates rules (`lt`, `gt`, `crosses_above`, `crosses_below`, on past values) and `analysis/events.py` scores them as event studies |
+| Probabilities | The forecast (quantiles k bars ahead), the volatility engine (HAR forecast), VaR/ES and the regime label are causal and per-bar: usable as filters or sizing inputs |
+| Synthetic markets | `analysis/synthetic.py` scenarios (random walk, trends, regimes, shocks) for known-answer tests |
+| Chart output | `markers` output type, the trade plan drawing's zones, background tints (`background` plot style) |
+| P5 | No broker interface by design; the agent will only ever run on replay windows and delayed data |

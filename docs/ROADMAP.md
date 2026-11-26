@@ -20,7 +20,13 @@
 | R5 | Market structure & reference values | M | ✅ (2026-11-23) |
 | R6 | Persistence, layouts & UX polish | L | ✅ (2026-11-23) |
 | R7 | Bar Replay | M | ✅ (2026-11-23) |
-| Review | Phase-1 review, Phase-2 plan | S | |
+| Review | Phase-1 review, Phase-2 plan | S | ✅ (2026-11-23) |
+| P2 | Education: a learn page for every indicator, labs, glossary, exercises | L | ✅ P2a–P2d (2026-11-24) |
+| P3 | Built-in indicators and tools designed with the user (Return, Statistics, Forecast, Volatility, Trade plan, VaR/ES, Regime) | L | ✅ (2026-11-24 – 2026-11-25) |
+| U2 | Appearance: theme presets, accent, text size, chart backgrounds, heatmap (ADR 0015) | M | ✅ (2026-11-25) |
+| U3 | Chart tools: compare, patterns, icons, eraser, zoom box, Go to date, forecast pointer, animated backgrounds (ADR 0016) | L | ✅ (2026-11-26) |
+| Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
+| P4 | Strategies and backtesting, in rounds B0–B6 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
 
@@ -313,9 +319,10 @@ Phase-2 plan.
 - Deferred: the Python plugin API (`plugins/` folder, hot reload, `chartlab test-indicator`), if ever needed.
 
 ### Phase 4 — Strategies & backtesting
-- Strategy API (on_bar with only past data), event-driven backtester sharing the replay clock, fills at next open by
-  default, commissions/slippage models, position sizing, trade list, equity/drawdown curves, metrics (CAGR, Sharpe,
-  Sortino, max DD, win rate, profit factor, exposure), walk-forward and out-of-sample splits, simple screener.
+- The round-by-round plan is in [PHASE4_PLAN.md](PHASE4_PLAN.md) (2026-11-26): strategy model and signals (B0),
+  the backtest engine (B1), the results tab and trades on the chart (B2), costs, sizing and risk exits (B3), honest
+  evaluation: walk-forward, parameter sweeps and multiple-testing corrections (B4), portfolio and screener (B5), the
+  strategy learn pages and the replay link (B6).
 
 ### Phase 5 — Paper trading agent
 - Rule-based agent first (strategies from P4) running on replay windows and delayed data; later ML/LLM-assisted
