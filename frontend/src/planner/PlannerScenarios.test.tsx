@@ -62,7 +62,14 @@ describe('PlannerScenarios', () => {
     const save = screen.getByRole('button', { name: 'Save scenario' });
     expect(save).toBeDisabled(); // nothing to save it under yet
     usePlannerStore.getState().update({ end: '2030-01-01' });
-    await user.type(screen.getByRole('textbox', { name: 'Scenario name' }), 'New one');
+    // A name the backend cannot keep is refused here, with the reason.
+    const field = screen.getByRole('textbox', { name: 'Scenario name' });
+    await user.type(field, 'a/b');
+    await user.click(save);
+    expect(screen.getByRole('alert')).toHaveTextContent('without "/"');
+    expect(calls).toEqual([]);
+    await user.clear(field);
+    await user.type(field, 'New one');
     await user.click(save);
     const picker = await screen.findByRole('combobox', { name: 'Saved scenario' });
     expect(within(picker).getByRole('option', { name: 'New one' })).toBeInTheDocument();

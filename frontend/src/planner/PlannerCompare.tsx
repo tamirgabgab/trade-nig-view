@@ -12,7 +12,7 @@ import {
 } from '../api/planner.ts';
 import panel from '../components/IndicatorSettingsPanel.module.css';
 import { homesOf, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
-import { formsOf, linked, usePlannerStore, type Slot } from '../store/plannerStore.ts';
+import { formsOf, linked, SLOTS, usePlannerStore } from '../store/plannerStore.ts';
 import { optionNames, toScenario } from './compare.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
@@ -33,7 +33,6 @@ interface Shown {
   run: number;
 }
 const STEPS = [1, 3, 6, 12];
-const SLOTS: readonly Slot[] = ['a', 'b'];
 /** What an option can contain, with the checkbox of each. */
 const CONTENTS = [
   ['home', 'apartment'],

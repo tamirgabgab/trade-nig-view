@@ -1,10 +1,8 @@
 import { useId } from 'react';
 
 import { usePlannerHomeStore } from '../store/plannerHomeStore.ts';
-import { usePlannerStore, type Slot } from '../store/plannerStore.ts';
+import { SLOTS, usePlannerStore, type Slot } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
-
-const SLOTS: readonly Slot[] = ['a', 'b'];
 
 /**
  * Whether the planner's two options share one set of forms, and when they do not, which of

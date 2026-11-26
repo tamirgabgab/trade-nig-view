@@ -126,6 +126,7 @@ export function toRequest(form: PlannerForm): MarketRequest {
 
 /** The planner compares two options; each has a market form and an apartment form of its own. */
 export type Slot = 'a' | 'b';
+export const SLOTS: readonly Slot[] = ['a', 'b'];
 
 /** What an option is made of in the comparison (its mix is always its own Market tab's). */
 export interface OptionContents {

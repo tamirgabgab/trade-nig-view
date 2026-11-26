@@ -43,6 +43,11 @@ export function PlannerScenarios() {
       });
   };
   const save = () => {
+    // The name is the scenario's address: the backend takes no "/" and no name of dots only.
+    if (typed.includes('/') || /^\.+$/.test(typed)) {
+      setError('Use a name without "/" that is not only dots.');
+      return;
+    }
     act(async () => {
       await saveScenario(typed, existing?.revision ?? 0, captureScenario(presets));
       await client.invalidateQueries({ queryKey: KEY });
@@ -76,7 +81,7 @@ export function PlannerScenarios() {
           <input
             className={panel.control}
             type="text"
-            maxLength={80}
+            maxLength={60}
             value={name}
             onChange={(event) => {
               setName(event.target.value);
