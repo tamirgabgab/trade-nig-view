@@ -30,7 +30,7 @@ describe('CsvButton', () => {
         ]}
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Download deposits as CSV' }));
+    await user.click(screen.getByRole('button', { name: 'Download CSV: deposits' }));
     expect(clicked).toEqual(['deposits.csv|blob:test']);
     expect(blobs[0]?.type).toBe('text/csv;charset=utf-8');
     // Reading a blob as text drops the byte-order mark: it is checked in the bytes.

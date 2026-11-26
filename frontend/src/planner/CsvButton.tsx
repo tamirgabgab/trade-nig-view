@@ -31,10 +31,10 @@ export function CsvButton({ name, headers, rows }: CsvButtonProps) {
     <button
       type="button"
       className={panel.secondary}
-      aria-label={`Download ${name} as CSV`}
+      aria-label={`Download CSV: ${name}`}
       onClick={download}
     >
-      CSV
+      Download CSV
     </button>
   );
 }

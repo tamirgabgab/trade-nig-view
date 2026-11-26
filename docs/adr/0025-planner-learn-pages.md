@@ -86,3 +86,16 @@ price and a probability; `m`, `s`, `a`, `b` and `X` each mean two or three thing
     reset, and a reset after the planned sale would read as "no risk".
   - Only prime and variable tracks move. A plan without one has no stress rows, and the page says why.
   - It is a what-if on the rate alone: the CPI, the value and the rent stay as entered.
+- **Polish (a UX audit of the Planner against the project's profile).** Three things changed:
+  - making option B the same as option A again asks first when B's forms differ from A's, since they would be
+    replaced ("Replace option B with option A" / "Keep both options");
+  - the download buttons read "Download CSV" (a verb first), named "Download CSV: exit months" for a screen reader;
+  - a note right above a grid of fields keeps its distance from the first row.
+  Left as they are, by the profile: native checkboxes with their labels as the hit target, "Reset inputs" without a
+  confirmation (the forms are a draft, not saved work), and no phone layout (the profile supports 960 px and up).
+
+## Consequences
+- A page's numbers cannot drift from the engine without a failing test; its prose still can, and is reviewed by
+  reading.
+- The pages are English, like the rest of the app's UI.
+- Adding a ninth page means adding its slug to the test's list, its sections in order, and its pinned example.

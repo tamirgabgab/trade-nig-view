@@ -300,7 +300,7 @@ discipline).
 | **H3b** ✅ 2026-11-26 | Statistics: block bootstrap and Monte Carlo on paired realizations, histograms, percentiles, P(a ≤ X ≤ b) with its interval, and layer 2 (the bad tail, regret, path risks, stochastic dominance, certainty equivalent). Tests: reproducibility by seed, zero regret for identical sides, dominance of X + c over X, the correlations kept by the blocks. | L |
 | **H3c** ✅ 2026-11-26 | Layer 3: the decomposition of the apartment's return, sensitivity, breakeven time, liquidity, the benefit of combining. | M |
 | **H4** ✅ 2026-11-26 | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
-| **H5** | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
+| **H5** ✅ 2026-11-26 | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
 
 Order: H0 → H1 → H2 → H3a → H3b → H3c → H4 → H5. H3 is split in three (the user, 2026-11-26) so each round runs at
 high effort: every metric gets its known-answer test before its code, and each round has its own review. After H1 the market side is usable on its own (through the API); after H4 the
@@ -312,6 +312,17 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H5 results (2026-11-26, ADR 0025)
+- The user's choices before H5: eight learn pages, each with a short derivation; above all clear equations and the
+  meaning of every variable.
+- A test checks each page's section order and that every formula is followed by its symbol table; another writes
+  each worked example as plain arithmetic, holds it equal to the engine and looks its numbers up in the page.
+- One notation for all eight pages (the ADR's table): the code's own letters collided across modules.
+- The stress test raises the Bank of Israel rate from the second month on and reports the highest payment over the
+  whole term, so a reset after the planned sale still shows.
+- The district dwelling indices needed nothing: they are in the "Region of the index" field since H2 (from 2017-10).
+- Phase H is complete. Open with the user: a run on real data, and the items left out in H4.
 
 ## H4 results (2026-11-26, ADR 0024)
 - The user's choices before H4: two options with full forms each, scenarios saved by the local backend.

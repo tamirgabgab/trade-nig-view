@@ -358,7 +358,7 @@ test('planner: two options of their own, a saved scenario and a CSV file', async
   await compare.getByRole('button', { name: 'Compare' }).click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    compare.getByRole('button', { name: 'Download exit months as CSV' }).click(),
+    compare.getByRole('button', { name: 'Download CSV: exit months' }).click(),
   ]);
   expect(download.suggestedFilename()).toBe('exit months.csv');
   const stream = await download.createReadStream();

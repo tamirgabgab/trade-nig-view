@@ -29,3 +29,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0022](0022-planner-simulation.md) | The planner's simulation: worlds, block bootstrap and the risk metrics | Accepted |
 | [0023](0023-planner-explain.md) | The planner's layer 3: what the answer depends on | Accepted |
 | [0024](0024-planner-two-options.md) | The planner's two options, saved scenarios and CSV | Accepted |
+| [0025](0025-planner-learn-pages.md) | The planner's learn pages, their notation and the rate stress test | Accepted |

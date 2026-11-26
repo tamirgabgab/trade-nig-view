@@ -659,3 +659,12 @@
   gap: var(--space-2);
   color: var(--color-text);
 }
+
+/* A note right above a grid of fields: the first row keeps its distance. */
+.note + .grid {
+  margin-top: var(--space-3);
+}
+
+.slot .buttons {
+  flex-basis: 100%;
+}

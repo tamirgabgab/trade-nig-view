@@ -61,7 +61,14 @@ describe('PlannerSlot', () => {
     await user.click(same());
     await user.click(option('B'));
     usePlannerHomeStore.getState().update({ price: 3_000_000 });
+    // Option B's forms differ from A's: they are not replaced without a yes.
     await user.click(same());
+    expect(usePlannerStore.getState().same).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Keep both options' }));
+    expect(homesOf(usePlannerHomeStore.getState()).b.price).toBe(3_000_000);
+    expect(same()).not.toBeChecked();
+    await user.click(same());
+    await user.click(screen.getByRole('button', { name: 'Replace option B with option A' }));
     expect(usePlannerStore.getState()).toMatchObject({ same: true, slot: 'a' });
     expect(usePlannerHomeStore.getState()).toMatchObject({
       slot: 'a',
@@ -72,6 +79,10 @@ describe('PlannerSlot', () => {
     // Apart again, option B is a new copy of option A: its earlier edits are gone.
     await user.click(same());
     expect(homesOf(usePlannerHomeStore.getState()).b.price).toBe(DEFAULT_HOME.price);
+    // Two options that are alike are joined without a question.
+    await user.click(same());
+    expect(screen.queryByRole('button', { name: 'Keep both options' })).not.toBeInTheDocument();
+    expect(usePlannerStore.getState().same).toBe(true);
   });
 
   it('moves between the two with the arrow keys, like any radio group', async () => {
