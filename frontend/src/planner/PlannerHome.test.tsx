@@ -66,6 +66,21 @@ describe('PlannerHome', () => {
     expect(screen.queryByRole('table', { name: 'Mortgage tracks' })).not.toBeInTheDocument();
   });
 
+  it('says so when the plan’s table is gone, and uses the first built-in one', async () => {
+    usePlannerHomeStore.setState({
+      home: { ...DEFAULT_HOME, purchaseTax: { preset: 'a_table_of_2020', edited: null } },
+    });
+    stubApi({ '/api/planner/tax-presets': { body: TAX_PRESETS } });
+    renderWithQuery(<PlannerHome hidden={false} />);
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'no longer there; “Single home (2026)” is used',
+    );
+    expect(screen.getByRole('spinbutton', { name: 'Purchase tax bracket 2 rate %' })).toHaveValue(
+      3.5,
+    );
+    expect(screen.getByRole('button', { name: 'Run' })).toBeEnabled();
+  });
+
   it('never runs without the tax tables', async () => {
     stubApi({ '/api/planner/tax-presets': { status: 503, body: { detail: 'down' } } });
     renderWithQuery(<PlannerHome hidden={false} />);

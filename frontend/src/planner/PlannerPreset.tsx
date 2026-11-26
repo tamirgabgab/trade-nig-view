@@ -34,6 +34,11 @@ export function PlannerPreset({
   const [name, setName] = useState('');
   const own = savedName(preset);
   const note = builtIn.find((p) => p.id === preset)?.note;
+  // A table of an older version, or a saved one that was lost: the first one stands in for it.
+  const lost =
+    note === undefined &&
+    !(own !== null && saved.includes(own)) &&
+    !(allowNone && preset === NO_TAX);
   return (
     <>
       <label className={styles.inline}>
@@ -60,6 +65,11 @@ export function PlannerPreset({
         </select>
       </label>
       {note !== undefined && <p className={styles.note}>{note}</p>}
+      {lost && (
+        <p className={styles.warning} role="status">
+          The table this plan used is no longer there; “{builtIn[0]?.name}” is used. Pick a table.
+        </p>
+      )}
       {edited && (
         <p className={styles.warning}>Changed: save it under a name to use it in other plans.</p>
       )}

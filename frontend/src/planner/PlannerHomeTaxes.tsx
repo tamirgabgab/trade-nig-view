@@ -61,7 +61,8 @@ export function PlannerHomeTaxes() {
         />
         {presets !== undefined && (
           <p className={styles.note}>
-            Built-in tables as of {presets.as_of}. {presets.source}. Defaults, not tax advice.
+            Built-in tables as of {presets.as_of}. {presets.source}. The table is applied whatever
+            the purchase year. Defaults, not tax advice.
           </p>
         )}
       </fieldset>
