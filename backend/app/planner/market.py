@@ -193,8 +193,8 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
 ) -> MarketResult:
     """Run the account (see the module docstring).
 
-    ``session_t[j]`` is the known time of deposit ``j`` inside its daily bar (NaN: unknown);
-    ``fill_override[j, a]`` a fill price already taken from a finer bar (NaN: none).
+    ``session_t[j, a]`` is the known time of deposit ``j`` inside asset ``a``'s daily bar (NaN:
+    unknown); ``fill_override[j, a]`` a fill price already taken from a finer bar (NaN: none).
     """
     if not assets or not deposits:
         raise PlanError("A plan needs at least one asset and one deposit")
@@ -233,7 +233,9 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
         if np.any(i > t_last):
             raise PlanError(f"{asset.symbol} has no bar between a deposit and the end date")
         o, h, lo, c = (x[i] for x in (asset.open, asset.high, asset.low, asset.close))
-        known = None if session_t is None or np.all(np.isnan(session_t)) else session_t
+        if not np.all(np.isfinite(asset.fx[i])):
+            raise PlanError(f"No exchange rate for {asset.symbol} on a deposit day")
+        known = None if session_t is None or np.all(np.isnan(session_t[:, a])) else session_t[:, a]
         price = fill_prices(o, h, lo, c, fill.mode, granularity=fill.granularity, rng=fill.rng)
         if known is not None:
             timed = fill_prices(

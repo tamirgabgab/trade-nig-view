@@ -576,10 +576,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/planner/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asset Depths
+         * @description How far back each ticker's daily history goes (a row with ``error`` for one that fails).
+         */
+        post: operations["asset_depths_api_planner_assets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/market": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Market Plan
+         * @description Deposits into a mix of assets, sold on ``end``: a row per deposit and the totals.
+         */
+        post: operations["run_market_plan_api_planner_market_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AssetDepth */
+        AssetDepth: {
+            /** Symbol */
+            symbol: string;
+            /** Currency */
+            currency?: string | null;
+            /**
+             * First
+             * @description The first daily bar
+             */
+            first?: string | null;
+            /** Last */
+            last?: string | null;
+            /**
+             * Bars
+             * @default 0
+             */
+            bars: number;
+            /**
+             * Has Dividends
+             * @description The adjusted close differs from it
+             * @default false
+             */
+            has_dividends: boolean;
+            /** Error */
+            error?: string | null;
+        };
+        /** AssetIn */
+        AssetIn: {
+            /**
+             * Symbol
+             * @description Any Yahoo ticker
+             */
+            symbol: string;
+            /**
+             * Weight
+             * @description Relative weight in the mix
+             * @default 1
+             */
+            weight: number;
+            /**
+             * Currency
+             * @description Of a ticker outside the universe (the universe knows its own)
+             * @default USD
+             * @enum {string}
+             */
+            currency: "USD" | "ILS";
+            /**
+             * Dividend Yield Pct
+             * @description Assumed yearly dividend yield, for price-only series
+             * @default 0
+             */
+            dividend_yield_pct: number;
+        };
+        /** AssetsRequest */
+        AssetsRequest: {
+            /** Assets */
+            assets: components["schemas"]["AssetIn"][];
+        };
         /** Bar */
         Bar: {
             /**
@@ -771,6 +870,58 @@ export interface components {
             op: "lt" | "gt" | "crosses_above" | "crosses_below";
             right: components["schemas"]["Operand"];
         };
+        /** DepositIn */
+        DepositIn: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Amount
+             * @description Shekels
+             */
+            amount: number;
+            /**
+             * Time
+             * @description Local time of the purchase, if known
+             */
+            time?: string | null;
+        };
+        /** DepositOut */
+        DepositOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Value
+             * @description Market value at the end
+             */
+            value: number;
+            /**
+             * Proceeds
+             * @description After the sell commission
+             */
+            proceeds: number;
+            /**
+             * Gross Gain
+             * @description Proceeds minus the deposit
+             */
+            gross_gain: number;
+            /**
+             * Tax
+             * @description Its share of the capital-gains tax (negative: it offsets)
+             */
+            tax: number;
+            /** Net Gain */
+            net_gain: number;
+            /** Lots */
+            lots: components["schemas"]["LotOut"][];
+        };
         /** Drawing */
         Drawing: {
             /**
@@ -941,6 +1092,36 @@ export interface components {
             /** Drawings */
             drawings: components["schemas"]["Drawing"][];
         };
+        /** FeesIn */
+        FeesIn: {
+            /**
+             * Deposit Pct
+             * @default 0
+             */
+            deposit_pct: number;
+            /**
+             * Buy Pct
+             * @default 0
+             */
+            buy_pct: number;
+            /**
+             * Sell Pct
+             * @default 0
+             */
+            sell_pct: number;
+            /**
+             * Management Pct
+             * @description Of the account's value, a year
+             * @default 0
+             */
+            management_pct: number;
+            /**
+             * Monthly Fee
+             * @description Shekels a month, from the account
+             * @default 0
+             */
+            monthly_fee: number;
+        };
         /**
          * FibLevel
          * @description One Fibonacci level: ratio ``value`` (0 = second anchor for a retracement), shown or not.
@@ -956,6 +1137,23 @@ export interface components {
              */
             visible: boolean;
         };
+        /** FillIn */
+        FillIn: {
+            /** @default close */
+            mode: components["schemas"]["FillMode"];
+            /** @default medium */
+            granularity: components["schemas"]["Granularity"];
+            /**
+             * Seed
+             * @description Draw the unknown times (and prices) with this seed; null: expected
+             */
+            seed?: number | null;
+        };
+        /**
+         * FillMode
+         * @enum {string}
+         */
+        FillMode: "close" | "open" | "mid" | "linear" | "piecewise" | "piecewise_random" | "estimated";
         /** ForecastParams */
         ForecastParams: {
             /**
@@ -1088,6 +1286,11 @@ export interface components {
              */
             gaps: components["schemas"]["GapInfo"][];
         };
+        /**
+         * Granularity
+         * @enum {string}
+         */
+        Granularity: "coarse" | "medium" | "fine";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1214,6 +1417,36 @@ export interface components {
              * @default false
              */
             intraday_only: boolean;
+        };
+        /** InflationIn */
+        InflationIn: {
+            /**
+             * Mode
+             * @default assumed
+             * @enum {string}
+             */
+            mode: "assumed" | "historical";
+            /**
+             * Mean Pct
+             * @default 2.5
+             */
+            mean_pct: number;
+            /**
+             * Sd Pct
+             * @default 0
+             */
+            sd_pct: number;
+            /**
+             * Persistence
+             * @description AR(1) coefficient of the years
+             * @default 0
+             */
+            persistence: number;
+            /**
+             * Seed
+             * @description Draw a path; null: the mean path
+             */
+            seed?: number | null;
         };
         /**
          * Interval
@@ -1560,6 +1793,26 @@ export interface components {
             /** Markdown */
             markdown: string;
         };
+        /** LotOut */
+        LotOut: {
+            /** Symbol */
+            symbol: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Price */
+            price: number;
+            /** Fx */
+            fx: number;
+            /** Units */
+            units: number;
+            /** Cost */
+            cost: number;
+            /** Value */
+            value: number;
+        };
         /** MacroPoint */
         MacroPoint: {
             /** Date */
@@ -1618,6 +1871,89 @@ export interface components {
             warnings: string[];
             /** Points */
             points: components["schemas"]["MacroPoint"][];
+        };
+        /** MarketRequest */
+        MarketRequest: {
+            /** Assets */
+            assets: components["schemas"]["AssetIn"][];
+            /**
+             * Use Fx
+             * @description Convert dollar assets by the USD/ILS rate
+             * @default true
+             */
+            use_fx: boolean;
+            /** Deposits */
+            deposits?: components["schemas"]["DepositIn"][];
+            /** Recurring */
+            recurring?: components["schemas"]["RecurringIn"][];
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * @default {
+             *       "deposit_pct": 0,
+             *       "buy_pct": 0,
+             *       "sell_pct": 0,
+             *       "management_pct": 0,
+             *       "monthly_fee": 0
+             *     }
+             */
+            fees: components["schemas"]["FeesIn"];
+            /**
+             * @default {
+             *       "gains_pct": 25,
+             *       "dividend_pct": 25,
+             *       "base": "nominal"
+             *     }
+             */
+            taxes: components["schemas"]["TaxesIn"];
+            /**
+             * @default {
+             *       "mode": "close",
+             *       "granularity": "medium"
+             *     }
+             */
+            fill: components["schemas"]["FillIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+            /**
+             * Timezone
+             * @description Of the deposit times
+             * @default Asia/Jerusalem
+             */
+            timezone: string;
+        };
+        /** MarketResponse */
+        MarketResponse: {
+            /** Assets */
+            assets: components["schemas"]["AssetDepth"][];
+            /**
+             * Earliest Start
+             * Format: date
+             * @description The first day every asset of the mix has data
+             */
+            earliest_start: string;
+            /**
+             * Fx Market From
+             * @description USD/ILS: Yahoo's rate from this day, the Bank of Israel's before; null when only the Bank of Israel's rate (or none) is used
+             */
+            fx_market_from: string | null;
+            summary: components["schemas"]["Summary"];
+            /** Deposits */
+            deposits: components["schemas"]["DepositOut"][];
+            /** Path */
+            path: components["schemas"]["PathPoint"][];
+            /** Warnings */
+            warnings: string[];
         };
         /**
          * Operand
@@ -1752,6 +2088,18 @@ export interface components {
              */
             requires?: string | null;
         };
+        /** PathPoint */
+        PathPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Value */
+            value: number;
+            /** Deposited */
+            deposited: number;
+        };
         /** PlanSummary */
         PlanSummary: {
             /**
@@ -1855,6 +2203,37 @@ export interface components {
              * @description Highest high of the last 365 days of daily bars
              */
             high_52w: number | null;
+        };
+        /** RecurringIn */
+        RecurringIn: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Amount
+             * @description Shekels per deposit
+             */
+            amount: number;
+            /**
+             * Every Months
+             * @default 1
+             */
+            every_months: number;
+            /**
+             * Count
+             * @default 12
+             */
+            count: number;
+            /**
+             * Indexed
+             * @description Raise the amount yearly with the CPI
+             * @default false
+             */
+            indexed: boolean;
+            /** Time */
+            time?: string | null;
         };
         /** RegimeCell */
         RegimeCell: {
@@ -2185,6 +2564,49 @@ export interface components {
              */
             hit_rate: number | null;
         };
+        /** Summary */
+        Summary: {
+            /** Deposited */
+            deposited: number;
+            /** Value */
+            value: number;
+            /** Proceeds */
+            proceeds: number;
+            /** Gross Gain */
+            gross_gain: number;
+            /** Taxable Gain */
+            taxable_gain: number;
+            /** Tax */
+            tax: number;
+            /** Net Value */
+            net_value: number;
+            /** Net Gain */
+            net_gain: number;
+            /** Deposit Fees */
+            deposit_fees: number;
+            /** Commissions */
+            commissions: number;
+            /** Account Fees */
+            account_fees: number;
+            /** Dividend Tax */
+            dividend_tax: number;
+            /** Xirr Gross */
+            xirr_gross: number | null;
+            /** Xirr Net */
+            xirr_net: number | null;
+            /**
+             * Net Value Real
+             * @description In shekels of the first deposit's day
+             */
+            net_value_real: number;
+            /** Xirr Net Real */
+            xirr_net_real: number | null;
+            /**
+             * Inflation Yearly
+             * @description The CPI's average yearly rate over the plan
+             */
+            inflation_yearly: number;
+        };
         /**
          * SymbolInfo
          * @description One tradable or reference instrument.
@@ -2300,6 +2722,26 @@ export interface components {
              * @enum {string}
              */
             interval: "1D" | "1h";
+        };
+        /**
+         * TaxBase
+         * @enum {string}
+         */
+        TaxBase: "nominal" | "real" | "currency";
+        /** TaxesIn */
+        TaxesIn: {
+            /**
+             * Gains Pct
+             * @default 25
+             */
+            gains_pct: number;
+            /**
+             * Dividend Pct
+             * @default 25
+             */
+            dividend_pct: number;
+            /** @default nominal */
+            base: components["schemas"]["TaxBase"];
         };
         /** TradePlanResponse */
         TradePlanResponse: {
@@ -3733,6 +4175,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MacroSeriesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    asset_depths_api_planner_assets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetDepth"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_market_plan_api_planner_market_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketResponse"];
                 };
             };
             /** @description Validation Error */

@@ -1955,10 +1955,228 @@
           }
         }
       }
+    },
+    "/api/planner/assets": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Asset Depths",
+        "description": "How far back each ticker's daily history goes (a row with ``error`` for one that fails).",
+        "operationId": "asset_depths_api_planner_assets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssetDepth"
+                  },
+                  "type": "array",
+                  "title": "Response Asset Depths Api Planner Assets Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/market": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Run Market Plan",
+        "description": "Deposits into a mix of assets, sold on ``end``: a row per deposit and the totals.",
+        "operationId": "run_market_plan_api_planner_market_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AssetDepth": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "first": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First",
+            "description": "The first daily bar"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars",
+            "default": 0
+          },
+          "has_dividends": {
+            "type": "boolean",
+            "title": "Has Dividends",
+            "description": "The adjusted close differs from it",
+            "default": false
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "title": "AssetDepth"
+      },
+      "AssetIn": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Symbol",
+            "description": "Any Yahoo ticker"
+          },
+          "weight": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Weight",
+            "description": "Relative weight in the mix",
+            "default": 1.0
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "ILS"
+            ],
+            "title": "Currency",
+            "description": "Of a ticker outside the universe (the universe knows its own)",
+            "default": "USD"
+          },
+          "dividend_yield_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Dividend Yield Pct",
+            "description": "Assumed yearly dividend yield, for price-only series",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "title": "AssetIn"
+      },
+      "AssetsRequest": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AssetIn"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "minItems": 1,
+            "title": "Assets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assets"
+        ],
+        "title": "AssetsRequest"
+      },
       "Bar": {
         "properties": {
           "time": {
@@ -2399,6 +2617,96 @@
         ],
         "title": "Condition"
       },
+      "DepositIn": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Shekels"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time",
+            "description": "Local time of the purchase, if known"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "amount"
+        ],
+        "title": "DepositIn"
+      },
+      "DepositOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Market value at the end"
+          },
+          "proceeds": {
+            "type": "number",
+            "title": "Proceeds",
+            "description": "After the sell commission"
+          },
+          "gross_gain": {
+            "type": "number",
+            "title": "Gross Gain",
+            "description": "Proceeds minus the deposit"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax",
+            "description": "Its share of the capital-gains tax (negative: it offsets)"
+          },
+          "net_gain": {
+            "type": "number",
+            "title": "Net Gain"
+          },
+          "lots": {
+            "items": {
+              "$ref": "#/components/schemas/LotOut"
+            },
+            "type": "array",
+            "title": "Lots"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "amount",
+          "value",
+          "proceeds",
+          "gross_gain",
+          "tax",
+          "net_gain",
+          "lots"
+        ],
+        "title": "DepositOut"
+      },
       "Drawing": {
         "properties": {
           "id": {
@@ -2782,6 +3090,48 @@
         "title": "DrawingsUpdate",
         "description": "``PUT`` body: the full list, and the revision it was based on (optimistic locking)."
       },
+      "FeesIn": {
+        "properties": {
+          "deposit_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Deposit Pct",
+            "default": 0.0
+          },
+          "buy_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Buy Pct",
+            "default": 0.0
+          },
+          "sell_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Sell Pct",
+            "default": 0.0
+          },
+          "management_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Management Pct",
+            "description": "Of the account's value, a year",
+            "default": 0.0
+          },
+          "monthly_fee": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Monthly Fee",
+            "description": "Shekels a month, from the account",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "FeesIn"
+      },
       "FibLevel": {
         "properties": {
           "value": {
@@ -2809,6 +3159,45 @@
         ],
         "title": "FibLevel",
         "description": "One Fibonacci level: ratio ``value`` (0 = second anchor for a retracement), shown or not."
+      },
+      "FillIn": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/FillMode",
+            "default": "close"
+          },
+          "granularity": {
+            "$ref": "#/components/schemas/Granularity",
+            "default": "medium"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed",
+            "description": "Draw the unknown times (and prices) with this seed; null: expected"
+          }
+        },
+        "type": "object",
+        "title": "FillIn"
+      },
+      "FillMode": {
+        "type": "string",
+        "enum": [
+          "close",
+          "open",
+          "mid",
+          "linear",
+          "piecewise",
+          "piecewise_random",
+          "estimated"
+        ],
+        "title": "FillMode"
       },
       "ForecastParams": {
         "properties": {
@@ -3095,6 +3484,15 @@
         ],
         "title": "GapsResponse"
       },
+      "Granularity": {
+        "type": "string",
+        "enum": [
+          "coarse",
+          "medium",
+          "fine"
+        ],
+        "title": "Granularity"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3363,6 +3761,55 @@
           "description"
         ],
         "title": "IndicatorInfo"
+      },
+      "InflationIn": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "assumed",
+              "historical"
+            ],
+            "title": "Mode",
+            "default": "assumed"
+          },
+          "mean_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": -20.0,
+            "title": "Mean Pct",
+            "default": 2.5
+          },
+          "sd_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Sd Pct",
+            "default": 0.0
+          },
+          "persistence": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Persistence",
+            "description": "AR(1) coefficient of the years",
+            "default": 0.0
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed",
+            "description": "Draw a path; null: the mean path"
+          }
+        },
+        "type": "object",
+        "title": "InflationIn"
       },
       "Interval": {
         "type": "string",
@@ -4240,6 +4687,50 @@
         ],
         "title": "LearnPage"
       },
+      "LotOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "fx": {
+            "type": "number",
+            "title": "Fx"
+          },
+          "units": {
+            "type": "number",
+            "title": "Units"
+          },
+          "cost": {
+            "type": "number",
+            "title": "Cost"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "date",
+          "price",
+          "fx",
+          "units",
+          "cost",
+          "value"
+        ],
+        "title": "LotOut"
+      },
       "MacroPoint": {
         "properties": {
           "date": {
@@ -4355,6 +4846,157 @@
           "points"
         ],
         "title": "MacroSeriesResponse"
+      },
+      "MarketRequest": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AssetIn"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "minItems": 1,
+            "title": "Assets"
+          },
+          "use_fx": {
+            "type": "boolean",
+            "title": "Use Fx",
+            "description": "Convert dollar assets by the USD/ILS rate",
+            "default": true
+          },
+          "deposits": {
+            "items": {
+              "$ref": "#/components/schemas/DepositIn"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "title": "Deposits"
+          },
+          "recurring": {
+            "items": {
+              "$ref": "#/components/schemas/RecurringIn"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Recurring"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "fees": {
+            "$ref": "#/components/schemas/FeesIn",
+            "default": {
+              "deposit_pct": 0.0,
+              "buy_pct": 0.0,
+              "sell_pct": 0.0,
+              "management_pct": 0.0,
+              "monthly_fee": 0.0
+            }
+          },
+          "taxes": {
+            "$ref": "#/components/schemas/TaxesIn",
+            "default": {
+              "gains_pct": 25.0,
+              "dividend_pct": 25.0,
+              "base": "nominal"
+            }
+          },
+          "fill": {
+            "$ref": "#/components/schemas/FillIn",
+            "default": {
+              "mode": "close",
+              "granularity": "medium"
+            }
+          },
+          "inflation": {
+            "$ref": "#/components/schemas/InflationIn",
+            "default": {
+              "mode": "assumed",
+              "mean_pct": 2.5,
+              "sd_pct": 0.0,
+              "persistence": 0.0
+            }
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "description": "Of the deposit times",
+            "default": "Asia/Jerusalem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assets",
+          "end"
+        ],
+        "title": "MarketRequest"
+      },
+      "MarketResponse": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AssetDepth"
+            },
+            "type": "array",
+            "title": "Assets"
+          },
+          "earliest_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Earliest Start",
+            "description": "The first day every asset of the mix has data"
+          },
+          "fx_market_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fx Market From",
+            "description": "USD/ILS: Yahoo's rate from this day, the Bank of Israel's before; null when only the Bank of Israel's rate (or none) is used"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "deposits": {
+            "items": {
+              "$ref": "#/components/schemas/DepositOut"
+            },
+            "type": "array",
+            "title": "Deposits"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/PathPoint"
+            },
+            "type": "array",
+            "title": "Path"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assets",
+          "earliest_start",
+          "fx_market_from",
+          "summary",
+          "deposits",
+          "path",
+          "warnings"
+        ],
+        "title": "MarketResponse"
       },
       "Operand": {
         "properties": {
@@ -4722,6 +5364,30 @@
         ],
         "title": "ParamInfo"
       },
+      "PathPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "deposited": {
+            "type": "number",
+            "title": "Deposited"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value",
+          "deposited"
+        ],
+        "title": "PathPoint"
+      },
       "PlanSummary": {
         "properties": {
           "paths": {
@@ -4968,6 +5634,59 @@
           "high_52w"
         ],
         "title": "QuoteOut"
+      },
+      "RecurringIn": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Shekels per deposit"
+          },
+          "every_months": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Every Months",
+            "default": 1
+          },
+          "count": {
+            "type": "integer",
+            "maximum": 1200.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "default": 12
+          },
+          "indexed": {
+            "type": "boolean",
+            "title": "Indexed",
+            "description": "Raise the amount yearly with the CPI",
+            "default": false
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "amount"
+        ],
+        "title": "RecurringIn"
       },
       "RegimeCell": {
         "properties": {
@@ -5759,6 +6478,122 @@
         ],
         "title": "StatsBlock"
       },
+      "Summary": {
+        "properties": {
+          "deposited": {
+            "type": "number",
+            "title": "Deposited"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "proceeds": {
+            "type": "number",
+            "title": "Proceeds"
+          },
+          "gross_gain": {
+            "type": "number",
+            "title": "Gross Gain"
+          },
+          "taxable_gain": {
+            "type": "number",
+            "title": "Taxable Gain"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "net_value": {
+            "type": "number",
+            "title": "Net Value"
+          },
+          "net_gain": {
+            "type": "number",
+            "title": "Net Gain"
+          },
+          "deposit_fees": {
+            "type": "number",
+            "title": "Deposit Fees"
+          },
+          "commissions": {
+            "type": "number",
+            "title": "Commissions"
+          },
+          "account_fees": {
+            "type": "number",
+            "title": "Account Fees"
+          },
+          "dividend_tax": {
+            "type": "number",
+            "title": "Dividend Tax"
+          },
+          "xirr_gross": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xirr Gross"
+          },
+          "xirr_net": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xirr Net"
+          },
+          "net_value_real": {
+            "type": "number",
+            "title": "Net Value Real",
+            "description": "In shekels of the first deposit's day"
+          },
+          "xirr_net_real": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xirr Net Real"
+          },
+          "inflation_yearly": {
+            "type": "number",
+            "title": "Inflation Yearly",
+            "description": "The CPI's average yearly rate over the plan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deposited",
+          "value",
+          "proceeds",
+          "gross_gain",
+          "taxable_gain",
+          "tax",
+          "net_value",
+          "net_gain",
+          "deposit_fees",
+          "commissions",
+          "account_fees",
+          "dividend_tax",
+          "xirr_gross",
+          "xirr_net",
+          "net_value_real",
+          "xirr_net_real",
+          "inflation_yearly"
+        ],
+        "title": "Summary"
+      },
       "SymbolInfo": {
         "properties": {
           "symbol": {
@@ -5947,6 +6782,39 @@
           "kind"
         ],
         "title": "SyntheticSource"
+      },
+      "TaxBase": {
+        "type": "string",
+        "enum": [
+          "nominal",
+          "real",
+          "currency"
+        ],
+        "title": "TaxBase"
+      },
+      "TaxesIn": {
+        "properties": {
+          "gains_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Gains Pct",
+            "default": 25.0
+          },
+          "dividend_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Dividend Pct",
+            "default": 25.0
+          },
+          "base": {
+            "$ref": "#/components/schemas/TaxBase",
+            "default": "nominal"
+          }
+        },
+        "type": "object",
+        "title": "TaxesIn"
       },
       "TradePlanResponse": {
         "properties": {

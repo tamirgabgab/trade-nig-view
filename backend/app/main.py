@@ -22,6 +22,7 @@ from app.api import (
     layouts,
     learn,
     macro,
+    planner,
     quotes,
     regime,
     risk,
@@ -125,6 +126,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         risk.router,
         regime.router,
         macro.router,
+        planner.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

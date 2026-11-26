@@ -224,7 +224,10 @@ def test_a_holiday_deposit_buys_on_the_next_bar_and_fills_follow_the_model() -> 
         assert result.lots[0].day == a.days[i]
     # A known time inside the daily bar, and a price already taken from a finer bar.
     timed = run(
-        [a], [Deposit(saturday, 1000.0)], fill=FillSpec(FillMode.LINEAR), session_t=np.array([0.25])
+        [a],
+        [Deposit(saturday, 1000.0)],
+        fill=FillSpec(FillMode.LINEAR),
+        session_t=np.array([[0.25]]),
     )
     assert timed.lots[0].price == pytest.approx(a.open[i] + 0.25 * (a.close[i] - a.open[i]))
     fixed = run([a], [Deposit(saturday, 1000.0)], fill_override=np.array([[42.0]]))
