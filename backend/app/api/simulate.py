@@ -34,6 +34,9 @@ from app.planner.scenario_data import (
 
 router = APIRouter(tags=["planner"])
 
+#: The shares of the money in x that the split is shown for.
+SPLITS = (0.0, 0.25, 0.5, 0.75, 1.0)
+
 
 class SimulateRequest(ScenarioRequest):
     method: Literal["bootstrap", "monte_carlo"] = Field(
@@ -114,6 +117,15 @@ class Samples(BaseModel):
     y_xirr_real: list[float]
 
 
+class SplitOut(BaseModel):
+    """The real end value with the share ``weight`` of the money in x and the rest in y."""
+
+    weight: float
+    p50: float
+    p5: float
+    cvar5: float
+
+
 class SimulateResponse(BaseModel):
     method: str
     runs: int
@@ -126,6 +138,7 @@ class SimulateResponse(BaseModel):
     dominance: risk.Dominance = Field(description="Between the real end values")
     x: OptionRisk
     y: OptionRisk
+    split: list[SplitOut] = Field(description="The same money split between x and y")
     samples: Samples
     warnings: list[str]
 
@@ -278,6 +291,10 @@ def _simulate(
         dominance=risk.dominance(x_sample["wealth_real"], y_sample["wealth_real"]),
         x=x_risk,
         y=y_risk,
+        split=[
+            SplitOut(weight=row.weight, p50=row.p50, p5=row.p5, cvar5=row.cvar5)
+            for row in risk.split(x_sample["wealth_real"], y_sample["wealth_real"], SPLITS)
+        ],
         samples=Samples(
             **{f"x_{name}": _rounded(name, values) for name, values in x_sample.items()},
             **{f"y_{name}": _rounded(name, values) for name, values in y_sample.items()},

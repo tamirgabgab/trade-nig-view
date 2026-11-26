@@ -127,21 +127,25 @@ def test_the_four_contributions_add_up_to_the_apartments_return() -> None:
     parts = decompose(plan, series)
     assert sum(parts[name] for name in COMPONENTS) == pytest.approx(parts["total"], abs=1e-12)
     assert parts["total"] == pytest.approx(run_home(plan, series).xirr, abs=1e-12)
-    # Rent received and a value that rises add; costs and taxes take away. Borrowing at
-    # 3 to 4.5 % against an apartment that earns more than that adds.
+    # Rent received and a value that rises add; costs and taxes take away. The mortgage's
+    # share has no sure sign: it is averaged over the orders in which the apartment does not
+    # yet earn its rent or its appreciation, and there a loan only costs.
     assert parts["appreciation"] > 0
     assert parts["rent"] > 0
     assert parts["costs"] < 0
-    assert parts["leverage"] > 0
     # Without a rent there is nothing for the rent to add.
     quiet = decompose(replace(plan, rent_mode=RentMode.NONE), series)
     assert quiet["rent"] == pytest.approx(0.0, abs=1e-12)
 
 
 def test_an_apartment_that_ends_with_a_debt_returns_minus_everything() -> None:
+    # 5 % of equity, and the value halves: the sale does not cover the loan.
     plan, series = mortgaged()
+    thin = replace(
+        plan, equity=75_000, tracks=[Track(1_425_000, 240, rate=0.045)], rent_mode=RentMode.NONE
+    )
     fallen = replace(series, value=np.concatenate(([1.0], np.full(240, 0.5))))
-    assert home_return(replace(plan, rent_mode=RentMode.NONE), fallen) == -1.0
+    assert home_return(thin, fallen) == -1.0
 
 
 # ---------------------------------------------------------------- a forced sale

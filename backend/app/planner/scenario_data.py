@@ -31,6 +31,12 @@ one realization, under a :class:`Change`:
   breakeven rates: every apartment's value grows by a constant yearly rate; every account holds
   one asset growing by a constant yearly rate in shekels; every track's rate (a prime track's
   spread) moves by a constant; every rent is multiplied.
+* **value_drift**, **market_drift**, **tax_shift**: one input *moved*, for the sensitivity. The
+  path in use (historical, assumed or a world's) is kept and tilted: every apartment's value is
+  multiplied by :math:`(1 + d)^{k/12}` in month :math:`k` (a rent that follows the value follows
+  it), every asset's price by :math:`(1 + d)^{\\text{days}/365.25}` from the first day; the
+  capital-gains tax rate of every account and the betterment tax rate of every apartment move
+  by a constant, held inside 0 to 100 %. A move of nothing is the plan itself.
 """
 
 from __future__ import annotations
@@ -44,6 +50,8 @@ import numpy as np
 from app.models.bars import FloatArray, IntArray
 from app.planner.data import InflationSpec, Macro, cpi_path
 from app.planner.deposits import EPOCH, Deposit, Recurring, add_months, day_number, expand
+from app.planner.explain import Correlation, yearly_correlation
+from app.planner.home import HomeSeries, RentMode
 from app.planner.home_data import MONTH_DAYS, HomeSpec, dwelling_index, home_series, month_days
 from app.planner.inflation import CpiPath, historical_cpi, month_starts
 from app.planner.market import DAYS_PER_YEAR, MAX_STALE_DAYS, AssetData, PlanError
@@ -81,6 +89,9 @@ class Change:
     market_return: float | None = None
     rate_shift: float = 0.0
     rent_scale: float = 1.0
+    value_drift: float = 0.0
+    market_drift: float = 0.0
+    tax_shift: float = 0.0
 
 
 def _date(day: int) -> date:
@@ -172,6 +183,9 @@ def _moved_home(spec: HomeSpec, change: Change, delta: int, macro: Macro) -> Hom
     )
     if change.historical or world is not None:
         plan = replace(plan, betterment=replace(plan.betterment, linear=False))
+    if change.tax_shift:
+        rate = _rate(plan.betterment.rate + change.tax_shift)
+        plan = replace(plan, betterment=replace(plan.betterment, rate=rate))
     if change.appreciation is not None:
         return replace(
             spec,
@@ -191,6 +205,24 @@ def _covers(account: Account, first: int, last: int) -> None:
             raise PlanError(f"{asset.symbol} has no data before {_date(int(asset.days[0]))}")
         if last - asset.days[-1] > MAX_STALE_DAYS:
             raise PlanError(f"{asset.symbol} has no data after {_date(int(asset.days[-1]))}")
+
+
+def _rate(value: float) -> float:
+    """A tax rate held inside 0 to 100 %."""
+    return min(max(value, 0.0), 1.0)
+
+
+def _moved_account(account: Account, change: Change, first: int) -> Account:
+    """The account with its prices tilted from day ``first`` and its gains tax moved."""
+    assets = list(account.assets)
+    if change.market_drift:
+        tilts = [(1.0 + change.market_drift) ** ((a.days - first) / DAYS_PER_YEAR) for a in assets]
+        assets = [
+            replace(a, open=a.open * t, high=a.high * t, low=a.low * t, close=a.close * t)
+            for a, t in zip(assets, tilts, strict=True)
+        ]
+    taxes = replace(account.taxes, gains=_rate(account.taxes.gains + change.tax_shift))
+    return replace(account, assets=assets, taxes=taxes)
 
 
 def asset_key(asset: AssetData) -> str:
@@ -232,6 +264,40 @@ def _world_series(
     return value, anchor
 
 
+def _changed_accounts(
+    spec: ScenarioSpec, change: Change, first: int, end_day: int
+) -> list[Account | None]:
+    """Each option's account under a change: a world's assets, one asset of a constant return,
+    or its own (checked to cover a window of history), then tilted and re-taxed."""
+    accounts = [o.account for o in (spec.x, spec.y)]
+    if change.world is not None:
+        accounts = [None if a is None else _world_account(a, change.world) for a in accounts]
+    elif change.market_return is not None:
+        grown = growing_asset(change.market_return, first, end_day)
+        accounts = [None if a is None else replace(a, assets=[grown]) for a in accounts]
+    elif change.historical:
+        for account in accounts:
+            if account is not None:
+                _covers(account, first, end_day)
+    if change.market_drift or change.tax_shift:
+        accounts = [None if a is None else _moved_account(a, change, first) for a in accounts]
+    return accounts
+
+
+def _series(
+    home: HomeSpec, cpi: CpiPath, macro: Macro, change: Change, number: int
+) -> tuple[HomeSeries, list[str]]:
+    """An apartment's monthly series under a change: from a world when there is one, and with
+    its value tilted by ``value_drift``."""
+    world = change.world
+    value, anchor = (None, None) if world is None else _world_series(home, world, number)
+    if change.value_drift:
+        if value is None:
+            value = home_series(home, cpi, macro, strict=change.historical)[0].value
+        value = value * (1.0 + change.value_drift) ** (np.arange(len(value)) / 12.0)
+    return home_series(home, cpi, macro, strict=change.historical, value=value, anchor=anchor)
+
+
 def build(
     spec: ScenarioSpec, macro: Macro, change: Change = Change()
 ) -> tuple[Side, Side, date, CpiPath, list[str]]:
@@ -255,17 +321,8 @@ def build(
             if h is not None and h.plan.tracks
         ]
     )
-    accounts = [o.account for o in (spec.x, spec.y)]
     world = change.world
-    if world is not None:
-        accounts = [None if a is None else _world_account(a, world) for a in accounts]
-    elif change.market_return is not None:
-        grown = growing_asset(change.market_return, first, end_day)
-        accounts = [None if a is None else replace(a, assets=[grown]) for a in accounts]
-    elif change.historical:
-        for account in accounts:
-            if account is not None:
-                _covers(account, first, end_day)
+    accounts = _changed_accounts(spec, change, first, end_day)
     cpi = world.cpi if world is not None else cpi_path(spec.inflation, first, last, macro)
     if change.historical and spec.inflation.mode == "historical":
         published = int(cpi.days[-1])
@@ -278,10 +335,7 @@ def build(
     ):
         series = None
         if home is not None:
-            value, anchor = (None, None) if world is None else _world_series(home, world, number)
-            series, notes = home_series(
-                home, cpi, macro, strict=change.historical, value=value, anchor=anchor
-            )
+            series, notes = _series(home, cpi, macro, change, number)
             warnings.extend(notes)
         deposits = expand(
             [replace(d, day=add_months(d.day, change.shift)) for d in option.one_off],
@@ -388,6 +442,21 @@ def history_panel(spec: ScenarioSpec, macro: Macro, *, assets: bool) -> Panel | 
     return Panel(months, ratios, rate)
 
 
+def _mix_growth(mix: Sequence[AssetData], ratios: dict[str, FloatArray]) -> FloatArray:
+    """The monthly growth of a mix in shekels, dividends in, its weights restored monthly."""
+    total = sum(a.weight for a in mix)
+    growth = sum(
+        a.weight
+        / total
+        * ratios[f"{asset_key(a)}/close"]
+        * ratios[f"{asset_key(a)}/factor"]
+        * ratios[f"{asset_key(a)}/fx"]
+        * (1.0 + a.dividend_yield) ** (1.0 / 12.0)
+        for a in mix
+    )
+    return np.asarray(growth)
+
+
 def estimate_market(spec: ScenarioSpec) -> tuple[float, float]:
     """The yearly mean growth and volatility, in shekels and with dividends (those in the
     prices, and a price-only asset's assumed yield), of the first account's mix over its
@@ -400,17 +469,7 @@ def estimate_market(spec: ScenarioSpec) -> tuple[float, float]:
     for asset in mix:
         series.update(_asset_series(asset))
     _, ratios = _panel(series)
-    total = sum(a.weight for a in mix)
-    growth = sum(
-        a.weight
-        / total
-        * ratios[f"{asset_key(a)}/close"]
-        * ratios[f"{asset_key(a)}/factor"]
-        * ratios[f"{asset_key(a)}/fx"]
-        * (1.0 + a.dividend_yield) ** (1.0 / 12.0)
-        for a in mix
-    )
-    return estimate(np.asarray(growth))
+    return estimate(_mix_growth(mix, ratios))
 
 
 def world_spec(
@@ -445,3 +504,79 @@ def world_spec(
         rate_now=float(macro.get("boi_rate").data.values[-1]) / 100.0 if rates else None,
         correlation=correlation,
     )
+
+
+def dwelling_correlation(spec: ScenarioSpec, macro: Macro) -> Correlation | None:
+    """The correlation of the yearly returns of the dwelling price index (the first apartment's
+    own when it follows one, the national one otherwise) and the first account's mix in
+    shekels, over the history they share. None without both, or without enough of it."""
+    homes, accounts = _homes(spec), _accounts(spec)
+    if not homes or not accounts:
+        return None
+    name = homes[0].value_series if homes[0].value_mode == "historical" else "dwelling"
+    index = dwelling_index(macro, name)
+    mix = accounts[0].assets
+    series: dict[str, tuple[IntArray, FloatArray]] = {name: (index.days, index.values)}
+    for asset in mix:
+        series.update(_asset_series(asset))
+    try:
+        _, ratios = _panel(series)
+    except PlanError:
+        return None
+    return yearly_correlation(ratios[name], _mix_growth(mix, ratios))
+
+
+@dataclass(frozen=True, slots=True)
+class Move:
+    """One input moved by ``step`` each way: the change of x's end value minus y's (None: the
+    plan cannot run with the move)."""
+
+    input: str
+    step: float
+    down: float | None
+    up: float | None
+
+
+#: The inputs of the sensitivity with their steps: points of a rate, or a share of the rent.
+STEPS = {
+    "appreciation": 0.01,
+    "mortgage_rates": 0.01,
+    "rent": 0.10,
+    "market_return": 0.01,
+    "taxes": 0.05,
+}
+
+
+def _moved(name: str, step: float) -> Change:
+    return {
+        "appreciation": Change(value_drift=step),
+        "mortgage_rates": Change(rate_shift=step),
+        "rent": Change(rent_scale=1.0 + step),
+        "market_return": Change(market_drift=step),
+        "taxes": Change(tax_shift=step),
+    }[name]
+
+
+def sensitivity(spec: ScenarioSpec, macro: Macro) -> list[Move]:
+    """Each input the scenario has, moved down and up by its step, everything else as entered."""
+    homes = [h.plan for h in _homes(spec)]
+    has = {
+        "appreciation": bool(homes),
+        "mortgage_rates": any(h.tracks for h in homes),
+        "rent": any(h.rent_mode is not RentMode.NONE and h.rent > 0 for h in homes),
+        "market_return": bool(_accounts(spec)),
+        "taxes": True,
+    }
+    base = difference(spec, macro, Change())
+
+    def moved(name: str, step: float) -> float | None:
+        try:
+            return difference(spec, macro, _moved(name, step)) - base
+        except PlanError:
+            return None
+
+    return [
+        Move(name, step, moved(name, -step), moved(name, step))
+        for name, step in STEPS.items()
+        if has[name]
+    ]

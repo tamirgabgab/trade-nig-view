@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Callable
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 
+import numpy as np
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -15,6 +17,7 @@ from app.api.planner import (
     InflationIn,
     InvalidPlanError,
     MarketOptionIn,
+    Percent,
     fees_of,
     inflation_spec,
     load_mix,
@@ -24,21 +27,23 @@ from app.api.planner import (
 )
 from app.data.bar_service import BarService
 from app.data.universe import Universe
+from app.errors import DataUnavailableError
 from app.macro.service import MacroService
-from app.planner import study
+from app.planner import explain, study
 from app.planner.data import FxSeries, Macro, MacroMemo
 from app.planner.deposits import add_months, day_number
 from app.planner.home import RentMode
 from app.planner.market import FillSpec, PlanError
-from app.planner.scenario import Account, PairResult, SideResult, run_pair
+from app.planner.scenario import Account, PairResult, Side, SideResult, run_pair
 from app.planner.scenario_data import (
     Change,
     OptionSpec,
     ScenarioSpec,
     build,
     difference,
+    dwelling_correlation,
     first_day,
-    run,
+    sensitivity,
     spending_gap,
     term_months,
 )
@@ -75,6 +80,9 @@ class ScenarioRequest(BaseModel):
     y: OptionIn
     end: dt.date = Field(description="Everything is sold on it (an apartment: on its month date)")
     inflation: InflationIn = InflationIn()
+    forced_discount_pct: Percent = Field(
+        default=10.0, description="Off the apartment's value in a forced sale"
+    )
 
 
 class StudyRequest(ScenarioRequest):
@@ -129,12 +137,62 @@ class AveragePoint(BaseModel):
     date: dt.date
     x: float
     y: float
+    x_forced: float | None = Field(description="With its apartment sold at the discount")
+    y_forced: float | None
 
 
 class AverageOut(BaseModel):
     x: float
     y: float
     points: list[AveragePoint]
+
+
+class DecompositionOut(BaseModel):
+    """The apartment's yearly return and what each source adds to it (they add up)."""
+
+    appreciation: float
+    rent: float
+    leverage: float
+    costs: float
+    total: float
+
+
+class MoveOut(BaseModel):
+    """One input moved by ``step`` each way: the change of x's end value minus y's."""
+
+    input: Literal["appreciation", "mortgage_rates", "rent", "market_return", "taxes"]
+    step: float = Field(description="Points of a yearly rate (0.01), or a share of the rent")
+    down: float | None = Field(description="Null: the plan cannot run with the move")
+    up: float | None
+
+
+class LeadOut(BaseModel):
+    leader: Literal["x", "y"] | None = Field(description="Ahead at the last exit; null: a tie")
+    since_months: int | None = Field(description="The exit month it stays ahead from")
+    x_share: float = Field(description="The share of exit months x is ahead (a tie: half)")
+    step_months: int = Field(description="The exit months checked are this far apart")
+
+
+class OptionLiquidity(BaseModel):
+    cash: float = Field(description="The account, after its tax: available at once")
+    apartment: float | None = Field(description="Its net worth in a normal sale")
+    forced: float | None = Field(description="Its net worth sold at the discount")
+    wealth_forced: float = Field(description="The option's end value with a forced sale")
+
+
+class LiquidityOut(BaseModel):
+    discount: float
+    x: OptionLiquidity
+    y: OptionLiquidity
+
+
+class CorrelationOut(BaseModel):
+    """Between the yearly returns of the dwelling index and of the mix, in shekels."""
+
+    value: float
+    years: int
+    low: float
+    high: float
 
 
 class RunResponse(BaseModel):
@@ -148,6 +206,11 @@ class RunResponse(BaseModel):
     difference_real: float
     breakeven: BreakevenOut
     average: AverageOut = Field(description="Net worth averaged over the exit months")
+    decomposition: DecompositionOut | None = Field(description="Of the first apartment")
+    sensitivity: list[MoveOut]
+    lead: LeadOut
+    liquidity: LiquidityOut
+    correlation: CorrelationOut | None = Field(description="Null: no apartment, or no history")
     warnings: list[str]
 
 
@@ -303,6 +366,48 @@ def _breakevens(spec: ScenarioSpec, macro: Macro) -> BreakevenOut:
     )
 
 
+def _forced(side: Side, result: SideResult, discount: float) -> OptionLiquidity:
+    """What of an option is cash at once, and its end value if the apartment sells low."""
+    cash = 0.0 if result.market is None else result.market.net_value
+    home = result.home
+    if home is None or side.home is None or side.series is None:
+        return OptionLiquidity(cash=cash, apartment=None, forced=None, wealth_forced=result.wealth)
+    normal = float(home.net_worth[-1])
+    forced = explain.forced_sale(side.home, side.series, home, discount)
+    return OptionLiquidity(
+        cash=cash, apartment=normal, forced=forced, wealth_forced=result.wealth - (normal - forced)
+    )
+
+
+def _decomposition(x: Side, y: Side) -> DecompositionOut | None:
+    for side in (x, y):
+        if side.home is not None and side.series is not None:
+            return DecompositionOut(**explain.decompose(side.home, side.series))
+    return None
+
+
+def _lead(average: study.Average, step: int) -> LeadOut:
+    points = average.points
+    found = explain.lead(
+        [p.months for p in points],
+        np.array([p.x for p in points]),
+        np.array([p.y for p in points]),
+    )
+    return LeadOut(
+        leader=found.leader, since_months=found.since, x_share=found.x_share, step_months=step
+    )
+
+
+def _correlation(spec: ScenarioSpec, macro: Macro) -> CorrelationOut | None:
+    try:
+        found = dwelling_correlation(spec, macro)
+    except DataUnavailableError:
+        return None  # an extra: its data missing is not the comparison failing
+    if found is None:
+        return None
+    return CorrelationOut(value=found.value, years=found.years, low=found.low, high=found.high)
+
+
 def _run(
     body: ScenarioRequest, service: BarService, macro: Macro, universe: Universe
 ) -> RunResponse:
@@ -320,7 +425,15 @@ def _run(
     term = term_months(spec)
     step = max(1, -(-term // AVERAGE_POINTS))
     exits = sorted({*range(step, term + 1, step), term})
-    average = study.time_average(lambda months: run(spec, macro, Change(months=months)), exits)
+    discount = body.forced_discount_pct / 100
+    sides: dict[date, tuple[Side, Side]] = {end: (x, y)}
+
+    def exit_after(months: int) -> PairResult:
+        early_x, early_y, sold, path, _ = build(spec, macro, Change(months=months))
+        sides[sold] = (early_x, early_y)
+        return run_pair(early_x, early_y, sold, path)
+
+    average = study.time_average(exit_after, exits)
     if average.skipped:
         warnings.append(
             f"The net worth is averaged over {len(average.points)} of {len(exits)} exit months: "
@@ -340,9 +453,33 @@ def _run(
             x=average.x,
             y=average.y,
             points=[
-                AveragePoint(months=p.months, date=p.end, x=p.x, y=p.y) for p in average.points
+                AveragePoint(
+                    months=p.months,
+                    date=p.end,
+                    x=p.x,
+                    y=p.y,
+                    x_forced=_forced(sides[p.end][0], p.result.x, discount).wealth_forced
+                    if p.result.x.home is not None
+                    else None,
+                    y_forced=_forced(sides[p.end][1], p.result.y, discount).wealth_forced
+                    if p.result.y.home is not None
+                    else None,
+                )
+                for p in average.points
             ],
         ),
+        decomposition=_decomposition(x, y),
+        sensitivity=[
+            MoveOut(input=m.input, step=m.step, down=m.down, up=m.up)  # type: ignore[arg-type]
+            for m in sensitivity(spec, macro)
+        ],
+        lead=_lead(average, step),
+        liquidity=LiquidityOut(
+            discount=discount,
+            x=_forced(x, result.x, discount),
+            y=_forced(y, result.y, discount),
+        ),
+        correlation=_correlation(spec, macro),
         warnings=list(dict.fromkeys(warnings)),
     )
 

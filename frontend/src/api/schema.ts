@@ -827,6 +827,13 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+            /**
+             * X Forced
+             * @description With its apartment sold at the discount
+             */
+            x_forced: number | null;
+            /** Y Forced */
+            y_forced: number | null;
         };
         /** Bar */
         Bar: {
@@ -1089,6 +1096,36 @@ export interface components {
              */
             op: "lt" | "gt" | "crosses_above" | "crosses_below";
             right: components["schemas"]["Operand"];
+        };
+        /**
+         * CorrelationOut
+         * @description Between the yearly returns of the dwelling index and of the mix, in shekels.
+         */
+        CorrelationOut: {
+            /** Value */
+            value: number;
+            /** Years */
+            years: number;
+            /** Low */
+            low: number;
+            /** High */
+            high: number;
+        };
+        /**
+         * DecompositionOut
+         * @description The apartment's yearly return and what each source adds to it (they add up).
+         */
+        DecompositionOut: {
+            /** Appreciation */
+            appreciation: number;
+            /** Rent */
+            rent: number;
+            /** Leverage */
+            leverage: number;
+            /** Costs */
+            costs: number;
+            /** Total */
+            total: number;
         };
         /** DepositIn */
         DepositIn: {
@@ -2292,6 +2329,29 @@ export interface components {
              */
             revision: number;
         };
+        /** LeadOut */
+        LeadOut: {
+            /**
+             * Leader
+             * @description Ahead at the last exit; null: a tie
+             */
+            leader: ("x" | "y") | null;
+            /**
+             * Since Months
+             * @description The exit month it stays ahead from
+             */
+            since_months: number | null;
+            /**
+             * X Share
+             * @description The share of exit months x is ahead (a tie: half)
+             */
+            x_share: number;
+            /**
+             * Step Months
+             * @description The exit months checked are this far apart
+             */
+            step_months: number;
+        };
         /** LearnIndex */
         LearnIndex: {
             /**
@@ -2328,6 +2388,13 @@ export interface components {
             slug: string;
             /** Markdown */
             markdown: string;
+        };
+        /** LiquidityOut */
+        LiquidityOut: {
+            /** Discount */
+            discount: number;
+            x: components["schemas"]["OptionLiquidity"];
+            y: components["schemas"]["OptionLiquidity"];
         };
         /** LotOut */
         LotOut: {
@@ -2569,6 +2636,29 @@ export interface components {
             warnings: string[];
         };
         /**
+         * MoveOut
+         * @description One input moved by ``step`` each way: the change of x's end value minus y's.
+         */
+        MoveOut: {
+            /**
+             * Input
+             * @enum {string}
+             */
+            input: "appreciation" | "mortgage_rates" | "rent" | "market_return" | "taxes";
+            /**
+             * Step
+             * @description Points of a yearly rate (0.01), or a share of the rent
+             */
+            step: number;
+            /**
+             * Down
+             * @description Null: the plan cannot run with the move
+             */
+            down: number | null;
+            /** Up */
+            up: number | null;
+        };
+        /**
          * Operand
          * @description Exactly one of ``{indicator, output}``, ``{price}`` or ``{value}``.
          */
@@ -2603,6 +2693,29 @@ export interface components {
             home?: components["schemas"]["HomeOptionIn"] | null;
             /** @description Its mix and its own deposits (none: only the top-ups) */
             market?: components["schemas"]["MarketOptionIn"] | null;
+        };
+        /** OptionLiquidity */
+        OptionLiquidity: {
+            /**
+             * Cash
+             * @description The account, after its tax: available at once
+             */
+            cash: number;
+            /**
+             * Apartment
+             * @description Its net worth in a normal sale
+             */
+            apartment: number | null;
+            /**
+             * Forced
+             * @description Its net worth sold at the discount
+             */
+            forced: number | null;
+            /**
+             * Wealth Forced
+             * @description The option's end value with a forced sale
+             */
+            wealth_forced: number;
         };
         /** OptionOut */
         OptionOut: {
@@ -3403,6 +3516,14 @@ export interface components {
             breakeven: components["schemas"]["BreakevenOut"];
             /** @description Net worth averaged over the exit months */
             average: components["schemas"]["AverageOut"];
+            /** @description Of the first apartment */
+            decomposition: components["schemas"]["DecompositionOut"] | null;
+            /** Sensitivity */
+            sensitivity: components["schemas"]["MoveOut"][];
+            lead: components["schemas"]["LeadOut"];
+            liquidity: components["schemas"]["LiquidityOut"];
+            /** @description Null: no apartment, or no history */
+            correlation: components["schemas"]["CorrelationOut"] | null;
             /** Warnings */
             warnings: string[];
         };
@@ -3475,6 +3596,12 @@ export interface components {
              *     }
              */
             inflation: components["schemas"]["InflationIn"];
+            /**
+             * Forced Discount Pct
+             * @description Off the apartment's value in a forced sale
+             * @default 10
+             */
+            forced_discount_pct: number;
         };
         /** ScheduleRow */
         ScheduleRow: {
@@ -3518,6 +3645,12 @@ export interface components {
              *     }
              */
             inflation: components["schemas"]["InflationIn"];
+            /**
+             * Forced Discount Pct
+             * @description Off the apartment's value in a forced sale
+             * @default 10
+             */
+            forced_discount_pct: number;
             /**
              * Method
              * @description The market: resampled from history in blocks, or drawn from a model
@@ -3603,9 +3736,28 @@ export interface components {
             dominance: "x_first" | "x_second" | "y_first" | "y_second" | "equal" | "none";
             x: components["schemas"]["OptionRisk"];
             y: components["schemas"]["OptionRisk"];
+            /**
+             * Split
+             * @description The same money split between x and y
+             */
+            split: components["schemas"]["SplitOut"][];
             samples: components["schemas"]["Samples"];
             /** Warnings */
             warnings: string[];
+        };
+        /**
+         * SplitOut
+         * @description The real end value with the share ``weight`` of the money in x and the rest in y.
+         */
+        SplitOut: {
+            /** Weight */
+            weight: number;
+            /** P50 */
+            p50: number;
+            /** P5 */
+            p5: number;
+            /** Cvar5 */
+            cvar5: number;
         };
         /** StatsBlock */
         StatsBlock: {
@@ -3645,6 +3797,12 @@ export interface components {
              *     }
              */
             inflation: components["schemas"]["InflationIn"];
+            /**
+             * Forced Discount Pct
+             * @description Off the apartment's value in a forced sale
+             * @default 10
+             */
+            forced_discount_pct: number;
             /**
              * First Start
              * @description The first start to try

@@ -30,6 +30,11 @@ When neither holds either way the answer depends on the investor.
 :math:`CE = u^{-1}(\\overline{u(W)})`: the sure amount worth as much as the gamble. Undefined
 when any :math:`W \\le 0` (ruin).
 
+**The same money in both.** Both options put in the same money, so a share :math:`w` of it in
+X and the rest in Y ends at :math:`w X + (1 - w) Y` in each realization (an indication: half an
+apartment cannot be bought, and fixed fees and tax brackets do not scale). Its percentiles
+against those of X and Y alone show whether holding both lowers the risk.
+
 **One path.** The max drawdown is the deepest fall from a running peak,
 :math:`\\max_t (\\text{peak}_t - v_t) / \\text{peak}_t`. A year's return takes the money put in
 out of the growth (modified Dietz, the money counted from mid-year):
@@ -40,6 +45,8 @@ return of zero.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
@@ -131,3 +138,22 @@ def sortino(returns: FloatArray) -> float | None:
     """The mean return over the root mean square of the losses (None without a loss)."""
     downside = float(np.sqrt(np.mean(np.minimum(returns, 0.0) ** 2))) if len(returns) else 0.0
     return None if downside == 0.0 else float(np.mean(returns)) / downside
+
+
+@dataclass(frozen=True, slots=True)
+class SplitRow:
+    #: The share of the money in x.
+    weight: float
+    p50: float
+    p5: float
+    cvar5: float
+
+
+def split(x: FloatArray, y: FloatArray, weights: Sequence[float]) -> list[SplitRow]:
+    """The end values of the same money split between x and y, for each share in x."""
+    rows: list[SplitRow] = []
+    for weight in weights:
+        mixed = weight * x + (1.0 - weight) * y
+        p5, _, p50, _, _ = percentiles(mixed)
+        rows.append(SplitRow(weight, p50, p5, cvar(mixed)))
+    return rows

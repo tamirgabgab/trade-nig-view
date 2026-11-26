@@ -84,6 +84,7 @@ class Point:
     end: date
     x: float
     y: float
+    result: PairResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,7 +201,7 @@ def time_average(run: Callable[[int], PairResult], months: Iterable[int]) -> Ave
         except PlanError:
             skipped += 1
             continue
-        points.append(Point(held, result.end, result.x.wealth, result.y.wealth))
+        points.append(Point(held, result.end, result.x.wealth, result.y.wealth, result))
     if not points:
         raise PlanError("The plan cannot run over any of the exit months")
     return Average(

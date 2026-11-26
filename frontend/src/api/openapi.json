@@ -2475,6 +2475,29 @@
           "y": {
             "type": "number",
             "title": "Y"
+          },
+          "x_forced": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X Forced",
+            "description": "With its apartment sold at the discount"
+          },
+          "y_forced": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y Forced"
           }
         },
         "type": "object",
@@ -2482,7 +2505,9 @@
           "months",
           "date",
           "x",
-          "y"
+          "y",
+          "x_forced",
+          "y_forced"
         ],
         "title": "AveragePoint"
       },
@@ -3078,6 +3103,69 @@
           "right"
         ],
         "title": "Condition"
+      },
+      "CorrelationOut": {
+        "properties": {
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "years": {
+            "type": "integer",
+            "title": "Years"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "years",
+          "low",
+          "high"
+        ],
+        "title": "CorrelationOut",
+        "description": "Between the yearly returns of the dwelling index and of the mix, in shekels."
+      },
+      "DecompositionOut": {
+        "properties": {
+          "appreciation": {
+            "type": "number",
+            "title": "Appreciation"
+          },
+          "rent": {
+            "type": "number",
+            "title": "Rent"
+          },
+          "leverage": {
+            "type": "number",
+            "title": "Leverage"
+          },
+          "costs": {
+            "type": "number",
+            "title": "Costs"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "appreciation",
+          "rent",
+          "leverage",
+          "costs",
+          "total"
+        ],
+        "title": "DecompositionOut",
+        "description": "The apartment's yearly return and what each source adds to it (they add up)."
       },
       "DepositIn": {
         "properties": {
@@ -5582,6 +5670,56 @@
         "title": "LayoutUpdate",
         "description": "``PUT`` body: the whole layout, and the revision it was based on (optimistic locking)."
       },
+      "LeadOut": {
+        "properties": {
+          "leader": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "x",
+                  "y"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leader",
+            "description": "Ahead at the last exit; null: a tie"
+          },
+          "since_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since Months",
+            "description": "The exit month it stays ahead from"
+          },
+          "x_share": {
+            "type": "number",
+            "title": "X Share",
+            "description": "The share of exit months x is ahead (a tie: half)"
+          },
+          "step_months": {
+            "type": "integer",
+            "title": "Step Months",
+            "description": "The exit months checked are this far apart"
+          }
+        },
+        "type": "object",
+        "required": [
+          "leader",
+          "since_months",
+          "x_share",
+          "step_months"
+        ],
+        "title": "LeadOut"
+      },
       "LearnIndex": {
         "properties": {
           "pages": {
@@ -5677,6 +5815,27 @@
           "markdown"
         ],
         "title": "LearnPage"
+      },
+      "LiquidityOut": {
+        "properties": {
+          "discount": {
+            "type": "number",
+            "title": "Discount"
+          },
+          "x": {
+            "$ref": "#/components/schemas/OptionLiquidity"
+          },
+          "y": {
+            "$ref": "#/components/schemas/OptionLiquidity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "discount",
+          "x",
+          "y"
+        ],
+        "title": "LiquidityOut"
       },
       "LotOut": {
         "properties": {
@@ -6146,6 +6305,58 @@
         ],
         "title": "MarketResponse"
       },
+      "MoveOut": {
+        "properties": {
+          "input": {
+            "type": "string",
+            "enum": [
+              "appreciation",
+              "mortgage_rates",
+              "rent",
+              "market_return",
+              "taxes"
+            ],
+            "title": "Input"
+          },
+          "step": {
+            "type": "number",
+            "title": "Step",
+            "description": "Points of a yearly rate (0.01), or a share of the rent"
+          },
+          "down": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Down",
+            "description": "Null: the plan cannot run with the move"
+          },
+          "up": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Up"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input",
+          "step",
+          "down",
+          "up"
+        ],
+        "title": "MoveOut",
+        "description": "One input moved by ``step`` each way: the change of x's end value minus y's."
+      },
       "Operand": {
         "properties": {
           "indicator": {
@@ -6242,6 +6453,52 @@
         "type": "object",
         "title": "OptionIn",
         "description": "One option: an apartment, a market account, or both. An empty option is a mirror: it\ninvests whatever the other option spends, in the other's asset mix."
+      },
+      "OptionLiquidity": {
+        "properties": {
+          "cash": {
+            "type": "number",
+            "title": "Cash",
+            "description": "The account, after its tax: available at once"
+          },
+          "apartment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apartment",
+            "description": "Its net worth in a normal sale"
+          },
+          "forced": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forced",
+            "description": "Its net worth sold at the discount"
+          },
+          "wealth_forced": {
+            "type": "number",
+            "title": "Wealth Forced",
+            "description": "The option's end value with a forced sale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cash",
+          "apartment",
+          "forced",
+          "wealth_forced"
+        ],
+        "title": "OptionLiquidity"
       },
       "OptionOut": {
         "properties": {
@@ -8046,6 +8303,41 @@
             "$ref": "#/components/schemas/AverageOut",
             "description": "Net worth averaged over the exit months"
           },
+          "decomposition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecompositionOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Of the first apartment"
+          },
+          "sensitivity": {
+            "items": {
+              "$ref": "#/components/schemas/MoveOut"
+            },
+            "type": "array",
+            "title": "Sensitivity"
+          },
+          "lead": {
+            "$ref": "#/components/schemas/LeadOut"
+          },
+          "liquidity": {
+            "$ref": "#/components/schemas/LiquidityOut"
+          },
+          "correlation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CorrelationOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null: no apartment, or no history"
+          },
           "warnings": {
             "items": {
               "type": "string"
@@ -8066,6 +8358,11 @@
           "difference_real",
           "breakeven",
           "average",
+          "decomposition",
+          "sensitivity",
+          "lead",
+          "liquidity",
+          "correlation",
           "warnings"
         ],
         "title": "RunResponse"
@@ -8209,6 +8506,14 @@
               "sd_pct": 0.0,
               "persistence": 0.0
             }
+          },
+          "forced_discount_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Forced Discount Pct",
+            "description": "Off the apartment's value in a forced sale",
+            "default": 10.0
           }
         },
         "type": "object",
@@ -8286,6 +8591,14 @@
               "sd_pct": 0.0,
               "persistence": 0.0
             }
+          },
+          "forced_discount_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Forced Discount Pct",
+            "description": "Off the apartment's value in a forced sale",
+            "default": 10.0
           },
           "method": {
             "type": "string",
@@ -8463,6 +8776,14 @@
           "y": {
             "$ref": "#/components/schemas/OptionRisk"
           },
+          "split": {
+            "items": {
+              "$ref": "#/components/schemas/SplitOut"
+            },
+            "type": "array",
+            "title": "Split",
+            "description": "The same money split between x and y"
+          },
           "samples": {
             "$ref": "#/components/schemas/Samples"
           },
@@ -8487,10 +8808,40 @@
           "dominance",
           "x",
           "y",
+          "split",
           "samples",
           "warnings"
         ],
         "title": "SimulateResponse"
+      },
+      "SplitOut": {
+        "properties": {
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "p50": {
+            "type": "number",
+            "title": "P50"
+          },
+          "p5": {
+            "type": "number",
+            "title": "P5"
+          },
+          "cvar5": {
+            "type": "number",
+            "title": "Cvar5"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weight",
+          "p50",
+          "p5",
+          "cvar5"
+        ],
+        "title": "SplitOut",
+        "description": "The real end value with the share ``weight`` of the money in x and the rest in y."
       },
       "StatsBlock": {
         "properties": {
@@ -8577,6 +8928,14 @@
               "sd_pct": 0.0,
               "persistence": 0.0
             }
+          },
+          "forced_discount_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Forced Discount Pct",
+            "description": "Off the apartment's value in a forced sale",
+            "default": 10.0
           },
           "first_start": {
             "anyOf": [

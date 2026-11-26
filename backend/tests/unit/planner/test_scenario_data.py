@@ -357,7 +357,7 @@ def test_the_sensitivity_moves_each_input_both_ways() -> None:
     spec = scenario()
     assert spec.x.home is not None
     low = [replace(t, rate=0.005) for t in spec.x.home.plan.tracks if t.kind is RateKind.FIXED]
-    cheap = replace(spec.x.home, plan=replace(spec.x.home.plan, tracks=low, equity=1_200_000))
+    cheap = replace(spec.x.home, plan=replace(spec.x.home.plan, tracks=low, equity=900_000))
     rates = {m.input: m for m in sensitivity(replace(spec, x=replace(spec.x, home=cheap)), MACRO)}[
         "mortgage_rates"
     ]
