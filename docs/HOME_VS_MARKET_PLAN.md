@@ -5,7 +5,8 @@ money, with history and with statistics. This phase runs **before Phase 4** (the
 their numbers.
 
 ## What the user asked for (summary)
-- **Market side:** deposits on chosen dates (one-off, or recurring such as 2,000 ₪ a month for 10 years), with or
+- **Market side:** a mix of symbols (S&P 500 by default; e.g. 60 % S&P 500, 30 % Nasdaq, 10 % Apple), deposits on
+  chosen dates (one-off, or recurring such as 2,000 ₪ a month for 10 years), with or
   without the USD/ILS rate (with: shekels are converted to dollars at each deposit and back at the end; without: the
   asset is treated as if it were priced in shekels). Accurate to the day, to the hour where possible.
 - **A table per deposit:** buy price, sell price, gross and net profit (capital-gains tax, 25 % by default and
@@ -24,7 +25,7 @@ their numbers.
 | Series | Source | Frequency | From | Use |
 |---|---|---|---|---|
 | USD/ILS official rate (`EXR/RER_USD_ILS`) | Bank of Israel SDMX API | daily | 1980-01-02 | converting deposits and the final value |
-| Consumer price index, general (`PRI/CP`) | Bank of Israel (CBS data) | monthly | 1951-09 | real returns, CPI-linked mortgage tracks, rent indexation |
+| Consumer price index, general (`PRI/CP`) | Bank of Israel (CBS data) | monthly | 1951-09 | optional: the "historical CPI from 1994" inflation mode (the default inflation is assumed, below) |
 | Dwelling price index, national, quality-adjusted (`REAL_ES_DF/IND_FLT_M`), and by district (`IND_FLT_TELAVIV_M`, `…_CENTER_M`, `…_HAIFA_M`, `…_JERUSALEM_M`, `…_NORTH_M`, `…_SOUTH_M`) | Bank of Israel (CBS data) | monthly | 1994-01 | the historical apartment value |
 | Mortgage rates by track (`BIR_MRTG_99`, about 114 series) | Bank of Israel | monthly | (to map in H0) | historical rates of new mortgages per track |
 | Bank of Israel interest rate (`BR`) | Bank of Israel | — | (to map in H0) | prime = BoI rate + 1.5 % |
@@ -61,17 +62,73 @@ Notes:
 
 ## Conventions (defaults, each open to change)
 **Market side**
-- A deposit on date d buys at **d's close** (the next trading day's close if the market was shut). With a time of
-  day and a date inside the ~2-year 1h window, it buys at that hour's bar.
+- **The asset mix:** S&P 500 by default (total return), or any mix of universe symbols with weights summing to 100 %.
+  Each deposit is split by the weights. **No rebalancing** by default; a yearly rebalance is an option, and its
+  sales realise gains that are taxed when they happen.
+  - Each symbol is marked price-only (`^GSPC`, `^NDX`) or total return (an adjusted close such as `SPY`, `QQQ`).
+  - The feasible start range is the latest inception date in the mix (QQQ starts in 1999); the UI shows it.
+- **The fill price** of a deposit (the section below explains the model): the day's **close** by default; options are
+  the open, a known time of day, the expected price at an unknown time, and a random time drawn from the model.
 - **With FX:** units = ILS ÷ rate(d) ÷ price(d); value at t = units × price(t) × rate(t). **Without FX:**
   units = ILS ÷ price(d), value = units × price(t).
+- **Fees** (all 0 by default, each editable):
+  - **deposit fee (%):** taken off each deposit before it buys;
+  - **buy and sell commission (%):** added to the cost basis at a buy, taken off the proceeds at a sale, so they lower
+    the taxable gain;
+  - **yearly management fee (%):** accrues monthly on the value and is paid by selling units;
+  - **monthly account fee (₪):** paid from the account by selling units (the user's choice), so the deposits stay as
+    planned and the fee shows as a lower value.
 - **Dividends:** reinvested through the adjusted close (total-return series). A dividend tax drag (e.g. 25 % of the
   yield) is an option, off by default.
-- **Fees:** buy commission (% or fixed), yearly management fee (%), both 0 by default.
 - **Tax:** at the sale on t, on the **sum of the gains of all lots** (a loss in one lot offsets gains in another), at
-  25 % by default (editable). The default base is the **nominal gain in shekels**; a **real** gain (CPI-indexed) is an
-  option. The UI states that this is a model and not tax advice.
-- **The table per deposit:** date, ILS in, rate, price, units, value at t, gross gain, its share of the tax, net gain.
+  25 % by default (editable). The base is the **nominal** gain in shekels by default, or the **real** gain (the cost
+  indexed by the model's CPI, below). The UI states that this is a model and not tax advice.
+- **The table per deposit:** date, ILS in, fees, rate, fill price, units, value at t, gross gain, its share of the
+  tax, net gain.
+
+### The fill price inside a bar (the user's f(t) question)
+Inside a bar the data gives only f(0) = O, f(1) = C, max f = H and min f = L. The model: the (log) price inside the
+bar is a driftless Brownian motion. Normalised to the bar's range, the path's shape given u = (O − L)/(H − L) and
+v = (C − L)/(H − L) does **not** depend on the volatility (Brownian scaling). So the conditional law of f(t) given
+(O, H, L, C) is a table over (u, v, t), computed once by simulation.
+
+A first simulation (2026-11-26: 400,000 paths of 390 one-minute steps, a separate 200,000 for testing) measured each
+estimator's error in units of the bar's range:
+
+| What is estimated | Estimator | RMSE |
+|---|---|---|
+| The price at an unknown time (the bar's time-average) | close or open | 0.33 |
+| | (O + C)/2 | 0.19 |
+| | OHLC4 = (O + H + L + C)/4 | 0.12 |
+| | **(H + L)/2** | **0.073** |
+| | the conditional table over (u, v) | 0.069 |
+| The price at a known time t (0.25, 0.5, 0.75) | linear from O to C | 0.29–0.32 |
+| | (H + L)/2 | 0.23–0.24 |
+| | **the conditional table over (u, v, t)** | **0.21** |
+
+Notes:
+- HLC3 = (H + L + C)/3 is biased on trending bars (0.63 instead of 0.50 on a bar that rose from near L to near H).
+- **The price at a uniformly random time** has a standard deviation of about 0.23–0.27 of the range, with 90 % of it
+  between 0.08 and 0.92. A uniform draw on [L, H] (the user's first idea) is close but slightly too wide (0.289).
+  Drawing between the close and the max is biased.
+- **The biggest gain is finer data, not a better formula:** the fill uses the finest bar that contains the purchase
+  time (1m inside the last 30 days, 5m inside 60 days, 1h inside about 2 years), so the estimation error shrinks to
+  that bar's range.
+- **Size of the effect:** a random fill's error is about 0.25 × the bar's range. For a daily bar of about 1–1.5 % (an
+  assumption, to be measured from the data in H1), that is about 0.3 % per deposit, and it averages out: with 120
+  monthly deposits about 0.03 % of the end value. The fill rule matters for one large deposit, and later for the
+  Phase 4 Day profile, which reuses the same table.
+- **Limits:** a constant volatility, no drift, and time weighting. Real intraday volatility and volume are U-shaped,
+  and a volume-weighted fill would sit closer to the open and the close.
+- **Implementation:**
+  - The table is computed offline with a fixed seed (a 20 × 20 (u, v) grid × 21 t points: the mean and the 5/25/50/75/95 %
+    quantiles) and committed.
+  - Tests check two symmetries: reflection, (u, v) → (1 − u, 1 − v) gives 1 − value; and time reversal, swapping u
+    and v with t → 1 − t.
+  - A bar with H = L (old close-only data) falls back to its close.
+- **Fill options:** the close [default]; the open (realistic for an order placed in Israel before the US opens); a
+  known time of day (the finest bar, then the (u, v, t) table); the expected price at an unknown time (the (u, v)
+  table); a random time (a draw from the conditional law, new in every realization).
 
 **Mortgage (up to 3 tracks)**
 - Each track has an amount, a term, an **interest type** (fixed unlinked, fixed CPI-linked, prime = BoI rate +
@@ -80,15 +137,16 @@ Notes:
   - **Equal principal:** principal $L/n$ a month plus the interest on the balance;
   - **Grace:** $g$ months of interest only, then Spitzer over $n-g$;
   - **Balloon:** interest only and the principal at the end (or a partial balloon).
-- **CPI-linked** tracks: the balance is multiplied by the CPI ratio each month, and the payment is recomputed.
+- **CPI-linked** tracks: the balance is multiplied by the model CPI's ratio each month (below), and the payment is
+  recomputed.
 - **Prime:** the historical BoI rate in historical mode, an assumed path (a constant, or a shock of +2 or +3 %) in
   assumed mode.
 - **The amortization table per track:** month, payment, interest, principal, CPI linkage, balance, and a sum of all
   tracks. A sale at t repays the remaining balance (an early-repayment fee is a parameter, 0 by default).
 
 **Apartment**
-- **Price and equity;** the loan = price − equity. Purchase costs: purchase tax (an amount or %, 0 by default: it
-  depends on the buyer and the year), lawyer and broker (%), renovation.
+- **Price and equity;** the loan = price − equity. Purchase costs: **purchase tax** by a bracket table (presets
+  below, editable and saved), lawyer and broker (%), renovation.
 - **Owner costs:** maintenance (% of value a year), insurance.
 - **Rent switch:** *live in it* (the rent saved; the market side pays rent) or *rent it out* (the income, minus
   vacancy and a rent tax %). Rent grows with the CPI or with the dwelling index.
@@ -97,8 +155,39 @@ Notes:
     real correlation is kept;
   - **assumed:** lognormal with a yearly mean and σ, monthly steps, a correlation ρ with the stock returns (0 by
     default), plus an optional single-apartment σ on top of the index.
-- **At a sale on t:** selling costs (%) and a betterment-tax % (0 by default, typical of a single home).
+- **At a sale on t:** selling costs (%) and **betterment tax** (presets below).
 - **Net worth** = value − remaining mortgage balance − selling costs − tax on the sale (+ the market account, in A+B).
+
+**Taxes on the apartment (presets: editable, saved, each with its source and validity date)**
+- **Purchase tax:** a bracket table, tax = Σ rate_k × (the part of the price inside bracket k). Saved as documents
+  (`DocumentStore("tax_presets")`); the user creates, edits and saves their own tables. Built-in presets, from
+  secondary sources (2026-11-26) to be checked against the Tax Authority's table in H2:
+  - **Single home (2026):** 0 % up to 1,978,745 ₪; 3.5 % to 2,347,040; 5 % to 6,055,070; 8 % to 20,183,565; 10 %
+    above. The brackets are frozen (not CPI-updated) until 2028-01-15.
+  - **Additional home (2026):** 8 % up to 6,055,070 ₪, 10 % above. A temporary provision until 2026-12-31.
+  - In historical mode the chosen table applies in every year, stated in the UI.
+- **Betterment tax** is not a bracket schedule in the law. The default model follows the law's parameters:
+  - **rate:** 25 % of the real gain (sale − purchase − recognised costs, the cost indexed by the model's CPI);
+  - **single-home exemption:** on or off, with its ceiling (about 5 million ₪, to be checked in H2);
+  - **the linear rule:** for a home bought before 2014, the share of the gain from before 2014-01-01 is taxed at 0 %,
+    by days held.
+  - Presets: "single home (exempt up to the ceiling)" and "additional home (25 % of the real gain)".
+  - The user's choice adds a **custom bracket table** on the gain, like the purchase tax, for any other assumption.
+
+**Inflation (the model CPI)**
+- **Default: assumed.** The user sets a yearly mean μ and standard deviation σ, and optionally a persistence φ
+  (AR(1); φ = 0 gives independent years). Each year's rate is
+  $\pi_y = \mu + \phi(\pi_{y-1} - \mu) + \sigma\sqrt{1-\phi^2}\,\varepsilon_y$, $\varepsilon_y \sim N(0,1)$,
+  spread evenly over its months: $\text{CPI}_m = \text{CPI}_{m-1}(1+\pi_y)^{1/12}$, $\text{CPI}_0 = 100$.
+  - Persistence matters because real inflation runs in multi-year waves. Independent years understate the spread
+    over 20 years.
+  - The UI shows how the index is built: the formula, one sample path and the band of many paths.
+- **Option in historical mode: the actual CPI from 1994.** The dwelling index and the historical prime already
+  contain Israel's actual inflation, so an assumed CPI in the same window would mix two inflations. From 1994 the
+  series has no hyperinflation years: a yearly mean of 3.0 % (σ 3.6 %, from 14.5 % in 1994 to −1.9 % in 2003); from
+  2000, a mean of 1.75 % (σ 2.0 %). Earlier years are never used.
+- **The model CPI drives:** the CPI-linked mortgage tracks, the real tax bases (market and betterment), rent
+  indexation (when chosen), and the "real" results.
 
 **Fair comparison (mirrored cash flows)**
 - Both sides spend the **same money at the same dates**. At the start, the market side invests the equity plus the
@@ -152,9 +241,9 @@ Notes:
 ## Rounds
 | Round | What | Size |
 |---|---|---|
-| **H0** | Macro data: `app/macro`, BoI source, cache, fixtures, `GET /macro/series`. Check `^SP500TR`, `SPY` and `^TA125.TA` depth on the user's machine (`make-fixtures`). ADR 0018. | M |
-| **H1** | Market engine: deposit schedules, lots, FX on/off, fees, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots, XIRR against known cash flows, "no FX" equals FX at a constant rate. | M |
-| **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0019. | L |
+| **H0** | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
+| **H1** | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the fill model and its (u, v, t) table, the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, the fill table's symmetries, the CPI generator's mean, σ and autocorrelation. | L |
+| **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0019. | L |
 | **H3** | Scenarios and statistics: modes A, B and A+B, mirrored cash flows, rolling windows, block bootstrap, Monte Carlo, every metric above, histograms and P(a ≤ X ≤ b) with its interval. Tests: known answers (constant returns), bootstrap reproducibility by seed, the effective-sample count, P(A > B) = 0.5 for identical sides. | L |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
 | **H5** | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
@@ -165,12 +254,17 @@ whole page works.
 ## Risks
 - **Total-return history before 1993** depends on Yahoo's `^SP500TR`, unverified from here.
 - **The dwelling index starts in 1994;** apartment realizations before that are assumed-only.
-- **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase tax brackets) are modelled as
-  parameters with defaults, not as tax advice.
+- **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
+  are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
 
-## Questions still open (defaults in brackets)
-1. The default market asset: [S&P 500 total return in USD with FX], TA-125 in ILS, or any universe symbol.
-2. The tax base: [nominal gain in shekels] or real.
-3. The purchase tax: [entered by the user] or the current brackets built in.
-4. The deposit time: [the day's close], or also an hour when the date is inside the 1h window.
+## Decisions (the user, 2026-11-26)
+- Rent: a switch, live in it or rent it out. The mortgage: a mix of up to three tracks. The apartment value: both the
+  historical index and an assumed one. The phase runs before Phase 4.
+- The market asset: S&P 500 by default, or a mix of symbols; no rebalancing by default.
+- The tax base: nominal or real, the user's choice.
+- Inflation: assumed (μ, σ, persistence) by default; the actual CPI from 1994 as an option in historical mode.
+- Purchase tax: bracket presets (single home, additional home), editable and saved.
+- Betterment tax: the law's parameters by default, and custom brackets as an option.
+- Fees: deposit %, buy and sell commission %, yearly management %, a monthly account fee in ₪ paid from the account.
+- The fill: the day's close by default, with the model-based options above.
