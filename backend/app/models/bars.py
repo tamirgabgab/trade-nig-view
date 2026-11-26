@@ -4,7 +4,7 @@ Conventions (see docs/ARCHITECTURE.md section 6):
 
 * ``time`` is UTC epoch seconds. For daily and longer bars it is the **session date at 00:00 UTC**
   (so ``time // 86400`` is the day number since 1970-01-01), independent of the exchange time zone.
-  For intraday bars (``1h``, ``4h``) it is the real UTC instant the bar **starts**.
+  For intraday bars (``1m`` … ``4h``) it is the real UTC instant the bar **starts**.
 * ``open/high/low/close`` are **split-adjusted only** (what TradingView shows with ADJ off).
 * ``adj_close`` is split **and** dividend adjusted; ``adj_close / close`` is the dividend factor.
 * Arrays are sorted by ``time``, strictly increasing, all the same length.
@@ -32,10 +32,17 @@ SECONDS_PER_DAY = 86_400
 class Interval(StrEnum):
     """Bar intervals served by the API.
 
-    ``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and
-    ``1W``/``1M`` from ``1D``.
+    Four are downloaded (the *base* intervals): ``1m``, ``5m``, ``1h`` and ``1D``. ``2m`` is
+    resampled from ``1m``; ``15m``, ``30m`` and ``90m`` from ``5m``; ``4h`` from ``1h``; ``1W`` and
+    ``1M`` from ``1D``.
     """
 
+    MIN1 = "1m"
+    MIN2 = "2m"
+    MIN5 = "5m"
+    MIN15 = "15m"
+    MIN30 = "30m"
+    MIN90 = "90m"
     H1 = "1h"
     H4 = "4h"
     D1 = "1D"
@@ -44,12 +51,43 @@ class Interval(StrEnum):
 
     @property
     def is_intraday(self) -> bool:
-        return self in (Interval.H1, Interval.H4)
+        return self in _INTRADAY_SECONDS
+
+    @property
+    def seconds(self) -> int:
+        """Length of an intraday bar in seconds (ValueError for daily and longer)."""
+        if self not in _INTRADAY_SECONDS:
+            raise ValueError(f"{self} is not an intraday interval")
+        return _INTRADAY_SECONDS[self]
 
     @property
     def base(self) -> Interval:
         """The downloaded interval this one is derived from."""
-        return Interval.H1 if self.is_intraday else Interval.D1
+        return _BASE.get(self, Interval.D1)
+
+
+_INTRADAY_SECONDS: dict[Interval, int] = {
+    Interval.MIN1: 60,
+    Interval.MIN2: 120,
+    Interval.MIN5: 300,
+    Interval.MIN15: 900,
+    Interval.MIN30: 1800,
+    Interval.MIN90: 5400,
+    Interval.H1: 3600,
+    Interval.H4: 14_400,
+}
+_BASE: dict[Interval, Interval] = {
+    Interval.MIN1: Interval.MIN1,
+    Interval.MIN2: Interval.MIN1,
+    Interval.MIN5: Interval.MIN5,
+    Interval.MIN15: Interval.MIN5,
+    Interval.MIN30: Interval.MIN5,
+    Interval.MIN90: Interval.MIN5,
+    Interval.H1: Interval.H1,
+    Interval.H4: Interval.H1,
+}
+#: The intervals that are downloaded and cached.
+BASE_INTERVALS = frozenset({Interval.MIN1, Interval.MIN5, Interval.H1, Interval.D1})
 
 
 def date_to_ts(day: date) -> int:

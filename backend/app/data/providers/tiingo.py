@@ -21,7 +21,7 @@ import numpy as np
 
 from app.data.providers.base import ProviderError, RateLimitedError
 from app.data.ratelimit import TokenBucket
-from app.models.bars import SECONDS_PER_DAY, BarFrame
+from app.models.bars import SECONDS_PER_DAY, BarFrame, Interval
 from app.models.symbols import SymbolInfo
 
 BASE_URL = "https://api.tiingo.com"
@@ -100,9 +100,11 @@ class TiingoProvider:
             raise ProviderError(f"Unexpected Tiingo response for {symbol.symbol}")
         return frame_from_prices(payload)  # pyright: ignore[reportUnknownArgumentType]
 
-    def supports_hourly(self, symbol: SymbolInfo) -> bool:
+    def supports_intraday(self, symbol: SymbolInfo, base: Interval) -> bool:
         # Tiingo intraday (IEX) carries IEX-only volume, not consolidated bars: not used.
         return False
 
-    def fetch_hourly(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
-        raise ProviderError("Tiingo does not provide 1h bars in ChartLab")
+    def fetch_intraday(
+        self, symbol: SymbolInfo, base: Interval, start: date, end: date
+    ) -> BarFrame:
+        raise ProviderError(f"Tiingo does not provide {base} bars in ChartLab")

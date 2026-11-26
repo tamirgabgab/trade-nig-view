@@ -19,7 +19,7 @@ router = APIRouter(tags=["bars"])
 class Bar(BaseModel):
     time: str | int = Field(
         description="Daily and longer: session date 'YYYY-MM-DD'. "
-        "Intraday (1h, 4h): UTC epoch seconds of the bar start."
+        "Intraday (1m … 4h): UTC epoch seconds of the bar start."
     )
     open: float
     high: float
@@ -38,6 +38,14 @@ class BarsResponse(BaseModel):
     stale: bool = Field(description="True if a refresh failed and cached data is served")
     has_more_before: bool = Field(description="Older bars exist (request with an earlier end)")
     warnings: list[str]
+    history_start: int | None = Field(
+        description="UTC epoch seconds of the oldest bar of this interval that exists (cached), "
+        "before paging; null without bars"
+    )
+    provider_window_days: int | None = Field(
+        description="Intraday only: days of this interval the provider keeps; older bars exist "
+        "only where the local cache collected them"
+    )
     bars: list[Bar]
 
 
@@ -102,5 +110,7 @@ def get_bars(
         stale=result.stale,
         has_more_before=result.has_more_before,
         warnings=list(result.warnings),
+        history_start=result.history_start,
+        provider_window_days=result.provider_window_days,
         bars=bars,
     )

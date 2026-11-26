@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, timedelta
+from itertools import pairwise
 from pathlib import Path
 
 import httpx2
@@ -14,19 +15,19 @@ from app.data.providers.fixtures import (
     FixtureProvider,
     fixture_filename,
     read_fixture,
-    read_hourly_fixture,
+    read_intraday_fixture,
     write_fixture,
-    write_hourly_fixture,
+    write_intraday_fixture,
 )
 from app.data.providers.tiingo import TiingoProvider, frame_from_prices
 from app.data.providers.yahoo import (
-    HOURLY_MAX_DAYS,
+    INTRADAY_MAX_DAYS,
     YahooProvider,
     frame_from_history,
-    frame_from_hourly_history,
+    frame_from_intraday_history,
 )
 from app.data.ratelimit import TokenBucket
-from app.models.bars import BarFrame, date_to_ts, ts_to_iso_dates
+from app.models.bars import BarFrame, Interval, date_to_ts, ts_to_iso_dates
 from app.models.symbols import SymbolInfo
 from tests.conftest import FIXTURES_DIR
 from tests.unit.data.factories import bars
@@ -114,14 +115,14 @@ def yahoo_hourly_frame() -> pd.DataFrame:
 
 
 def test_yahoo_hourly_frame_uses_utc_bar_starts() -> None:
-    frame = frame_from_hourly_history(yahoo_hourly_frame())
+    frame = frame_from_intraday_history(yahoo_hourly_frame())
     # 09:30 New York (EST) is 14:30 UTC.
     assert frame.time[1] == date_to_ts(date(2026, 11, 20)) + 14 * 3600 + 1800
     assert frame.close.tolist() == [349.21, 351.0, 341.0]
     assert frame.adj_close.tolist() == frame.close.tolist()
     assert frame.volume.tolist() == [5e6, 12e6, 9e6]
-    assert len(frame_from_hourly_history(pd.DataFrame())) == 0
-    no_volume = frame_from_hourly_history(yahoo_hourly_frame().drop(columns=["Volume"]))
+    assert len(frame_from_intraday_history(pd.DataFrame())) == 0
+    no_volume = frame_from_intraday_history(yahoo_hourly_frame().drop(columns=["Volume"]))
     assert no_volume.volume.tolist() == [0.0, 0.0, 0.0]
 
 
@@ -129,21 +130,21 @@ def test_yahoo_hourly_frame_needs_a_time_zone() -> None:
     history = yahoo_hourly_frame()
     history.index = pd.DatetimeIndex(history.index).tz_localize(None)
     with pytest.raises(ProviderError, match="time zone"):
-        frame_from_hourly_history(history)
+        frame_from_intraday_history(history)
 
 
 def test_yahoo_hourly_pads_the_request_and_cuts_to_utc_dates() -> None:
     calls: list[tuple[str, date, date]] = []
 
-    def fake_hourly(ticker: str, start: date, end: date) -> pd.DataFrame:
+    def fake_hourly(ticker: str, start: date, end: date, interval: str) -> pd.DataFrame:
         calls.append((ticker, start, end))
         return yahoo_hourly_frame()
 
     provider = YahooProvider(
-        hourly_history=fake_hourly, bucket=NO_WAIT, today=lambda: date(2026, 11, 22)
+        intraday_history=fake_hourly, bucket=NO_WAIT, today=lambda: date(2026, 11, 22)
     )
-    assert provider.supports_hourly(AAPL)
-    frame = provider.fetch_hourly(AAPL, date(2026, 11, 20), date(2026, 11, 20))
+    assert provider.supports_intraday(AAPL, Interval.H1)
+    frame = provider.fetch_intraday(AAPL, Interval.H1, date(2026, 11, 20), date(2026, 11, 20))
     assert calls == [("AAPL", date(2026, 11, 19), date(2026, 11, 22))]
     assert len(frame) == 2  # the 2026-11-19 bar is outside the requested UTC dates
 
@@ -151,19 +152,45 @@ def test_yahoo_hourly_pads_the_request_and_cuts_to_utc_dates() -> None:
 def test_yahoo_hourly_never_asks_past_the_730_day_limit() -> None:
     calls: list[tuple[str, date, date]] = []
 
-    def fake_hourly(ticker: str, start: date, end: date) -> pd.DataFrame:
+    def fake_hourly(ticker: str, start: date, end: date, interval: str) -> pd.DataFrame:
         calls.append((ticker, start, end))
         return pd.DataFrame()
 
     today = date(2026, 11, 22)
-    provider = YahooProvider(hourly_history=fake_hourly, bucket=NO_WAIT, today=lambda: today)
+    provider = YahooProvider(intraday_history=fake_hourly, bucket=NO_WAIT, today=lambda: today)
     oldest = date(2024, 11, 23)
-    assert (today - oldest).days == HOURLY_MAX_DAYS
-    provider.fetch_hourly(AAPL, date(2020, 1, 1), today)
+    assert (today - oldest).days == INTRADAY_MAX_DAYS[Interval.H1]
+    provider.fetch_intraday(AAPL, Interval.H1, date(2020, 1, 1), today)
     assert calls[0][1] == oldest
     # A range that ends before the limit is not requested at all.
-    assert len(provider.fetch_hourly(AAPL, date(2020, 1, 1), date(2021, 1, 1))) == 0
+    assert len(provider.fetch_intraday(AAPL, Interval.H1, date(2020, 1, 1), date(2021, 1, 1))) == 0
     assert len(calls) == 1
+
+
+def test_yahoo_1m_requests_are_split_into_week_chunks_inside_30_days() -> None:
+    calls: list[tuple[date, date, str]] = []
+
+    def fake(ticker: str, start: date, end: date, interval: str) -> pd.DataFrame:
+        calls.append((start, end, interval))
+        return yahoo_hourly_frame()
+
+    today = date(2026, 11, 22)
+    provider = YahooProvider(intraday_history=fake, bucket=NO_WAIT, today=lambda: today)
+    assert provider.supports_intraday(AAPL, Interval.MIN1)
+    assert provider.supports_intraday(AAPL, Interval.MIN5)
+    assert not provider.supports_intraday(AAPL, Interval.MIN15)  # resampled, never downloaded
+    provider.fetch_intraday(AAPL, Interval.MIN1, date(2026, 1, 1), today)
+    oldest = today - timedelta(days=INTRADAY_MAX_DAYS[Interval.MIN1])
+    assert calls[0][0] == oldest
+    assert all(interval == "1m" for _, _, interval in calls)
+    assert all((end - start).days <= 7 for start, end, _ in calls)
+    # The chunks tile the padded range without gaps or overlaps.
+    assert all(a[1] == b[0] for a, b in pairwise(calls))
+    assert calls[-1][1] == today + timedelta(days=2)
+
+    calls.clear()
+    provider.fetch_intraday(AAPL, Interval.MIN5, date(2026, 1, 1), today)
+    assert calls == [(today - timedelta(days=59), today + timedelta(days=2), "5m")]
 
 
 # ---------------------------------------------------------------- Tiingo
@@ -301,9 +328,9 @@ def test_fixture_with_missing_columns(tmp_path: Path) -> None:
 
 def test_tiingo_has_no_hourly_bars() -> None:
     provider = TiingoProvider("key", bucket=NO_WAIT)
-    assert not provider.supports_hourly(AAPL)
+    assert not provider.supports_intraday(AAPL, Interval.H1)
     with pytest.raises(ProviderError, match="1h"):
-        provider.fetch_hourly(AAPL, date(2026, 1, 1), date(2026, 1, 2))
+        provider.fetch_intraday(AAPL, Interval.H1, date(2026, 1, 1), date(2026, 1, 2))
 
 
 def test_hourly_fixture_write_read_roundtrip_is_exact(tmp_path: Path) -> None:
@@ -315,9 +342,9 @@ def test_hourly_fixture_write_read_roundtrip_is_exact(tmp_path: Path) -> None:
         close=[0.5, 2 / 7],
         volume=[10.0, 0.0],
     )
-    write_hourly_fixture(tmp_path / "X.csv", frame)
+    write_intraday_fixture(tmp_path / "X.csv", frame)
     assert (tmp_path / "X.csv").read_text().splitlines()[1].startswith("2026-02-05T14:30:00Z,")
-    assert read_hourly_fixture(tmp_path / "X.csv").equals(frame)
+    assert read_intraday_fixture(tmp_path / "X.csv").equals(frame)
 
 
 def test_fixture_provider_serves_hourly_bars_by_utc_date() -> None:
@@ -325,21 +352,33 @@ def test_fixture_provider_serves_hourly_bars_by_utc_date() -> None:
     aaa = SymbolInfo(
         symbol="AAA", display="AAA", name="A", type="stock", group="Stocks", exchange="T"
     )
-    assert provider.supports_hourly(aaa)
-    frame = provider.fetch_hourly(aaa, date(2026, 2, 6), date(2026, 2, 9))
+    assert provider.supports_intraday(aaa, Interval.H1)
+    frame = provider.fetch_intraday(aaa, Interval.H1, date(2026, 2, 6), date(2026, 2, 9))
     assert len(frame) == 14
     assert ts_to_iso_dates(frame.time)[0] == "2026-02-06"
     assert ts_to_iso_dates(frame.time)[-1] == "2026-02-09"
 
 
+def test_fixture_provider_serves_each_base_from_its_folder(tmp_path: Path) -> None:
+    frame = BarFrame.from_columns(
+        time=[1_767_709_800, 1_767_710_100], open=[1, 2], high=[2, 3], low=[0.5, 1], close=[1.5, 2]
+    )
+    write_intraday_fixture(tmp_path / "5m" / "AAPL.csv", frame)
+    provider = FixtureProvider(tmp_path)
+    assert provider.supports_intraday(AAPL, Interval.MIN5)
+    assert not provider.supports_intraday(AAPL, Interval.MIN1)
+    got = provider.fetch_intraday(AAPL, Interval.MIN5, date(2026, 1, 1), date(2026, 1, 31))
+    assert got.equals(frame)
+
+
 def test_fixture_provider_without_hourly_file(tmp_path: Path) -> None:
     provider = FixtureProvider(FIXTURES_DIR)
-    assert not provider.supports_hourly(AAPL)
+    assert not provider.supports_intraday(AAPL, Interval.H1)
     with pytest.raises(ProviderError, match="1h fixture"):
-        provider.fetch_hourly(AAPL, date(2026, 1, 1), date(2026, 1, 2))
+        provider.fetch_intraday(AAPL, Interval.H1, date(2026, 1, 1), date(2026, 1, 2))
     (tmp_path / "1h").mkdir()
     (tmp_path / "1h" / "X.csv").write_text("time,close\n2026-01-05T14:30:00Z,1.0\n")
     with pytest.raises(ProviderError, match="missing columns"):
-        read_hourly_fixture(tmp_path / "1h" / "X.csv")
+        read_intraday_fixture(tmp_path / "1h" / "X.csv")
     (tmp_path / "1h" / "Y.csv").write_text("")
-    assert len(read_hourly_fixture(tmp_path / "1h" / "Y.csv")) == 0
+    assert len(read_intraday_fixture(tmp_path / "1h" / "Y.csv")) == 0

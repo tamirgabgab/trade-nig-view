@@ -101,7 +101,7 @@ def test_delete(client: TestClient) -> None:
         ),
         ({"indicators": [{**BB, "pane_stretch": 0}]}, "validation_error"),
         ({"chart_type": "renko"}, "validation_error"),
-        ({"interval": "5m"}, "validation_error"),
+        ({"interval": "7m"}, "validation_error"),
         ({"extra": 1}, "validation_error"),
         ({"compare": ["a", "b", "c", "d"]}, "validation_error"),
     ],

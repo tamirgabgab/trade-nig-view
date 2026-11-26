@@ -1868,7 +1868,7 @@
               }
             ],
             "title": "Time",
-            "description": "Daily and longer: session date 'YYYY-MM-DD'. Intraday (1h, 4h): UTC epoch seconds of the bar start."
+            "description": "Daily and longer: session date 'YYYY-MM-DD'. Intraday (1m … 4h): UTC epoch seconds of the bar start."
           },
           "open": {
             "type": "number",
@@ -1947,6 +1947,30 @@
             "type": "array",
             "title": "Warnings"
           },
+          "history_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Start",
+            "description": "UTC epoch seconds of the oldest bar of this interval that exists (cached), before paging; null without bars"
+          },
+          "provider_window_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Window Days",
+            "description": "Intraday only: days of this interval the provider keeps; older bars exist only where the local cache collected them"
+          },
           "bars": {
             "items": {
               "$ref": "#/components/schemas/Bar"
@@ -1966,6 +1990,8 @@
           "stale",
           "has_more_before",
           "warnings",
+          "history_start",
+          "provider_window_days",
           "bars"
         ],
         "title": "BarsResponse"
@@ -3238,6 +3264,12 @@
       "Interval": {
         "type": "string",
         "enum": [
+          "1m",
+          "2m",
+          "5m",
+          "15m",
+          "30m",
+          "90m",
           "1h",
           "4h",
           "1D",
@@ -3245,7 +3277,7 @@
           "1M"
         ],
         "title": "Interval",
-        "description": "Bar intervals served by the API.\n\n``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and\n``1W``/``1M`` from ``1D``."
+        "description": "Bar intervals served by the API.\n\nFour are downloaded (the *base* intervals): ``1m``, ``5m``, ``1h`` and ``1D``. ``2m`` is\nresampled from ``1m``; ``15m``, ``30m`` and ``90m`` from ``5m``; ``4h`` from ``1h``; ``1W`` and\n``1M`` from ``1D``."
       },
       "LabForecastRequest": {
         "properties": {

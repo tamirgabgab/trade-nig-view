@@ -287,3 +287,52 @@ def test_4h_has_no_lookahead(case: tuple[BarFrame, str, int | None], data: st.Da
     completed = len(prefix) - 1
     assert prefix.take(slice(0, completed)).equals(full.take(slice(0, completed)))
     assert prefix.time[-1] == full.time[completed]
+
+
+# ---------------------------------------------------------------- minute intervals
+
+
+def minute_bars(base: Interval, sessions: int = 3) -> BarFrame:
+    """``base`` bars of a US stock's regular hours (09:30-16:00), ``sessions`` days from Jan 5."""
+    per_session = 390 * 60 // base.seconds
+    times = [
+        ny(2026, 1, 5 + d, 9, 30) + base.seconds * k
+        for d in range(sessions)
+        for k in range(per_session)
+    ]
+    rng = np.random.default_rng(7)
+    closes = list(100.0 + np.cumsum(rng.normal(0.0, 0.1, len(times))))
+    return hourly(times, closes)
+
+
+def test_interval_bases_and_lengths() -> None:
+    bases = {i: i.base for i in Interval}
+    assert bases[Interval.MIN2] is Interval.MIN1
+    assert {bases[i] for i in (Interval.MIN15, Interval.MIN30, Interval.MIN90)} == {Interval.MIN5}
+    assert bases[Interval.H4] is Interval.H1
+    assert bases[Interval.W1] is Interval.D1
+    assert Interval.MIN90.seconds == 5400
+    assert all(i.is_intraday for i in Interval if i.base is not Interval.D1)
+    with pytest.raises(ValueError, match="not an intraday"):
+        _ = Interval.D1.seconds
+
+
+@pytest.mark.parametrize(
+    ("interval", "per_session"),
+    [(Interval.MIN2, 195), (Interval.MIN15, 26), (Interval.MIN30, 13), (Interval.MIN90, 5)],
+)
+def test_minute_resampling_counts_totals_and_no_lookahead(
+    interval: Interval, per_session: int
+) -> None:
+    frame = minute_bars(interval.base)
+    days = session_days(frame.time, NEW_YORK)
+    full = resample_intraday(frame, days, interval)
+    assert len(full) == 3 * per_session
+    assert np.isclose(full.volume.sum(), frame.volume.sum())
+    assert full.high.max() == frame.high.max()
+    # Every bar starts on the interval's grid counted from 09:30.
+    assert np.all((full.time - ny(2026, 1, 5, 9, 30)) % interval.seconds == 0)
+    for k in (1, 7, len(frame) // 2, len(frame) - 1):
+        prefix = resample_intraday(frame.take(slice(0, k)), days[:k], interval)
+        completed = len(prefix) - 1
+        assert prefix.take(slice(0, completed)).equals(full.take(slice(0, completed)))

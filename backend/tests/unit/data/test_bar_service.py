@@ -11,10 +11,18 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pytest
 
-from app.data.bar_service import HISTORY_START, SPARK_BARS, BarService, overlap_consistent
+from app.data.bar_service import (
+    HISTORY_START,
+    SPARK_BARS,
+    BarService,
+    overlap_consistent,
+    rescaled_before,
+)
 from app.data.cache.bar_cache import BarCache
 from app.data.providers.base import ProviderError, RateLimitedError
-from app.data.providers.yahoo import HOURLY_MAX_DAYS
+from app.data.providers.yahoo import INTRADAY_MAX_DAYS
+from app.data.resample import aggregate, intraday_block_keys
+from app.data.sessions import session_days
 from app.data.universe import Universe
 from app.errors import DataUnavailableError, SymbolNotFoundError
 from app.models.bars import BarFrame, Interval, date_to_ts, ts_to_date, ts_to_iso_dates
@@ -47,20 +55,35 @@ class FakeProvider:
     calls: list[tuple[str, date, date]] = field(default_factory=list[tuple[str, date, date]])
     hourly: BarFrame | None = None
     hourly_calls: list[tuple[str, date, date]] = field(default_factory=list[tuple[str, date, date]])
+    #: Bars of the minute bases (1m, 5m), served like ``hourly``.
+    minutes: dict[Interval, BarFrame] = field(default_factory=dict[Interval, BarFrame])
+    minute_calls: list[tuple[Interval, date, date]] = field(
+        default_factory=list[tuple[Interval, date, date]]
+    )
+
+    def _intraday(self, base: Interval) -> BarFrame | None:
+        return self.hourly if base is Interval.H1 else self.minutes.get(base)
 
     def supports(self, symbol: SymbolInfo) -> bool:
         return self.only is None or symbol.symbol in self.only
 
-    def supports_hourly(self, symbol: SymbolInfo) -> bool:
-        return self.hourly is not None
+    def supports_intraday(self, symbol: SymbolInfo, base: Interval) -> bool:
+        return self._intraday(base) is not None
 
-    def fetch_hourly(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
-        self.hourly_calls.append((symbol.symbol, start, end))
+    def fetch_intraday(
+        self, symbol: SymbolInfo, base: Interval, start: date, end: date
+    ) -> BarFrame:
+        if base is Interval.H1:
+            self.hourly_calls.append((symbol.symbol, start, end))
+        else:
+            self.minute_calls.append((base, start, end))
         if self.fail is not None:
             raise self.fail
-        assert self.hourly is not None
-        t = self.hourly.time
-        return self.hourly.take((t >= date_to_ts(start)) & (t < date_to_ts(end) + 86_400))
+        frame = self._intraday(base)
+        assert frame is not None
+        return frame.take(
+            (frame.time >= date_to_ts(start)) & (frame.time < date_to_ts(end) + 86_400)
+        )
 
     def fetch_daily(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
         self.calls.append((symbol.symbol, start, end))
@@ -363,7 +386,9 @@ def test_first_hourly_request_downloads_the_provider_limit_once(make_service: Fa
 
     first = service.hourly(AAA)
     service.hourly(AAA)
-    assert provider.hourly_calls == [("AAA", TODAY - timedelta(days=HOURLY_MAX_DAYS), TODAY)]
+    assert provider.hourly_calls == [
+        ("AAA", TODAY - timedelta(days=INTRADAY_MAX_DAYS[Interval.H1]), TODAY)
+    ]
     assert first.frame.equals(hourly_history())
     assert provider.calls == []  # daily history untouched
 
@@ -380,7 +405,11 @@ def test_hourly_refresh_after_a_long_pause_stays_within_the_limit(make_service: 
     service._today = lambda: today  # pyright: ignore[reportPrivateUsage]
     clock.now += 901.0
     service.hourly(AAA)
-    assert provider.hourly_calls[1] == ("AAA", today - timedelta(days=HOURLY_MAX_DAYS), today)
+    assert provider.hourly_calls[1] == (
+        "AAA",
+        today - timedelta(days=INTRADAY_MAX_DAYS[Interval.H1]),
+        today,
+    )
 
 
 def test_hourly_bars_skip_providers_without_intraday(make_service: Factory) -> None:
@@ -473,3 +502,119 @@ def test_intraday_frames_carry_their_sessions_and_daily_frames_do_not(
         days = [ts_to_date(int(d) * 86_400) for d in frame.session]
         assert days[-1] == DAYS[-1]
         assert days.count(DAYS[-1]) == per_session
+
+
+# ---------------------------------------------------------------- minute intervals (1m … 90m)
+
+
+def five_minute_history(days: list[date] = DAYS) -> BarFrame:
+    """78 regular-hours 5m bars per session (09:30 … 15:55); closes rise by 0.01 a bar."""
+    times: list[int] = []
+    closes: list[float] = []
+    for day, close in zip(days, CLOSES, strict=False):
+        session_open = int(datetime(day.year, day.month, day.day, 9, 30, tzinfo=NY).timestamp())
+        for k in range(78):
+            times.append(session_open + 300 * k)
+            closes.append(close - 0.78 + 0.01 * (k + 1))
+    return BarFrame.from_columns(
+        time=times,
+        open=[c - 0.005 for c in closes],
+        high=[c + 0.02 for c in closes],
+        low=[c - 0.02 for c in closes],
+        close=closes,
+        volume=[5.0] * len(times),
+    )
+
+
+def test_minute_intervals_resample_their_base(make_service: Factory) -> None:
+    provider = FakeProvider("p", history(), minutes={Interval.MIN5: five_minute_history()})
+    service, _ = make_service(provider)
+    five = service.get_bars("AAA", Interval.MIN5, adjusted=False, limit=100_000).frame
+    assert len(five) == 78 * len(DAYS)
+    for interval, per_session in ((Interval.MIN15, 26), (Interval.MIN30, 13), (Interval.MIN90, 5)):
+        out = service.get_bars("AAA", interval, adjusted=False, limit=100_000).frame
+        assert len(out) == per_session * len(DAYS)
+        assert out.session is not None
+        np.testing.assert_allclose(out.volume.sum(), five.volume.sum())
+    ninety = service.get_bars("AAA", Interval.MIN90, adjusted=False, limit=5).frame
+    starts = [datetime.fromtimestamp(int(t), NY) for t in ninety.time]
+    assert [(t.hour, t.minute) for t in starts] == [(9, 30), (11, 0), (12, 30), (14, 0), (15, 30)]
+    # The 5m base is downloaded once, for the provider's window only; no 1h request.
+    assert provider.minute_calls == [
+        (Interval.MIN5, TODAY - timedelta(days=INTRADAY_MAX_DAYS[Interval.MIN5]), TODAY)
+    ]
+    assert provider.hourly_calls == []
+
+
+def test_5m_bars_aggregate_to_the_1h_bars() -> None:
+    """Resampling the 5m base with 1h blocks gives the 1h bars of the same session."""
+    five = five_minute_history()
+    days = session_days(five.time, "America/New_York")
+    hours = aggregate(five, intraday_block_keys(five.time, days, 3600))
+    assert len(hours) == 7 * len(DAYS)
+    first = five.take(slice(0, 12))
+    assert hours.open[0] == first.open[0]
+    assert hours.close[0] == first.close[-1]
+    assert hours.high[0] == first.high.max()
+    assert hours.volume[0] == first.volume.sum()
+    # The session's last 1h bar is the half hour 15:30-16:00 (six 5m bars).
+    assert hours.close[6] == five.close[77]
+
+
+def test_bars_report_the_history_depth(make_service: Factory) -> None:
+    provider = FakeProvider(
+        "p", history(), hourly=hourly_history(), minutes={Interval.MIN5: five_minute_history()}
+    )
+    service, _ = make_service(provider)
+    fifteen = service.get_bars("AAA", Interval.MIN15, adjusted=False, limit=3)
+    assert fifteen.history_start == int(five_minute_history().time[0])
+    assert fifteen.provider_window_days == INTRADAY_MAX_DAYS[Interval.MIN5] + 1
+    assert service.get_bars("AAA", Interval.H4, adjusted=False).provider_window_days == 730
+    daily = service.get_bars("AAA", Interval.D1, limit=2)
+    assert daily.history_start == date_to_ts(DAYS[0])
+    assert daily.provider_window_days is None
+
+
+def test_minute_bases_refresh_after_a_minute(make_service: Factory) -> None:
+    provider = FakeProvider("p", history(), minutes={Interval.MIN1: five_minute_history()})
+    service, clock = make_service(provider)
+    service.history(AAA, Interval.MIN1)
+    clock.now += 30.0
+    service.history(AAA, Interval.MIN1)
+    assert len(provider.minute_calls) == 1
+    clock.now += 31.0
+    service.history(AAA, Interval.MIN1)
+    assert provider.minute_calls[1] == (Interval.MIN1, TODAY - timedelta(days=2), TODAY)
+
+
+def test_a_split_keeps_older_intraday_bars_rescaled(make_service: Factory) -> None:
+    """Bars older than the provider's window survive a split, brought to the new prices."""
+    five = five_minute_history()
+    provider = FakeProvider("p", history(), minutes={Interval.MIN5: five})
+    service, clock = make_service(provider)
+    service.history(AAA, Interval.MIN5)
+    # Later: the provider only has the last two sessions, after a 2:1 split.
+    recent = five.take(five.time >= int(five.time[-2 * 78]))
+    provider.minutes[Interval.MIN5] = BarFrame(
+        recent.time,
+        recent.open / 2,
+        recent.high / 2,
+        recent.low / 2,
+        recent.close / 2,
+        recent.adj_close / 2,
+        recent.volume * 2,
+    )
+    clock.now += 61.0
+    cached = service.history(AAA, Interval.MIN5)
+    assert any("adjustment changed" in w for w in cached.warnings)
+    assert len(cached.frame) == len(five)
+    np.testing.assert_allclose(cached.frame.close, five.close / 2, rtol=1e-12)
+    np.testing.assert_allclose(cached.frame.volume, five.volume * 2, rtol=1e-12)
+
+
+def test_rescaled_before_needs_common_bars() -> None:
+    old = five_minute_history().take(slice(0, 10))
+    new = five_minute_history().take(slice(20, 30))
+    assert len(rescaled_before(old, new)) == 0
+    assert len(rescaled_before(BarFrame.empty(), new)) == 0
+    assert len(rescaled_before(old, BarFrame.empty())) == 0

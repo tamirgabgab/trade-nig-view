@@ -112,7 +112,7 @@ def test_symbol_without_data_is_503(client: TestClient) -> None:
 
 
 def test_bad_interval_is_422(client: TestClient) -> None:
-    response = client.get("/api/bars", params={"symbol": "AAA", "interval": "5m"})
+    response = client.get("/api/bars", params={"symbol": "AAA", "interval": "7m"})
     assert response.status_code == 422
 
 

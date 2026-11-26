@@ -23,11 +23,11 @@ import numpy as np
 
 from app.config import REPO_ROOT
 from app.data.providers.base import ProviderError
-from app.data.providers.fixtures import fixture_filename, write_fixture, write_hourly_fixture
+from app.data.providers.fixtures import fixture_filename, write_fixture, write_intraday_fixture
 from app.data.providers.yahoo import YahooProvider
 from app.data.universe import Universe
 from app.data.validate import validate_bars
-from app.models.bars import BarFrame
+from app.models.bars import BarFrame, Interval
 from app.models.symbols import SymbolInfo
 
 START = date(2015, 1, 1)
@@ -57,7 +57,7 @@ def fetch_one(provider: YahooProvider, info: SymbolInfo, interval: str) -> bool:
         if interval == "1D":
             raw = provider.fetch_daily(info, START, END)
         else:
-            raw = provider.fetch_hourly(info, HOURLY_START, HOURLY_END)
+            raw = provider.fetch_intraday(info, Interval.H1, HOURLY_START, HOURLY_END)
     except ProviderError as exc:
         print(f"FAIL {info.symbol:10} {interval}: {exc}")
         return False
@@ -72,7 +72,7 @@ def fetch_one(provider: YahooProvider, info: SymbolInfo, interval: str) -> bool:
     if interval == "1D":
         write_fixture(path, clean)
     else:
-        write_hourly_fixture(path, clean)
+        write_intraday_fixture(path, clean)
     notes = "; ".join(report.warnings) or "ok"
     print(f"OK   {info.symbol:10} {interval:2} {len(clean):5} bars -> {folder}/{path.name} {notes}")
     return True

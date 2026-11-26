@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from pydantic_settings import SettingsConfigDict
 
 from app.config import Settings
-from app.data.providers.fixtures import fixture_filename, read_fixture, read_hourly_fixture
+from app.data.providers.fixtures import fixture_filename, read_fixture, read_intraday_fixture
 from app.data.sessions import session_days
 from app.data.universe import Universe
 from app.data.validate import validate_bars
@@ -71,7 +71,7 @@ def test_daily_fixture_is_clean(symbol: str) -> None:
 
 @pytest.mark.parametrize("symbol", SYMBOLS)
 def test_hourly_fixture_is_clean_and_matches_daily_sessions(symbol: str) -> None:
-    hourly = read_hourly_fixture(fixture_path("1h", symbol))
+    hourly = read_intraday_fixture(fixture_path("1h", symbol))
     clean, report = validate_bars(hourly, symbol=symbol)
     assert report.ok, report
     assert len(clean) == len(hourly) > 0

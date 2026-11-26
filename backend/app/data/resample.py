@@ -13,10 +13,13 @@ matches how TradingView labels weekly/monthly bars. Weeks start on Monday (ISO w
 Partial periods (the current week, or a week cut by a replay cursor) are emitted as-is: only the
 bars that exist are aggregated, so resampling never looks ahead.
 
-Intraday: ``4h`` bars aggregate ``1h`` bars with the same rule, grouped by trading session and
-by 4-hour block **counted from the session's first bar** (``app.data.sessions``). A US stock
-therefore gets 09:30-13:30 and 13:30-16:00 bars, as on TradingView, and a CME future opening at
-18:00 gets 18:00, 22:00, 02:00, ... A block is keyed by its first bar's start time.
+Intraday: an interval of :math:`L` seconds aggregates the bars of its base interval (``2m`` from
+``1m``; ``15m``, ``30m``, ``90m`` from ``5m``; ``4h`` from ``1h``) with the same rule, grouped by
+trading session and by block :math:`\\lfloor (t - t_0) / L \\rfloor` **counted from the session's
+first bar** :math:`t_0` (``app.data.sessions``). A US stock therefore gets 09:30-13:30 and
+13:30-16:00 ``4h`` bars and 09:30, 11:00, 12:30, 14:00, 15:30 ``90m`` bars, as on TradingView, and a
+CME future opening at 18:00 gets 18:00, 22:00, 02:00, ... A block is keyed by its first bar's start
+time.
 """
 
 from __future__ import annotations
@@ -26,7 +29,9 @@ import numpy as np
 from app.data.sessions import session_first_index
 from app.models.bars import SECONDS_PER_DAY, BarFrame, IntArray, Interval
 
-SECONDS_PER_HOUR = 3600
+#: More blocks than any session can hold (a day has 1,440 minutes), so (session, block) pairs are
+#: unique as ``session * BLOCKS_PER_SESSION + block``.
+BLOCKS_PER_SESSION = 2048
 
 # 1970-01-01 was a Thursday, so day-number + 3 aligns integer division by 7 to Mondays.
 _MONDAY_OFFSET_DAYS = 3
@@ -49,21 +54,20 @@ def resample(frame: BarFrame, interval: Interval) -> BarFrame:
     return aggregate(frame, period_keys(frame.time, interval))
 
 
-def intraday_block_keys(times: IntArray, sessions: IntArray, hours: int) -> IntArray:
-    """Group id per ``1h`` bar for ``hours``-hour bars: (session, block since session start)."""
+def intraday_block_keys(times: IntArray, sessions: IntArray, seconds: int) -> IntArray:
+    """Group id per base bar for ``seconds``-long bars: (session, block since session start)."""
     first = session_first_index(sessions)
-    block = (times - times[first]) // (hours * SECONDS_PER_HOUR)
-    # Sessions are increasing and blocks per session are < 24, so this pairing is unique.
-    return sessions * 32 + block
+    block = (times - times[first]) // seconds
+    return sessions * BLOCKS_PER_SESSION + block
 
 
 def resample_intraday(frame: BarFrame, sessions: IntArray, interval: Interval) -> BarFrame:
-    """Aggregate ``1h`` bars into ``interval`` bars (identity for ``1h``)."""
-    if interval is Interval.H1 or len(frame) == 0:
-        return frame
-    if interval is not Interval.H4:
+    """Aggregate base-interval bars into ``interval`` bars (identity for a base interval)."""
+    if not interval.is_intraday:
         raise ValueError(f"No intraday grouping for interval {interval}")
-    return aggregate(frame, intraday_block_keys(frame.time, sessions, 4))
+    if interval is interval.base or len(frame) == 0:
+        return frame
+    return aggregate(frame, intraday_block_keys(frame.time, sessions, interval.seconds))
 
 
 def aggregate(frame: BarFrame, keys: IntArray) -> BarFrame:

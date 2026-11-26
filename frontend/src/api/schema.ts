@@ -544,7 +544,7 @@ export interface components {
         Bar: {
             /**
              * Time
-             * @description Daily and longer: session date 'YYYY-MM-DD'. Intraday (1h, 4h): UTC epoch seconds of the bar start.
+             * @description Daily and longer: session date 'YYYY-MM-DD'. Intraday (1m … 4h): UTC epoch seconds of the bar start.
              */
             time: string | number;
             /** Open */
@@ -592,6 +592,16 @@ export interface components {
             has_more_before: boolean;
             /** Warnings */
             warnings: string[];
+            /**
+             * History Start
+             * @description UTC epoch seconds of the oldest bar of this interval that exists (cached), before paging; null without bars
+             */
+            history_start: number | null;
+            /**
+             * Provider Window Days
+             * @description Intraday only: days of this interval the provider keeps; older bars exist only where the local cache collected them
+             */
+            provider_window_days: number | null;
             /** Bars */
             bars: components["schemas"]["Bar"][];
         };
@@ -1169,11 +1179,12 @@ export interface components {
          * Interval
          * @description Bar intervals served by the API.
          *
-         *     ``1h`` and ``1D`` are downloaded (the *base* intervals); ``4h`` is resampled from ``1h`` and
-         *     ``1W``/``1M`` from ``1D``.
+         *     Four are downloaded (the *base* intervals): ``1m``, ``5m``, ``1h`` and ``1D``. ``2m`` is
+         *     resampled from ``1m``; ``15m``, ``30m`` and ``90m`` from ``5m``; ``4h`` from ``1h``; ``1W`` and
+         *     ``1M`` from ``1D``.
          * @enum {string}
          */
-        Interval: "1h" | "4h" | "1D" | "1W" | "1M";
+        Interval: "1m" | "2m" | "5m" | "15m" | "30m" | "90m" | "1h" | "4h" | "1D" | "1W" | "1M";
         /** LabForecastRequest */
         LabForecastRequest: {
             /** Source */

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from app.data.providers.fixtures import read_hourly_fixture
+from app.data.providers.fixtures import read_intraday_fixture
 from app.data.sessions import session_days
 from app.indicators import core
 from app.indicators.atr import SMOOTHING
@@ -64,7 +64,7 @@ def _lists(frame: BarFrame) -> tuple[list[float], list[float], list[float], list
 
 def hourly_frame(path: Path) -> BarFrame:
     """An hourly fixture with its New York session days, as ``BarService`` serves it."""
-    frame = read_hourly_fixture(path)
+    frame = read_intraday_fixture(path)
     return frame.with_session(session_days(frame.time, "America/New_York"))
 
 
