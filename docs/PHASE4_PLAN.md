@@ -45,16 +45,16 @@ What a profile fixes (`TraderProfile` in the backend, one object per profile, te
 ### Data per profile (the main constraint)
 | Profile | Data needed | What Yahoo gives | Consequence |
 |---|---|---|---|
-| Day | 5m/15m, years | 5m and 15m: only the **last 60 days**; 1m: 7 days | not enough history for honest statistics out of the box |
+| Day | 5m/15m, years | 2m … 90m: only the **last 60 days**; 1m: 30 days | not enough history for honest statistics out of the box |
 | Swing | 1h, years | 1h: ~730 days | about 2 years: enough for a first evaluation, growing with the cache |
 | Position | 1D, decades | full daily history | fine |
 | Long-term | 1W/1M, decades | resampled from 1D | fine |
 
-The plan for intraday history (round **D0**, below): add 5m and 15m as base intervals, keep everything ever downloaded
-in the cache (as 1h already does) so history **accumulates**, and add a small daily collector (a Windows scheduled
-task that runs `scripts/collect-intraday.ps1` after the US close) so the 60-day window never leaves gaps. After a year
-of collecting, the Day profile has a year of 5m bars. A paid data source (data only, never a broker) is the other way,
-for the user to decide.
+Intraday history (round **D0**, done 2026-11-26, ADR 0017): 1m, 2m, 5m, 15m, 30m and 90m bars, everything ever
+downloaded stays in the cache so history **accumulates**, and a daily collector (a Windows scheduled task that runs
+`scripts/collect-intraday.ps1` after the US close) keeps the 30/60-day windows from leaving gaps. After a year of
+collecting, the Day profile has a year of minute bars. A paid data source (data only, never a broker) is the other
+way, for the user to decide.
 
 ## What Phases 1–3 already give us
 | Piece | Where | Used for |
@@ -80,12 +80,14 @@ for the user to decide.
 
 ## Rounds
 
-### D0 — Intraday data for the Day profile (M)
-- 5m and 15m as base intervals from Yahoo (the last 60 days), cached and accumulated like 1h; sessions and
-  adjustment as for 1h; replay and indicators work on them unchanged.
-- `scripts/collect-intraday.ps1` + `install-collector.ps1` (a daily Windows scheduled task) fetch the last days of 5m
-  bars for the watchlist so the cache grows without gaps; a "history depth" line per symbol in the Data window.
-- Tests: fixtures for 5m; resampling 5m → 15m → 1h equals the downloaded 1h; no-lookahead across intervals.
+### D0 — Intraday data for the Day profile (M) — ✅ done 2026-11-26 (ADR 0017)
+- 1m and 5m base intervals from Yahoo (30 and 60 days), 2m and 15m/30m/90m resampled from them, cached and
+  accumulated (older bars rescaled after a split); sessions and adjustment as for 1h; replay and indicators work on
+  them unchanged.
+- `scripts/collect-intraday.ps1` + `install-collector.ps1` (a weekday Windows scheduled task) refresh 1m, 5m and 1h
+  for every watchlist symbol; the minutes menu and a line under the legend show how far back each interval goes.
+- Tests: the 1m request chunks, resampling counts, totals and no lookahead for every minute interval, 5m blocks of an
+  hour equal the 1h bars, a split keeps the older bars rescaled, the collector on fixtures, E2E on 15m bars.
 
 ### B0 — Trader profiles, strategy model and signals (M)
 - **`TraderProfile`** (the four profiles above) in the backend and a profile picker at the top of the Strategy tab;
@@ -192,8 +194,8 @@ B6 M, B7 L.
 
 ## Architecture notes
 - New backend package `app/backtest/` (`strategy.py` models, `signals.py`, `engine.py`, `metrics.py`,
-  `evaluation.py`), routers `api/strategies.py` and `api/backtest.py`; ADR 0017 (engine and fill conventions) at B1,
-  ADR 0018 (evaluation and overfitting statistics) at B4.
+  `evaluation.py`), routers `api/strategies.py` and `api/backtest.py`; ADR 0018 (engine and fill conventions) at B1,
+  ADR 0019 (evaluation and overfitting statistics) at B4.
 - Frontend: `components/StrategyPanel` and friends, `api/backtest.ts`, a `strategyStore`; trades drawn by a
   `TradeLayer` primitive in `chart/` (the only place that imports the chart library).
 - Performance targets: one daily backtest over 25 years under 200 ms on the server; a 100-point sweep under 5 s.
@@ -203,8 +205,8 @@ B6 M, B7 L.
    Phase 3)?
 2. **Side:** long only first, or long and short from B1?
 3. **Fills:** next bar's open by default (recommended), or the signal bar's close?
-4. **Profiles first:** which profile to build first (recommended: Position, then Swing and Long-term, Day last once D0
-   has collected intraday history)?
-5. **Day data:** collect 5m bars daily from Yahoo (free, history grows from today), or a paid data feed?
+4. **Profiles first:** which profile to build first (recommended: Position, then Swing and Long-term, Day last once the
+   collector has gathered intraday history)?
+5. **Day data:** the free daily collection from Yahoo (running since D0), or also a paid data feed?
 6. **Results:** which metrics and views matter most to you (to put first in B2)?
 7. **Portfolio (B5):** equal weight, or risk parity (inverse volatility)?

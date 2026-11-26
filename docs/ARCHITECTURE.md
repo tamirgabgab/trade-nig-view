@@ -132,7 +132,7 @@ prepended bars, so the same candles stay under the mouse. Pages are TanStack `us
 `(symbol, interval, adjusted, transform)`. Transforms (Heikin Ashi) run on the full history **before** windowing, so a
 page equals the same slice of the full-history result (tested).
 
-**Range buttons.** Each button switches to an interval that fits the span (1D/5D/1M/3M → 1h, 6M → 4h, YTD/1Y → 1D,
+**Range buttons.** Each button switches to an interval that fits the span (1D → 1m, 5D → 5m, 1M → 30m, 3M → 1h, 6M → 4h, YTD/1Y → 1D,
 5Y → 1W, All → 1M), loads older pages until the span's start is covered (or history ends), then sets the visible
 range once (`chart/visibleRange.ts`, pure and unit-tested).
 
@@ -188,7 +188,7 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 |---|---|---|---|
 | `GET /health` | — | `{status:"ok", version, offline, providers:[{id, enabled}]}` | R0 |
 | `GET /symbols` | `query?`, `group?` | `[{symbol, display, name, exchange, type: "index"\|"etf"\|"stock"\|"future"\|"forex", group, timezone, currency, has_volume, decimals, session_start}]` | R1 |
-| `GET /bars` | `symbol`, `interval` (`1h`\|`4h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `before?` (epoch seconds, exclusive: only bars starting earlier; paging cursor), `adjusted=true`, `transform=none`\|`heikin_ashi`, `until?` | `{symbol, interval, adjusted, transform, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, stale, warnings}`; intraday `time` is UTC epoch seconds, daily+ `'YYYY-MM-DD'`; for intraday `start`/`end`/`until` select whole sessions | R1 (1h/4h R1b, `before`/`transform` R2b) |
+| `GET /bars` | `symbol`, `interval` (`1m`\|`2m`\|`5m`\|`15m`\|`30m`\|`90m`\|`1h`\|`4h`\|`1D`\|`1W`\|`1M`), `start?`, `end?`, `limit?` (default 5000, from the end), `before?` (epoch seconds, exclusive: only bars starting earlier; paging cursor), `adjusted=true`, `transform=none`\|`heikin_ashi`, `until?` | `{symbol, interval, adjusted, transform, timezone, bars:[{time, open, high, low, close, volume}], has_more_before, source, stale, warnings, history_start, provider_window_days}` (`history_start`: UTC seconds of the oldest bar that exists; `provider_window_days`: intraday only, the days the provider keeps); intraday `time` is UTC epoch seconds, daily+ `'YYYY-MM-DD'`; for intraday `start`/`end`/`until` select whole sessions | R1 (1h/4h R1b, `before`/`transform` R2b, minutes and depth 2026-11-26) |
 | `GET /quotes` | `symbols=AAPL,NVDA,...` | `[{symbol, time, last, change, change_pct, stale, error, spark, day_low, day_high, low_52w, high_52w}]` from the unadjusted daily bars (`spark` = last 20 closes; 52-week range = 365 days up to the last bar); per-symbol `error` instead of failing the request | R1a, U1b |
 | `GET /indicators` | — | Registry metadata list (schema §5) | R3 |
 | `POST /indicators/compute` | `{symbol, interval, id, params, start?, end?, until?, adjusted, transform}` (`start`/`end` = epoch seconds of bar starts, inclusive) | `{id, version, params (resolved), time:[t], outputs:{<name>:[value\|null]}, warmup, lookback, display_shift}` — column arrays aligned with `time`; `null` = warm-up/NaN. A `markers` output holds `+1` (up) / `-1` (down) / `null` for MA Cross, the pivot price / `null` for Pivots. `display_shift` = bars the chart draws the outputs to the left of their bar (Pivots: `right`). `warmup` = first valid bar of the output that starts **last** (a composite's faster outputs start earlier); `lookback` = `total_lookback` (incl. offset). Cross-parameter errors (e.g. KAMA `fast > slow`, HMA length 1) are 422 `invalid_params` | R3 |
@@ -397,22 +397,26 @@ A shared `check_no_lookahead(spec, bars, k)` helper (`tests/golden/harness.py`) 
 - **Bar cache** (`data/bars.db`, SQLite, WAL; `app/data/cache/bar_cache.py`): table `bars(symbol, interval, ts, open,
   high, low, close, adj_close, volume, source)`, PK `(symbol, interval, ts)`; table `coverage(symbol, interval, start_ts,
   end_ts, fetched_at, source)`, PK `(symbol, interval)`; table `meta(key, value)` (schema version). Only base intervals
-  are stored (`1D`, `1h`); `1W`/`1M` are resampled from `1D` and `4h` from `1h` on read (cheap, always consistent).
+  are stored (`1D`, `1h`, `5m`, `1m`); `1W`/`1M` are resampled from `1D`, `4h` from `1h`, `15m`/`30m`/`90m` from `5m`
+  and `2m` from `1m` on read (cheap, always consistent; ADR 0017).
 - **Refresh policy** (`BarService`): the first request for a symbol and base interval downloads the full available
-  history (1h: the last 729 days Yahoo allows; older cached hours are kept). Later requests are served from the cache
-  for `refresh_ttl_s` (900 s); after that the last 10 days (1D) / 5 days (1h) are re-downloaded (late corrections, the
-  still-forming bar). If that overlap disagrees with the cache (a new split or dividend changed the adjusted history),
-  the full history is downloaded again and replaces the cache.
+  history (intraday: the last 729 / 59 / 29 days Yahoo allows for 1h / 5m / 1m; older cached bars are kept, so the
+  history grows). Later requests are served from the cache for `refresh_ttl_s` (900 s; 60 s for 1m and 5m); after that
+  the last 10 days (1D) / 5 days (1h) / 2 days (5m, 1m) are re-downloaded (late corrections, the still-forming bar).
+  If that overlap disagrees with the cache (a new split or dividend changed the adjusted history), the full history is
+  downloaded again and replaces the cache; intraday bars older than the download are kept, rescaled to the new
+  adjustment. `python -m app.data.collect` (`scripts/collect-intraday.ps1`, scheduled by `install-collector.ps1`)
+  refreshes 1m, 5m and 1h of every watchlist symbol once a day so minute history has no gaps.
 - **Throttling**: each provider owns a token bucket (Yahoo `TokenBucket(rate=2.0, capacity=4)`: 2 req/s, burst 4;
   Tiingo 50/h, burst 10) + exponential backoff with full jitter on rate limiting (`retry_with_backoff`, base 2 s, max
   60 s, 3 tries per fetch) + a circuit breaker per provider (skipped for 10 min after 2 consecutive failures; the next
   provider in `DATA_PROVIDERS`, default `yahoo,tiingo`, is tried).
 - **Stale-while-error**: if every provider fails, cached data is served with `stale: true` in the response and the
   reason in `warnings` (no header); with no cache the request fails with 503 `data_unavailable`.
-- **Frontend**: TanStack Query `staleTime` 60 s for bars and indicator values; quotes 30 s with a 60 s
+- **Frontend**: TanStack Query `staleTime` 60 s for bars and indicator values (minute charts re-fetch every 60 s); quotes 30 s with a 60 s
   `refetchInterval`; `Infinity` for symbols, watchlists, the indicator registry and learn pages.
 - **Offline**: `OFFLINE=1` → only the `fixtures` provider is registered. It reads CSV snapshots from
-  `backend/fixtures/{daily,1h}/`, which `scripts/make-fixtures.ps1` (`make_fixtures.py`) generates and commits on the
+  `backend/fixtures/{daily,1h}/` (and `5m/`, `1m/` where present; the intraday window does not apply offline), which `scripts/make-fixtures.ps1` (`make_fixtures.py`) generates and commits on the
   user's machine; until that has run, only the small synthetic test fixtures in `backend/tests/fixtures/` are committed.
 - **Symbol universe**: `backend/config/universe.toml` (order = watchlist order; `group` = section).
 

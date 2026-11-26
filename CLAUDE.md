@@ -37,6 +37,7 @@ Treat every indicator like a DUT (golden model, directed + property tests, score
 | All tests + lint + typecheck | `.\scripts\test.ps1` | `./scripts/test.sh` |
 | Regenerate API types (after a backend model change) | `.\scripts\gen-api.ps1` | `./scripts/gen-api.sh` |
 | Download fixtures from Yahoo + commit + push (user's machine only) | `.\scripts\make-fixtures.ps1` | — |
+| Collect 1m/5m/1h bars of the watchlists now / schedule it on weekdays | `.\scripts\collect-intraday.ps1` / `.\scripts\install-collector.ps1` | `./scripts/collect-intraday.sh` |
 | Backend tests | `cd backend; uv run python -m pytest` | same |
 | Backend lint/format/types | `uv run python -m ruff check . ; uv run python -m ruff format --check . ; uv run python -m pyright` | same |
 | Frontend tests | `cd frontend; npm test` | same |
@@ -52,7 +53,7 @@ ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.
 - `backend/` — FastAPI app (`app/api`, `app/data/{providers,cache}`, `app/indicators`, `app/analysis`, `app/models`, `app/storage`, `app/errors.py`, `app/config.py`), `config/universe.toml`, and `tests/` (`unit`, `api`, `golden`, `property`, `fixtures`).
 - `frontend/` — React app (`src/api`, `src/chart`, `src/drawings`, `src/components`, `src/store`, `src/styles`, `src/test`), `e2e/`.
 - `docs/` — `ROADMAP.md`, `ARCHITECTURE.md`, `TRADINGVIEW_RESEARCH.md`, `adr/`, `indicators/` (learn pages).
-- `scripts/` — setup, dev, test, lint, update, gen-api in `.ps1` + `.sh`; `make-fixtures.ps1`, `install-shortcut.ps1` (Windows only).
+- `scripts/` — setup, dev, test, lint, update, gen-api in `.ps1` + `.sh`; `make-fixtures.ps1`, `install-shortcut.ps1`, `install-collector.ps1` (Windows only).
 - `.github/workflows/` — CI (quality gates on ubuntu + windows, e2e on ubuntu).
 
 ## 5. Conventions

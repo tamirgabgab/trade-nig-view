@@ -32,6 +32,8 @@ The Decision above is kept as written; the code differs as follows:
 - Protocol as built (`app/data/providers/base.py`): `id`, `supports(symbol) -> bool`,
   `fetch_daily(symbol, start, end) -> BarFrame`, `supports_hourly(symbol) -> bool`, `fetch_hourly(symbol, start, end)
   -> BarFrame` (`symbol` is a `SymbolInfo`). There is no `rate_limit` spec: each provider owns its `TokenBucket`.
+  (2026-11-26, ADR 0017: the hourly pair became `supports_intraday(symbol, base)` and
+  `fetch_intraday(symbol, base, start, end)` for the `1m`, `5m` and `1h` bases.)
 - Default chain `DATA_PROVIDERS=yahoo,tiingo`; Twelve Data is not implemented.
 - Yahoo throttling: `TokenBucket(rate=2.0, capacity=4)` (2 req/s, burst 4), not 1 req/s. Tiingo: 50/h, burst 10.
 - Fixtures: `scripts/make_fixtures.py` (run by `scripts/make-fixtures.ps1`) downloads the whole universe (25 symbols),

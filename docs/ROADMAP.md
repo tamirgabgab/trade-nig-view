@@ -26,7 +26,8 @@
 | U2 | Appearance: theme presets, accent, text size, chart backgrounds, heatmap (ADR 0015) | M | ✅ (2026-11-25) |
 | U3 | Chart tools: compare, patterns, icons, eraser, zoom box, Go to date, forecast pointer, animated backgrounds (ADR 0016) | L | ✅ (2026-11-26) |
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
-| P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds D0 and B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
+| D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
+| P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
 
@@ -321,6 +322,8 @@ Phase-2 plan.
 ### Phase 4 — Strategies & backtesting
 - Organised by **four trader profiles** set by trade frequency (Day ≤ 10 a day, Swing ≤ 10 a week, Position ≤ 10 a
   month, Long-term ≤ 12 a year); the final models are one validated set per profile (B7).
+- [x] D0: minute intervals (1m, 2m, 5m, 15m, 30m, 90m), accumulated intraday history and the daily collector
+  (ADR 0017, 2026-11-26).
 - The round-by-round plan is in [PHASE4_PLAN.md](PHASE4_PLAN.md) (2026-11-26): intraday data for the Day profile (D0),
   profiles, strategy model and signals (B0),
   the backtest engine (B1), the results tab and trades on the chart (B2), costs, sizing and risk exits (B3), honest
