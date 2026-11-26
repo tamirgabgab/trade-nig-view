@@ -1852,6 +1852,109 @@
           }
         }
       }
+    },
+    "/api/macro/series": {
+      "get": {
+        "tags": [
+          "macro"
+        ],
+        "summary": "List Series",
+        "description": "Every macro series ChartLab can serve.",
+        "operationId": "list_series_api_macro_series_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MacroSeriesInfo"
+                  },
+                  "type": "array",
+                  "title": "Response List Series Api Macro Series Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/macro/series/{series_id}": {
+      "get": {
+        "tags": [
+          "macro"
+        ],
+        "summary": "Get Series",
+        "description": "The series' values with ``start <= date <= end`` (inclusive; all by default).",
+        "operationId": "get_series_api_macro_series__series_id__get",
+        "parameters": [
+          {
+            "name": "series_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series Id"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroSeriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4136,6 +4239,122 @@
           "markdown"
         ],
         "title": "LearnPage"
+      },
+      "MacroPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "MacroPoint"
+      },
+      "MacroSeriesInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency",
+            "description": "'daily' or 'monthly' (a monthly value is dated the 1st)"
+          },
+          "source_series": {
+            "type": "string",
+            "title": "Source Series",
+            "description": "The Bank of Israel dataflow/code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "frequency",
+          "source_series"
+        ],
+        "title": "MacroSeriesInfo"
+      },
+      "MacroSeriesResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency",
+            "description": "'daily' or 'monthly' (a monthly value is dated the 1st)"
+          },
+          "source_series": {
+            "type": "string",
+            "title": "Source Series",
+            "description": "The Bank of Israel dataflow/code"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Where the cached copy came from: 'boi' or 'fixtures'"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "description": "True if a refresh failed and the cached copy is served"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/MacroPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "frequency",
+          "source_series",
+          "source",
+          "stale",
+          "warnings",
+          "points"
+        ],
+        "title": "MacroSeriesResponse"
       },
       "Operand": {
         "properties": {

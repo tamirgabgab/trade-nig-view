@@ -53,6 +53,37 @@ group = "Indices"
 exchange = "CBOE"
 has_volume = false
 
+# Total-return benchmarks (dividends reinvested) and Israel: the home-vs-market planner's default
+# assets (Phase H). Their history depth on Yahoo is checked on the user's machine.
+[[symbols]]
+symbol = "^SP500TR"
+display = "SPXTR"
+name = "S&P 500 Total Return"
+type = "index"
+group = "Benchmarks"
+exchange = "SNP"
+has_volume = false
+
+[[symbols]]
+symbol = "^XNDX"
+display = "XNDX"
+name = "Nasdaq-100 Total Return"
+type = "index"
+group = "Benchmarks"
+exchange = "NASDAQ"
+has_volume = false
+
+[[symbols]]
+symbol = "^TA125.TA"
+display = "TA125"
+name = "Tel Aviv 125"
+type = "index"
+group = "Benchmarks"
+exchange = "TASE"
+currency = "ILS"
+timezone = "Asia/Jerusalem"
+has_volume = false
+
 [[symbols]]
 symbol = "SPY"
 display = "SPY"
@@ -225,3 +256,15 @@ exchange = "FX"
 session_start = "17:00"
 has_volume = false
 decimals = 5
+
+[[symbols]]
+symbol = "ILS=X"
+display = "USDILS"
+name = "US Dollar / Israeli Shekel"
+type = "forex"
+group = "Forex"
+exchange = "FX"
+currency = "ILS"
+session_start = "17:00"
+has_volume = false
+decimals = 4

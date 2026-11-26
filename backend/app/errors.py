@@ -38,6 +38,11 @@ class SymbolNotFoundError(ChartLabError):
     code = "symbol_not_found"
 
 
+class SeriesNotFoundError(ChartLabError):
+    status = HTTPStatus.NOT_FOUND
+    code = "series_not_found"
+
+
 class RevisionConflictError(ChartLabError):
     """The client saved on top of an older revision (another tab or window saved meanwhile)."""
 

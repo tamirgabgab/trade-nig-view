@@ -8,6 +8,7 @@ from fastapi import Request
 
 from app.data.bar_service import BarService
 from app.data.universe import Universe
+from app.macro.service import MacroService
 from app.storage.documents import DocumentStore
 from app.storage.drawings import DrawingsRepository
 
@@ -30,3 +31,7 @@ def get_layouts(request: Request) -> DocumentStore:
 
 def get_watchlists(request: Request) -> DocumentStore:
     return cast("DocumentStore", request.app.state.watchlists)
+
+
+def get_macro_service(request: Request) -> MacroService:
+    return cast("MacroService", request.app.state.macro_service)

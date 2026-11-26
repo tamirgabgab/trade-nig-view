@@ -12,8 +12,13 @@ REAL_UNIVERSE = REPO_ROOT / "backend" / "config" / "universe.toml"
 def test_real_universe_loads_with_expected_sections() -> None:
     universe = Universe.load(REAL_UNIVERSE)
     groups = list(dict.fromkeys(info.group for info in universe.symbols))
-    assert groups == ["Indices", "ETFs", "Stocks", "Futures", "Forex"]
+    assert groups == ["Indices", "Benchmarks", "ETFs", "Stocks", "Futures", "Forex"]
     assert universe.resolve("SPX") == universe.resolve("^gspc")
+    # Phase H: total-return benchmarks, Israel, and the shekel.
+    assert [i.display for i in universe.search(group="Benchmarks")] == ["SPXTR", "XNDX", "TA125"]
+    ta125, usd_ils = universe.resolve("TA125"), universe.resolve("USDILS")
+    assert ta125 is not None and ta125.timezone == "Asia/Jerusalem"
+    assert usd_ils is not None and usd_ils.symbol == "ILS=X"
     assert universe.resolve("AAPL") is not None
     indices = universe.search(group="Indices")
     assert all(not info.has_volume for info in indices)

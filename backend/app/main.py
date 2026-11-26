@@ -21,6 +21,7 @@ from app.api import (
     indicators,
     layouts,
     learn,
+    macro,
     quotes,
     regime,
     risk,
@@ -38,6 +39,9 @@ from app.data.providers.tiingo import TiingoProvider
 from app.data.providers.yahoo import YahooProvider
 from app.data.universe import Universe
 from app.errors import register_error_handlers
+from app.macro.boi import BoiSource
+from app.macro.fixtures import MacroFixtureSource
+from app.macro.service import MacroCache, MacroService
 from app.storage.documents import DocumentStore
 from app.storage.drawings import DrawingsRepository
 
@@ -94,6 +98,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         refresh_ttl_s=settings.refresh_ttl_s,
         provider_limits=not settings.offline,
     )
+    app.state.macro_service = MacroService(
+        MacroCache(settings.chartlab_data_dir / "bars.db"),
+        [MacroFixtureSource(settings.fixtures_dir)] if settings.offline else [BoiSource()],
+    )
     app_db = settings.chartlab_data_dir / "app.db"
     app.state.drawings = DrawingsRepository(app_db)
     app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)
@@ -115,6 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         trade_plan.router,
         risk.router,
         regime.router,
+        macro.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app
