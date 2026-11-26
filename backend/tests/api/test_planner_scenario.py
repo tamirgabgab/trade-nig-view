@@ -191,6 +191,14 @@ def test_what_the_answer_depends_on(client: TestClient) -> None:
     assert free["liquidity"]["discount"] == 0
 
 
+def test_a_breakeven_market_return_says_when_the_mixes_differ(client: TestClient) -> None:
+    other = {"market": {**MARKET, "assets": [{"symbol": "NVDA"}]}}
+    apartment = {"home": {**HOME, "start": "2016-01-15"}, "market": MARKET}
+    notes = post(client, "run", x=apartment, y=other, end="2021-01-15")["warnings"]
+    assert any("hold different mixes" in note for note in notes)
+    assert not any("different mixes" in note for note in post(client, "run")["warnings"])
+
+
 def test_two_market_options_have_no_apartment_to_explain(client: TestClient) -> None:
     saver = {**MARKET, "deposits": [{"date": "2012-01-05", "amount": 1_000}]}
     body = post(client, "run", x={"market": saver}, y={}, end="2014-01-05")

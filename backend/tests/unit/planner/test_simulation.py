@@ -27,7 +27,7 @@ from app.planner.scenario_data import (
 from app.planner.study import outcome
 from tests.unit.planner.test_scenario import END, FLAT_CPI, account
 from tests.unit.planner.test_scenario import home as owner
-from tests.unit.planner.test_scenario_data import MACRO, START, home, scenario
+from tests.unit.planner.test_scenario_data import MACRO, MARKET, START, home, scenario
 
 HISTORICAL = {"value_mode": "historical", "rates_mode": "historical"}
 
@@ -276,3 +276,37 @@ def test_a_world_does_not_warn_about_a_cpi_that_ends_with_the_plan() -> None:
     spec = scenario()  # a linked track of 240 months, held for 120
     world = make_world(world_spec(spec, MACRO, market=(0.06, 0.1)), 0)
     assert build(spec, MACRO, Change(world=world))[4] == []
+
+
+def test_an_apartment_can_have_its_own_volatility_on_top_of_the_index() -> None:
+    plain = scenario(**HISTORICAL)
+    own = scenario(**HISTORICAL, value_own_sd=0.08)
+    worlds = world_spec(plain, MACRO)
+
+    def value(spec: ScenarioSpec, index: int) -> np.ndarray:
+        result = run(spec, MACRO, Change(world=make_world(worlds, index)))
+        assert result.x.home is not None
+        return result.x.home.value
+
+    # Without it the apartment is the index of its world; with it, each world moves it apart.
+    ratios = np.array([value(own, i)[-1] / value(plain, i)[-1] for i in range(400)])
+    assert np.all(value(scenario(**HISTORICAL, value_own_sd=0.0), 3) == value(plain, 3))
+    assert len(set(np.round(ratios, 9))) == 400
+    # Ten years of 8 % a year: a log spread of 0.08 * sqrt(10), around no drift at all.
+    assert np.log(ratios).std() == pytest.approx(0.08 * 10**0.5, rel=0.1)
+    assert ratios.mean() == pytest.approx(1.0, abs=4 * 0.26 / 400**0.5)
+    assert value(own, 5)[0] == 1_500_000  # the purchase price is the purchase price
+    # Outside a simulation there is one path, and it is the index.
+    alone, indexed = run(own, MACRO).x.home, run(plain, MACRO).x.home
+    assert alone is not None
+    assert indexed is not None
+    assert np.array_equal(alone.value, indexed.value)
+
+
+def test_two_apartments_get_their_own_shocks() -> None:
+    spec = scenario(**HISTORICAL, value_own_sd=0.08)
+    both = replace(spec, y=replace(spec.x, account=MARKET))
+    result = run(both, MACRO, Change(world=make_world(world_spec(both, MACRO), 0)))
+    assert result.x.home is not None
+    assert result.y.home is not None
+    assert not np.array_equal(result.x.home.value, result.y.home.value)

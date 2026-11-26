@@ -161,3 +161,25 @@ def test_simulations_that_cannot_run_say_why(client: TestClient) -> None:
         "warnings"
     ]
     assert not any("correlation" in note for note in tied)
+
+
+def test_different_mixes_are_one_market_in_a_monte_carlo(client: TestClient) -> None:
+    other = {"market": {**MARKET, "assets": [{"symbol": "NVDA"}]}}
+    apartment = {"home": {**HOME, "start": "2016-01-15"}, "market": MARKET}
+    late = {"x": apartment, "y": other, "end": "2021-01-15", "runs": 10}
+    notes = simulate(client, method="monte_carlo", **late)["warnings"]
+    assert any("hold different mixes" in note for note in notes)
+    # A bootstrap resamples each mix as it is: nothing to warn about.
+    assert not any("different mixes" in note for note in simulate(client, **late)["warnings"])
+    same = simulate(client, method="monte_carlo", runs=10, x={"home": HOME, "market": MARKET})
+    assert not any("different mixes" in note for note in same["warnings"])
+
+
+def test_an_apartments_own_volatility_reaches_the_worlds(client: TestClient) -> None:
+    def spread(own: float) -> float:
+        home = {**HOME, **HISTORICAL, "value": {"mode": "historical", "own_sd_pct": own}}
+        return float(np.std(simulate(client, x={"home": home})["samples"]["x_wealth"]))
+
+    # The synthetic index grows at a constant rate: only the rates move the apartment's end
+    # value, until it gets a volatility of its own.
+    assert spread(10) > 3 * spread(0)
