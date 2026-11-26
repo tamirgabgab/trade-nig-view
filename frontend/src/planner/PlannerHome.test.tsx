@@ -107,7 +107,7 @@ describe('PlannerHome', () => {
       .getAllByRole('row')
       .map((row) =>
         within(row)
-          .getAllByRole('cell')
+          .queryAllByRole('cell')
           .map((cell) => cell.textContent),
       );
     // Against the plan's own highest payment over the whole term (3,635.88).
