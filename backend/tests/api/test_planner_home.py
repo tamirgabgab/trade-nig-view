@@ -94,6 +94,7 @@ def test_tax_presets_feed_the_purchase_tax(client: TestClient) -> None:
     assert presets["betterment"][0]["spec"]["single_home"] is True
     single, additional = (p["brackets"] for p in presets["purchase"])
     assert single[-1] == {"up_to": None, "rate_pct": 10.0}
+    assert [b["rate_pct"] for b in single] == [0.0, 3.5, 5.0, 8.0, 10.0]
     plan: dict[str, Any] = {"price": 2_500_000, "equity": 2_500_000, "tracks": []}
     first = run(client, **plan, purchase={"tax_brackets": single})
     assert first["summary"]["purchase_tax"] == pytest.approx(20_538.3, abs=0.1)

@@ -209,8 +209,13 @@ class TaxPresets(BaseModel):
     betterment: list[BettermentPresetOut]
 
 
+def _pct(fraction: float) -> float:
+    """A stored fraction as a percentage a form can show (3.5, not 3.5000000000000004)."""
+    return round(fraction * 100, 6)
+
+
 def _brackets_out(brackets: tuple[Bracket, ...]) -> list[BracketIn]:
-    return [BracketIn(up_to=b.up_to, rate_pct=b.rate * 100) for b in brackets]
+    return [BracketIn(up_to=b.up_to, rate_pct=_pct(b.rate)) for b in brackets]
 
 
 @router.get("/planner/tax-presets", response_model=TaxPresets)
@@ -229,7 +234,7 @@ def get_tax_presets() -> TaxPresets:
                 name=p.name,
                 note=p.note,
                 spec=BettermentIn(
-                    rate_pct=p.spec.rate * 100,
+                    rate_pct=_pct(p.spec.rate),
                     single_home=p.spec.single_home,
                     ceiling=p.spec.ceiling,
                     linear=p.spec.linear,

@@ -2,13 +2,14 @@ import { useRef, useState } from 'react';
 
 import panel from '../components/IndicatorSettingsPanel.module.css';
 
-interface PlannerNumberProps {
+export interface PlannerNumberProps {
   /** The accessible name (the column header or the label next to it is the visible one). */
   label: string;
   value: number;
   min?: number;
   max?: number;
   step?: number;
+  disabled?: boolean;
   onChange: (value: number) => void;
 }
 
@@ -23,6 +24,7 @@ export function PlannerNumber({
   min = 0,
   max = Number.MAX_SAFE_INTEGER,
   step = 1,
+  disabled = false,
   onChange,
 }: PlannerNumberProps) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -36,6 +38,7 @@ export function PlannerNumber({
       min={min}
       max={max}
       step={step}
+      disabled={disabled}
       value={draft ?? String(value)}
       onFocus={() => {
         before.current = value;

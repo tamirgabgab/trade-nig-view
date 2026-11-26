@@ -1,11 +1,11 @@
 import type { MarketSummary } from '../api/planner.ts';
-import styles from './Planner.module.css';
+import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
 import { percent, shekels } from './plannerFormat.ts';
 
 /** The totals of a run: what went in, what it is worth, and what is left after fees and tax. */
 export function PlannerSummary({ summary }: { summary: MarketSummary }) {
   const fees = summary.deposit_fees + summary.commissions + summary.account_fees;
-  const cards: [string, string, string?][] = [
+  const cards: PlannerCard[] = [
     ['Deposited', shekels(summary.deposited)],
     ['Value at the end', shekels(summary.value)],
     ['Gross gain', shekels(summary.gross_gain), 'After fees and the sell commission, before tax'],
@@ -23,14 +23,5 @@ export function PlannerSummary({ summary }: { summary: MarketSummary }) {
     ['Fees paid', shekels(fees), 'Deposit fees, commissions and account fees'],
     ['Dividend tax', shekels(summary.dividend_tax), 'Taken from dividends before reinvesting'],
   ];
-  return (
-    <dl className={styles.cards}>
-      {cards.map(([label, value, note]) => (
-        <div key={label} className={styles.card} title={note}>
-          <dt>{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
+  return <PlannerCards cards={cards} />;
 }

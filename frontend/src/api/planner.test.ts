@@ -1,4 +1,5 @@
-import { parseDepths, parseMarket } from './planner.ts';
+import { HOME_RESULT, TAX_PRESETS } from '../test/plannerHomeBody.ts';
+import { parseDepths, parseHome, parseMarket, parseTaxPresets } from './planner.ts';
 
 const SUMMARY = {
   deposited: 1000,
@@ -40,5 +41,21 @@ describe('parseDepths', () => {
     expect(parseDepths([{ symbol: 'SPY' }])).toHaveLength(1);
     expect(() => parseDepths({})).toThrow('Unexpected');
     expect(() => parseDepths([1])).toThrow('Unexpected');
+  });
+});
+
+describe('parseHome', () => {
+  it('accepts a result; only the returns may be null', () => {
+    expect(parseHome(HOME_RESULT).summary.first_payment).toBe(3635.88);
+    expect(() => parseHome({ ...HOME_RESULT, schedule: undefined })).toThrow('Unexpected');
+    const summary = { ...HOME_RESULT.summary, net_worth: null };
+    expect(() => parseHome({ ...HOME_RESULT, summary })).toThrow('net_worth');
+  });
+});
+
+describe('parseTaxPresets', () => {
+  it('accepts the two lists only', () => {
+    expect(parseTaxPresets(TAX_PRESETS).purchase).toHaveLength(2);
+    expect(() => parseTaxPresets({ purchase: [] })).toThrow('Unexpected');
   });
 });
