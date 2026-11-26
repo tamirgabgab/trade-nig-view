@@ -103,29 +103,34 @@ export function PlannerHomeResults({ result }: { result: HomeResult }) {
           <PlannerTable label="Mortgage tracks" columns={TRACKS} rows={result.tracks} />
         </>
       )}
-      <h2 className={styles.heading}>If the Bank of Israel rate rose</h2>
-      {result.stress.length > 0 ? (
-        <PlannerTable
-          label="Rate stress"
-          columns={[
-            ['Bank of Israel rate', (row) => rise(row.rise)],
-            ['Highest payment, whole term', (row) => shekels(row.highest_payment)],
-            ['Against the plan', (row) => signedShekels(row.highest_payment - highest)],
-            ['Paid until the sale', (row) => shekels(row.paid)],
-          ]}
-          rows={result.stress}
-        />
-      ) : (
-        <p className={styles.note}>
-          Every track has a fixed rate: the Bank of Israel rate does not move the payments.
-        </p>
-      )}
-      {result.stress.length > 0 && (
-        <p className={styles.note}>
-          The same loan with the Bank of Israel rate that much higher from the second month on,
-          everything else as entered: a prime track pays more at once, a variable one from its next
-          reset. The highest payment is over the whole term of the loan, not only until the sale.
-        </p>
+      {result.tracks.length > 0 && (
+        <>
+          <h2 className={styles.heading}>If the Bank of Israel rate rose</h2>
+          {result.stress.length > 0 ? (
+            <>
+              <PlannerTable
+                label="Rate stress"
+                columns={[
+                  ['Bank of Israel rate', (row) => rise(row.rise)],
+                  ['Highest payment, whole term', (row) => shekels(row.highest_payment)],
+                  ['Against the plan', (row) => signedShekels(row.highest_payment - highest)],
+                  ['Paid until the sale', (row) => shekels(row.paid)],
+                ]}
+                rows={result.stress}
+              />
+              <p className={styles.note}>
+                The same loan with the Bank of Israel rate that much higher from the second month
+                on, everything else as entered: a prime track pays more at once, a variable one from
+                its next reset. The highest payment is over the whole term of the loan, not only
+                until the sale.
+              </p>
+            </>
+          ) : (
+            <p className={styles.note}>
+              Every track has a fixed rate: the Bank of Israel rate does not move the payments.
+            </p>
+          )}
+        </>
       )}
       <PlannerHeading
         csv="apartment path"
