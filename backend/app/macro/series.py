@@ -34,10 +34,6 @@ class MacroSeries:
     values: FloatArray
 
     @classmethod
-    def empty(cls) -> MacroSeries:
-        return cls(np.empty(0, dtype=np.int64), np.empty(0, dtype=np.float64))
-
-    @classmethod
     def from_pairs(cls, pairs: dict[int, float]) -> MacroSeries:
         """Sorted by day, one value per day; non-finite values (NaN, inf) count as missing."""
         days = sorted(d for d, v in pairs.items() if np.isfinite(v))
