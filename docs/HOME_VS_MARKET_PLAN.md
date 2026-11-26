@@ -190,15 +190,15 @@ Notes:
 
 **Taxes on the apartment (presets: editable, saved, each with its source and validity date)**
 - **Purchase tax:** a bracket table, tax = Σ rate_k × (the part of the price inside bracket k). Saved as documents
-  (`DocumentStore("tax_presets")`); the user creates, edits and saves their own tables. Built-in presets, from
-  secondary sources (2026-11-26) to be checked against the Tax Authority's table in H2:
+  in the browser, beside the form (H2; see ADR 0020); the user creates, edits and saves their own tables. Built-in
+  presets, checked in H2 against the Israel Tax Authority's directive 1/2026 (2026-01-18):
   - **Single home (2026):** 0 % up to 1,978,745 ₪; 3.5 % to 2,347,040; 5 % to 6,055,070; 8 % to 20,183,565; 10 %
     above. The brackets are frozen (not CPI-updated) until 2028-01-15.
   - **Additional home (2026):** 8 % up to 6,055,070 ₪, 10 % above. A temporary provision until 2026-12-31.
   - In historical mode the chosen table applies in every year, stated in the UI.
 - **Betterment tax** is not a bracket schedule in the law. The default model follows the law's parameters:
   - **rate:** 25 % of the real gain (sale − purchase − recognised costs, the cost indexed by the model's CPI);
-  - **single-home exemption:** on or off, with its ceiling (about 5 million ₪, to be checked in H2);
+  - **single-home exemption:** on or off, with its ceiling (5,008,000 ₪ for 2025 to 2027, by the same directive);
   - **the linear rule:** for a home bought before 2014, the share of the gain from before 2014-01-01 is taxed at 0 %,
     by days held.
   - Presets: "single home (exempt up to the ceiling)" and "additional home (25 % of the real gain)".
@@ -295,7 +295,7 @@ discipline).
 |---|---|---|
 | **H0** ✅ 2026-11-26 | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
 | **H1** ✅ 2026-11-26 | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
-| **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0020. | L |
+| **H2** ✅ 2026-11-26 | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0020. | L |
 | **H3** | Scenarios and statistics: modes A, B and A+B, mirrored cash flows, rolling windows, block bootstrap, Monte Carlo, the fifteen metrics above (breakeven rates, win map, regret, path risks, dominance, decomposition, sensitivity among them), histograms and P(a ≤ X ≤ b) with its interval. Tests: known answers (constant returns), bootstrap reproducibility by seed, the effective-sample count, P(A > B) = 0.5 and zero regret for identical sides, a breakeven rate that reproduces equality, dominance of X + c over X. May split into H3a (scenarios, layer 1) and H3b (layers 2 and 3). | XL |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
 | **H5** | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
@@ -309,6 +309,18 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H2 results (2026-11-26, ADR 0020)
+- The user's choices before H2: a variable-rate track, linked or not; the Bank of Israel rate both from history and
+  assumed; the grace chosen per track; the rent grows as the user chooses, by the CPI by default.
+- The tax amounts were checked against the primary source (the Tax Authority's directive 1/2026): the single-home
+  and additional-home purchase brackets and the betterment exemption ceiling are exactly the built-in ones.
+- Saved tax tables are kept in the browser, not in the backend's document store.
+- The Planner page has two tabs (Market, Apartment), so H4 shrinks again: the A/B/A+B switch, the charts, the
+  histograms and saved scenarios.
+- A variable track follows the Bank of Israel rate (the bond-yield anchors banks use are not mapped; see H0).
+- A hand check: 600,000 ₪ at a fixed 4 % over 20 years pays 3,635.88 ₪ a month.
+- Still open: compare one real offer from a bank with the page (the user).
 
 ## H1 results (2026-11-26, ADR 0019)
 - The user's choices before H1: free tickers typed in the planner; the start limited to the youngest asset of the

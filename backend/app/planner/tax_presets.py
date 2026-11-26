@@ -1,14 +1,18 @@
 """Built-in tax tables for the apartment. Defaults to start from, not tax advice.
 
-Purchase tax (מס רכישה), 2026, from secondary sources (property and news sites, read on
-2026-11-26; check the Israel Tax Authority's own table before relying on them):
+The amounts are those of the Israel Tax Authority's real-estate taxation directive 1/2026
+(הוראת ביצוע מיסוי מקרקעין 1/2026, 2026-01-18), read on 2026-11-26.
 
-* a single home: nothing up to 1,978,745; 3.5 % to 2,347,040; 5 % to 6,055,070; 8 % to
-  20,183,565; 10 % above. The brackets are frozen until 2028-01-15;
-* an additional home: 8 % up to 6,055,070, 10 % above (a temporary provision until 2026-12-31).
+Purchase tax (מס רכישה):
 
-Betterment tax (מס שבח): 25 % of the real gain; a single home is exempt up to a ceiling
-(5,008,000 in 2025); a home bought before 2014 pays only for the days held after 2014-01-01.
+* a single home, 2025-01-16 to 2028-01-15 (frozen): nothing up to 1,978,745; 3.5 % to
+  2,347,040; 5 % to 6,055,070; 8 % to 20,183,565; 10 % above;
+* an additional home, a temporary provision until 2026-12-31: 8 % up to 6,055,070, 10 % above.
+
+Betterment tax (מס שבח): the single-home exemption ceiling is 5,008,000 from 2025-01-01 to
+2027-12-31 (the directive). The rate (25 % of the real gain) and the linear rule (a home bought
+before 2014 pays only for the days held after 2014-01-01) are the law's general rules, modelled
+without its conditions (the holding period, who may use the linear rule).
 """
 
 from __future__ import annotations
@@ -17,8 +21,8 @@ from dataclasses import dataclass
 
 from app.planner.home import Betterment, Bracket
 
-AS_OF = "2026-11-26"
-SOURCE = "Secondary sources (property and news sites); check the Israel Tax Authority"
+AS_OF = "2026-01-18"
+SOURCE = "Israel Tax Authority, real-estate taxation directive 1/2026"
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +45,7 @@ PURCHASE = (
     PurchasePreset(
         "single_home_2026",
         "Single home (2026)",
-        "Brackets frozen until 2028-01-15",
+        "From 2025-01-16, frozen until 2028-01-15",
         (
             Bracket(1_978_745.0, 0.0),
             Bracket(2_347_040.0, 0.035),
@@ -62,7 +66,7 @@ BETTERMENT = (
     BettermentPreset(
         "single_home",
         "Single home (exempt up to the ceiling)",
-        "The 2025 ceiling; a home held at least 18 months",
+        "The ceiling of 2025 to 2027; the law also asks for 18 months of holding",
         Betterment(single_home=True),
     ),
     BettermentPreset(
