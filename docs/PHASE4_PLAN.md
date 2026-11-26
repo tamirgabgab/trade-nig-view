@@ -11,6 +11,51 @@ it worked: trades on the chart, an equity curve against buy-and-hold, the standa
 skill from luck (out-of-sample, walk-forward, multiple-testing corrections). The same engine later runs on a
 watchlist (screener, portfolio) and, in Phase 5, drives a paper agent.
 
+## Trader profiles: the organising principle (user, 2026-11-26)
+Every strategy, forecast model, default and report in Phase 4 belongs to one of **four trader profiles**, set by how
+often the trader acts. The user picks a profile; the whole Strategy tab (intervals, horizons, costs, constraints,
+evaluation windows, metrics) follows it. **The final models of Phase 4 are one honest, validated model set per
+profile** (B7).
+
+| Profile | Trades at most | Decision bars | Context bars | Typical hold | Forecast horizon | Overnight |
+|---|---|---|---|---|---|---|
+| **Day** | 10 a day | 5m (15m) | 1h, the day's open, the previous close | minutes to hours | the next 1–12 bars (≤ 1 hour), the rest of the session | none: flat at the close |
+| **Swing** | 10 a week | 1h | 1D | hours to ~10 days | 1–10 daily bars | allowed |
+| **Position** | 10 a month | 1D | 1W | days to weeks | 5–20 daily bars | allowed |
+| **Long-term** | 12 a year | 1W (1M) | 1M | weeks to months | 1–12 months | allowed |
+
+What a profile fixes (`TraderProfile` in the backend, one object per profile, tested):
+- **The trade cap**, enforced by the engine per calendar period in the exchange time zone (a day, an ISO week, a
+  month, a year): a signal past the cap is skipped and counted in the report, never silently dropped.
+- **Intervals:** the decision interval and the context intervals (a higher interval's values reach a lower one only
+  once its bar has closed: no lookahead across intervals).
+- **Session rules:** the Day profile is flat at the session close and opens nothing in the last N minutes; the others
+  may hold overnight and over weekends (gaps are part of their risk).
+- **Default costs:** per-trade costs matter most for Day (spread, commission on every trade), much less for
+  Long-term (where turnover and holding time dominate).
+- **Forecast horizons and models:** the OHLC forecast (ADR 0010) and the HAR volatility forecast (ADR 0011) are
+  refitted per profile on its decision interval with its horizons; features stay causal.
+- **Evaluation windows:** walk-forward windows sized to the profile (Day: weeks of 5m bars; Swing: months of 1h;
+  Position: years of 1D; Long-term: decades of 1W), and a minimum number of trades before any statistic is shown
+  (e.g. 30), with a warning when the history cannot supply it.
+- **Metrics in front:** Day: the distribution of daily P&L, the worst day, trades a day, hit rate and average
+  win/loss; Swing and Position: Sharpe, max drawdown, profit factor, exposure; Long-term: CAGR, max drawdown and its
+  length, the gap to buy-and-hold, turnover.
+
+### Data per profile (the main constraint)
+| Profile | Data needed | What Yahoo gives | Consequence |
+|---|---|---|---|
+| Day | 5m/15m, years | 5m and 15m: only the **last 60 days**; 1m: 7 days | not enough history for honest statistics out of the box |
+| Swing | 1h, years | 1h: ~730 days | about 2 years: enough for a first evaluation, growing with the cache |
+| Position | 1D, decades | full daily history | fine |
+| Long-term | 1W/1M, decades | resampled from 1D | fine |
+
+The plan for intraday history (round **D0**, below): add 5m and 15m as base intervals, keep everything ever downloaded
+in the cache (as 1h already does) so history **accumulates**, and add a small daily collector (a Windows scheduled
+task that runs `scripts/collect-intraday.ps1` after the US close) so the 60-day window never leaves gaps. After a year
+of collecting, the Day profile has a year of 5m bars. A paid data source (data only, never a broker) is the other way,
+for the user to decide.
+
 ## What Phases 1–3 already give us
 | Piece | Where | Used for |
 |---|---|---|
@@ -35,8 +80,17 @@ watchlist (screener, portfolio) and, in Phase 5, drives a paper agent.
 
 ## Rounds
 
-### B0 — Strategy model and signals (M)
-- A **strategy document** (stored like layouts, `DocumentStore("strategies")`): name, symbol(s), interval, side
+### D0 — Intraday data for the Day profile (M)
+- 5m and 15m as base intervals from Yahoo (the last 60 days), cached and accumulated like 1h; sessions and
+  adjustment as for 1h; replay and indicators work on them unchanged.
+- `scripts/collect-intraday.ps1` + `install-collector.ps1` (a daily Windows scheduled task) fetch the last days of 5m
+  bars for the watchlist so the cache grows without gaps; a "history depth" line per symbol in the Data window.
+- Tests: fixtures for 5m; resampling 5m → 15m → 1h equals the downloaded 1h; no-lookahead across intervals.
+
+### B0 — Trader profiles, strategy model and signals (M)
+- **`TraderProfile`** (the four profiles above) in the backend and a profile picker at the top of the Strategy tab;
+  the chart opens on the profile's decision interval.
+- A **strategy document** (stored like layouts, `DocumentStore("strategies")`): name, **profile**, symbol(s), side
   (long, short or both), entry rules and exit rules as groups of conditions (AND within a group, OR between groups),
   filters (regime label, volatility percentile, forecast P(up) above a level), and exits (the opposite signal, a stop
   and a target in % or ATR multiples, a time stop in bars, a trailing stop).
@@ -47,9 +101,10 @@ watchlist (screener, portfolio) and, in Phase 5, drives a paper agent.
 - **Output:** signals as markers on the chart (no trades yet).
 
 ### B1 — The backtest engine, one symbol (L)
-- A **bar loop** in Python (25 years of daily bars is about 6,300 iterations: fast enough; vectorise later only if
-  B4's sweeps need it): position state (flat, long, short), pending orders, fills at the next open, stop and target
-  and trailing exits inside the bar by the conventions above, mark-to-market at each close.
+- A **bar loop** in Python (25 years of daily bars is about 6,300 iterations; a year of 5m bars about 20,000: fast
+  enough; vectorise later only if B4's sweeps need it): position state (flat, long, short), pending orders, fills at
+  the next open, stop and target and trailing exits inside the bar by the conventions above, mark-to-market at each
+  close; **the profile's trade cap and session rules** (the Day profile closes at the session's end).
 - **Outputs:** the trade list (entry and exit time and price, reason, P&L in money and %, R multiple, MAE and MFE,
   bars held), the equity and drawdown curves, exposure, and buy-and-hold over the same bars as the benchmark.
 - **Metrics:** total return, CAGR, annualised volatility, Sharpe, Sortino, max drawdown and its length, Calmar, win
@@ -105,6 +160,8 @@ watchlist (screener, portfolio) and, in Phase 5, drives a paper agent.
 - Cache-first and rate-limit aware: a watchlist run reads cached bars and refreshes at most the stale ones.
 
 ### B6 — Learn pages and the replay link (M)
+(Also per profile: a learn page for each of the four trading styles: what the numbers mean for it, its typical
+costs, and the history it needs.)
 - Learn pages: **Backtesting honestly** (lookahead, survivorship, costs, overfitting, the Deflated Sharpe) and
   **Position sizing** (fixed risk, volatility targeting, the Kelly fraction and why to use less), with live widgets
   on synthetic markets.
@@ -114,9 +171,24 @@ watchlist (screener, portfolio) and, in Phase 5, drives a paper agent.
   the backtester; the results compare the user with the strategy and with buy-and-hold. This is the bridge to the
   Phase 5 paper agent.
 
+### B7 — The final models: one validated set per profile (L)
+- For each profile, a **model set**: the strategy families that suit it (e.g. Day: opening-range breakout, VWAP
+  reversion, momentum bursts; Swing: pullbacks in a trend, RSI and Bollinger reversion by regime; Position: MA and
+  breakout trends with volatility sizing; Long-term: trend and momentum on weekly/monthly bars, buy-and-hold with a
+  regime or drawdown filter), plus forecast-driven rules (enter when the profile's forecast P(up) and the expected
+  move beat the costs).
+- Each family is tuned **walk-forward only**, under the profile's trade cap and costs, on several symbols; the
+  results go to a **leaderboard per profile** ranked by the out-of-sample Deflated Sharpe, with the trade count, the
+  worst drawdown and buy-and-hold beside it. A model that does not beat buy-and-hold after costs says so.
+- The chosen model of each profile is saved as a named strategy ("Day — v1", …) the user can open, replay, practise
+  against (B6) and, in Phase 5, hand to the paper agent. Re-running the leaderboard later (new data) gives v2.
+- Tests: the leaderboard on synthetic markets ranks a planted edge first and finds nothing on a random walk.
+
 ## Order and size
-B0 → B1 → B2 is the core (a usable backtester after three rounds). B3 and B4 make the numbers honest; B5 and B6
-widen and teach. Sizes: B0 M, B1 L, B2 L, B3 M, B4 L, B5 M, B6 M.
+D0 can run first or in parallel with B0–B2 (only the Day profile needs it). B0 → B1 → B2 is the core (a usable
+backtester for the Swing, Position and Long-term profiles after three rounds). B3 and B4 make the numbers honest; B5
+and B6 widen and teach; B7 delivers the final per-profile models. Sizes: D0 M, B0 M, B1 L, B2 L, B3 M, B4 L, B5 M,
+B6 M, B7 L.
 
 ## Architecture notes
 - New backend package `app/backtest/` (`strategy.py` models, `signals.py`, `engine.py`, `metrics.py`,
@@ -131,6 +203,8 @@ widen and teach. Sizes: B0 M, B1 L, B2 L, B3 M, B4 L, B5 M, B6 M.
    Phase 3)?
 2. **Side:** long only first, or long and short from B1?
 3. **Fills:** next bar's open by default (recommended), or the signal bar's close?
-4. **Intervals:** daily first, or 1h and 4h from the start?
-5. **Results:** which metrics and views matter most to you (to put first in B2)?
-6. **Portfolio (B5):** equal weight, or risk parity (inverse volatility)?
+4. **Profiles first:** which profile to build first (recommended: Position, then Swing and Long-term, Day last once D0
+   has collected intraday history)?
+5. **Day data:** collect 5m bars daily from Yahoo (free, history grows from today), or a paid data feed?
+6. **Results:** which metrics and views matter most to you (to put first in B2)?
+7. **Portfolio (B5):** equal weight, or risk parity (inverse volatility)?

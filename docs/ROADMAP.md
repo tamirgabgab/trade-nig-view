@@ -26,7 +26,7 @@
 | U2 | Appearance: theme presets, accent, text size, chart backgrounds, heatmap (ADR 0015) | M | ✅ (2026-11-25) |
 | U3 | Chart tools: compare, patterns, icons, eraser, zoom box, Go to date, forecast pointer, animated backgrounds (ADR 0016) | L | ✅ (2026-11-26) |
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
-| P4 | Strategies and backtesting, in rounds B0–B6 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
+| P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds D0 and B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
 
@@ -319,7 +319,10 @@ Phase-2 plan.
 - Deferred: the Python plugin API (`plugins/` folder, hot reload, `chartlab test-indicator`), if ever needed.
 
 ### Phase 4 — Strategies & backtesting
-- The round-by-round plan is in [PHASE4_PLAN.md](PHASE4_PLAN.md) (2026-11-26): strategy model and signals (B0),
+- Organised by **four trader profiles** set by trade frequency (Day ≤ 10 a day, Swing ≤ 10 a week, Position ≤ 10 a
+  month, Long-term ≤ 12 a year); the final models are one validated set per profile (B7).
+- The round-by-round plan is in [PHASE4_PLAN.md](PHASE4_PLAN.md) (2026-11-26): intraday data for the Day profile (D0),
+  profiles, strategy model and signals (B0),
   the backtest engine (B1), the results tab and trades on the chart (B2), costs, sizing and risk exits (B3), honest
   evaluation: walk-forward, parameter sweeps and multiple-testing corrections (B4), portfolio and screener (B5), the
   strategy learn pages and the replay link (B6).
