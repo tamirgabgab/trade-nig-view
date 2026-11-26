@@ -133,7 +133,7 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
   const typed = (value: number) => Number(value.toFixed(step < 1 ? 2 : 0));
 
   return (
-    <figure className={styles.histogram}>
+    <figure className={`${styles.histogram ?? ''} ${styles.draggable ?? ''}`}>
       <svg
         ref={svg}
         viewBox={`0 0 ${String(W)} ${String(H)}`}

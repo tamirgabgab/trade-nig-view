@@ -56,6 +56,18 @@ sale costs, and whether holding both lowers the risk. The user's choices before 
   by exit month with the forced sale dashed and the month of the lead marked), and the liquidity table. The
   simulation gets the split table.
 
+- **What the review settled.**
+  - With appreciation off, a rent that follows the value stays flat too: its rise is part of the appreciation,
+    and the tornado already moved the two together.
+  - A return that does not exist is not turned into a number: an apartment bought with no money down (or one whose
+    rate is beyond what XIRR searches) has no decomposition, where it used to show shares of hundreds of points.
+  - The correlation reads the national dwelling index even when the apartment's value is assumed. That is a new
+    dependency of `/planner/run` on a macro series; when it is unavailable the correlation is left out, after the
+    macro service's own retries.
+  - The forced sale's label shows the discount as typed; the lead chart marks whole years (months on a plan under
+    four years), keeps the two names apart, and only the chart with handles takes the touch for itself.
+  - The parsers reject a response without the new fields, so an older backend gives an error, not a blank page.
+
 ## Verification
 - **All the round's tests were committed before its code** (`892c80f`), hand arithmetic first: the Shapley value of
   a two-player game by hand; everything off earns nothing; an apartment bought outright earns its appreciation and

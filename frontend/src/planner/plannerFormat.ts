@@ -29,3 +29,6 @@ export function signedShekels(value: number): string {
   const text = shekels(value);
   return value >= 0.5 ? `+${text}` : text;
 }
+
+/** A share as a plain percentage, with only the decimals it has: `10%`, `7.5%`, `0%`. */
+export const plainPercent = (fraction: number) => `${String(Number((fraction * 100).toFixed(2)))}%`;

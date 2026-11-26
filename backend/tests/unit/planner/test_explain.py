@@ -121,6 +121,7 @@ def test_with_everything_off_an_apartment_earns_nothing() -> None:
 
 def test_an_apartment_bought_outright_earns_its_appreciation_only() -> None:
     parts = decompose(*outright(0.03))
+    assert parts is not None
     # Months against calendar days: ten years of 3 % are 3 % a year to a few days' worth.
     assert parts["appreciation"] == pytest.approx(0.03, abs=1e-4)
     assert (parts["rent"], parts["leverage"], parts["costs"]) == pytest.approx((0, 0, 0), abs=1e-12)
@@ -130,6 +131,7 @@ def test_an_apartment_bought_outright_earns_its_appreciation_only() -> None:
 def test_the_four_contributions_add_up_to_the_apartments_return() -> None:
     plan, series = mortgaged()
     parts = decompose(plan, series)
+    assert parts is not None
     assert sum(parts[name] for name in COMPONENTS) == pytest.approx(parts["total"], abs=1e-12)
     assert parts["total"] == pytest.approx(run_home(plan, series).xirr, abs=1e-12)
     # Rent received and a value that rises add; costs and taxes take away. The mortgage's
@@ -140,7 +142,48 @@ def test_the_four_contributions_add_up_to_the_apartments_return() -> None:
     assert parts["costs"] < 0
     # Without a rent there is nothing for the rent to add.
     quiet = decompose(replace(plan, rent_mode=RentMode.NONE), series)
+    assert quiet is not None
     assert quiet["rent"] == pytest.approx(0.0, abs=1e-12)
+
+
+def test_a_rent_that_follows_the_value_stops_with_the_appreciation() -> None:
+    plan, series = outright(0.05)
+    let = replace(plan, rent_mode=RentMode.RENT_OUT, rent=3_000.0)
+    following = replace(series, rent=series.value[:121])  # as home_series makes it
+    _, still = without(let, following, frozenset({"appreciation"}))
+    assert np.all(still.rent == 1.0)
+    # Its own index (here: flat) is kept as it is.
+    assert without(let, series, frozenset({"appreciation"}))[1].rent is series.rent
+    # With only the rent on, the two apartments are the same one: a rent at its first level.
+    rent_only = EVERYTHING - {"rent"}
+    assert home_return(*without(let, following, rent_only)) == home_return(
+        *without(let, series, rent_only)
+    )
+    flat_rent, rising_rent = decompose(let, series), decompose(let, following)
+    assert flat_rent is not None
+    assert rising_rent is not None
+    # The rise of the rent exists only with the appreciation on: the two share it.
+    assert rising_rent["rent"] > flat_rent["rent"]
+    assert rising_rent["appreciation"] > flat_rent["appreciation"]
+    assert sum(rising_rent[name] for name in COMPONENTS) == pytest.approx(
+        rising_rent["total"], abs=1e-12
+    )
+
+
+def test_no_decomposition_of_a_return_that_does_not_exist() -> None:
+    # Nothing down, and the rent covers the payment: money only ever comes in.
+    plan = HomePlan(
+        start=START,
+        months=120,
+        price=1_000_000,
+        equity=0.0,
+        tracks=[Track(1_000_000, 120, rate=0.03)],
+        rent_mode=RentMode.RENT_OUT,
+        rent=12_000.0,
+        betterment=Betterment(rate=0.0),
+    )
+    assert home_return(plan, flat(120)) is None
+    assert decompose(plan, flat(120)) is None
 
 
 def test_an_apartment_that_ends_with_a_debt_returns_minus_everything() -> None:

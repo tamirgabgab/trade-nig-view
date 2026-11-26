@@ -212,6 +212,25 @@ describe('PlannerCompare', () => {
     });
   });
 
+  it('reports a response without what the page needs, instead of breaking on it', async () => {
+    const user = userEvent.setup();
+    // An undefined field is not sent: the body an older backend would give.
+    const older = { ...SCENARIO_RESULT, lead: undefined };
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': { body: older },
+    });
+    renderWithQuery(<PlannerCompare hidden={false} />);
+    const compare = screen.getByRole('button', { name: 'Compare' });
+    await vi.waitFor(() => {
+      expect(compare).toBeEnabled();
+    });
+    await user.click(compare);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Unexpected /api/planner/run response',
+    );
+  });
+
   it('shows why a comparison cannot run and drops the earlier results', async () => {
     const user = userEvent.setup();
     let fail = false;

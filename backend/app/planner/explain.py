@@ -3,7 +3,7 @@
 
 **The apartment's return by source.** Four sources can each be switched off:
 
-* *appreciation*: the value stays at the price;
+* *appreciation*: the value stays at the price (and so does a rent that follows the value);
 * *rent*: none is saved or received;
 * *leverage*: the apartment is bought in cash, without a mortgage;
 * *costs*: no purchase tax, lawyer, broker or renovation; no maintenance or insurance; no
@@ -22,7 +22,8 @@ on,
     \\qquad \\sum_i \\varphi_i = v(\\text{all}) - v(\\varnothing) = v(\\text{all})
 
 An apartment that ends with nothing or a debt has no rate: it counts as -100 %, as in the
-comparison.
+comparison. One bought with no money down has no rate either, and nothing to share: there is no
+decomposition then.
 
 **A forced sale** sells the apartment at a discount :math:`\\delta` on its value. The betterment
 tax is recomputed on the lower price, so the loss is the discount less the tax it saves:
@@ -106,27 +107,43 @@ def without(plan: HomePlan, series: HomeSeries, off: frozenset[str]) -> tuple[Ho
             betterment=replace(plan.betterment, rate=0.0, brackets=()),
         )
     if "appreciation" in off:
-        series = replace(series, value=np.ones_like(series.value))
+        # A rent that follows the value is part of the appreciation: it stays flat with it.
+        held = len(series.rent)
+        follows = held <= len(series.value) and np.array_equal(series.rent, series.value[:held])
+        series = replace(
+            series,
+            value=np.ones_like(series.value),
+            rent=np.ones(held) if follows else series.rent,
+        )
     return plan, series
 
 
-def home_return(plan: HomePlan, series: HomeSeries) -> float:
-    """The apartment's yearly return; -100 % when money went in and nothing came back."""
+def home_return(plan: HomePlan, series: HomeSeries) -> float | None:
+    """The apartment's yearly return; -100 % when money went in and none came back. None when
+    there is no such rate: no money was put in, or the rate is beyond what XIRR searches."""
     result = run_home(plan, series)
     if result.xirr is not None:
         return result.xirr
-    return -1.0 if plan.equity + result.purchase_costs > 0 else 0.0
+    flows = result.rent - result.payment - result.costs
+    flows[0] = -(plan.equity + result.purchase_costs)
+    flows[-1] += result.net_worth[-1]
+    return -1.0 if np.any(flows < 0) and not np.any(flows > 0) else None
 
 
-def decompose(plan: HomePlan, series: HomeSeries) -> dict[str, float]:
-    """The apartment's yearly return (``total``) and each source's contribution to it."""
+def decompose(plan: HomePlan, series: HomeSeries) -> dict[str, float] | None:
+    """The apartment's yearly return (``total``) and each source's contribution to it. None
+    when the return, or that of the apartment with some sources off, does not exist (an
+    apartment bought with no money down has no rate of return to share out)."""
     everything = frozenset(COMPONENTS)
-
-    def worth(on: frozenset[str]) -> float:
-        # With every source off it is bought and sold for the same price: exactly nothing.
-        return home_return(*without(plan, series, everything - on)) if on else 0.0
-
-    return {**shapley(worth, COMPONENTS), "total": worth(everything)}
+    worth: dict[frozenset[str], float] = {frozenset(): 0.0}  # all off: bought and sold at par
+    for size in range(1, len(COMPONENTS) + 1):
+        for chosen in combinations(COMPONENTS, size):
+            on = frozenset(chosen)
+            rate = home_return(*without(plan, series, everything - on))
+            if rate is None:
+                return None
+            worth[on] = rate
+    return {**shapley(worth.__getitem__, COMPONENTS), "total": worth[everything]}
 
 
 def forced_sale(plan: HomePlan, series: HomeSeries, result: HomeResult, discount: float) -> float:

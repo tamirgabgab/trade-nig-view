@@ -206,11 +206,15 @@ class RunResponse(BaseModel):
     difference_real: float
     breakeven: BreakevenOut
     average: AverageOut = Field(description="Net worth averaged over the exit months")
-    decomposition: DecompositionOut | None = Field(description="Of the first apartment")
+    decomposition: DecompositionOut | None = Field(
+        description="Of the first apartment; null: none, or its return does not exist"
+    )
     sensitivity: list[MoveOut]
     lead: LeadOut
     liquidity: LiquidityOut
-    correlation: CorrelationOut | None = Field(description="Null: no apartment, or no history")
+    correlation: CorrelationOut | None = Field(
+        description="Null: no apartment or account, or no history (reads the dwelling index)"
+    )
     warnings: list[str]
 
 
@@ -382,7 +386,8 @@ def _forced(side: Side, result: SideResult, discount: float) -> OptionLiquidity:
 def _decomposition(x: Side, y: Side) -> DecompositionOut | None:
     for side in (x, y):
         if side.home is not None and side.series is not None:
-            return DecompositionOut(**explain.decompose(side.home, side.series))
+            parts = explain.decompose(side.home, side.series)
+            return None if parts is None else DecompositionOut(**parts)
     return None
 
 

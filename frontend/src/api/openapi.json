@@ -8312,7 +8312,7 @@
                 "type": "null"
               }
             ],
-            "description": "Of the first apartment"
+            "description": "Of the first apartment; null: none, or its return does not exist"
           },
           "sensitivity": {
             "items": {
@@ -8336,7 +8336,7 @@
                 "type": "null"
               }
             ],
-            "description": "Null: no apartment, or no history"
+            "description": "Null: no apartment or account, or no history (reads the dwelling index)"
           },
           "warnings": {
             "items": {

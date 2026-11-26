@@ -1,7 +1,7 @@
 import type { ScenarioResult } from '../api/planner.ts';
 import { extent, niceTicks, scale } from '../components/plotScale.ts';
 import styles from './Planner.module.css';
-import { shekels } from './plannerFormat.ts';
+import { plainPercent, shekels } from './plannerFormat.ts';
 
 type Point = ScenarioResult['average']['points'][number];
 type Series = 'x' | 'y' | 'x_forced' | 'y_forced';
@@ -23,9 +23,13 @@ const KEY: Record<Series, string | undefined> = {
 const W = 640;
 const H = 240;
 const LEFT = 10;
-const RIGHT = 110;
+const RIGHT = 160;
+/** The least distance between the two names at the lines' ends. */
+const LINE_GAP = 14;
 const TOP = 18;
 const AXIS = 24;
+/** Plans shorter than this many months get their axis in months. */
+const SHORT_PLAN = 48;
 
 interface PlannerLeadChartProps {
   points: readonly Point[];
@@ -41,7 +45,7 @@ interface PlannerLeadChartProps {
  * side also in a forced sale, and the month from which the leader at the end stays ahead.
  */
 export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadChartProps) {
-  const off = `forced sale at −${String(Math.round(discount * 100))}%`;
+  const off = `forced sale at −${plainPercent(discount)}`;
   const label: Record<Series, string> = {
     x: names[0],
     y: names[1],
@@ -63,6 +67,26 @@ export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadC
       .map((p) => `${px(p.months).toFixed(1)},${py(p[series] ?? 0).toFixed(1)}`)
       .join(' ');
   const leader = lead.leader === null ? null : names[lead.leader === 'x' ? 0 : 1];
+  // Whole years on the axis; a plan too short for a few of them is marked in months.
+  const whole = (values: number[]) => values.filter((v) => Number.isInteger(v));
+  const ticks: [number, string][] =
+    last >= SHORT_PLAN
+      ? whole(niceTicks(0, last / 12, 6)).map((year) => [year * 12, `Year ${String(year)}`])
+      : whole(niceTicks(0, last, 6)).map((month) => [month, `Month ${String(month)}`]);
+  // The names at the lines' ends, pushed apart when the two options end close together.
+  const end = points.at(-1);
+  const ends: [Series, number][] =
+    end === undefined
+      ? []
+      : (['x', 'y'] as const)
+          .map((series): [Series, number] => [series, py(end[series])])
+          .sort((p, q) => p[1] - q[1]);
+  const [upper, lower] = ends;
+  if (upper !== undefined && lower !== undefined && lower[1] - upper[1] < LINE_GAP) {
+    const middle = (upper[1] + lower[1]) / 2;
+    upper[1] = middle - LINE_GAP / 2;
+    lower[1] = middle + LINE_GAP / 2;
+  }
 
   return (
     <figure className={styles.histogram}>
@@ -72,15 +96,15 @@ export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadC
         aria-label={`End value by exit month: ${names[0]} and ${names[1]}`}
       >
         <line className={styles.baseline} x1={LEFT} x2={W - RIGHT} y1={H - AXIS} y2={H - AXIS} />
-        {niceTicks(0, last / 12, 6).map((year) => (
+        {ticks.map(([months, text]) => (
           <text
-            key={year}
+            key={months}
             className={styles.axisTick}
-            x={px(year * 12)}
+            x={px(months)}
             y={H - 7}
             textAnchor="middle"
           >
-            {`Year ${String(year)}`}
+            {text}
           </text>
         ))}
         {leader !== null && lead.since_months !== null && (
@@ -108,19 +132,11 @@ export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadC
             })}
           </g>
         ))}
-        {(['x', 'y'] as const).map((series) => {
-          const end = points.at(-1);
-          return end === undefined ? null : (
-            <text
-              key={series}
-              className={styles.seriesName}
-              x={px(end.months) + 8}
-              y={py(end[series]) + 4}
-            >
-              {label[series]}
-            </text>
-          );
-        })}
+        {ends.map(([series, y]) => (
+          <text key={series} className={styles.seriesName} x={px(last) + 8} y={y + 4}>
+            {label[series]}
+          </text>
+        ))}
       </svg>
       <figcaption className={styles.legend}>
         {drawn.map((series) => (

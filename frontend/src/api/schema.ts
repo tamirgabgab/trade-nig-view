@@ -3516,13 +3516,13 @@ export interface components {
             breakeven: components["schemas"]["BreakevenOut"];
             /** @description Net worth averaged over the exit months */
             average: components["schemas"]["AverageOut"];
-            /** @description Of the first apartment */
+            /** @description Of the first apartment; null: none, or its return does not exist */
             decomposition: components["schemas"]["DecompositionOut"] | null;
             /** Sensitivity */
             sensitivity: components["schemas"]["MoveOut"][];
             lead: components["schemas"]["LeadOut"];
             liquidity: components["schemas"]["LiquidityOut"];
-            /** @description Null: no apartment, or no history */
+            /** @description Null: no apartment or account, or no history (reads the dwelling index) */
             correlation: components["schemas"]["CorrelationOut"] | null;
             /** Warnings */
             warnings: string[];

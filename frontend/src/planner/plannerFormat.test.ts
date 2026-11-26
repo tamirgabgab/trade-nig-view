@@ -1,6 +1,10 @@
-import { percent, price, shekels, signedShekels } from './plannerFormat.ts';
+import { percent, plainPercent, price, shekels, signedShekels } from './plannerFormat.ts';
 
 describe('planner formats', () => {
+  it('shows a share with the decimals it has', () => {
+    expect([0.1, 0.075, 0, 0.004].map(plainPercent)).toEqual(['10%', '7.5%', '0%', '0.4%']);
+  });
+
   it('signs a change in shekels, and leaves a change of nothing unsigned', () => {
     expect(signedShekels(300_000)).toBe('+₪300,000');
     expect(signedShekels(-340_000.4)).toBe('−₪340,000');

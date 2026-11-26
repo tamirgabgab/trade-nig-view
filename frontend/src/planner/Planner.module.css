@@ -380,6 +380,10 @@
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* Only the chart with handles takes the touch for itself; the others let the page scroll. */
+.draggable svg {
   touch-action: none;
 }
 

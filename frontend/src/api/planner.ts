@@ -108,7 +108,7 @@ export type StudyRequest = Schemas['StudyRequest'];
 export type ScenarioResult = Schemas['RunResponse'];
 export type StudyResult = Schemas['StudyResponse'];
 
-/** Checks the shape the page relies on (both options, the breakeven rates, the lists). */
+/** Checks the shape the page relies on (both options, the lists, what the answer rests on). */
 export function parseScenario(body: unknown): ScenarioResult {
   if (
     !isRecord(body) ||
@@ -116,6 +116,12 @@ export function parseScenario(body: unknown): ScenarioResult {
     !isRecord(body['y']) ||
     !isRecord(body['breakeven']) ||
     !isRecord(body['average']) ||
+    !Array.isArray(body['average']['points']) ||
+    !Array.isArray(body['sensitivity']) ||
+    !isRecord(body['lead']) ||
+    !isRecord(body['liquidity']) ||
+    !isRecord(body['liquidity']['x']) ||
+    !isRecord(body['liquidity']['y']) ||
     !Array.isArray(body['warnings']) ||
     typeof body['difference'] !== 'number'
   ) {
@@ -158,6 +164,7 @@ export function parseSimulation(body: unknown): SimulationResult {
     !isRecord(body['y']) ||
     !isRecord(samples) ||
     !Object.values(samples).every(Array.isArray) ||
+    !Array.isArray(body['split']) ||
     !Array.isArray(body['warnings'])
   ) {
     throw new Error('Unexpected /api/planner/simulate response');

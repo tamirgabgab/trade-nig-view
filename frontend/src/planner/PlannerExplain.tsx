@@ -1,7 +1,7 @@
 import type { ScenarioResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
-import { percent, points, shekels } from './plannerFormat.ts';
+import { percent, plainPercent, points, shekels } from './plannerFormat.ts';
 import { PlannerLeadChart } from './PlannerLeadChart.tsx';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
 import { PlannerTornado } from './PlannerTornado.tsx';
@@ -49,7 +49,7 @@ export function PlannerExplain({
       `The correlation of their yearly returns over ${String(correlation.years)} years; 95% interval ${correlation.low.toFixed(2)} to ${correlation.high.toFixed(2)}`,
     ]);
   }
-  const off = `−${String(Math.round(liquidity.discount * 100))}%`;
+  const off = `−${plainPercent(liquidity.discount)}`;
   const rows: Row<Liquidity>[] = [
     ['Cash at once', (l) => shekels(l.cash)],
     ['Apartment, sold normally', (l) => money(l.apartment)],

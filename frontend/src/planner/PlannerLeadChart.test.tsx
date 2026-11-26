@@ -35,6 +35,43 @@ describe('PlannerLeadChart', () => {
     expect(screen.getByText('Market leads from month 120')).toBeInTheDocument();
   });
 
+  it('marks whole years, or months on a short plan, and the discount as it was typed', () => {
+    const { unmount } = render(
+      <PlannerLeadChart points={POINTS} lead={RESULT.lead} names={['A', 'B']} discount={0.075} />,
+    );
+    // 120 months: every other year, never half a year.
+    expect(screen.getByText('Year 2')).toBeInTheDocument();
+    expect(screen.queryByText(/^Year \d+\.\d/)).not.toBeInTheDocument();
+    expect(screen.getByText('A, forced sale at −7.5%')).toBeInTheDocument();
+    unmount();
+    const short = POINTS.map((p, i) => ({ ...p, months: 12 * (i + 1) }));
+    render(
+      <PlannerLeadChart points={short} lead={RESULT.lead} names={['A', 'B']} discount={0.1} />,
+    );
+    expect(screen.getByText('Month 10')).toBeInTheDocument();
+    expect(screen.queryByText(/^Year/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the two names apart when the options end together', () => {
+    const close = POINTS.map((p) => ({ ...p, y: p.x * 1.001 }));
+    render(
+      <PlannerLeadChart
+        points={close}
+        lead={RESULT.lead}
+        names={['Apartment and account', 'Market']}
+        discount={0}
+      />,
+    );
+    const at = (name: string) =>
+      Number(
+        screen
+          .getAllByText(name)
+          .find((el) => el.tagName === 'text')
+          ?.getAttribute('y'),
+      );
+    expect(Math.abs(at('Apartment and account') - at('Market'))).toBeGreaterThanOrEqual(14);
+  });
+
   it('has no forced-sale line without an apartment, and no mark without a leader', () => {
     const bare = POINTS.map((p) => ({ ...p, x_forced: null }));
     const svg = chart({ leader: null, since_months: null, x_share: 0.5, step_months: 40 }, bare);

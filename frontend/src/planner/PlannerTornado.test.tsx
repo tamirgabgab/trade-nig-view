@@ -23,7 +23,7 @@ describe('PlannerTornado', () => {
       ['Apartment appreciation, 1 point a year', '−₪210,000', '+₪230,000'],
       ['Mortgage rates, 1 point', '+₪60,000', '−₪90,000'],
       ['Rent, 10%', '−₪45,000', '+₪45,000'],
-      // A move that cannot run (a tax rate below zero) is a dash, not a zero.
+      // A move the plan cannot run with is a dash, not a zero.
       ['Capital-gains and betterment tax, 5 points', '—', '−₪20,000'],
     ]);
   });
