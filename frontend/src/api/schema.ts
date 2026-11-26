@@ -698,6 +698,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/planner/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simulate Scenario
+         * @description The scenario in many simulated worlds: the distribution of each option's end value and
+         *     return, and how risky each is.
+         */
+        post: operations["simulate_scenario_api_planner_simulate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1121,6 +1142,26 @@ export interface components {
             /** Lots */
             lots: components["schemas"]["LotOut"][];
         };
+        /** Distribution */
+        Distribution: {
+            /** P5 */
+            p5: number;
+            /** P25 */
+            p25: number;
+            /** P50 */
+            p50: number;
+            /** P75 */
+            p75: number;
+            /** P95 */
+            p95: number;
+            /** Mean */
+            mean: number;
+            /**
+             * Cvar5
+             * @description The mean of the worst 5 %
+             */
+            cvar5: number;
+        };
         /** Drawing */
         Drawing: {
             /**
@@ -1529,6 +1570,26 @@ export interface components {
              * @description Fraction of baseline returns per bin
              */
             baseline: number[];
+        };
+        /** HistoryUsed */
+        HistoryUsed: {
+            /**
+             * First
+             * Format: date
+             */
+            first: string;
+            /**
+             * Last
+             * Format: date
+             */
+            last: string;
+            /** Months */
+            months: number;
+            /**
+             * Effective
+             * @description About how many independent terms it holds
+             */
+            effective: number;
         };
         /**
          * HomeOptionIn
@@ -2369,6 +2430,18 @@ export interface components {
              */
             cells: (components["schemas"]["MapCell"] | null)[];
         };
+        /** MarketModel */
+        MarketModel: {
+            /** Mean */
+            mean: number;
+            /** Sd */
+            sd: number;
+            /**
+             * Estimated
+             * @description From the mix's history, not from the request
+             */
+            estimated: boolean;
+        };
         /**
          * MarketOptionIn
          * @description A market account: its mix, its deposits and its costs.
@@ -2559,6 +2632,63 @@ export interface components {
             topped_up: number;
             home: components["schemas"]["HomeOut"] | null;
             account: components["schemas"]["AccountOut"] | null;
+        };
+        /** OptionRisk */
+        OptionRisk: {
+            wealth: components["schemas"]["Distribution"];
+            wealth_real: components["schemas"]["Distribution"];
+            xirr: components["schemas"]["Distribution"];
+            xirr_real: components["schemas"]["Distribution"];
+            /**
+             * Shortfall
+             * @description P(the end value is below the money put in)
+             */
+            shortfall: number;
+            /**
+             * Regret Mean
+             * @description Real shekels the other option would have added
+             */
+            regret_mean: number;
+            /** Regret P95 */
+            regret_p95: number;
+            /**
+             * Certainty Equivalent
+             * @description Of the real end value; null: ruin
+             */
+            certainty_equivalent: number | null;
+            /**
+             * Ruin
+             * @description P(the end value is zero or less)
+             */
+            ruin: number;
+            /**
+             * Negative Equity
+             * @description P(worth less than its loan in a month)
+             */
+            negative_equity: number | null;
+            /**
+             * Stress
+             * @description P(a payment above the share of the income)
+             */
+            stress: number | null;
+            /**
+             * Stress Median
+             * @description Median of the worst payment over income
+             */
+            stress_median: number | null;
+            /**
+             * Under Water
+             * @description Mean share of months below its deposits
+             */
+            under_water: number | null;
+            /** Drawdown Median */
+            drawdown_median: number;
+            /** Drawdown P95 */
+            drawdown_p95: number;
+            /** Sharpe */
+            sharpe: number | null;
+            /** Sortino */
+            sortino: number | null;
         };
         /** OutputInfo */
         OutputInfo: {
@@ -3300,6 +3430,28 @@ export interface components {
             betterment: components["schemas"]["BettermentIn"];
         };
         /**
+         * Samples
+         * @description The end values of every world, x and y world by world.
+         */
+        Samples: {
+            /** X Wealth */
+            x_wealth: number[];
+            /** Y Wealth */
+            y_wealth: number[];
+            /** X Wealth Real */
+            x_wealth_real: number[];
+            /** Y Wealth Real */
+            y_wealth_real: number[];
+            /** X Xirr */
+            x_xirr: number[];
+            /** Y Xirr */
+            y_xirr: number[];
+            /** X Xirr Real */
+            x_xirr_real: number[];
+            /** Y Xirr Real */
+            y_xirr_real: number[];
+        };
+        /**
          * Scenario
          * @enum {string}
          */
@@ -3346,6 +3498,114 @@ export interface components {
              * @description Balance-weighted yearly rate of the month
              */
             rate: number;
+        };
+        /** SimulateRequest */
+        SimulateRequest: {
+            x: components["schemas"]["OptionIn"];
+            y: components["schemas"]["OptionIn"];
+            /**
+             * End
+             * Format: date
+             * @description Everything is sold on it (an apartment: on its month date)
+             */
+            end: string;
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+            /**
+             * Method
+             * @description The market: resampled from history in blocks, or drawn from a model
+             * @default bootstrap
+             * @enum {string}
+             */
+            method: "bootstrap" | "monte_carlo";
+            /**
+             * Runs
+             * @description Simulated worlds
+             * @default 1000
+             */
+            runs: number;
+            /**
+             * Seed
+             * @default 1
+             */
+            seed: number;
+            /**
+             * Block Months
+             * @default 12
+             */
+            block_months: number;
+            /**
+             * Market Mean Pct
+             * @description Monte Carlo; null: estimated from the mix
+             */
+            market_mean_pct?: number | null;
+            /** Market Sd Pct */
+            market_sd_pct?: number | null;
+            /**
+             * Correlation
+             * @description A modelled apartment value with a modelled market
+             * @default 0
+             */
+            correlation: number;
+            /**
+             * Follow Rates
+             * @default true
+             */
+            follow_rates: boolean;
+            /**
+             * Income
+             * @description Monthly net income on the first day; rises with the CPI
+             */
+            income?: number | null;
+            /**
+             * Stress Share Pct
+             * @description Of the income, for a payment
+             * @default 40
+             */
+            stress_share_pct: number;
+            /**
+             * Risk Aversion
+             * @description CRRA gamma
+             * @default 2
+             */
+            risk_aversion: number;
+        };
+        /** SimulateResponse */
+        SimulateResponse: {
+            /** Method */
+            method: string;
+            /** Runs */
+            runs: number;
+            /** Months */
+            months: number;
+            /** @description The modelled market (Monte Carlo) */
+            market: components["schemas"]["MarketModel"] | null;
+            /** @description The months that are resampled */
+            history: components["schemas"]["HistoryUsed"] | null;
+            /** P Win */
+            p_win: number;
+            /** Median Difference */
+            median_difference: number;
+            /** Median Difference Real */
+            median_difference_real: number;
+            /**
+             * Dominance
+             * @description Between the real end values
+             * @enum {string}
+             */
+            dominance: "x_first" | "x_second" | "y_first" | "y_second" | "equal" | "none";
+            x: components["schemas"]["OptionRisk"];
+            y: components["schemas"]["OptionRisk"];
+            samples: components["schemas"]["Samples"];
+            /** Warnings */
+            warnings: string[];
         };
         /** StatsBlock */
         StatsBlock: {
@@ -5403,6 +5663,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    simulate_scenario_api_planner_simulate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulateResponse"];
                 };
             };
             /** @description Validation Error */

@@ -199,7 +199,7 @@ class StudyResponse(BaseModel):
     warnings: list[str]
 
 
-def _spec(
+def scenario_spec(
     body: ScenarioRequest, service: BarService, macro: Macro, universe: Universe
 ) -> tuple[ScenarioSpec, list[str], list[FxSeries | None]]:
     """The scenario of a request, its warnings, and the USD/ILS series its accounts use."""
@@ -306,7 +306,7 @@ def _breakevens(spec: ScenarioSpec, macro: Macro) -> BreakevenOut:
 def _run(
     body: ScenarioRequest, service: BarService, macro: Macro, universe: Universe
 ) -> RunResponse:
-    spec, warnings, _ = _spec(body, service, macro, universe)
+    spec, warnings, _ = scenario_spec(body, service, macro, universe)
     x, y, end, cpi, notes = build(spec, macro)
     result = run_pair(x, y, end, cpi)
     warnings.extend(notes)
@@ -361,7 +361,7 @@ def _shifts(base: dt.date, first: dt.date, last: dt.date, step: int) -> list[int
 def _study(
     body: StudyRequest, service: BarService, macro: Macro, universe: Universe
 ) -> StudyResponse:
-    spec, warnings, rates = _spec(body, service, macro, universe)
+    spec, warnings, rates = scenario_spec(body, service, macro, universe)
     base = first_day(spec)
     today = dt.datetime.now(dt.UTC).date()
     if body.first_start and body.last_start and body.last_start < body.first_start:

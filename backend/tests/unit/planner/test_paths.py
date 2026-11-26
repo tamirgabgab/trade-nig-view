@@ -151,7 +151,7 @@ def test_a_world_keeps_the_months_of_history_together() -> None:
 
 def test_dividends_stay_on_month_dates_and_prices_fill_the_days_between() -> None:
     a = make_world(spec(), 0).assets["AAA"]
-    assert np.array_equal(a.days, np.arange(a.days[0], a.days[-1] + 1))
+    assert np.array_equal(a.days, np.arange(int(a.days[0]), int(a.days[-1]) + 1))
     grid = month_starts(FIRST, 61)
     on_grid = np.isin(a.days, grid)
     steps = a.factor[1:] / a.factor[:-1]

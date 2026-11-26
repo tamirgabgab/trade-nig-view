@@ -2191,6 +2191,48 @@
           }
         }
       }
+    },
+    "/api/planner/simulate": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Simulate Scenario",
+        "description": "The scenario in many simulated worlds: the distribution of each option's end value and\nreturn, and how risky each is.",
+        "operationId": "simulate_scenario_api_planner_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3127,6 +3169,50 @@
         ],
         "title": "DepositOut"
       },
+      "Distribution": {
+        "properties": {
+          "p5": {
+            "type": "number",
+            "title": "P5"
+          },
+          "p25": {
+            "type": "number",
+            "title": "P25"
+          },
+          "p50": {
+            "type": "number",
+            "title": "P50"
+          },
+          "p75": {
+            "type": "number",
+            "title": "P75"
+          },
+          "p95": {
+            "type": "number",
+            "title": "P95"
+          },
+          "mean": {
+            "type": "number",
+            "title": "Mean"
+          },
+          "cvar5": {
+            "type": "number",
+            "title": "Cvar5",
+            "description": "The mean of the worst 5 %"
+          }
+        },
+        "type": "object",
+        "required": [
+          "p5",
+          "p25",
+          "p50",
+          "p75",
+          "p95",
+          "mean",
+          "cvar5"
+        ],
+        "title": "Distribution"
+      },
       "Drawing": {
         "properties": {
           "id": {
@@ -3993,6 +4079,37 @@
           "baseline"
         ],
         "title": "Histogram"
+      },
+      "HistoryUsed": {
+        "properties": {
+          "first": {
+            "type": "string",
+            "format": "date",
+            "title": "First"
+          },
+          "last": {
+            "type": "string",
+            "format": "date",
+            "title": "Last"
+          },
+          "months": {
+            "type": "integer",
+            "title": "Months"
+          },
+          "effective": {
+            "type": "number",
+            "title": "Effective",
+            "description": "About how many independent terms it holds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first",
+          "last",
+          "months",
+          "effective"
+        ],
+        "title": "HistoryUsed"
       },
       "HomeOptionIn": {
         "properties": {
@@ -5788,6 +5905,30 @@
         ],
         "title": "MapRow"
       },
+      "MarketModel": {
+        "properties": {
+          "mean": {
+            "type": "number",
+            "title": "Mean"
+          },
+          "sd": {
+            "type": "number",
+            "title": "Sd"
+          },
+          "estimated": {
+            "type": "boolean",
+            "title": "Estimated",
+            "description": "From the mix's history, not from the request"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mean",
+          "sd",
+          "estimated"
+        ],
+        "title": "MarketModel"
+      },
       "MarketOptionIn": {
         "properties": {
           "assets": {
@@ -6179,6 +6320,152 @@
           "account"
         ],
         "title": "OptionOut"
+      },
+      "OptionRisk": {
+        "properties": {
+          "wealth": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "wealth_real": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "xirr": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "xirr_real": {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          "shortfall": {
+            "type": "number",
+            "title": "Shortfall",
+            "description": "P(the end value is below the money put in)"
+          },
+          "regret_mean": {
+            "type": "number",
+            "title": "Regret Mean",
+            "description": "Real shekels the other option would have added"
+          },
+          "regret_p95": {
+            "type": "number",
+            "title": "Regret P95"
+          },
+          "certainty_equivalent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certainty Equivalent",
+            "description": "Of the real end value; null: ruin"
+          },
+          "ruin": {
+            "type": "number",
+            "title": "Ruin",
+            "description": "P(the end value is zero or less)"
+          },
+          "negative_equity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negative Equity",
+            "description": "P(worth less than its loan in a month)"
+          },
+          "stress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stress",
+            "description": "P(a payment above the share of the income)"
+          },
+          "stress_median": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stress Median",
+            "description": "Median of the worst payment over income"
+          },
+          "under_water": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Under Water",
+            "description": "Mean share of months below its deposits"
+          },
+          "drawdown_median": {
+            "type": "number",
+            "title": "Drawdown Median"
+          },
+          "drawdown_p95": {
+            "type": "number",
+            "title": "Drawdown P95"
+          },
+          "sharpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe"
+          },
+          "sortino": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortino"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wealth",
+          "wealth_real",
+          "xirr",
+          "xirr_real",
+          "shortfall",
+          "regret_mean",
+          "regret_p95",
+          "certainty_equivalent",
+          "ruin",
+          "negative_equity",
+          "stress",
+          "stress_median",
+          "under_water",
+          "drawdown_median",
+          "drawdown_p95",
+          "sharpe",
+          "sortino"
+        ],
+        "title": "OptionRisk"
       },
       "OutputInfo": {
         "properties": {
@@ -7813,6 +8100,79 @@
         "type": "object",
         "title": "SaleIn"
       },
+      "Samples": {
+        "properties": {
+          "x_wealth": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "X Wealth"
+          },
+          "y_wealth": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Y Wealth"
+          },
+          "x_wealth_real": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "X Wealth Real"
+          },
+          "y_wealth_real": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Y Wealth Real"
+          },
+          "x_xirr": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "X Xirr"
+          },
+          "y_xirr": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Y Xirr"
+          },
+          "x_xirr_real": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "X Xirr Real"
+          },
+          "y_xirr_real": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Y Xirr Real"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x_wealth",
+          "y_wealth",
+          "x_wealth_real",
+          "y_wealth_real",
+          "x_xirr",
+          "y_xirr",
+          "x_xirr_real",
+          "y_xirr_real"
+        ],
+        "title": "Samples",
+        "description": "The end values of every world, x and y world by world."
+      },
       "Scenario": {
         "type": "string",
         "enum": [
@@ -7903,6 +8263,234 @@
           "rate"
         ],
         "title": "ScheduleRow"
+      },
+      "SimulateRequest": {
+        "properties": {
+          "x": {
+            "$ref": "#/components/schemas/OptionIn"
+          },
+          "y": {
+            "$ref": "#/components/schemas/OptionIn"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End",
+            "description": "Everything is sold on it (an apartment: on its month date)"
+          },
+          "inflation": {
+            "$ref": "#/components/schemas/InflationIn",
+            "default": {
+              "mode": "assumed",
+              "mean_pct": 2.5,
+              "sd_pct": 0.0,
+              "persistence": 0.0
+            }
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "bootstrap",
+              "monte_carlo"
+            ],
+            "title": "Method",
+            "description": "The market: resampled from history in blocks, or drawn from a model",
+            "default": "bootstrap"
+          },
+          "runs": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 10.0,
+            "title": "Runs",
+            "description": "Simulated worlds",
+            "default": 1000
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 1
+          },
+          "block_months": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Block Months",
+            "default": 12
+          },
+          "market_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": -50.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Mean Pct",
+            "description": "Monte Carlo; null: estimated from the mix"
+          },
+          "market_sd_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 200.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Sd Pct"
+          },
+          "correlation": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Correlation",
+            "description": "A modelled apartment value with a modelled market",
+            "default": 0.0
+          },
+          "follow_rates": {
+            "type": "boolean",
+            "title": "Follow Rates",
+            "default": true
+          },
+          "income": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Income",
+            "description": "Monthly net income on the first day; rises with the CPI"
+          },
+          "stress_share_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Stress Share Pct",
+            "description": "Of the income, for a payment",
+            "default": 40.0
+          },
+          "risk_aversion": {
+            "type": "number",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Risk Aversion",
+            "description": "CRRA gamma",
+            "default": 2.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "end"
+        ],
+        "title": "SimulateRequest"
+      },
+      "SimulateResponse": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          },
+          "months": {
+            "type": "integer",
+            "title": "Months"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The modelled market (Monte Carlo)"
+          },
+          "history": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryUsed"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The months that are resampled"
+          },
+          "p_win": {
+            "type": "number",
+            "title": "P Win"
+          },
+          "median_difference": {
+            "type": "number",
+            "title": "Median Difference"
+          },
+          "median_difference_real": {
+            "type": "number",
+            "title": "Median Difference Real"
+          },
+          "dominance": {
+            "type": "string",
+            "enum": [
+              "x_first",
+              "x_second",
+              "y_first",
+              "y_second",
+              "equal",
+              "none"
+            ],
+            "title": "Dominance",
+            "description": "Between the real end values"
+          },
+          "x": {
+            "$ref": "#/components/schemas/OptionRisk"
+          },
+          "y": {
+            "$ref": "#/components/schemas/OptionRisk"
+          },
+          "samples": {
+            "$ref": "#/components/schemas/Samples"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "runs",
+          "months",
+          "market",
+          "history",
+          "p_win",
+          "median_difference",
+          "median_difference_real",
+          "dominance",
+          "x",
+          "y",
+          "samples",
+          "warnings"
+        ],
+        "title": "SimulateResponse"
       },
       "StatsBlock": {
         "properties": {
