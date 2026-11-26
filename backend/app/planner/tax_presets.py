@@ -1,18 +1,19 @@
 """Built-in tax tables for the apartment. Defaults to start from, not tax advice.
 
 The amounts are those of the Israel Tax Authority's real-estate taxation directive 1/2026
-(הוראת ביצוע מיסוי מקרקעין 1/2026, 2026-01-18), read on 2026-11-26.
+(2026-01-18), read on 2026-11-26.
 
-Purchase tax (מס רכישה):
+Purchase tax:
 
 * a single home, 2025-01-16 to 2028-01-15 (frozen): nothing up to 1,978,745; 3.5 % to
   2,347,040; 5 % to 6,055,070; 8 % to 20,183,565; 10 % above;
 * an additional home, a temporary provision until 2026-12-31: 8 % up to 6,055,070, 10 % above.
 
-Betterment tax (מס שבח): the single-home exemption ceiling is 5,008,000 from 2025-01-01 to
+Betterment tax: the single-home exemption ceiling is 5,008,000 from 2025-01-01 to
 2027-12-31 (the directive). The rate (25 % of the real gain) and the linear rule (a home bought
-before 2014 pays only for the days held after 2014-01-01) are the law's general rules, modelled
-without its conditions (the holding period, who may use the linear rule).
+before 2014 and sold after it pays only for the days held after 2014-01-01) are the law's
+general rules, modelled without its conditions (the holding period, who may use the linear
+rule).
 """
 
 from __future__ import annotations

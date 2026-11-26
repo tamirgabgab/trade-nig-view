@@ -76,6 +76,12 @@ def test_betterment_tax_by_the_laws_parameters() -> None:
         bought=date(2004, 1, 1), sold=date(2024, 1, 1),
     )  # fmt: skip
     assert old == pytest.approx(0.25 * 1e6 * 3652 / 7305)
+    # Sold before 2014: the rule does not exist yet, the whole gain is taxed.
+    before = betterment_tax(
+        additional, value=3e6, net_sale=3e6, indexed_cost=2e6,
+        bought=date(2003, 1, 15), sold=date(2012, 1, 15),
+    )  # fmt: skip
+    assert before == 0.25 * 1e6
     # A custom table on the gain replaces all of it.
     custom = Betterment(brackets=(Bracket(500_000, 0.0), Bracket(None, 0.30)))
     assert betterment_tax(custom, value=3e6, net_sale=3e6, indexed_cost=2e6, **kw) == 150_000

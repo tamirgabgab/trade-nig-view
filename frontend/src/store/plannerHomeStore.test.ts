@@ -44,13 +44,19 @@ describe('resolveTaxes', () => {
     expect(resolveTaxes(none, NO_SAVED, PRESETS)?.purchase).toEqual([]);
   });
 
-  it('is null while a table is missing, never "no tax"', () => {
+  it('is null until the built-in tables arrive; a lost table reads as the default one', () => {
     expect(resolveTaxes(DEFAULT_HOME, NO_SAVED, undefined)).toBeNull();
     const gone: HomeForm = {
       ...DEFAULT_HOME,
+      purchaseTax: { preset: 'a_table_of_an_older_version', edited: null },
       betterment: { preset: savedKey('Deleted'), edited: null },
     };
-    expect(resolveTaxes(gone, NO_SAVED, PRESETS)).toBeNull();
+    expect(resolveTaxes(gone, NO_SAVED, undefined)).toBeNull();
+    // Never "no tax", and never a form stuck without a table to pick.
+    expect(resolveTaxes(gone, NO_SAVED, PRESETS)).toEqual({
+      purchase: SINGLE,
+      betterment: PRESETS.betterment[0]?.spec,
+    });
   });
 });
 
@@ -60,7 +66,13 @@ describe('toHomeRequest', () => {
       ...DEFAULT_HOME,
       tracks: [
         { ...newTrack('prime', 1), years: 20 },
-        { ...newTrack('variable_linked', 2), repayment: 'grace', graceMonths: 12 },
+        // A typed fraction of a whole-number field is rounded, not refused by the API.
+        {
+          ...newTrack('variable_linked', 2),
+          repayment: 'grace',
+          graceMonths: 12.4,
+          resetYears: 2.5,
+        },
         // Grace months typed before the repayment was changed are not sent.
         { ...newTrack('fixed_linked', 1), graceMonths: 24, graceFull: true },
       ],
@@ -80,7 +92,12 @@ describe('toHomeRequest', () => {
         grace_months: 0,
         grace_full: false,
       },
-      expect.objectContaining({ kind: 'variable', linked: true, grace_months: 12 }),
+      expect.objectContaining({
+        kind: 'variable',
+        linked: true,
+        grace_months: 12,
+        reset_years: 3,
+      }),
       expect.objectContaining({ kind: 'fixed', linked: true, grace_months: 0 }),
     ]);
     expect(request.purchase).toEqual({
@@ -94,7 +111,8 @@ describe('toHomeRequest', () => {
       early_repayment_pct: 0,
       betterment: taxes.betterment,
     });
-    expect(request.value.seed).toBe(1);
+    // Not the inflation's seed: the two draws must not move together.
+    expect(request.value.seed).toBe(2);
     expect(request.inflation).toEqual({
       mode: 'assumed',
       mean_pct: 2.5,

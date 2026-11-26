@@ -45,16 +45,19 @@ mortgage, the months of owning it, and the sale. The user's choices:
   - *Purchase tax* is a bracket table. The built-in ones (a single home; an additional home) hold the amounts of the
     Israel Tax Authority's directive 1/2026.
   - *Betterment tax* is a rate on the real gain (the cost indexed by the CPI), a single-home exemption up to a
-    ceiling, and the linear rule for a home bought before 2014; or a custom bracket table on the gain.
+    ceiling, and the linear rule for a home bought before 2014 and sold after it; or a custom bracket table on the
+    gain. A table's last bracket has no upper bound.
   - The law's conditions (the holding period, who may use each rule) are not modelled. The page says so.
 - **Saved tables live in the browser** (`chartlab.planner.home`), beside the form. The plan proposed the backend's
   document store; the browser needs no API and no migration, and H4's saved scenarios can move both together.
-  - A form names its table and holds its edits. The table itself is resolved when a plan runs, so a missing table
-    blocks Run and is never read as "no tax".
+  - A form names its table and holds its edits. The table itself is resolved when a plan runs: Run waits for the
+    built-in tables, and a table that is no longer there reads as the first built-in one, never as "no tax".
 - **API.**
   - `GET /api/planner/tax-presets`: the built-in tables with their source and date.
   - `POST /api/planner/home`: the summary, a row per track, the whole schedule, the months until the sale, warnings.
   - A plan that cannot run is a 422 `invalid_plan`; missing macro data is a 503.
+  - Past the published CPI or Bank of Israel rate the last value is held, with a warning: one text when the sale
+    is past it, another when only the schedule after the sale is.
 - **The page.** The Planner has two tabs, Market and Apartment. Both stay mounted, so each keeps its results. The
   inflation fields are shared.
 

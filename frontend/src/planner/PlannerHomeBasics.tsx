@@ -1,5 +1,5 @@
 import panel from '../components/IndicatorSettingsPanel.module.css';
-import { usePlannerHomeStore } from '../store/plannerHomeStore.ts';
+import { DWELLING_SERIES, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { percent, shekels } from './plannerFormat.ts';
@@ -8,17 +8,6 @@ import { PlannerSelect } from './PlannerSelect.tsx';
 const VALUE_MODES = [
   ['assumed', 'Assumed growth'],
   ['historical', 'Dwelling price index (CBS)'],
-] as const;
-
-/** The CBS dwelling price indices of /api/macro. */
-const SERIES = [
-  ['dwelling', 'All of Israel'],
-  ['dwelling_telaviv', 'Tel Aviv'],
-  ['dwelling_center', 'Center'],
-  ['dwelling_jerusalem', 'Jerusalem'],
-  ['dwelling_haifa', 'Haifa'],
-  ['dwelling_north', 'North'],
-  ['dwelling_south', 'South'],
 ] as const;
 
 /** The purchase, the sale, and how the apartment's value moves between them. */
@@ -80,8 +69,8 @@ export function PlannerHomeBasics() {
         />
         <PlannerSelect
           label="Region of the index"
-          value={SERIES.find(([id]) => id === value.series)?.[0] ?? 'dwelling'}
-          options={SERIES}
+          value={value.series}
+          options={DWELLING_SERIES}
           disabled={assumed}
           onChange={(series) => {
             update({ value: { ...value, series } });

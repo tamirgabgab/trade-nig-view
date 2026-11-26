@@ -14,6 +14,7 @@ from app.api.planner import InflationIn, InvalidPlanError, Percent
 from app.macro.service import MacroService
 from app.models.bars import IntArray
 from app.planner import tax_presets
+from app.planner.deposits import add_months
 from app.planner.home import (
     Betterment,
     Bracket,
@@ -35,6 +36,10 @@ from app.planner.market import PlanError
 from app.planner.mortgage import RateKind, Repayment, Schedule, Track
 
 router = APIRouter(tags=["planner"])
+
+#: Bounds that keep the month dates and the value path finite.
+MAX_YEAR = 2200
+MAX_HELD_MONTHS = 1200
 
 
 class BracketIn(BaseModel):
@@ -250,12 +255,15 @@ def _brackets(rows: list[BracketIn]) -> tuple[Bracket, ...]:
     bounds = [float("inf") if r.up_to is None else r.up_to for r in rows]
     if bounds != sorted(bounds) or len(set(bounds)) != len(bounds):
         raise PlanError("Tax brackets must rise, each with a different upper bound")
+    if rows and rows[-1].up_to is not None:
+        raise PlanError("The last tax bracket must have no upper bound")
     return tuple(Bracket(r.up_to, r.rate_pct / 100) for r in rows)
 
 
 def months_between(start: dt.date, end: dt.date) -> int:
-    """Whole months from ``start`` to ``end``."""
-    return (end.year - start.year) * 12 + end.month - start.month - (end.day < start.day)
+    """The largest k with ``add_months(start, k) <= end`` (so Jan 31 to Feb 28 is a month)."""
+    k = (end.year - start.year) * 12 + end.month - start.month
+    return k if k < 1 or add_months(start, k) <= end else k - 1
 
 
 @router.post("/planner/home", response_model=HomeResponse)
@@ -287,9 +295,13 @@ def _cpi(body: HomeRequest, macro: MacroService, days: IntArray) -> CpiPath:
 
 
 def _run(body: HomeRequest, macro: MacroService) -> HomeResponse:
+    if body.end.year > MAX_YEAR:
+        raise PlanError(f"Dates after {MAX_YEAR} are not supported")
     held = months_between(body.start, body.end)
     if held < 1:
         raise PlanError("The sale must be at least a month after the purchase")
+    if held > MAX_HELD_MONTHS:
+        raise PlanError(f"The apartment can be held for at most {MAX_HELD_MONTHS // 12} years")
     loan = body.price - body.equity
     if loan < 0:
         raise PlanError("The equity cannot exceed the price")
@@ -313,14 +325,26 @@ def _run(body: HomeRequest, macro: MacroService) -> HomeResponse:
     horizon = max([held, *(t.months for t in tracks)])
     days = month_days(body.start, horizon)
     warnings: list[str] = []
+
+    def held_flat(what: str, last: int, in_schedule: bool) -> None:
+        """Warn when the plan runs past the published data (``last`` is its last day)."""
+        if days[held] > last + MONTH_DAYS:
+            warnings.append(f"After the last published {what} it is held flat")
+        elif in_schedule and days[-1] > last + MONTH_DAYS:
+            warnings.append(
+                f"The schedule after the sale holds the {what} flat past its last published value"
+            )
+
     path = _cpi(body, macro, days)
-    if days[held] > path.days[-1] + MONTH_DAYS:
-        warnings.append("After the last published CPI the index is held flat")
+    held_flat("CPI", int(path.days[-1]), any(t.linked for t in tracks))
     cpi = path.at(days)
     if body.rates.mode == "historical":
         anchor = historical_anchor(macro, days)
-        if days[held] > macro.get("boi_rate").data.days[-1] + MONTH_DAYS:
-            warnings.append("After the last published Bank of Israel rate it is held flat")
+        held_flat(
+            "Bank of Israel rate",
+            int(macro.get("boi_rate").data.days[-1]),
+            any(t.kind is not RateKind.FIXED for t in tracks),
+        )
     else:
         anchor = assumed_anchor(
             horizon,

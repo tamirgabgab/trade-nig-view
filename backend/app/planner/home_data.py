@@ -17,6 +17,7 @@ from datetime import date, timedelta
 
 import numpy as np
 
+from app.macro.series import SERIES
 from app.macro.service import MacroService
 from app.models.bars import FloatArray, IntArray
 from app.planner.deposits import add_months, day_number
@@ -54,7 +55,7 @@ def assumed_anchor(months: int, base: float, shock: float = 0.0, after: int = 0)
 
 def historical_values(macro: MacroService, series_id: str, days: IntArray) -> FloatArray:
     """The dwelling price index on each day (geometric between its monthly values)."""
-    if not series_id.startswith("dwelling"):
+    if not series_id.startswith("dwelling") or series_id not in SERIES:
         raise PlanError(f"'{series_id}' is not a dwelling price index")
     series = macro.get(series_id).data
     first, last = int(series.days[0]), int(series.days[-1]) + MONTH_DAYS

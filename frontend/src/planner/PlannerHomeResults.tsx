@@ -55,7 +55,7 @@ export function PlannerHomeResults({ result }: { result: HomeResult }) {
     [
       'Paid to the bank',
       shekels(s.paid),
-      `Until the sale; of it ${shekels(s.interest)} interest and ${shekels(s.linkage)} linkage`,
+      `Until the sale. Interest charged: ${shekels(s.interest)}; linkage added to the balance: ${shekels(s.linkage)}`,
     ],
     ['Owner costs', shekels(s.owner_costs), 'Maintenance and insurance until the sale'],
     ['Rent', shekels(s.rent), 'Saved or received until the sale'],

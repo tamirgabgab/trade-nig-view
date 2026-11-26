@@ -40,7 +40,7 @@ describe('PlannerHome', () => {
       sale: { betterment: { rate_pct: 25, single_home: false, ceiling: 5_008_000 } },
     });
     expect(screen.getByText(/^Changed: save it/)).toBeInTheDocument();
-    expect(screen.getByText('After the last published CPI the index is held flat')).toBeVisible();
+    expect(screen.getByText('After the last published CPI it is held flat')).toBeVisible();
     const schedule = screen.getByRole('table', { name: 'Mortgage schedule' });
     expect(within(schedule).getAllByRole('row')).toHaveLength(2);
     expect(screen.getByText('Yearly return, real').parentElement).toHaveTextContent('—');

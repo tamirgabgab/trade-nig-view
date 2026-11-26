@@ -33,7 +33,11 @@ def test_months_between_counts_whole_months() -> None:
 
     assert months_between(date(2026, 1, 15), date(2028, 1, 15)) == 24
     assert months_between(date(2026, 1, 15), date(2028, 1, 14)) == 23
-    assert months_between(date(2026, 1, 31), date(2026, 2, 28)) == 0
+    assert months_between(date(2026, 1, 15), date(2026, 1, 14)) < 1
+    # A purchase on a month's last days: the month dates are clamped, and so is the count.
+    assert months_between(date(2026, 1, 31), date(2026, 2, 28)) == 1
+    assert months_between(date(2024, 2, 29), date(2025, 2, 28)) == 12
+    assert months_between(date(2015, 1, 31), date(2025, 4, 30)) == 123
 
 
 def test_one_fixed_track_on_a_constant_value(client: TestClient) -> None:
@@ -164,9 +168,13 @@ def test_published_indices_are_used_as_ratios_to_the_purchase_day(client: TestCl
     assert second["payment"] == pytest.approx(3635.88 * 105.2 / 104.6, abs=0.01)
     assert [p["rent"] for p in body["path"]] == pytest.approx([0, 4000, 4000 * 104.9 / 104.6])
     assert body["path"][1]["costs"] == pytest.approx(100 * 104.9 / 104.6)
-    assert body["warnings"] == []
     late = run(client, **{**plan, "end": "2027-10-01"})
-    assert late["warnings"] == ["After the last published CPI the index is held flat"]
+    assert late["warnings"] == ["After the last published CPI it is held flat"]
+    # Sold inside the data, but the linked track's schedule runs past it.
+    past = "The schedule after the sale holds the CPI flat past its last published value"
+    assert run(client, **{**plan, "end": "2026-09-01"})["warnings"] == [past]
+    unlinked = {**plan, "end": "2026-09-01", "tracks": [{"months": 240, "rate_pct": 4}]}
+    assert run(client, **unlinked)["warnings"] == []
     # Rent that follows the apartment's index (580.1, 584.0, 588.2 from 2026-06).
     rent = {"mode": "live", "monthly": 4000, "growth": "value"}
     dates = {"start": "2026-06-01", "end": "2026-08-01", "inflation": {"mean_pct": 0}}
@@ -190,6 +198,10 @@ def test_published_indices_are_used_as_ratios_to_the_purchase_day(client: TestCl
             "must rise",
         ),
         ({"value": {"mode": "historical", "series": "cpi"}}, "not a dwelling"),
+        ({"value": {"mode": "historical", "series": "dwelling_mars"}}, "not a dwelling"),
+        ({"purchase": {"tax_brackets": [{"up_to": 1e6, "rate_pct": 8}]}}, "no upper bound"),
+        ({"start": "9990-01-15", "end": "9995-12-31"}, "after 2200"),
+        ({"start": "1900-01-15", "end": "2100-01-15"}, "at most 100 years"),
         ({"inflation": {"mode": "historical"}, "start": "1990-01-01", "end": "1992-01-01"}, "1994"),
     ],
 )

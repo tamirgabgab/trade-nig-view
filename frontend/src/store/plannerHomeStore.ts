@@ -33,6 +33,18 @@ export interface TaxChoice<T> {
   edited: T | null;
 }
 
+/** The CBS dwelling price indices of /api/macro, with the region each one covers. */
+export const DWELLING_SERIES = [
+  ['dwelling', 'All of Israel'],
+  ['dwelling_telaviv', 'Tel Aviv'],
+  ['dwelling_center', 'Center'],
+  ['dwelling_jerusalem', 'Jerusalem'],
+  ['dwelling_haifa', 'Haifa'],
+  ['dwelling_north', 'North'],
+  ['dwelling_south', 'South'],
+] as const;
+export type DwellingSeries = (typeof DWELLING_SERIES)[number][0];
+
 /** The apartment side's inputs (percentages in %, money in shekels). */
 export interface HomeForm {
   start: string;
@@ -43,7 +55,7 @@ export interface HomeForm {
   rates: { mode: 'assumed' | 'historical'; base: number; shock: number; shockAfterMonths: number };
   value: {
     mode: 'assumed' | 'historical';
-    series: string;
+    series: DwellingSeries;
     mean: number;
     sd: number;
     random: boolean;
@@ -127,35 +139,41 @@ export interface SavedTaxes {
 }
 
 /**
- * The two tax tables a form stands for, or null while a table it names is not there (the
- * built-in ones are not loaded yet, or a saved one was deleted).
+ * The two tax tables a form stands for, or null until the built-in ones are loaded. A table the
+ * form names but is not there (a saved one that was lost, an id of an older version) reads as
+ * the first built-in one, as its select shows it: never as "no tax".
  */
 export function resolveTaxes(
   home: HomeForm,
   saved: SavedTaxes,
   presets: TaxPresets | undefined,
 ): { purchase: TaxBracket[]; betterment: BettermentSpec } | null {
+  if (presets === undefined) return null;
   const pick = <T>(choice: TaxChoice<T>, own: Record<string, T>, builtIn: T | undefined) => {
     const name = savedName(choice.preset);
     return choice.edited ?? (name === null ? builtIn : own[name]);
   };
-  const purchase = pick(
-    home.purchaseTax,
-    saved.purchase,
-    home.purchaseTax.preset === NO_TAX
-      ? []
-      : presets?.purchase.find((p) => p.id === home.purchaseTax.preset)?.brackets,
-  );
-  const betterment = pick(
-    home.betterment,
-    saved.betterment,
-    presets?.betterment.find((p) => p.id === home.betterment.preset)?.spec,
-  );
+  const purchase =
+    pick(
+      home.purchaseTax,
+      saved.purchase,
+      home.purchaseTax.preset === NO_TAX
+        ? []
+        : presets.purchase.find((p) => p.id === home.purchaseTax.preset)?.brackets,
+    ) ?? presets.purchase[0]?.brackets;
+  const betterment =
+    pick(
+      home.betterment,
+      saved.betterment,
+      presets.betterment.find((p) => p.id === home.betterment.preset)?.spec,
+    ) ?? presets.betterment[0]?.spec;
   return purchase === undefined || betterment === undefined ? null : { purchase, betterment };
 }
 
-/** The seed of "draw a path": fixed, so a run can be repeated. */
+/** The seeds of "draw a path": fixed, so a run can be repeated. */
 const SEED = 1;
+/** Another one for the value, or it would move with the inflation draw for draw. */
+const VALUE_SEED = 2;
 
 /** The API request of a form, its two tax tables and the planner's shared inflation. */
 export function toHomeRequest(
@@ -174,16 +192,16 @@ export function toHomeRequest(
       kind: t.type === 'prime' ? 'prime' : t.type.startsWith('fixed') ? 'fixed' : 'variable',
       rate_pct: t.rate,
       linked: t.type.endsWith('_linked'),
-      reset_years: t.resetYears,
+      reset_years: Math.round(t.resetYears),
       repayment: t.repayment,
-      grace_months: t.repayment === 'grace' ? t.graceMonths : 0,
+      grace_months: t.repayment === 'grace' ? Math.round(t.graceMonths) : 0,
       grace_full: t.graceFull,
     })),
     rates: {
       mode: home.rates.mode,
       base_pct: home.rates.base,
       shock_pct: home.rates.shock,
-      shock_after_months: home.rates.shockAfterMonths,
+      shock_after_months: Math.round(home.rates.shockAfterMonths),
     },
     purchase: {
       tax_brackets: taxes.purchase,
@@ -205,7 +223,7 @@ export function toHomeRequest(
       series: home.value.series,
       mean_pct: home.value.mean,
       sd_pct: home.value.sd,
-      seed: home.value.random ? SEED : null,
+      seed: home.value.random ? VALUE_SEED : null,
     },
     sale: {
       costs_pct: home.costs.selling,

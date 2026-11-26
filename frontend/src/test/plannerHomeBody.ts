@@ -96,5 +96,5 @@ export const HOME_RESULT = {
       rent: 0,
     },
   ],
-  warnings: ['After the last published CPI the index is held flat'],
+  warnings: ['After the last published CPI it is held flat'],
 };

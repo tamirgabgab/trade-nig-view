@@ -32,8 +32,9 @@ repaid, plus an early-repayment fee :math:`e B_k`; and the betterment tax. So
 :math:`G = V_k (1 - s) - C \\cdot I_k / I_0`, with :math:`C` the price plus the purchase costs and
 :math:`I` the CPI. By the law's parameters: a rate (25 %) on the taxable part of :math:`G`; a
 single home is exempt up to a ceiling, so only the share :math:`\\max(V_k - \\text{ceiling}, 0) /
-V_k` is taxable; and for a home bought before 2014 only the share of the holding days after
-2014-01-01 is taxable (the linear rule). Or a custom bracket table on :math:`G`.
+V_k` is taxable; and for a home bought before 2014 and sold after it, only the share of the
+holding days after 2014-01-01 is taxable (the linear rule). Or a custom bracket table on
+:math:`G`.
 
 **The return** is the XIRR of the owner's cash flows: :math:`-(E + \\text{purchase costs})` at
 :math:`d_0`; each month the rent (saved or received) minus the payment and the owner costs; and
@@ -107,8 +108,8 @@ def betterment_tax(
     taxable = gain
     if spec.single_home:
         taxable *= max(value - spec.ceiling, 0.0) / value
-    if spec.linear and bought < LINEAR_FROM:
-        taxable *= max((sold - LINEAR_FROM).days, 0) / (sold - bought).days
+    if spec.linear and bought < LINEAR_FROM <= sold:
+        taxable *= (sold - LINEAR_FROM).days / (sold - bought).days
     return spec.rate * taxable
 
 

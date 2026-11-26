@@ -26,8 +26,9 @@ export function PlannerHome({ hidden }: { hidden: boolean }) {
   const [result, setResult] = useState<HomeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const ready = taxes !== null && home.start !== '' && home.end !== '';
   const run = () => {
-    if (taxes === null) return;
+    if (!ready) return;
     setRunning(true);
     setError(null);
     runHome(toHomeRequest(home, inflation, taxes))
@@ -60,7 +61,7 @@ export function PlannerHome({ hidden }: { hidden: boolean }) {
         <PlannerHomeTaxes />
         <PlannerInflation />
         <div className={styles.actions}>
-          <button type="submit" className={panel.primary} disabled={running || taxes === null}>
+          <button type="submit" className={panel.primary} disabled={running || !ready}>
             {running ? 'Running…' : 'Run'}
           </button>
           <button type="button" className={panel.secondary} onClick={reset}>
