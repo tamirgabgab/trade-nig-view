@@ -214,7 +214,7 @@ def test_the_pair_equals_the_golden_model(seed: int) -> None:
     month_days = np.array([day_number(add_months(start, k)) for k in range(241)])
     index = cpi.at(month_days)
     value = np.exp(np.cumsum(np.concatenate(([0.0], rng.normal(0.003, 0.01, 240)))))
-    anchor = 0.03 + 0.0002 * np.arange(241)
+    anchor = 0.03 + 0.0002 * np.arange(241, dtype=np.float64)
     tracks = [
         Track(500_000, 240, rate=0.045),
         Track(400_000, 180, rate=0.03, linked=True),

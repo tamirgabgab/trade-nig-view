@@ -19,7 +19,10 @@ from app.macro.service import MacroService
 from app.planner.data import (
     AssetRequest,
     FxSeries,
+    InflationSpec,
     LoadedAsset,
+    Macro,
+    cpi_path,
     first_day,
     last_day,
     load_asset,
@@ -28,7 +31,6 @@ from app.planner.data import (
 )
 from app.planner.deposits import Deposit, Recurring, day_number, expand
 from app.planner.fills import FillMode, Granularity
-from app.planner.inflation import HISTORICAL_FROM, CpiPath, assumed_cpi, historical_cpi
 from app.planner.market import Fees, FillSpec, PlanError, TaxBase, Taxes, run_market
 
 router = APIRouter(tags=["planner"])
@@ -107,14 +109,19 @@ class AssetsRequest(BaseModel):
     assets: list[AssetIn] = Field(min_length=1, max_length=60)
 
 
-class MarketRequest(AssetsRequest):
+class MarketOptionIn(AssetsRequest):
+    """A market account: its mix, its deposits and its costs."""
+
     use_fx: bool = Field(default=True, description="Convert dollar assets by the USD/ILS rate")
     deposits: list[DepositIn] = Field(default_factory=list[DepositIn], max_length=2000)
     recurring: list[RecurringIn] = Field(default_factory=list[RecurringIn], max_length=20)
-    end: dt.date
     fees: FeesIn = FeesIn()
     taxes: TaxesIn = TaxesIn()
     fill: FillIn = FillIn()
+
+
+class MarketRequest(MarketOptionIn):
+    end: dt.date
     inflation: InflationIn = InflationIn()
     timezone: str = Field(default="Asia/Jerusalem", description="Of the deposit times")
 
@@ -243,16 +250,66 @@ def asset_depths(
     return out
 
 
-def _cpi(body: MarketRequest, macro: MacroService, first: int, last: int) -> CpiPath:
-    spec = body.inflation
-    if spec.mode == "historical":
-        if first < HISTORICAL_FROM:
-            raise PlanError("The historical CPI is used from 1994 on: start later or assume one")
-        return historical_cpi(macro.get("cpi").data)
-    rng = None if spec.seed is None else np.random.default_rng(spec.seed)
-    return assumed_cpi(
-        first, last, mu=spec.mean_pct / 100, sigma=spec.sd_pct / 100, phi=spec.persistence, rng=rng
+def inflation_spec(spec: InflationIn) -> InflationSpec:
+    return InflationSpec(
+        spec.mode, spec.mean_pct / 100, spec.sd_pct / 100, spec.persistence, spec.seed
     )
+
+
+def schedule(body: MarketOptionIn) -> tuple[list[Deposit], list[Recurring]]:
+    """The one-off and the recurring deposits of a request."""
+    return (
+        [Deposit(d.date, d.amount, d.time) for d in body.deposits],
+        [
+            Recurring(r.start, r.amount, r.every_months, r.count, r.indexed, r.time)
+            for r in body.recurring
+        ],
+    )
+
+
+def fees_of(body: MarketOptionIn) -> Fees:
+    f = body.fees
+    return Fees(
+        f.deposit_pct / 100,
+        f.buy_pct / 100,
+        f.sell_pct / 100,
+        f.management_pct / 100,
+        f.monthly_fee,
+    )
+
+
+def taxes_of(body: MarketOptionIn) -> Taxes:
+    return Taxes(body.taxes.gains_pct / 100, body.taxes.dividend_pct / 100, body.taxes.base)
+
+
+def load_mix(
+    body: MarketOptionIn,
+    service: BarService,
+    macro: Macro,
+    universe: Universe,
+    first: int,
+) -> tuple[list[LoadedAsset], FxSeries | None, list[str]]:
+    """The assets of a request with their shekel rates, the rate series when a dollar asset
+    uses it, and warnings (``first`` is the plan's first day)."""
+    warnings: list[str] = []
+    fx: FxSeries | None = usd_ils(service, macro, universe) if body.use_fx else None
+    assets = [load_asset(service, universe, _request(a), fx) for a in body.assets]
+    if fx is not None and not any(a.info.currency == "USD" for a in assets):
+        fx = None
+    if fx is not None:
+        warnings.extend(fx.warnings)
+        if fx.market_from is not None and first < fx.market_from:
+            warnings.append(
+                f"USD/ILS before {_to_date(fx.market_from)} is the Bank of Israel's official rate, "
+                "not Yahoo's market rate"
+            )
+    warnings.extend(
+        f"{a.info.symbol} has no dividends in its prices: its return leaves them out "
+        "(set an assumed dividend yield, or use a fund such as SPY)"
+        for a in assets
+        if not a.has_dividends and a.info.type == "index" and a.data.dividend_yield == 0
+    )
+    return assets, fx, warnings
 
 
 @router.post("/planner/market", response_model=MarketResponse)
@@ -272,38 +329,17 @@ def run_market_plan(
 def _run(
     body: MarketRequest, service: BarService, macro: MacroService, universe: Universe
 ) -> MarketResponse:
-    one_off = [Deposit(d.date, d.amount, d.time) for d in body.deposits]
-    recurring = [
-        Recurring(r.start, r.amount, r.every_months, r.count, r.indexed, r.time)
-        for r in body.recurring
-    ]
+    one_off, recurring = schedule(body)
     if not one_off and not recurring:
         raise PlanError("A plan needs at least one deposit")
     starts = [d.day for d in one_off] + [r.start for r in recurring]
     if body.end <= min(starts):
         raise PlanError("The end date must be after the first deposit")
     first, last = day_number(min(starts)), day_number(body.end)
-    cpi = _cpi(body, macro, first, last)
+    cpi = cpi_path(inflation_spec(body.inflation), first, last, macro)
     deposits = [d for d in expand(one_off, recurring, cpi) if d.day < body.end]
 
-    warnings: list[str] = []
-    fx: FxSeries | None = usd_ils(service, macro, universe) if body.use_fx else None
-    assets = [load_asset(service, universe, _request(a), fx) for a in body.assets]
-    dollars = [a for a in assets if a.info.currency == "USD"]
-    fx_used = fx is not None and bool(dollars)
-    if fx is not None and fx_used:
-        warnings.extend(fx.warnings)
-        if fx.market_from is not None and first < fx.market_from:
-            warnings.append(
-                f"USD/ILS before {_to_date(fx.market_from)} is the Bank of Israel's official rate, "
-                "not Yahoo's market rate"
-            )
-    warnings.extend(
-        f"{a.info.symbol} has no dividends in its prices: its return leaves them out "
-        "(set an assumed dividend yield, or use a fund such as SPY)"
-        for a in assets
-        if not a.has_dividends and a.info.type == "index" and a.data.dividend_yield == 0
-    )
+    assets, fx, warnings = load_mix(body, service, macro, universe, first)
     rng = None if body.fill.seed is None else np.random.default_rng(body.fill.seed)
     fill = FillSpec(body.fill.mode, body.fill.granularity, rng)
     session_t, override = timed_fills(service, assets, deposits, body.timezone, fill)
@@ -311,14 +347,8 @@ def _run(
         [a.data for a in assets],
         deposits,
         body.end,
-        fees=Fees(
-            body.fees.deposit_pct / 100,
-            body.fees.buy_pct / 100,
-            body.fees.sell_pct / 100,
-            body.fees.management_pct / 100,
-            body.fees.monthly_fee,
-        ),
-        taxes=Taxes(body.taxes.gains_pct / 100, body.taxes.dividend_pct / 100, body.taxes.base),
+        fees=fees_of(body),
+        taxes=taxes_of(body),
         fill=fill,
         cpi=cpi,
         session_t=session_t,
@@ -342,9 +372,7 @@ def _run(
     return MarketResponse(
         assets=[_depth(a, last) for a in assets],
         earliest_start=max(first_day(a) for a in assets),
-        fx_market_from=_to_date(fx.market_from)
-        if fx is not None and fx_used and fx.market_from is not None
-        else None,
+        fx_market_from=None if fx is None or fx.market_from is None else _to_date(fx.market_from),
         summary=Summary(
             deposited=result.deposited,
             value=result.value,

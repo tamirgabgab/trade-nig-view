@@ -21,6 +21,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import Literal, Protocol
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -28,11 +29,12 @@ import numpy as np
 from app.data.bar_service import BarService
 from app.data.universe import Universe
 from app.errors import DataUnavailableError
-from app.macro.service import MacroService
+from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, IntArray, Interval
 from app.models.symbols import SymbolInfo, parse_session_start
 from app.planner.deposits import Deposit, day_number
 from app.planner.fills import fill_prices
+from app.planner.inflation import HISTORICAL_FROM, CpiPath, assumed_cpi, historical_cpi
 from app.planner.market import AssetData, FillSpec, PlanError
 
 TICKER = re.compile(r"^[A-Za-z0-9.^=\-]{1,20}$")
@@ -43,6 +45,49 @@ TASE_HOURS = {"cash_hours": "09:59-17:14", "friday_hours": "10:00-14:00"}
 INTRADAY_BASES = (Interval.MIN1, Interval.MIN5, Interval.H1)
 DIVIDEND_TOLERANCE = 1e-9
 FRIDAY = 4
+
+
+class Macro(Protocol):
+    """Where the macro series come from: ``MacroService``, or a copy kept for one request."""
+
+    def get(self, series: str) -> CachedSeries: ...
+
+
+class MacroMemo:
+    """Each series loaded once: a study reads the same ones for hundreds of windows."""
+
+    def __init__(self, macro: Macro) -> None:
+        self._macro = macro
+        self._loaded: dict[str, CachedSeries] = {}
+
+    def get(self, series: str) -> CachedSeries:
+        if series not in self._loaded:
+            self._loaded[series] = self._macro.get(series)
+        return self._loaded[series]
+
+
+@dataclass(frozen=True, slots=True)
+class InflationSpec:
+    """Which index a plan uses: the assumed model's parameters, or the actual one."""
+
+    mode: Literal["assumed", "historical"] = "assumed"
+    mean: float = 0.025
+    sd: float = 0.0
+    persistence: float = 0.0
+    #: Draw a path; None: the mean path.
+    seed: int | None = None
+
+
+def cpi_path(spec: InflationSpec, first_day: int, last_day: int, macro: Macro) -> CpiPath:
+    """The plan's index over ``first_day .. last_day``."""
+    if spec.mode == "historical":
+        if first_day < HISTORICAL_FROM:
+            raise PlanError("The historical CPI is used from 1994 on: start later or assume one")
+        return historical_cpi(macro.get("cpi").data)
+    rng = None if spec.seed is None else np.random.default_rng(spec.seed)
+    return assumed_cpi(
+        first_day, last_day, mu=spec.mean, sigma=spec.sd, phi=spec.persistence, rng=rng
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +143,7 @@ def asset_info(universe: Universe, request: AssetRequest) -> SymbolInfo:
     return info
 
 
-def usd_ils(service: BarService, macro: MacroService, universe: Universe) -> FxSeries:
+def usd_ils(service: BarService, macro: Macro, universe: Universe) -> FxSeries:
     """Shekels per dollar by day: the BoI official rate, then Yahoo's market rate."""
     warnings: list[str] = []
     official = market = None

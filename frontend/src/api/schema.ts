@@ -656,10 +656,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/planner/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Scenario
+         * @description Two options on the same money: what each is worth at the end, the breakeven rates and
+         *     the net worth averaged over the exit months.
+         */
+        post: operations["run_scenario_api_planner_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/study": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Study Scenario
+         * @description The same scenario started on every month of history that can run it, and a win map by
+         *     start year and horizon.
+         */
+        post: operations["study_scenario_api_planner_study_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountOut */
+        AccountOut: {
+            /** Deposited */
+            deposited: number;
+            /** Value */
+            value: number;
+            /** Tax */
+            tax: number;
+            /** Net Value */
+            net_value: number;
+        };
         /** AssetDepth */
         AssetDepth: {
             /** Symbol */
@@ -730,6 +783,29 @@ export interface components {
         AssetsRequest: {
             /** Assets */
             assets: components["schemas"]["AssetIn"][];
+        };
+        /** AverageOut */
+        AverageOut: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Points */
+            points: components["schemas"]["AveragePoint"][];
+        };
+        /** AveragePoint */
+        AveragePoint: {
+            /** Months */
+            months: number;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
         };
         /** Bar */
         Bar: {
@@ -840,6 +916,32 @@ export interface components {
             up_to?: number | null;
             /** Rate Pct */
             rate_pct: number;
+        };
+        /**
+         * BreakevenOut
+         * @description The value of one input at which the options end equal (null: none in its range).
+         */
+        BreakevenOut: {
+            /**
+             * Appreciation
+             * @description Yearly growth of the apartment's value
+             */
+            appreciation: number | null;
+            /**
+             * Market Return
+             * @description Yearly return of the market asset
+             */
+            market_return: number | null;
+            /**
+             * Mortgage Shift
+             * @description Added to every track's yearly rate
+             */
+            mortgage_shift: number | null;
+            /**
+             * Rent Scale
+             * @description A multiple of the rent
+             */
+            rent_scale: number | null;
         };
         /** Calibration */
         Calibration: {
@@ -1428,42 +1530,16 @@ export interface components {
              */
             baseline: number[];
         };
-        /** HomePoint */
-        HomePoint: {
-            /**
-             * Date
-             * Format: date
-             */
-            date: string;
-            /** Value */
-            value: number;
-            /** Balance */
-            balance: number;
-            /**
-             * Net Worth
-             * @description If sold this month
-             */
-            net_worth: number;
-            /** Payment */
-            payment: number;
-            /** Costs */
-            costs: number;
-            /** Rent */
-            rent: number;
-        };
-        /** HomeRequest */
-        HomeRequest: {
+        /**
+         * HomeOptionIn
+         * @description An apartment: the purchase, the mortgage, the costs and the sale's terms.
+         */
+        HomeOptionIn: {
             /**
              * Start
              * Format: date
              */
             start: string;
-            /**
-             * End
-             * Format: date
-             * @description The sale: on the last whole month from the start before it
-             */
-            end: string;
             /** Price */
             price: number;
             /** Equity */
@@ -1529,6 +1605,122 @@ export interface components {
              *     }
              */
             sale: components["schemas"]["SaleIn"];
+        };
+        /** HomeOut */
+        HomeOut: {
+            /** Value */
+            value: number;
+            /** Balance */
+            balance: number;
+            /** Betterment Tax */
+            betterment_tax: number;
+            /**
+             * Net Worth
+             * @description After the selling costs, the loan and the tax
+             */
+            net_worth: number;
+        };
+        /** HomePoint */
+        HomePoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Value */
+            value: number;
+            /** Balance */
+            balance: number;
+            /**
+             * Net Worth
+             * @description If sold this month
+             */
+            net_worth: number;
+            /** Payment */
+            payment: number;
+            /** Costs */
+            costs: number;
+            /** Rent */
+            rent: number;
+        };
+        /** HomeRequest */
+        HomeRequest: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Price */
+            price: number;
+            /** Equity */
+            equity: number;
+            /** Tracks */
+            tracks?: components["schemas"]["TrackIn"][];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "base_pct": 3.25,
+             *       "shock_pct": 0,
+             *       "shock_after_months": 0
+             *     }
+             */
+            rates: components["schemas"]["RatesIn"];
+            /**
+             * @default {
+             *       "tax_brackets": [],
+             *       "lawyer_pct": 0,
+             *       "broker_pct": 0,
+             *       "renovation": 0
+             *     }
+             */
+            purchase: components["schemas"]["PurchaseIn"];
+            /**
+             * @default {
+             *       "maintenance_pct": 0,
+             *       "insurance": 0
+             *     }
+             */
+            owner: components["schemas"]["OwnerIn"];
+            /**
+             * @default {
+             *       "mode": "none",
+             *       "monthly": 0,
+             *       "growth": "cpi",
+             *       "growth_pct": 0,
+             *       "vacancy_pct": 0,
+             *       "tax_pct": 0
+             *     }
+             */
+            rent: components["schemas"]["RentIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "series": "dwelling",
+             *       "mean_pct": 3,
+             *       "sd_pct": 0
+             *     }
+             */
+            value: components["schemas"]["ValueIn"];
+            /**
+             * @default {
+             *       "costs_pct": 0,
+             *       "early_repayment_pct": 0,
+             *       "betterment": {
+             *         "brackets": [],
+             *         "ceiling": 5008000,
+             *         "linear": true,
+             *         "rate_pct": 25,
+             *         "single_home": false
+             *       }
+             *     }
+             */
+            sale: components["schemas"]["SaleIn"];
+            /**
+             * End
+             * Format: date
+             * @description The sale: on the last whole month from the start before it
+             */
+            end: string;
             /**
              * @default {
              *       "mode": "assumed",
@@ -2155,8 +2347,33 @@ export interface components {
             /** Points */
             points: components["schemas"]["MacroPoint"][];
         };
-        /** MarketRequest */
-        MarketRequest: {
+        /** MapCell */
+        MapCell: {
+            /** X Xirr */
+            x_xirr: number | null;
+            /** Y Xirr */
+            y_xirr: number | null;
+            /** Difference */
+            difference: number;
+        };
+        /** MapRow */
+        MapRow: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Cells
+             * @description One per horizon (null: it cannot run)
+             */
+            cells: (components["schemas"]["MapCell"] | null)[];
+        };
+        /**
+         * MarketOptionIn
+         * @description A market account: its mix, its deposits and its costs.
+         */
+        MarketOptionIn: {
             /** Assets */
             assets: components["schemas"]["AssetIn"][];
             /**
@@ -2169,11 +2386,6 @@ export interface components {
             deposits?: components["schemas"]["DepositIn"][];
             /** Recurring */
             recurring?: components["schemas"]["RecurringIn"][];
-            /**
-             * End
-             * Format: date
-             */
-            end: string;
             /**
              * @default {
              *       "deposit_pct": 0,
@@ -2199,6 +2411,51 @@ export interface components {
              *     }
              */
             fill: components["schemas"]["FillIn"];
+        };
+        /** MarketRequest */
+        MarketRequest: {
+            /** Assets */
+            assets: components["schemas"]["AssetIn"][];
+            /**
+             * Use Fx
+             * @description Convert dollar assets by the USD/ILS rate
+             * @default true
+             */
+            use_fx: boolean;
+            /** Deposits */
+            deposits?: components["schemas"]["DepositIn"][];
+            /** Recurring */
+            recurring?: components["schemas"]["RecurringIn"][];
+            /**
+             * @default {
+             *       "deposit_pct": 0,
+             *       "buy_pct": 0,
+             *       "sell_pct": 0,
+             *       "management_pct": 0,
+             *       "monthly_fee": 0
+             *     }
+             */
+            fees: components["schemas"]["FeesIn"];
+            /**
+             * @default {
+             *       "gains_pct": 25,
+             *       "dividend_pct": 25,
+             *       "base": "nominal"
+             *     }
+             */
+            taxes: components["schemas"]["TaxesIn"];
+            /**
+             * @default {
+             *       "mode": "close",
+             *       "granularity": "medium"
+             *     }
+             */
+            fill: components["schemas"]["FillIn"];
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
             /**
              * @default {
              *       "mode": "assumed",
@@ -2263,6 +2520,45 @@ export interface components {
              * @default 0
              */
             ago: number;
+        };
+        /**
+         * OptionIn
+         * @description One option: an apartment, a market account, or both. An empty option is a mirror: it
+         *     invests whatever the other option spends, in the other's asset mix.
+         */
+        OptionIn: {
+            home?: components["schemas"]["HomeOptionIn"] | null;
+            /** @description Its mix and its own deposits (none: only the top-ups) */
+            market?: components["schemas"]["MarketOptionIn"] | null;
+        };
+        /** OptionOut */
+        OptionOut: {
+            /**
+             * Wealth
+             * @description What it is worth in cash at the end
+             */
+            wealth: number;
+            /**
+             * Wealth Real
+             * @description In shekels of the first day
+             */
+            wealth_real: number;
+            /** Xirr */
+            xirr: number | null;
+            /** Xirr Real */
+            xirr_real: number | null;
+            /**
+             * Own
+             * @description Its own spending before the end
+             */
+            own: number;
+            /**
+             * Topped Up
+             * @description Invested to match the other option's spending
+             */
+            topped_up: number;
+            home: components["schemas"]["HomeOut"] | null;
+            account: components["schemas"]["AccountOut"] | null;
         };
         /** OutputInfo */
         OutputInfo: {
@@ -2943,6 +3239,43 @@ export interface components {
             /** Exceedances */
             exceedances: number;
         };
+        /** RunResponse */
+        RunResponse: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Months
+             * @description The scenario's term
+             */
+            months: number;
+            /**
+             * Spent
+             * @description What each option puts in before the end
+             */
+            spent: number;
+            x: components["schemas"]["OptionOut"];
+            y: components["schemas"]["OptionOut"];
+            /**
+             * Difference
+             * @description The end value of x minus that of y
+             */
+            difference: number;
+            /** Difference Real */
+            difference_real: number;
+            breakeven: components["schemas"]["BreakevenOut"];
+            /** @description Net worth averaged over the exit months */
+            average: components["schemas"]["AverageOut"];
+            /** Warnings */
+            warnings: string[];
+        };
         /** SaleIn */
         SaleIn: {
             /**
@@ -2971,6 +3304,26 @@ export interface components {
          * @enum {string}
          */
         Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime" | "accumulation" | "regimes";
+        /** ScenarioRequest */
+        ScenarioRequest: {
+            x: components["schemas"]["OptionIn"];
+            y: components["schemas"]["OptionIn"];
+            /**
+             * End
+             * Format: date
+             * @description Everything is sold on it (an apartment: on its month date)
+             */
+            end: string;
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+        };
         /** ScheduleRow */
         ScheduleRow: {
             /**
@@ -3012,6 +3365,79 @@ export interface components {
              * @description Share of returns > 0
              */
             hit_rate: number | null;
+        };
+        /** StudyRequest */
+        StudyRequest: {
+            x: components["schemas"]["OptionIn"];
+            y: components["schemas"]["OptionIn"];
+            /**
+             * End
+             * Format: date
+             * @description Everything is sold on it (an apartment: on its month date)
+             */
+            end: string;
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+            /**
+             * First Start
+             * @description The first start to try
+             */
+            first_start?: string | null;
+            /** Last Start */
+            last_start?: string | null;
+            /**
+             * Step Months
+             * @default 1
+             */
+            step_months: number;
+            /**
+             * Follow Rates
+             * @description Move the tracks' rates with the Bank of Israel rate at each window's start
+             * @default true
+             */
+            follow_rates: boolean;
+            /**
+             * Horizons Years
+             * @default [
+             *       5,
+             *       10,
+             *       15,
+             *       20,
+             *       25,
+             *       30
+             *     ]
+             */
+            horizons_years: number[];
+        };
+        /** StudyResponse */
+        StudyResponse: {
+            /** Months */
+            months: number;
+            summary: components["schemas"]["SummaryOut"];
+            /**
+             * Skipped
+             * @description Starts in the range that cannot run
+             */
+            skipped: number;
+            /**
+             * Before
+             * @description Why the start before the first window cannot run
+             */
+            before: string | null;
+            /** After */
+            after: string | null;
+            /** Windows */
+            windows: components["schemas"]["WindowOut"][];
+            win_map: components["schemas"]["WinMap"];
+            /** Warnings */
+            warnings: string[];
         };
         /** Summary */
         Summary: {
@@ -3055,6 +3481,43 @@ export interface components {
              * @description The CPI's average yearly rate over the plan
              */
             inflation_yearly: number;
+        };
+        /** SummaryOut */
+        SummaryOut: {
+            /** Windows */
+            windows: number;
+            /**
+             * First
+             * Format: date
+             */
+            first: string;
+            /**
+             * Last
+             * Format: date
+             */
+            last: string;
+            /**
+             * Effective
+             * @description About how many independent terms the windows hold
+             */
+            effective: number;
+            /**
+             * P Win
+             * @description The share of windows x ends above y (a tie counts half)
+             */
+            p_win: number;
+            /** Median Difference */
+            median_difference: number;
+            /** Median Difference Real */
+            median_difference_real: number;
+            /** X Xirr */
+            x_xirr: number | null;
+            /** Y Xirr */
+            y_xirr: number | null;
+            /** X Xirr Real */
+            x_xirr_real: number | null;
+            /** Y Xirr Real */
+            y_xirr_real: number | null;
         };
         /**
          * SymbolInfo
@@ -3687,6 +4150,29 @@ export interface components {
             revision: number;
             /** Sections */
             sections: components["schemas"]["WatchlistSection"][];
+        };
+        /** WinMap */
+        WinMap: {
+            /** Horizons Years */
+            horizons_years: number[];
+            /** Rows */
+            rows: components["schemas"]["MapRow"][];
+        };
+        /** WindowOut */
+        WindowOut: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** X Wealth */
+            x_wealth: number;
+            /** Y Wealth */
+            y_wealth: number;
+            /** X Xirr */
+            x_xirr: number | null;
+            /** Y Xirr */
+            y_xirr: number | null;
         };
     };
     responses: never;
@@ -4856,6 +5342,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HomeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_scenario_api_planner_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    study_scenario_api_planner_study_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyResponse"];
                 };
             };
             /** @description Validation Error */

@@ -5,33 +5,17 @@ from __future__ import annotations
 import datetime as dt
 from typing import Annotated, Literal
 
-import numpy as np
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_macro_service
-from app.api.planner import InflationIn, InvalidPlanError, Percent
+from app.api.planner import InflationIn, InvalidPlanError, Percent, inflation_spec
 from app.macro.service import MacroService
-from app.models.bars import IntArray
 from app.planner import tax_presets
+from app.planner.data import Macro, cpi_path
 from app.planner.deposits import add_months
-from app.planner.home import (
-    Betterment,
-    Bracket,
-    HomePlan,
-    HomeSeries,
-    RentMode,
-    assumed_values,
-    run_home,
-)
-from app.planner.home_data import (
-    MONTH_DAYS,
-    assumed_anchor,
-    historical_anchor,
-    historical_values,
-    month_days,
-)
-from app.planner.inflation import HISTORICAL_FROM, CpiPath, assumed_cpi, historical_cpi
+from app.planner.home import Betterment, Bracket, HomePlan, RentMode, run_home
+from app.planner.home_data import HomeSpec, home_series, month_days
 from app.planner.market import PlanError
 from app.planner.mortgage import RateKind, Repayment, Schedule, Track
 
@@ -116,9 +100,10 @@ class SaleIn(BaseModel):
     betterment: BettermentIn = BettermentIn()
 
 
-class HomeRequest(BaseModel):
+class HomeOptionIn(BaseModel):
+    """An apartment: the purchase, the mortgage, the costs and the sale's terms."""
+
     start: dt.date
-    end: dt.date = Field(description="The sale: on the last whole month from the start before it")
     price: float = Field(gt=0)
     equity: float = Field(ge=0)
     tracks: list[TrackIn] = Field(default_factory=list[TrackIn], max_length=3)
@@ -128,6 +113,10 @@ class HomeRequest(BaseModel):
     rent: RentIn = RentIn()
     value: ValueIn = ValueIn()
     sale: SaleIn = SaleIn()
+
+
+class HomeRequest(HomeOptionIn):
+    end: dt.date = Field(description="The sale: on the last whole month from the start before it")
     inflation: InflationIn = InflationIn()
 
 
@@ -277,27 +266,11 @@ def run_home_plan(
         raise InvalidPlanError(str(exc)) from exc
 
 
-def _cpi(body: HomeRequest, macro: MacroService, days: IntArray) -> CpiPath:
-    spec = body.inflation
-    if spec.mode == "historical":
-        if days[0] < HISTORICAL_FROM:
-            raise PlanError("The historical CPI is used from 1994 on: start later or assume one")
-        return historical_cpi(macro.get("cpi").data)
-    rng = None if spec.seed is None else np.random.default_rng(spec.seed)
-    return assumed_cpi(
-        int(days[0]),
-        int(days[-1]),
-        mu=spec.mean_pct / 100,
-        sigma=spec.sd_pct / 100,
-        phi=spec.persistence,
-        rng=rng,
-    )
-
-
-def _run(body: HomeRequest, macro: MacroService) -> HomeResponse:
-    if body.end.year > MAX_YEAR:
+def home_spec(body: HomeOptionIn, end: dt.date) -> HomeSpec:
+    """The apartment of a request, sold on the last whole month from its start up to ``end``."""
+    if end.year > MAX_YEAR:
         raise PlanError(f"Dates after {MAX_YEAR} are not supported")
-    held = months_between(body.start, body.end)
+    held = months_between(body.start, end)
     if held < 1:
         raise PlanError("The sale must be at least a month after the purchase")
     if held > MAX_HELD_MONTHS:
@@ -322,46 +295,6 @@ def _run(body: HomeRequest, macro: MacroService) -> HomeResponse:
         )
         for t in (body.tracks if loan > 0 else [])
     ]
-    horizon = max([held, *(t.months for t in tracks)])
-    days = month_days(body.start, horizon)
-    warnings: list[str] = []
-
-    def held_flat(what: str, last: int, in_schedule: bool) -> None:
-        """Warn when the plan runs past the published data (``last`` is its last day)."""
-        if days[held] > last + MONTH_DAYS:
-            warnings.append(f"After the last published {what} it is held flat")
-        elif in_schedule and days[-1] > last + MONTH_DAYS:
-            warnings.append(
-                f"The schedule after the sale holds the {what} flat past its last published value"
-            )
-
-    path = _cpi(body, macro, days)
-    held_flat("CPI", int(path.days[-1]), any(t.linked for t in tracks))
-    cpi = path.at(days)
-    if body.rates.mode == "historical":
-        anchor = historical_anchor(macro, days)
-        held_flat(
-            "Bank of Israel rate",
-            int(macro.get("boi_rate").data.days[-1]),
-            any(t.kind is not RateKind.FIXED for t in tracks),
-        )
-    else:
-        anchor = assumed_anchor(
-            horizon,
-            body.rates.base_pct / 100,
-            body.rates.shock_pct / 100,
-            body.rates.shock_after_months,
-        )
-    if body.value.mode == "historical":
-        value = historical_values(macro, body.value.series, days[: held + 1])
-    else:
-        rng = None if body.value.seed is None else np.random.default_rng(body.value.seed)
-        value = assumed_values(held, body.value.mean_pct / 100, body.value.sd_pct / 100, rng)
-    rent_index = {
-        "cpi": cpi[: held + 1],
-        "value": value,
-        "fixed": (1 + body.rent.growth_pct / 100) ** (np.arange(held + 1) / 12),
-    }[body.rent.growth]
     spec = body.sale.betterment
     plan = HomePlan(
         start=body.start,
@@ -389,7 +322,29 @@ def _run(body: HomeRequest, macro: MacroService) -> HomeResponse:
             brackets=_brackets(spec.brackets),
         ),
     )
-    result = run_home(plan, HomeSeries(value, cpi, anchor, rent_index))
+    return HomeSpec(
+        plan=plan,
+        value_mode=body.value.mode,
+        value_series=body.value.series,
+        value_mean=body.value.mean_pct / 100,
+        value_sd=body.value.sd_pct / 100,
+        value_seed=body.value.seed,
+        rates_mode=body.rates.mode,
+        rates_base=body.rates.base_pct / 100,
+        rates_shock=body.rates.shock_pct / 100,
+        rates_shock_after=body.rates.shock_after_months,
+        rent_growth=body.rent.growth,
+        rent_growth_rate=body.rent.growth_pct / 100,
+    )
+
+
+def _run(body: HomeRequest, macro: Macro) -> HomeResponse:
+    spec = home_spec(body, body.end)
+    plan, held, tracks = spec.plan, spec.plan.months, list(spec.plan.tracks)
+    days = month_days(body.start, max([held, *(t.months for t in tracks)]))
+    path = cpi_path(inflation_spec(body.inflation), int(days[0]), int(days[-1]), macro)
+    series, warnings = home_series(spec, path, macro)
+    result = run_home(plan, series)
     m = result.mortgage
     until = slice(0, held)
 

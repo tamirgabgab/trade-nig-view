@@ -27,6 +27,7 @@ from app.api import (
     quotes,
     regime,
     risk,
+    scenario,
     symbols,
     trade_plan,
     volatility,
@@ -129,6 +130,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         macro.router,
         planner.router,
         home.router,
+        scenario.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

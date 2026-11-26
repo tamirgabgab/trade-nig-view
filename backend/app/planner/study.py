@@ -79,6 +79,7 @@ class Cell:
 @dataclass(frozen=True, slots=True)
 class Point:
     months: int
+    end: date
     x: float
     y: float
 
@@ -92,7 +93,7 @@ class Average:
 
 def win_probability(x: FloatArray, y: FloatArray) -> float:
     """:math:`P(X > Y)` over paired values, a tie counting as half."""
-    return float(np.mean((x > y) + 0.5 * (x == y)))
+    return float(np.mean(np.where(x > y, 1.0, np.where(x == y, 0.5, 0.0))))
 
 
 def effective_samples(span_months: float, term_months: float) -> float:
@@ -191,7 +192,7 @@ def time_average(run: Callable[[int], PairResult], months: Iterable[int]) -> Ave
             result = run(held)
         except PlanError:
             continue
-        points.append(Point(held, result.x.wealth, result.y.wealth))
+        points.append(Point(held, result.end, result.x.wealth, result.y.wealth))
     if not points:
         raise PlanError("The plan cannot run over any of the exit months")
     return Average(
