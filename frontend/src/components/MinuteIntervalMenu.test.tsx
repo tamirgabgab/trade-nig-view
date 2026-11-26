@@ -23,6 +23,7 @@ describe('MinuteIntervalMenu', () => {
       '1 minute~30 days',
       '2 minutes~30 days',
       '5 minutes~60 days',
+      '10 minutes~60 days',
       '15 minutes~60 days',
       '30 minutes~60 days',
       '90 minutes~60 days',

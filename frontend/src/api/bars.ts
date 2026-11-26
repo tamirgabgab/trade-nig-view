@@ -18,6 +18,7 @@ export const INTERVALS = [
   '1m',
   '2m',
   '5m',
+  '10m',
   '15m',
   '30m',
   '90m',

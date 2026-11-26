@@ -533,7 +533,12 @@ def test_minute_intervals_resample_their_base(make_service: Factory) -> None:
     service, _ = make_service(provider)
     five = service.get_bars("AAA", Interval.MIN5, adjusted=False, limit=100_000).frame
     assert len(five) == 78 * len(DAYS)
-    for interval, per_session in ((Interval.MIN15, 26), (Interval.MIN30, 13), (Interval.MIN90, 5)):
+    for interval, per_session in (
+        (Interval.MIN10, 39),
+        (Interval.MIN15, 26),
+        (Interval.MIN30, 13),
+        (Interval.MIN90, 5),
+    ):
         out = service.get_bars("AAA", interval, adjusted=False, limit=100_000).frame
         assert len(out) == per_session * len(DAYS)
         assert out.session is not None
@@ -666,6 +671,6 @@ def test_the_minutes_menu_states_the_provider_windows() -> None:
     """The frontend's "~30 days" hints match INTRADAY_MAX_DAYS (+1: the request stays inside)."""
     text = (REPO_ROOT / "frontend" / "src" / "components" / "intervals.ts").read_text("utf-8")
     menu = {m[0]: int(m[1]) for m in re.findall(r"interval: '(\w+)',.*keepsDays: (\d+)", text)}
-    assert len(menu) == 6
+    assert len(menu) == 7
     for interval, days in menu.items():
         assert days == INTRADAY_MAX_DAYS[Interval(interval).base] + 1, interval

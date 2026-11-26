@@ -61,6 +61,18 @@ test('range buttons switch interval and chart types redraw', async ({ page }) =>
   );
   await page.getByRole('button', { name: '1 year' }).click();
   await expect(legend(page)).toContainText('Apple Inc. · 1D · NASDAQ');
+  // The long ranges keep their daily, weekly and monthly bars.
+  for (const [range, interval] of [
+    ['Year to date', '1D'],
+    ['5 years', '1W'],
+    ['All data', '1M'],
+  ] as const) {
+    await page.getByRole('button', { name: range }).click();
+    await expect(legend(page)).toContainText(`Apple Inc. · ${interval} · NASDAQ`);
+    await expect(page.getByRole('button', { name: range })).toHaveAttribute('aria-pressed', 'true');
+  }
+  await page.getByRole('button', { name: '1 year' }).click();
+  await expect(legend(page)).toContainText('Apple Inc. · 1D · NASDAQ');
 
   const heikin = page.waitForRequest((r) => r.url().includes('transform=heikin_ashi'));
   await page.getByRole('button', { name: /Chart type/ }).click();
@@ -99,6 +111,14 @@ test('the minutes menu picks 15m bars built from 5m and notes how far back they 
   );
   await expect(legend(page)).toContainText(
     /15m data since 2026-10-26 \(\d+ days\)/, // offline: no provider window
+  );
+  // 10m: built from two 5m bars (Yahoo has none).
+  await page.getByRole('button', { name: /Minute intervals/ }).click();
+  await page.getByRole('menuitemradio', { name: /10 minutes/ }).click();
+  await expect(legend(page)).toContainText('Apple Inc. · 10m · NASDAQ');
+  await page.mouse.move(0, 0);
+  await expect(field(page, 'C')).toHaveText(
+    price(present(intradayCloses('5m', 'AAPL.csv').at(-1), '5m')),
   );
   // Daily bars carry no note.
   await page

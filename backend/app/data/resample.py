@@ -14,9 +14,9 @@ Partial periods (the current week, or a week cut by a replay cursor) are emitted
 bars that exist are aggregated, so resampling never looks ahead.
 
 Intraday: an interval of :math:`L` seconds aggregates the bars of its base interval (``2m`` from
-``1m``; ``15m``, ``30m``, ``90m`` from ``5m``; ``4h`` from ``1h``) with the same rule, grouped by
-trading session and by block :math:`\\lfloor (t - t_0) / L \\rfloor` **counted from the session's
-first bar** :math:`t_0` (``app.data.sessions``), snapped back onto the grid of the usual
+``1m``; ``10m``, ``15m``, ``30m``, ``90m`` from ``5m``; ``4h`` from ``1h``) with the same rule,
+grouped by trading session and by block :math:`\\lfloor (t - t_0) / L \\rfloor` **counted from the
+session's first bar** :math:`t_0` (``app.data.sessions``), snapped back onto the grid of the usual
 session open when the first bars of a session are missing. A US stock therefore gets 09:30-13:30 and
 13:30-16:00 ``4h`` bars and 09:30, 11:00, 12:30, 14:00, 15:30 ``90m`` bars, as on TradingView, and a
 CME future opening at 18:00 gets 18:00, 22:00, 02:00, ... A block is keyed by its first bar's start

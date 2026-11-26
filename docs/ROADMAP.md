@@ -322,7 +322,7 @@ Phase-2 plan.
 ### Phase 4 — Strategies & backtesting
 - Organised by **four trader profiles** set by trade frequency (Day ≤ 10 a day, Swing ≤ 10 a week, Position ≤ 10 a
   month, Long-term ≤ 12 a year); the final models are one validated set per profile (B7).
-- [x] D0: minute intervals (1m, 2m, 5m, 15m, 30m, 90m), accumulated intraday history and the daily collector
+- [x] D0: minute intervals (1m, 2m, 5m, 10m, 15m, 30m, 90m), accumulated intraday history and the daily collector
   (ADR 0017, 2026-11-26).
 - The round-by-round plan is in [PHASE4_PLAN.md](PHASE4_PLAN.md) (2026-11-26): intraday data for the Day profile (D0),
   profiles, strategy model and signals (B0),

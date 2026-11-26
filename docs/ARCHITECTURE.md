@@ -397,7 +397,7 @@ A shared `check_no_lookahead(spec, bars, k)` helper (`tests/golden/harness.py`) 
 - **Bar cache** (`data/bars.db`, SQLite, WAL; `app/data/cache/bar_cache.py`): table `bars(symbol, interval, ts, open,
   high, low, close, adj_close, volume, source)`, PK `(symbol, interval, ts)`; table `coverage(symbol, interval, start_ts,
   end_ts, fetched_at, source)`, PK `(symbol, interval)`; table `meta(key, value)` (schema version). Only base intervals
-  are stored (`1D`, `1h`, `5m`, `1m`); `1W`/`1M` are resampled from `1D`, `4h` from `1h`, `15m`/`30m`/`90m` from `5m`
+  are stored (`1D`, `1h`, `5m`, `1m`); `1W`/`1M` are resampled from `1D`, `4h` from `1h`, `10m`/`15m`/`30m`/`90m` from `5m`
   and `2m` from `1m` on read (cheap, always consistent; ADR 0017).
 - **Refresh policy** (`BarService`): the first request for a symbol and base interval downloads the full available
   history (intraday: the last 729 / 59 / 29 days Yahoo allows for 1h / 5m / 1m; older cached bars are kept, so the

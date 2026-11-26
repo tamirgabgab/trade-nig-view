@@ -45,12 +45,12 @@ What a profile fixes (`TraderProfile` in the backend, one object per profile, te
 ### Data per profile (the main constraint)
 | Profile | Data needed | What Yahoo gives | Consequence |
 |---|---|---|---|
-| Day | 5m/15m, years | 2m … 90m: only the **last 60 days**; 1m: 30 days | not enough history for honest statistics out of the box |
+| Day | 5m/15m, years | 2m … 90m: only the **last 60 days** (10m built from 5m); 1m: 30 days | not enough history for honest statistics out of the box |
 | Swing | 1h, years | 1h: ~730 days | about 2 years: enough for a first evaluation, growing with the cache |
 | Position | 1D, decades | full daily history | fine |
 | Long-term | 1W/1M, decades | resampled from 1D | fine |
 
-Intraday history (round **D0**, done 2026-11-26, ADR 0017): 1m, 2m, 5m, 15m, 30m and 90m bars, everything ever
+Intraday history (round **D0**, done 2026-11-26, ADR 0017): 1m, 2m, 5m, 10m, 15m, 30m and 90m bars, everything ever
 downloaded stays in the cache so history **accumulates**, and a daily collector (a Windows scheduled task that runs
 `scripts/collect-intraday.ps1` after the US close) keeps the 30/60-day windows from leaving gaps. After a year of
 collecting, the Day profile has a year of minute bars. A paid data source (data only, never a broker) is the other
@@ -81,7 +81,7 @@ way, for the user to decide.
 ## Rounds
 
 ### D0 — Intraday data for the Day profile (M) — ✅ done 2026-11-26 (ADR 0017)
-- 1m and 5m base intervals from Yahoo (30 and 60 days), 2m and 15m/30m/90m resampled from them, cached and
+- 1m and 5m base intervals from Yahoo (30 and 60 days), 2m and 10m/15m/30m/90m resampled from them, cached and
   accumulated (older bars rescaled after a split); sessions and adjustment as for 1h; replay and indicators work on
   them unchanged.
 - `scripts/collect-intraday.ps1` + `install-collector.ps1` (a weekday Windows scheduled task) refresh 1m, 5m and 1h

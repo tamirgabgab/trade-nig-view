@@ -309,7 +309,8 @@ def minute_bars(base: Interval, sessions: int = 3) -> BarFrame:
 def test_interval_bases_and_lengths() -> None:
     bases = {i: i.base for i in Interval}
     assert bases[Interval.MIN2] is Interval.MIN1
-    assert {bases[i] for i in (Interval.MIN15, Interval.MIN30, Interval.MIN90)} == {Interval.MIN5}
+    minutes = (Interval.MIN10, Interval.MIN15, Interval.MIN30, Interval.MIN90)
+    assert {bases[i] for i in minutes} == {Interval.MIN5}
     assert bases[Interval.H4] is Interval.H1
     assert bases[Interval.W1] is Interval.D1
     assert Interval.MIN90.seconds == 5400
@@ -320,7 +321,13 @@ def test_interval_bases_and_lengths() -> None:
 
 @pytest.mark.parametrize(
     ("interval", "per_session"),
-    [(Interval.MIN2, 195), (Interval.MIN15, 26), (Interval.MIN30, 13), (Interval.MIN90, 5)],
+    [
+        (Interval.MIN2, 195),
+        (Interval.MIN10, 39),
+        (Interval.MIN15, 26),
+        (Interval.MIN30, 13),
+        (Interval.MIN90, 5),
+    ],
 )
 def test_minute_resampling_counts_totals_and_no_lookahead(
     interval: Interval, per_session: int

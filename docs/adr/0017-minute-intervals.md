@@ -5,13 +5,14 @@
 ## Context
 The user wants bars shorter than an hour (for the Day trader profile of Phase 4), with a note where the history is
 short. Yahoo serves 1m bars for the last 30 days (8 days per request), 2m to 90m for the last 60 days and 1h for 730
-days; it has no 10m bars. The user chose: only the intervals Yahoo offers (1m, 2m, 5m, 15m, 30m, 90m), downloaded as
+days; it has no 10m bars. The user chose: only the intervals Yahoo offers (1m, 2m, 5m, 10m, 15m, 30m, 90m), downloaded as
 two bases and resampled, history accumulated in the cache with a daily collector, and the depth noted in the
-interval menu and on the chart.
+interval menu and on the chart. Afterwards the user asked for 10m as well: Yahoo has none, so it is built from two
+5m bars (39 a regular session).
 
 ## Decision
 - **Base intervals:** `1m`, `5m`, `1h`, `1D` are downloaded (`BASE_INTERVALS`). `2m` is resampled from `1m`;
-  `15m`, `30m`, `90m` from `5m`; `4h` from `1h`. Blocks count from the session's first bar, snapped back onto the
+  `10m`, `15m`, `30m`, `90m` from `5m`; `4h` from `1h`. Blocks count from the session's first bar, snapped back onto the
   grid of the usual session open (the most common first-bar time) when a session's opening bars are missing (no
   trades at 09:30), so 2m bars stay at 09:30, 09:32, ... One download per base keeps the intervals consistent with
   each other and halves the calls to Yahoo.

@@ -33,13 +33,14 @@ class Interval(StrEnum):
     """Bar intervals served by the API.
 
     Four are downloaded (the *base* intervals): ``1m``, ``5m``, ``1h`` and ``1D``. ``2m`` is
-    resampled from ``1m``; ``15m``, ``30m`` and ``90m`` from ``5m``; ``4h`` from ``1h``; ``1W`` and
-    ``1M`` from ``1D``.
+    resampled from ``1m``; ``10m``, ``15m``, ``30m`` and ``90m`` from ``5m`` (Yahoo has no 10m);
+    ``4h`` from ``1h``; ``1W`` and ``1M`` from ``1D``.
     """
 
     MIN1 = "1m"
     MIN2 = "2m"
     MIN5 = "5m"
+    MIN10 = "10m"
     MIN15 = "15m"
     MIN30 = "30m"
     MIN90 = "90m"
@@ -70,6 +71,7 @@ _INTRADAY_SECONDS: dict[Interval, int] = {
     Interval.MIN1: 60,
     Interval.MIN2: 120,
     Interval.MIN5: 300,
+    Interval.MIN10: 600,
     Interval.MIN15: 900,
     Interval.MIN30: 1800,
     Interval.MIN90: 5400,
@@ -80,6 +82,7 @@ _BASE: dict[Interval, Interval] = {
     Interval.MIN1: Interval.MIN1,
     Interval.MIN2: Interval.MIN1,
     Interval.MIN5: Interval.MIN5,
+    Interval.MIN10: Interval.MIN5,
     Interval.MIN15: Interval.MIN5,
     Interval.MIN30: Interval.MIN5,
     Interval.MIN90: Interval.MIN5,

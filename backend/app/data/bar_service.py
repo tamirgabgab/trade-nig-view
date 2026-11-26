@@ -3,8 +3,8 @@
 Four **base** intervals are downloaded and cached: ``1D`` (full history) and ``1h``, ``5m``,
 ``1m`` (the last :data:`~app.data.providers.yahoo.INTRADAY_MAX_DAYS` days the provider allows; the
 cache keeps older bars it already has, so local intraday history grows over time). ``1W``/``1M``
-are resampled from ``1D``, ``4h`` from ``1h``, ``15m``/``30m``/``90m`` from ``5m`` and ``2m`` from
-``1m``.
+are resampled from ``1D``, ``4h`` from ``1h``, ``10m``/``15m``/``30m``/``90m`` from ``5m`` and
+``2m`` from ``1m``.
 
 Freshness policy (docs/ARCHITECTURE.md section 8), per symbol and base interval:
 

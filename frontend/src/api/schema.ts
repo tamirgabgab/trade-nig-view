@@ -1180,11 +1180,11 @@ export interface components {
          * @description Bar intervals served by the API.
          *
          *     Four are downloaded (the *base* intervals): ``1m``, ``5m``, ``1h`` and ``1D``. ``2m`` is
-         *     resampled from ``1m``; ``15m``, ``30m`` and ``90m`` from ``5m``; ``4h`` from ``1h``; ``1W`` and
-         *     ``1M`` from ``1D``.
+         *     resampled from ``1m``; ``10m``, ``15m``, ``30m`` and ``90m`` from ``5m`` (Yahoo has no 10m);
+         *     ``4h`` from ``1h``; ``1W`` and ``1M`` from ``1D``.
          * @enum {string}
          */
-        Interval: "1m" | "2m" | "5m" | "15m" | "30m" | "90m" | "1h" | "4h" | "1D" | "1W" | "1M";
+        Interval: "1m" | "2m" | "5m" | "10m" | "15m" | "30m" | "90m" | "1h" | "4h" | "1D" | "1W" | "1M";
         /** LabForecastRequest */
         LabForecastRequest: {
             /** Source */
