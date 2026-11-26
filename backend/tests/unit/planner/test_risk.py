@@ -90,7 +90,9 @@ def test_the_certainty_equivalent_by_risk_aversion() -> None:
     assert certainty_equivalent(wealth) == pytest.approx(160.0)  # gamma 2: the harmonic mean
     assert certainty_equivalent(np.full(5, 123.0)) == pytest.approx(123.0)
     # More risk aversion, a lower equivalent.
-    assert certainty_equivalent(wealth, gamma=5.0) < 160.0
+    averse = certainty_equivalent(wealth, gamma=5.0)
+    assert averse is not None
+    assert averse < 160.0
 
 
 def test_ruin_has_no_certainty_equivalent() -> None:

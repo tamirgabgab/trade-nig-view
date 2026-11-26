@@ -35,10 +35,12 @@ from datetime import date, timedelta
 
 import numpy as np
 
-from app.models.bars import FloatArray
-from app.planner.deposits import EPOCH
+from app.models.bars import FloatArray, IntArray
+from app.planner.deposits import EPOCH, day_number
+from app.planner.inflation import CpiPath
 from app.planner.market import PlanError
-from app.planner.scenario import PairResult
+from app.planner.risk import dietz_returns, max_drawdown
+from app.planner.scenario import PairResult, SideResult
 
 BISECTIONS = 100
 
@@ -206,4 +208,90 @@ def time_average(run: Callable[[int], PairResult], months: Iterable[int]) -> Ave
         float(np.mean([p.y for p in points])),
         points,
         skipped,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class SideOutcome:
+    """What one realization leaves of an option: its end, and the risks along its path."""
+
+    wealth: float
+    wealth_real: float
+    xirr: float | None
+    xirr_real: float | None
+    #: The apartment was worth less than its loan in some month (None: no apartment).
+    negative_equity: bool | None
+    #: The highest mortgage payment over the income of its month (None: no income given).
+    stress: float | None
+    #: The share of months the account was worth less than what was put into it.
+    under_water: float | None
+    drawdown: float
+    #: Yearly returns of the net worth, the money put in taken out.
+    returns: FloatArray
+
+
+@dataclass(frozen=True, slots=True)
+class Outcome:
+    spent: float
+    x: SideOutcome
+    y: SideOutcome
+
+
+def _side_outcome(
+    side: SideResult, result: PairResult, cpi: CpiPath, income: float | None
+) -> SideOutcome:
+    """The path risks of one option. Net worth on the way is before any exit cost or tax: the
+    apartment's value less its loan, plus the account's market value, on the account's month
+    ends (the apartment's month dates without an account). A net worth below zero counts as
+    zero in the drawdown: the whole peak is lost. The money put in includes the apartment's
+    bills of the last day, which the ledger settles in cash."""
+    home, market = side.home, side.market
+    last = 0.0 if home is None else float(home.payment[-1] + home.costs[-1] - home.rent[-1])
+    days: IntArray = np.append(result.days, day_number(result.end))
+    put_in = np.cumsum(np.append(result.budget, last))
+    home_days = None if home is None else np.array([day_number(d) for d in home.dates])
+    equity = None if home is None else home.value - home.balance
+    grid = np.array([], dtype=np.int64)
+    worth = np.array([])
+    if market is not None:
+        grid = np.array(market.path_days, dtype=np.int64)
+        worth = np.array(market.path_value)
+        if home_days is not None and equity is not None:
+            month = np.searchsorted(home_days, grid, side="right") - 1
+            worth = worth + np.where(month >= 0, equity[np.maximum(month, 0)], 0.0)
+    elif home_days is not None and equity is not None:
+        grid, worth = home_days, equity
+    yearly = worth[::12].copy()
+    paid = np.searchsorted(days, grid[::12], side="right") - 1
+    paid_in = np.where(paid >= 0, put_in[np.maximum(paid, 0)], 0.0)
+    if len(yearly):
+        yearly[0] = paid_in[0]  # the first point is the money put in so far: costs are a loss
+    stress = None
+    if income is not None and home is not None and home_days is not None and len(home.payment) > 1:
+        earned = income * cpi.at(home_days[1:]) / cpi.at(int(home_days[0]))
+        stress = float(np.max(home.payment[1:] / earned))
+    under_water = None
+    if market is not None:
+        deposited = np.array(market.path_deposited)
+        under_water = float(np.mean(np.array(market.path_value) < deposited * (1.0 - 1e-12)))
+    return SideOutcome(
+        wealth=side.wealth,
+        wealth_real=side.wealth_real,
+        xirr=side.xirr,
+        xirr_real=side.xirr_real,
+        negative_equity=None if home is None else bool(np.any(home.value < home.balance)),
+        stress=stress,
+        under_water=under_water,
+        drawdown=max_drawdown(np.maximum(worth, 0.0)) if len(worth) else 0.0,
+        returns=dietz_returns(yearly, np.diff(paid_in)) if len(yearly) > 1 else np.array([]),
+    )
+
+
+def outcome(result: PairResult, cpi: CpiPath, income: float | None = None) -> Outcome:
+    """One realization reduced to what the layer-2 metrics need. ``income``: the monthly
+    income on the first day, in shekels; it rises with the CPI."""
+    return Outcome(
+        spent=float(result.budget.sum()),
+        x=_side_outcome(result.x, result, cpi, income),
+        y=_side_outcome(result.y, result, cpi, income),
     )

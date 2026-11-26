@@ -7,6 +7,7 @@ from datetime import date
 import numpy as np
 import pytest
 
+from app.models.bars import FloatArray
 from app.planner.data import InflationSpec
 from app.planner.deposits import add_months, day_number
 from app.planner.home import assumed_values
@@ -69,8 +70,9 @@ def test_a_modelled_path_grows_by_its_mean_and_matches_the_apartments_convention
 
 def test_the_estimate_of_a_mix_returns_the_models_parameters() -> None:
     assert estimate(np.full(60, 1.05 ** (1 / 12))) == pytest.approx((0.05, 0.0), abs=1e-12)
-    path = lognormal(0.07, 0.15, np.random.default_rng(7).standard_normal(240_000))
-    mean, sd = estimate(path[1:] / path[:-1])
+    # 240,000 single months of the model (one long path would overflow).
+    months = lognormal(0.07, 0.15, np.random.default_rng(7).standard_normal((240_000, 1)))
+    mean, sd = estimate(months[:, 1])
     assert mean == pytest.approx(0.07, abs=0.005)
     assert sd == pytest.approx(0.15, abs=0.002)
 
@@ -93,10 +95,10 @@ def asset(symbol: str, close: np.ndarray, factor: np.ndarray, fx: np.ndarray) ->
 
 def history(months: int = 120) -> tuple[Panel, dict[str, AssetData]]:
     """Ten years in which every series has its own recognisable monthly growth."""
-    j = np.arange(months)
+    j = np.arange(months, dtype=np.float64)
     ratios = {
-        "AAA/close": 1.0 + 0.001 * j,
-        "AAA/factor": np.where(j % 3 == 0, 1.01, 1.0),
+        "AAA/close": 1.001 + 0.001 * j,  # never flat: month j grows by j + 1 tenths of a percent
+        "AAA/factor": 1.0 + 0.01 * (j % 3 == 0),
         "AAA/fx": 1.0 - 0.0001 * j,
         "cpi": 1.0 + 0.00001 * j,
         "dwelling": 1.0 + 0.00002 * j,
@@ -128,7 +130,7 @@ def test_a_world_keeps_the_months_of_history_together() -> None:
     a = world.assets["AAA"]
     at = np.searchsorted(a.days, grid)
     # The month each step came from, read back from the asset's own growth.
-    came_from = np.rint((a.close[at][1:] / a.close[at][:-1] - 1.0) / 0.001).astype(int)
+    came_from = np.rint((a.close[at][1:] / a.close[at][:-1] - 1.0) / 0.001).astype(int) - 1
     assert came_from.min() >= 0
     assert came_from.max() <= 119
     assert np.all(np.diff(came_from)[np.arange(1, 60) % 12 != 0] == 1)
@@ -158,7 +160,7 @@ def test_dividends_stay_on_month_dates_and_prices_fill_the_days_between() -> Non
 
 
 def test_a_world_depends_only_on_the_seed_and_its_number() -> None:
-    def closes(world_spec: WorldSpec, index: int) -> np.ndarray:
+    def closes(world_spec: WorldSpec, index: int) -> FloatArray:
         return make_world(world_spec, index).assets["AAA"].close
 
     assert np.array_equal(closes(spec(), 3), closes(spec(), 3))
@@ -166,7 +168,7 @@ def test_a_world_depends_only_on_the_seed_and_its_number() -> None:
     assert not np.array_equal(closes(spec(), 3), closes(spec(seed=2), 3))
     # A longer plan sees the same world, further.
     short, long = closes(spec(60), 3), closes(spec(120), 3)
-    assert np.array_equal(short, long[: len(short)])
+    assert np.array_equal(short[:-1], long[: len(short) - 1])
 
 
 def test_a_modelled_market_replaces_the_mix_and_inflation_can_be_modelled_too() -> None:

@@ -23,7 +23,7 @@ from typing import Literal
 
 import numpy as np
 
-from app.macro.series import SERIES
+from app.macro.series import SERIES, MacroSeries
 from app.models.bars import FloatArray, IntArray
 from app.planner.data import Macro
 from app.planner.deposits import add_months, day_number
@@ -62,11 +62,16 @@ def assumed_anchor(months: int, base: float, shock: float = 0.0, after: int = 0)
     return base + np.where(np.arange(months + 1) >= after, shock, 0.0)
 
 
-def historical_values(macro: Macro, series_id: str, days: IntArray) -> FloatArray:
-    """The dwelling price index on each day (geometric between its monthly values)."""
+def dwelling_index(macro: Macro, series_id: str) -> MacroSeries:
+    """A CBS dwelling price index by its id."""
     if not series_id.startswith("dwelling") or series_id not in SERIES:
         raise PlanError(f"'{series_id}' is not a dwelling price index")
-    series = macro.get(series_id).data
+    return macro.get(series_id).data
+
+
+def historical_values(macro: Macro, series_id: str, days: IntArray) -> FloatArray:
+    """The dwelling price index on each day (geometric between its monthly values)."""
+    series = dwelling_index(macro, series_id)
     first, last = int(series.days[0]), int(series.days[-1]) + MONTH_DAYS
     if days[0] < first or days[-1] > last:
         raise PlanError(
@@ -97,9 +102,17 @@ class HomeSpec:
 
 
 def home_series(
-    spec: HomeSpec, path: CpiPath, macro: Macro, *, strict: bool = False
+    spec: HomeSpec,
+    path: CpiPath,
+    macro: Macro,
+    *,
+    strict: bool = False,
+    value: FloatArray | None = None,
+    anchor: FloatArray | None = None,
 ) -> tuple[HomeSeries, list[str]]:
-    """The apartment's monthly series, and warnings about data held flat."""
+    """The apartment's monthly series, and warnings about data held flat. A ``value`` index
+    (months 0 to the sale) or an ``anchor`` rate (months 0 to the longest track's end) that is
+    given is used as it is: a simulated world has its own."""
     plan = spec.plan
     held = plan.months
     horizon = max([held, *(t.months for t in plan.tracks)])
@@ -119,7 +132,9 @@ def home_series(
 
     held_flat("CPI", int(path.days[-1]), any(t.linked for t in plan.tracks))
     cpi = path.at(days)
-    if spec.rates_mode == "historical":
+    if anchor is not None:
+        pass
+    elif spec.rates_mode == "historical":
         anchor = historical_anchor(macro, days)
         held_flat(
             "Bank of Israel rate",
@@ -128,7 +143,9 @@ def home_series(
         )
     else:
         anchor = assumed_anchor(horizon, spec.rates_base, spec.rates_shock, spec.rates_shock_after)
-    if spec.value_mode == "historical":
+    if value is not None:
+        pass
+    elif spec.value_mode == "historical":
         value = historical_values(macro, spec.value_series, days[: held + 1])
     else:
         rng = None if spec.value_seed is None else np.random.default_rng(spec.value_seed)
