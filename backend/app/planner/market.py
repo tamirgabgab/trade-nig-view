@@ -111,7 +111,6 @@ class Lot:
     fx: float
     units: float
     cost: float
-    final_units: float
     value: float
     fees_paid: float
     reinvested: float
@@ -294,16 +293,15 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
     # log of the units factor before event m (index events = after all of them).
     log_factor = np.concatenate(([0.0], np.cumsum(np.log1p(-phi))))
 
-    index_of = {TaxBase.NOMINAL: None, TaxBase.REAL: "cpi", TaxBase.CURRENCY: "fx"}[taxes.base]
     lots: list[Lot] = []
     value_by_deposit = np.zeros(n)
     gain_by_deposit = np.zeros(n)
     reinvested_total = 0.0
     for a, asset in enumerate(used):
         g, e, t_last, i, k = g_all[a], event_index[a], last_index[a], buy_index[a], first_event[a]
-        if index_of == "cpi":
+        if taxes.base is TaxBase.REAL:
             level = cpi.at(asset.days)
-        elif index_of == "fx":
+        elif taxes.base is TaxBase.CURRENCY:
             level = asset.fx
         else:
             level = np.ones(len(asset.days))
@@ -347,7 +345,6 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
                 fx=float(asset.fx[i[j]]),
                 units=float(units0[a][j]),
                 cost=float(cost[a][j]),
-                final_units=float(final_units[j]),
                 value=float(value[j]),
                 fees_paid=float(fees_paid[j]),
                 reinvested=float(plain[j]),
