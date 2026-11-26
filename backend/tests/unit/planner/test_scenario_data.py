@@ -148,12 +148,15 @@ def test_a_window_moves_the_unlinked_rates_with_the_bank_of_israel() -> None:
         return [t.rate for t in side.home.tracks]
 
     assert rates(Change()) == [0.05, 0.03, -0.005]
-    # Bought in 2002 at a Bank of Israel rate of 10 %, against 4 % on the plan's own day: the
-    # fixed track gets 6 % more; the linked one and the prime spread stay.
+    # Bought in 2002 at a Bank of Israel rate of 10 %, against 0.25 % now (the rates entered
+    # are today's quotes): the fixed track gets 9.75 % more; the linked one and the prime
+    # spread stay.
     early = Change(shift=-96, historical=True)
-    assert rates(early) == pytest.approx([0.11, 0.03, -0.005])
+    assert rates(early) == pytest.approx([0.1475, 0.03, -0.005])
     assert rates(Change(shift=-96, historical=True, follow_rates=False)) == [0.05, 0.03, -0.005]
-    assert rates(Change(shift=-12, historical=True)) == pytest.approx([0.05, 0.03, -0.005])
+    # The plan's own day (2010, 4 %) is a window like any other; one at today's rate is as entered.
+    assert rates(Change(historical=True)) == pytest.approx([0.0875, 0.03, -0.005])
+    assert rates(Change(shift=72, historical=True)) == pytest.approx([0.05, 0.03, -0.005])
     # An assumed rate path has no history to follow.
     assumed = scenario(value_mode="historical")
     side = build(assumed, MACRO, early)[0]

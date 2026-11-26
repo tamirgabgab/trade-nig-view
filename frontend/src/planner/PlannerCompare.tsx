@@ -179,9 +179,10 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
           <p className={styles.note}>
             The plan is started on every month the data can run it (empty dates: as far as it goes).
             The apartment’s value, the rates and the CPI follow history only where their tab says
-            “historical”. With the box ticked, a fixed or variable track that is not CPI-linked gets
-            the rate you entered plus the move of the Bank of Israel rate between your purchase day
-            and the window’s; it needs historical rates in the Apartment tab.
+            “historical”. With the box ticked, the rates you entered count as today’s quotes: a
+            fixed or variable track that is not CPI-linked gets its rate plus the Bank of Israel
+            rate of the window’s purchase day minus today’s. It needs historical rates in the
+            Apartment tab.
           </p>
         </fieldset>
         <div className={styles.actions}>

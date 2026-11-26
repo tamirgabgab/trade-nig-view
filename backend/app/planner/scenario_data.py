@@ -16,10 +16,11 @@ one realization, under a :class:`Change`:
     window stands for a plan that starts today;
   - with ``follow_rates``, the rates of the tracks move with the Bank of Israel rate: a fixed or
     variable track that is not CPI-linked gets its rate plus
-    :math:`a(d_0') - a(d_0)`, the Bank of Israel rate on the window's purchase day minus the one
-    on the plan's own purchase day (the day the user's rates belong to). Prime tracks follow the
-    rate by themselves; linked tracks keep a real rate. Only for an apartment whose rates are
-    historical.
+    :math:`a(d_0') - a_{\\text{now}}`, the Bank of Israel rate on the window's purchase day minus
+    the last published one (the user's rates are today's quotes). So the window that starts on
+    the plan's own day differs from the plan as entered, unless that day is today. Prime tracks
+    follow the rate by themselves; linked tracks keep a real rate. Only for an apartment whose
+    rates are historical.
 * **appreciation**, **market_return**, **rate_shift**, **rent_scale**: one input replaced, for the
   breakeven rates: every apartment's value grows by a constant yearly rate; every account holds
   one asset growing by a constant yearly rate in shekels; every track's rate (a prime track's
@@ -112,13 +113,14 @@ def growing_asset(rate: float, first: int, last: int) -> AssetData:
     return AssetData("RETURN", 1.0, days, close, close, close, close, ones, ones)
 
 
-def _rate_on(macro: Macro, day: date) -> float:
-    """The Bank of Israel rate (a fraction) on ``day``: the last one published on or before it."""
+def _rate_move(macro: Macro, day: date) -> float:
+    """The Bank of Israel rate on ``day`` (the last one published on or before it) minus the
+    last published one, as a fraction."""
     series = macro.get("boi_rate").data
     index = int(np.searchsorted(series.days, day_number(day), side="right")) - 1
     if index < 0:
         raise PlanError(f"The Bank of Israel rate starts on {_date(int(series.days[0]))}")
-    return float(series.values[index]) / 100.0
+    return float(series.values[index] - series.values[-1]) / 100.0
 
 
 def _moved_home(spec: HomeSpec, change: Change, delta: int, macro: Macro) -> HomeSpec:
@@ -129,7 +131,7 @@ def _moved_home(spec: HomeSpec, change: Change, delta: int, macro: Macro) -> Hom
     start = add_months(plan.start, change.shift)
     follow = 0.0
     if change.historical and change.follow_rates and spec.rates_mode == "historical":
-        follow = _rate_on(macro, start) - _rate_on(macro, plan.start)
+        follow = _rate_move(macro, start)
     tracks = [
         replace(
             t,

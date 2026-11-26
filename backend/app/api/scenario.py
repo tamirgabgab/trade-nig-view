@@ -386,6 +386,17 @@ def _study(
     windows, skipped = study.rolling(window, shifts(body.step_months))
     term = term_months(spec)
     summary = study.summarize(windows, term)
+    homes = [o.home for o in (spec.x, spec.y) if o.home is not None]
+    if body.follow_rates and homes and all(h.rates_mode != "historical" for h in homes):
+        warnings.append(
+            "The tracks' rates do not follow the Bank of Israel rate: the apartment's rates are "
+            "assumed, so every window has the rates as entered"
+        )
+    if homes and all(h.value_mode != "historical" for h in homes):
+        warnings.append(
+            "The apartment's value is assumed: it is the same in every window, so the windows "
+            "differ only by the market"
+        )
     earliest = day_number(windows[0].start)
     for fx in rates:
         warnings.extend(official_rate_note(fx, earliest))

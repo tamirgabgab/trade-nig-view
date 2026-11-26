@@ -188,11 +188,24 @@ def test_the_win_map_has_a_row_per_start_year(client: TestClient) -> None:
 def test_the_rates_follow_the_bank_of_israel_only_when_asked(client: TestClient) -> None:
     follow = {w["start"]: w for w in study(client)["windows"]}
     fixed = {w["start"]: w for w in study(client, follow_rates=False)["windows"]}
-    # 2002: the Bank of Israel rate was 10 %, against 4 % on the plan's own day in 2010.
-    assert follow["2002-06-15"]["x_wealth"] < fixed["2002-06-15"]["x_wealth"]
-    assert follow["2008-06-15"]["x_wealth"] == fixed["2008-06-15"]["x_wealth"]
-    # 2015: it was 0.25 %, so the fixed track is cheaper than the one entered.
-    assert follow["2015-06-15"]["x_wealth"] > fixed["2015-06-15"]["x_wealth"]
+    # The rates entered are today's quotes, at a Bank of Israel rate of 0.25 %. In 2002 it was
+    # 10 % and in 2008 4 %: the fixed track is dearer there, by more in 2002.
+    lost = {day: fixed[day]["x_wealth"] - follow[day]["x_wealth"] for day in follow}
+    assert lost["2002-06-15"] > lost["2008-06-15"] > 0
+    # From 2015 it is today's rate: the track is the one entered.
+    assert lost["2015-06-15"] == 0
+
+
+def test_a_study_says_when_history_does_not_reach_the_apartment(client: TestClient) -> None:
+    assert study(client)["warnings"] == [
+        "The schedule after the sale holds the Bank of Israel rate flat past its last "
+        "published value"
+    ]
+    notes = post(client, "study", horizons_years=[5])["warnings"]
+    assert any("rates do not follow the Bank of Israel rate" in note for note in notes)
+    assert any("differ only by the market" in note for note in notes)
+    quiet = post(client, "study", horizons_years=[5], follow_rates=False)["warnings"]
+    assert not any("do not follow" in note for note in quiet)
 
 
 def test_the_study_range_and_step_are_the_requests(client: TestClient) -> None:

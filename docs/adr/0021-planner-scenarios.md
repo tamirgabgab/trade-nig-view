@@ -49,10 +49,13 @@ dates, in two options, for one plan and over history. The user's choices before 
   - needs every asset's bars from the window's first day, so the youngest asset limits the starts, as in H1;
   - turns the linear rule off: it depends on the calendar date 2014-01-01, and a window stands for a plan that
     starts today;
-  - with the switch on, adds to the rate of a fixed or variable track that is not CPI-linked the move of the Bank
-    of Israel rate between the plan's own purchase day and the window's. The user's rates belong to their own day;
-    a 4 % fixed loan in 1994, at a Bank of Israel rate above 10 %, would make every early window win. Prime tracks
-    follow the rate by themselves; linked tracks keep a real rate. It needs historical rates for the apartment.
+  - with the switch on, adds to the rate of a fixed or variable track that is not CPI-linked the Bank of Israel
+    rate on the window's purchase day minus the last published one. The user's rates are today's quotes; a 4 %
+    fixed loan in 1994, at a Bank of Israel rate above 10 %, would make every early window win. So the window that
+    starts on the plan's own day differs from the plan as entered, unless that day is today. Prime tracks follow
+    the rate by themselves; linked tracks keep a real rate. It needs historical rates for the apartment: a study
+    warns when the switch is on and they are assumed, and when the apartment's value is assumed (then the windows
+    differ only by the market).
   - keeps the same shekel amounts in every window, so the ratios (tax to price, rent to price, fee to deposit) are
     the plan's own. There is no historical rent series: the rent yield is the same in every window.
 - **Breakeven inputs.** One input is replaced: a constant yearly growth for every apartment's value; one asset
