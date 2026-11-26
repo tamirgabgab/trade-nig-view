@@ -101,3 +101,45 @@ export function parseTaxPresets(body: unknown): TaxPresets {
 export const runHome = (request: HomeRequest) => apiPost('/planner/home', request, parseHome);
 
 export const taxPresets = () => apiGet('/planner/tax-presets', parseTaxPresets);
+
+/** POST /api/planner/run and /api/planner/study: two options on the same money. */
+export type ScenarioRequest = Schemas['ScenarioRequest'];
+export type StudyRequest = Schemas['StudyRequest'];
+export type ScenarioResult = Schemas['RunResponse'];
+export type StudyResult = Schemas['StudyResponse'];
+
+/** Checks the shape the page relies on (both options, the breakeven rates, the lists). */
+export function parseScenario(body: unknown): ScenarioResult {
+  if (
+    !isRecord(body) ||
+    !isRecord(body['x']) ||
+    !isRecord(body['y']) ||
+    !isRecord(body['breakeven']) ||
+    !isRecord(body['average']) ||
+    !Array.isArray(body['warnings']) ||
+    typeof body['difference'] !== 'number'
+  ) {
+    throw new Error('Unexpected /api/planner/run response');
+  }
+  return body as unknown as ScenarioResult;
+}
+
+export function parseStudy(body: unknown): StudyResult {
+  if (
+    !isRecord(body) ||
+    !isRecord(body['summary']) ||
+    !isRecord(body['win_map']) ||
+    !Array.isArray(body['win_map']['rows']) ||
+    !Array.isArray(body['windows']) ||
+    !Array.isArray(body['warnings'])
+  ) {
+    throw new Error('Unexpected /api/planner/study response');
+  }
+  return body as unknown as StudyResult;
+}
+
+export const runScenario = (request: ScenarioRequest) =>
+  apiPost('/planner/run', request, parseScenario);
+
+export const studyScenario = (request: StudyRequest) =>
+  apiPost('/planner/study', request, parseStudy);

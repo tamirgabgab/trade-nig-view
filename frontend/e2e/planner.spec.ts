@@ -119,3 +119,68 @@ test('planner: an apartment with one fixed track, a saved purchase-tax table and
   await expect(home.getByLabel('Purchase tax bracket 1 rate %')).toHaveValue('5');
   await expect(home.getByLabel('Track 1 years')).toHaveValue('20');
 });
+
+test('planner: the apartment against the same money in the market, for one plan and over history', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  // The market side: AAPL in shekels as they are (offline, the USD/ILS rate starts in 2015).
+  await planner.getByLabel('Ticker 1').fill('aapl');
+  await planner.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
+  // The apartment: its value and its rates from history, so the windows differ.
+  await planner.getByRole('tab', { name: 'Apartment' }).click();
+  const home = planner.getByRole('tabpanel', { name: 'Apartment' });
+  await home.getByLabel('Value path', { exact: true }).selectOption('historical');
+  await home.getByLabel('Bank of Israel rate', { exact: true }).selectOption('historical');
+
+  await planner.getByRole('tab', { name: 'Compare' }).click();
+  const compare = planner.getByRole('tabpanel', { name: 'Compare' });
+  await expect(home).toBeHidden();
+  await compare.getByRole('button', { name: 'Compare' }).click();
+  await expect(
+    compare.getByRole('heading', { name: 'Apartment against market: 2015-01-15 to 2025-01-15' }),
+  ).toBeVisible();
+  const card = (label: string) => compare.getByText(label, { exact: true }).locator('..');
+  // Both options put in the same money: the equity and the purchase costs, then every month.
+  await expect(card('Put in by each')).toContainText('₪');
+  await expect(card('Apartment: worth at the end')).toContainText('₪');
+  await expect(card('Market: yearly return')).toContainText('%');
+  await expect(compare.getByRole('heading', { name: 'Breakeven rates' })).toBeVisible();
+  await expect(card('Apartment appreciation')).toContainText(/% a year|None in range/);
+  await expect(compare.getByRole('table', { name: 'Win map' })).toBeHidden();
+
+  // Over history: a start every month from AAPL's first bar to a sale inside the index.
+  await compare.getByRole('button', { name: 'Run history' }).click();
+  await expect(
+    compare.getByRole('heading', { name: /^History: 176 starts, 2002-01-15 to/ }),
+  ).toBeVisible();
+  await expect(card('Windows')).toContainText('176');
+  await expect(card('Independent terms, about')).toContainText('2.5');
+  await expect(card('P(apartment > market)')).toContainText('%');
+  await expect(
+    compare.getByText('Earlier starts cannot run: AAPL has no data before'),
+  ).toBeVisible();
+  const map = compare.getByRole('table', { name: 'Win map' });
+  // A row per start year (2002 to 2021) under the header; ten years from 2017 is past the data.
+  await expect(map.getByRole('row')).toHaveCount(21);
+  const row = (year: string) => map.getByRole('row').filter({ hasText: new RegExp(`^${year}`) });
+  await expect(row('2010').getByRole('cell').nth(1)).toHaveText(/^[+−]\d+\.\d\d$/);
+  await expect(row('2017').getByRole('cell').nth(1)).toHaveText('—');
+
+  // With its own account the apartment's side is renamed, and the mirror follows its deposits.
+  await compare.getByLabel('The apartment’s side also makes the Market tab’s deposits').check();
+  await compare.getByRole('button', { name: 'Compare' }).click();
+  await expect(
+    compare.getByRole('heading', { name: /^Apartment and account against market/ }),
+  ).toBeVisible();
+  await expect(map).toBeHidden();
+
+  // A comparison that cannot run says why, with no earlier results under it.
+  await planner.getByRole('tab', { name: 'Apartment' }).click();
+  await home.getByLabel('Equity ₪').fill('99000000');
+  await planner.getByRole('tab', { name: 'Compare' }).click();
+  await compare.getByRole('button', { name: 'Compare' }).click();
+  await expect(compare.getByRole('alert')).toContainText('The equity cannot exceed the price');
+  await expect(compare.getByRole('heading', { name: 'Breakeven rates' })).toBeHidden();
+});

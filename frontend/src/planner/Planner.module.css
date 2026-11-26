@@ -309,6 +309,67 @@
   font-size: var(--font-size-sm);
 }
 
+/* The win map: a cell per start year and horizon, tinted by the winner and by how much. */
+.map {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.map th,
+.map td {
+  min-width: 56px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.map th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.map td {
+  color: var(--color-text-strong);
+}
+
+.map .empty {
+  color: var(--color-text-muted);
+}
+
+.win1 {
+  background: color-mix(in srgb, var(--color-up) 12%, transparent);
+}
+
+.win2 {
+  background: color-mix(in srgb, var(--color-up) 24%, transparent);
+}
+
+.win3 {
+  background: color-mix(in srgb, var(--color-up) 38%, transparent);
+}
+
+.win4 {
+  background: color-mix(in srgb, var(--color-up) 54%, transparent);
+}
+
+.lose1 {
+  background: color-mix(in srgb, var(--color-down) 12%, transparent);
+}
+
+.lose2 {
+  background: color-mix(in srgb, var(--color-down) 24%, transparent);
+}
+
+.lose3 {
+  background: color-mix(in srgb, var(--color-down) 38%, transparent);
+}
+
+.lose4 {
+  background: color-mix(in srgb, var(--color-down) 54%, transparent);
+}
+
 @media (max-width: 899px) {
   .page {
     grid-template-columns: minmax(0, 1fr);

@@ -17,3 +17,9 @@ export function percent(value: number | null | undefined): string {
 
 /** A price or an exchange rate: 2 to 4 decimals. */
 export const price = (value: number) => PRICE.format(value);
+
+/** A difference of two rates in percentage points, signed: `+1.32`, `−0.80`. */
+export function points(value: number): string {
+  const sign = value < 0 ? '−' : '+';
+  return `${sign}${Math.abs(value * 100).toFixed(2)}`;
+}

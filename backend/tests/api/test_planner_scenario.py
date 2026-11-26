@@ -1,53 +1,18 @@
-"""``/api/planner/run`` and ``/api/planner/study`` on the synthetic e2e bars (AAPL from
-2001-12-24) and macro series written for the test: a dwelling index and a CPI that grow by a
-constant rate from 1994 to 2026-08, and a Bank of Israel rate in steps."""
+"""``/api/planner/run`` and ``/api/planner/study`` on the synthetic e2e data: AAPL's bars from
+2001-12-24, a dwelling index and a CPI that grow by a constant rate from 1994 to 2026-08, and a
+Bank of Israel rate in steps (10 % from 1994, 4 % from 2005, 0.25 % from 2015)."""
 
 from __future__ import annotations
 
-import shutil
-from collections.abc import Iterator
-from datetime import date
-from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
-from app.planner.deposits import add_months
-from tests.api.conftest import E2E_DATA
-from tests.conftest import IsolatedSettings
-
-RATES = {"1994-01-27": 10.0, "2005-01-01": 4.0, "2015-01-01": 0.25, "2026-11-20": 0.25}
-
-
-def _monthly(months: int, start: float, growth: float) -> str:
-    rows = [
-        f"{add_months(date(1994, 1, 1), k).isoformat()},{start * (1 + growth) ** k!r}"
-        for k in range(months)
-    ]
-    return "date,value\n" + "\n".join(rows) + "\n"
-
 
 @pytest.fixture
-def client(tmp_path: Path) -> Iterator[TestClient]:
-    fixtures = tmp_path / "fixtures"
-    (fixtures / "daily").mkdir(parents=True)
-    (fixtures / "macro").mkdir()
-    shutil.copy(E2E_DATA / "daily" / "AAPL.csv", fixtures / "daily")
-    (fixtures / "macro" / "dwelling.csv").write_text(_monthly(392, 100.0, 0.004))
-    (fixtures / "macro" / "cpi.csv").write_text(_monthly(392, 50.0, 0.002))
-    (fixtures / "macro" / "boi_rate.csv").write_text(
-        "date,value\n" + "".join(f"{d},{v}\n" for d, v in RATES.items())
-    )
-    settings = IsolatedSettings(
-        offline=True,
-        chartlab_data_dir=tmp_path / "data",
-        universe_file=E2E_DATA / "universe.toml",
-        fixtures_dir=fixtures,
-    )
-    with TestClient(create_app(settings)) as test_client:
-        yield test_client
+def client(e2e_client: TestClient) -> TestClient:
+    return e2e_client
 
 
 HOME: dict[str, Any] = {

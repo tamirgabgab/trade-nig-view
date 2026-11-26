@@ -112,12 +112,33 @@ def write_minutes(stem: str, days: list[date], last_close: float) -> None:
             out.writerow(["time", "open", "high", "low", "close", "volume"])
             for i, (o, h, lo, c) in enumerate(rows):
                 day, k = sessions[i // per_session], i % per_session
-                start = datetime.combine(day, time(9, 30), NEW_YORK) + timedelta(minutes=minutes * k)
+                start = datetime.combine(day, time(9, 30), NEW_YORK) + timedelta(
+                    minutes=minutes * k
+                )
                 out.writerow([start.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), o, h, lo, c,
                               float(rng.integers(5_000, 50_000))])  # fmt: skip
 
 
+def write_macro() -> None:
+    """The macro series of the planner's comparison (``macro/``; ``usd_ils_boi.csv`` there is a
+    recorded snapshot): a dwelling price index and a CPI that grow by a constant monthly rate
+    from 1994-01 to 2026-08, and a Bank of Israel rate that moves in three steps."""
+    months = [date(1994 + k // 12, k % 12 + 1, 1) for k in range(392)]
+    rates = {"1994-01-27": 10.0, "2005-01-01": 4.0, "2015-01-01": 0.25, "2026-11-20": 0.25}
+    series = {
+        "dwelling": [(d.isoformat(), 100.0 * 1.004**k) for k, d in enumerate(months)],
+        "cpi": [(d.isoformat(), 50.0 * 1.002**k) for k, d in enumerate(months)],
+        "boi_rate": list(rates.items()),
+    }
+    for name, rows in series.items():
+        with (ROOT / "macro" / f"{name}.csv").open("w", newline="", encoding="utf-8") as handle:
+            out = csv.writer(handle, lineterminator="\n")
+            out.writerow(["date", "value"])
+            out.writerows(rows)
+
+
 def main() -> None:
+    write_macro()
     rng = np.random.default_rng(20261122)
     for symbol, stem, count, start, drift, vol, dividend in SPECS:
         days = business_days(count)
