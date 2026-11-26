@@ -25,8 +25,11 @@ one realization, under a :class:`Change`:
   dates. The world's assets replace each mix (a modelled market replaces all of them), its CPI
   is the plan's, and each apartment takes from it what its tab marks as historical: the dwelling
   index and the Bank of Israel rate. A value marked as assumed is drawn from the apartment's own
-  mean and volatility with the world's shocks. The linear rule is off and the rates follow, as
-  in a window: here by the world's rate on the purchase day minus the last published one.
+  mean and volatility with the world's shocks; one that follows an index can add its own
+  volatility on top (``value_own_sd``): the index times a driftless lognormal path of that
+  apartment's shocks, since a single apartment moves more than the average of all of them.
+  The linear rule is off and the rates follow, as in a window: here by the world's rate on the
+  purchase day minus the last published one.
 * **appreciation**, **market_return**, **rate_shift**, **rent_scale**: one input replaced, for the
   breakeven rates: every apartment's value grows by a constant yearly rate; every account holds
   one asset growing by a constant yearly rate in shekels; every track's rate (a prime track's
@@ -251,6 +254,9 @@ def _world_series(
     if home.value_mode == "historical":
         levels = world.dwellings[home.value_series]
         value = np.exp(np.interp(days[: held + 1], world.days, np.log(levels)))
+        if home.value_own_sd:
+            # One apartment is not the index: its own shocks, with no drift, on top of it.
+            value = value * lognormal(0.0, home.value_own_sd, world.home_shocks[number, :held])
     else:
         first = EPOCH + timedelta(days=int(world.days[0]))
         offset = (plan.start.year - first.year) * 12 + plan.start.month - first.month
@@ -580,3 +586,12 @@ def sensitivity(spec: ScenarioSpec, macro: Macro) -> list[Move]:
         for name, step in STEPS.items()
         if has[name]
     ]
+
+
+def mixes_differ(spec: ScenarioSpec) -> bool:
+    """Whether the two options name accounts that hold different assets or weights."""
+    mixes = [
+        sorted((a.symbol, a.weight / sum(b.weight for b in account.assets)) for a in account.assets)
+        for account in _accounts(spec)
+    ]
+    return len(mixes) == 2 and mixes[0] != mixes[1]  # noqa: PLR2004 - the two options

@@ -28,6 +28,7 @@ from app.api import (
     regime,
     risk,
     scenario,
+    scenarios,
     simulate,
     symbols,
     trade_plan,
@@ -111,6 +112,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.drawings = DrawingsRepository(app_db)
     app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)
     app.state.watchlists = DocumentStore(app_db, "watchlists", watchlists.WatchlistNotFoundError)
+    app.state.scenarios = DocumentStore(app_db, "scenarios", scenarios.ScenarioNotFoundError)
 
     for router in (
         health.router,
@@ -132,6 +134,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         planner.router,
         home.router,
         scenario.router,
+        scenarios.router,
         simulate.router,
     ):
         app.include_router(router, prefix=API_PREFIX)

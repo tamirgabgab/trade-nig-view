@@ -2192,6 +2192,186 @@
         }
       }
     },
+    "/api/planner/scenarios": {
+      "get": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "List Scenarios",
+        "description": "Every saved scenario, newest first, without its state.",
+        "operationId": "list_scenarios_api_planner_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/scenarios/{name}": {
+      "get": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Get Scenario",
+        "description": "One saved scenario.",
+        "operationId": "get_scenario_api_planner_scenarios__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioDocument"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No scenario with this name (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Put Scenario",
+        "description": "Create (``revision`` 0) or replace a scenario; a stale ``revision`` is a 409.",
+        "operationId": "put_scenario_api_planner_scenarios__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioDocument"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Delete Scenario",
+        "description": "Delete a scenario; a stale ``revision`` is a 409.",
+        "operationId": "delete_scenario_api_planner_scenarios__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Revision the client last read",
+              "title": "Revision"
+            },
+            "description": "Revision the client last read"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No scenario with this name (problem+json)"
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/planner/simulate": {
       "post": {
         "tags": [
@@ -4266,7 +4446,8 @@
               "mode": "assumed",
               "series": "dwelling",
               "mean_pct": 3.0,
-              "sd_pct": 0.0
+              "sd_pct": 0.0,
+              "own_sd_pct": 0.0
             }
           },
           "sale": {
@@ -4434,7 +4615,8 @@
               "mode": "assumed",
               "series": "dwelling",
               "mean_pct": 3.0,
-              "sd_pct": 0.0
+              "sd_pct": 0.0,
+              "own_sd_pct": 0.0
             }
           },
           "sale": {
@@ -8484,6 +8666,52 @@
         ],
         "title": "Scenario"
       },
+      "ScenarioDocument": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "state": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "revision",
+          "updated_at",
+          "state"
+        ],
+        "title": "ScenarioDocument"
+      },
+      "ScenarioList": {
+        "properties": {
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioSummary"
+            },
+            "type": "array",
+            "title": "Scenarios",
+            "description": "Newest first"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenarios"
+        ],
+        "title": "ScenarioList"
+      },
       "ScenarioRequest": {
         "properties": {
           "x": {
@@ -8523,6 +8751,53 @@
           "end"
         ],
         "title": "ScenarioRequest"
+      },
+      "ScenarioSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "revision",
+          "updated_at"
+        ],
+        "title": "ScenarioSummary"
+      },
+      "ScenarioUpdate": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "description": "Revision the client last read; 0 = create"
+          },
+          "state": {
+            "additionalProperties": true,
+            "type": "object",
+            "minProperties": 1,
+            "title": "State",
+            "description": "The planner's state, kept as it is"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "state"
+        ],
+        "title": "ScenarioUpdate",
+        "description": "``PUT`` body: the whole state, and the revision it was based on (optimistic locking)."
       },
       "ScheduleRow": {
         "properties": {
@@ -9981,6 +10256,14 @@
             ],
             "title": "Seed",
             "description": "Draw a path; null: the mean path"
+          },
+          "own_sd_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Own Sd Pct",
+            "description": "This apartment's own yearly volatility on top of a historical index, in a simulation",
+            "default": 0.0
           }
         },
         "type": "object",

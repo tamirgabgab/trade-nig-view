@@ -92,6 +92,8 @@ class HomeSpec:
     value_mean: float = 0.03
     value_sd: float = 0.0
     value_seed: int | None = None
+    #: This apartment's own yearly volatility on top of a historical index (simulations only).
+    value_own_sd: float = 0.0
     rates_mode: Literal["assumed", "historical"] = "assumed"
     #: The assumed Bank of Israel rate, and a move of it after some months.
     rates_base: float = 0.0325

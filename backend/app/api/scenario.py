@@ -43,6 +43,7 @@ from app.planner.scenario_data import (
     difference,
     dwelling_correlation,
     first_day,
+    mixes_differ,
     sensitivity,
     spending_gap,
     term_months,
@@ -426,6 +427,11 @@ def _run(
         warnings.append(
             "The options spend on different dates: each is topped up to the larger spending of "
             f"every date, so both put in {gap:,.0f} more than the larger plan alone"
+        )
+    if mixes_differ(spec):
+        warnings.append(
+            "The options hold different mixes: the breakeven market return gives both the same "
+            "return, and the market's move in the sensitivity tilts both"
         )
     term = term_months(spec)
     step = max(1, -(-term // AVERAGE_POINTS))

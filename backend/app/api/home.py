@@ -84,6 +84,11 @@ class ValueIn(BaseModel):
     mean_pct: float = Field(default=3.0, ge=-20, le=50, description="Yearly mean growth")
     sd_pct: Percent = Field(default=0.0, description="Yearly volatility")
     seed: int | None = Field(default=None, description="Draw a path; null: the mean path")
+    own_sd_pct: Percent = Field(
+        default=0.0,
+        description="This apartment's own yearly volatility on top of a historical index, "
+        "in a simulation",
+    )
 
 
 class BettermentIn(BaseModel):
@@ -329,6 +334,7 @@ def home_spec(body: HomeOptionIn, end: dt.date) -> HomeSpec:
         value_mean=body.value.mean_pct / 100,
         value_sd=body.value.sd_pct / 100,
         value_seed=body.value.seed,
+        value_own_sd=body.value.own_sd_pct / 100,
         rates_mode=body.rates.mode,
         rates_base=body.rates.base_pct / 100,
         rates_shock=body.rates.shock_pct / 100,

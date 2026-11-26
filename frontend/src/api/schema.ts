@@ -698,6 +698,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/planner/scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Scenarios
+         * @description Every saved scenario, newest first, without its state.
+         */
+        get: operations["list_scenarios_api_planner_scenarios_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/scenarios/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scenario
+         * @description One saved scenario.
+         */
+        get: operations["get_scenario_api_planner_scenarios__name__get"];
+        /**
+         * Put Scenario
+         * @description Create (``revision`` 0) or replace a scenario; a stale ``revision`` is a 409.
+         */
+        put: operations["put_scenario_api_planner_scenarios__name__put"];
+        post?: never;
+        /**
+         * Delete Scenario
+         * @description Delete a scenario; a stale ``revision`` is a 409.
+         */
+        delete: operations["delete_scenario_api_planner_scenarios__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/planner/simulate": {
         parameters: {
             query?: never;
@@ -1685,7 +1733,8 @@ export interface components {
              *       "mode": "assumed",
              *       "series": "dwelling",
              *       "mean_pct": 3,
-             *       "sd_pct": 0
+             *       "sd_pct": 0,
+             *       "own_sd_pct": 0
              *     }
              */
             value: components["schemas"]["ValueIn"];
@@ -1795,7 +1844,8 @@ export interface components {
              *       "mode": "assumed",
              *       "series": "dwelling",
              *       "mean_pct": 3,
-             *       "sd_pct": 0
+             *       "sd_pct": 0,
+             *       "own_sd_pct": 0
              *     }
              */
             value: components["schemas"]["ValueIn"];
@@ -3577,6 +3627,27 @@ export interface components {
          * @enum {string}
          */
         Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime" | "accumulation" | "regimes";
+        /** ScenarioDocument */
+        ScenarioDocument: {
+            /** Name */
+            name: string;
+            /** Revision */
+            revision: number;
+            /** Updated At */
+            updated_at: string;
+            /** State */
+            state: {
+                [key: string]: unknown;
+            };
+        };
+        /** ScenarioList */
+        ScenarioList: {
+            /**
+             * Scenarios
+             * @description Newest first
+             */
+            scenarios: components["schemas"]["ScenarioSummary"][];
+        };
         /** ScenarioRequest */
         ScenarioRequest: {
             x: components["schemas"]["OptionIn"];
@@ -3602,6 +3673,33 @@ export interface components {
              * @default 10
              */
             forced_discount_pct: number;
+        };
+        /** ScenarioSummary */
+        ScenarioSummary: {
+            /** Name */
+            name: string;
+            /** Revision */
+            revision: number;
+            /** Updated At */
+            updated_at: string;
+        };
+        /**
+         * ScenarioUpdate
+         * @description ``PUT`` body: the whole state, and the revision it was based on (optimistic locking).
+         */
+        ScenarioUpdate: {
+            /**
+             * Revision
+             * @description Revision the client last read; 0 = create
+             */
+            revision: number;
+            /**
+             * State
+             * @description The planner's state, kept as it is
+             */
+            state: {
+                [key: string]: unknown;
+            };
         };
         /** ScheduleRow */
         ScheduleRow: {
@@ -4295,6 +4393,12 @@ export interface components {
              * @description Draw a path; null: the mean path
              */
             seed?: number | null;
+            /**
+             * Own Sd Pct
+             * @description This apartment's own yearly volatility on top of a historical index, in a simulation
+             * @default 0
+             */
+            own_sd_pct: number;
         };
         /**
          * VisibleRange
@@ -5822,6 +5926,152 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["StudyResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_scenarios_api_planner_scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioList"];
+                };
+            };
+        };
+    };
+    get_scenario_api_planner_scenarios__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioDocument"];
+                };
+            };
+            /** @description No scenario with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_scenario_api_planner_scenarios__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioDocument"];
+                };
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_scenario_api_planner_scenarios__name__delete: {
+        parameters: {
+            query: {
+                /** @description Revision the client last read */
+                revision: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No scenario with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

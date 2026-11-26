@@ -28,6 +28,7 @@ from app.planner.scenario_data import (
     ScenarioSpec,
     build,
     estimate_market,
+    mixes_differ,
     term_months,
     world_spec,
 )
@@ -229,6 +230,11 @@ def _warnings(body: SimulateRequest, spec: ScenarioSpec) -> list[str]:
         )
     if body.method == "monte_carlo" and any(a.taxes.dividend > 0 for a in accounts):
         notes.append("A modelled market pays no dividend tax: its growth is the mix's total return")
+    if body.method == "monte_carlo" and mixes_differ(spec):
+        notes.append(
+            "The options hold different mixes, and a modelled market replaces both with one "
+            "asset: they hold the same market here"
+        )
     if body.method == "monte_carlo" and any(a.taxes.base is TaxBase.CURRENCY for a in accounts):
         notes.append(
             "A modelled market is priced in shekels: the tax base 'currency' taxes the "

@@ -33,5 +33,9 @@ def get_watchlists(request: Request) -> DocumentStore:
     return cast("DocumentStore", request.app.state.watchlists)
 
 
+def get_scenarios(request: Request) -> DocumentStore:
+    return cast("DocumentStore", request.app.state.scenarios)
+
+
 def get_macro_service(request: Request) -> MacroService:
     return cast("MacroService", request.app.state.macro_service)
