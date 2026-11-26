@@ -10,6 +10,7 @@ from typing import Any, cast
 
 import pytest
 
+from app.api.learn import CONCEPT_PAGES
 from app.config import REPO_ROOT
 from app.indicators.catalog import CATALOG
 
@@ -63,6 +64,29 @@ V2_SECTIONS = (
     "Pitfalls",
     "Exercise",
 )
+#: The planner's concept pages (Phase H, ADR 0025) and the sections each one has, in this order.
+PLANNER_PAGES: set[str] = {
+    "xirr",
+    "mortgage-tracks",
+    "rent-or-buy",
+    "same-money",
+    "overlapping-windows",
+    "simulated-worlds",
+    "risk-metrics",
+    "what-the-answer-depends-on",
+}
+PLANNER_SECTIONS = (
+    "What it answers",
+    "Formula",
+    "Worked example",
+    "How to read it",
+    "Where it comes from",
+    "Limits",
+)
+#: Sections whose formulas reuse the symbols the Formula section's tables already gave.
+REUSES_SYMBOLS = {"Worked example", "Where it comes from"}
+SYMBOL_TABLE = "| Symbol | Meaning | Units / typical range |"
+_MATH = re.compile(r"\$\$.*?\$\$|\$[^$\n]+\$", re.DOTALL)
 #: The fields each lab kind cannot do without (LabBlock.tsx shows an error line without them).
 LAB_REQUIRED: dict[str, set[str]] = {
     "param": {"indicator", "vary"},
@@ -112,18 +136,42 @@ def heading_anchors(markdown: str, levels: tuple[str, ...] = ("## ", "### ")) ->
     return {anchor_of(h) for h in headings(markdown, levels) if "$" not in h}
 
 
-def missing_sections(markdown: str) -> list[str]:
-    """``V2_SECTIONS`` that are absent or out of order among the page's ``## `` headings (other
+def missing_sections(markdown: str, sections: tuple[str, ...] = V2_SECTIONS) -> list[str]:
+    """``sections`` that are absent or out of order among the page's ``## `` headings (other
     headings may sit in between)."""
     headings = [line[3:].strip() for line in markdown.splitlines() if line.startswith("## ")]
     missing: list[str] = []
     position = 0
-    for section in V2_SECTIONS:
+    for section in sections:
         try:
             position = headings.index(section, position) + 1
         except ValueError:
             missing.append(section)
     return missing
+
+
+def formulas_without_symbols(markdown: str) -> list[str]:
+    """The first line of every display formula (a ``$$`` block) that no symbol table follows
+    before the next heading. Formulas in ``REUSES_SYMBOLS`` sections are not counted."""
+    found: list[str] = []
+    waiting: list[str] = []
+    section, inside, first = "", False, ""
+    for line in [*markdown.splitlines(), "## end"]:
+        text = line.strip()
+        if text == "$$":
+            if inside and section not in REUSES_SYMBOLS:
+                waiting.append(first)
+            inside, first = not inside, ""
+        elif inside:
+            first = first or text
+        elif text.startswith(SYMBOL_TABLE):
+            waiting.clear()
+        elif line.startswith(("## ", "### ")):
+            found.extend(waiting)
+            waiting.clear()
+            if line.startswith("## "):
+                section = line[3:].strip()
+    return found
 
 
 def indicator_ids(block: Any) -> list[str]:  # JSON: dict / list / scalar
@@ -174,6 +222,16 @@ def test_section_checker() -> None:
     swapped = page.replace("## Formula", "## TMP").replace("## Defaults", "## Formula")
     assert missing_sections(swapped.replace("## TMP", "## Defaults")) == ["Defaults"]
     assert missing_sections("## What it measures\n### Formula") == list(V2_SECTIONS[1:])
+
+
+def test_symbol_table_checker() -> None:
+    table = f"{SYMBOL_TABLE}\n|---|---|---|\n| $x$ | a thing | ₪ |"
+    page = f"## Formula\n$$\nx = 1\n$$\n{table}\n### More\n$$\ny = 2\n$$\ntext\n## Limits"
+    assert formulas_without_symbols(page) == ["y = 2"]
+    # Two formulas may share one table; a worked example reuses the symbols above it.
+    shared = f"## Formula\n$$\nx\n$$\nand\n$$\ny\n$$\n{table}\n## Worked example\n$$\nz\n$$"
+    assert formulas_without_symbols(shared) == []
+    assert formulas_without_symbols("## How to read it\n$$\nq\n$$") == ["q"]
 
 
 def test_lab_block_helpers() -> None:
@@ -263,3 +321,19 @@ def test_lab_blocks_are_valid(slug: str) -> None:
             assert fields["output"] in outputs, f"{where}: output not in {outputs}"
         unknown = sorted(set(indicator_ids(block)) - CATALOG.keys())
         assert not unknown, f"{where}: unknown indicator(s) {unknown}"
+
+
+def test_planner_pages_are_registered() -> None:
+    assert set(ALL_PAGES) >= PLANNER_PAGES
+    assert CONCEPT_PAGES.keys() >= PLANNER_PAGES
+
+
+@pytest.mark.parametrize("slug", sorted(PLANNER_PAGES))
+def test_planner_page_has_its_sections_and_a_symbol_table_for_every_formula(slug: str) -> None:
+    markdown = (LEARN_DIR / f"{slug}.md").read_text(encoding="utf-8")
+    assert missing_sections(markdown, PLANNER_SECTIONS) == [], f"{slug}.md: missing or out of order"
+    assert formulas_without_symbols(markdown) == [], f"{slug}.md: a formula without its symbols"
+    assert SYMBOL_TABLE in markdown
+    # An unescaped % starts a TeX comment: the rest of the formula would vanish without an error.
+    for math in _MATH.findall(markdown):
+        assert not re.search(r"(?<!\\)%", math), f"{slug}.md: write \\% inside math: {math[:60]}"

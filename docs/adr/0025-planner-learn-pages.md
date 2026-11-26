@@ -45,23 +45,33 @@ price and a probability; `m`, `s`, `a`, `b` and `X` each mean two or three thing
   | $r$ | a yearly return (XIRR): an effective rate |
   | $c_j$, $d_j$, $\tau_j$ | a cash flow, its day, and its time in years from the first day |
   | $f_A(d)$, $f_B(d)$, $F(d)$ | each option's own spending on day $d$, and what both spend |
+  | $u_A(d)$, $u_B(d)$ | each option's top-up: what it invests to match the other |
   | $L$, $n$, $k$ | a track's loan, its term in months, a month's number |
   | $q_k$, $i_k = q_k/12$ | a track's quoted yearly rate in month $k$, and its monthly rate |
-  | $s$ | a prime track's spread |
+  | $s$ | a prime track's spread (a standard deviation is written $\operatorname{sd}(\cdot)$) |
   | $\mathrm{BoI}_k$, $\mathrm{CPI}_k$ | the Bank of Israel rate and the consumer price index at month $k$ |
-  | $M_k$, $B_k$ | the payment of month $k$ and the balance after it |
+  | $M_k$, $B_k$, $m_k$ | the payment of month $k$, the balance after it, the payments left |
   | $V_k$, $E$, $C_0$ | the apartment's value in month $k$ ($V_0$ is the price), the equity, the purchase costs |
   | $\mathrm{NW}_k$ | net worth if sold in month $k$ |
+  | $J_k$, $Y_k$ | the index an apartment's value follows, and the one its rent follows |
+  | $\theta_k$, $\kappa$ | the taxable share of a real gain; the discount of a forced sale |
   | $g$, $\pi$ | a constant yearly growth of a value; yearly inflation |
   | $\mu$, $\sigma$, $z$ | a model's expected yearly growth, its yearly log-volatility, a standard normal shock |
+  | $x_k$, $G_k$ | a modelled series' monthly log step and its level |
   | $\rho$ | a correlation (never a rate) |
   | $\lambda$ | the block length of the bootstrap, in months |
   | $T$, $S$, $N$ | a plan's term in months, the span of the starts in months, a number of windows or worlds |
+  | $n_{\text{eff}}$, $n_y$ | the independent terms a study holds; a number of years |
   | $Q_p$ | the percentile $p$ of a sample |
   | $\gamma$ | the risk aversion of the certainty equivalent |
   | $a$, $b$ | the two handles of the histogram, as the page labels them |
-  | $\phi_i$, $v(K)$ | a source's share of the return, and the return with the sources in $K$ switched on |
-  | $\delta$ | a move of one input in the sensitivity |
+  | $\phi_j$, $v(K)$ | a source's share of the return, and the return with the sources in $K$ switched on |
+  | $\beta$, $\beta^*$ | the input a breakeven searches, and its breakeven value |
+  | $\delta$ | a move of one input: in the sensitivity, and the rise of the rate stress test |
+  | $j$, $k$, $w$, $t$, $d$ | counters: an item of a list, a month, a world, a year, a day |
+
+  Shares that are fields of the form are written as words inside the formulas (`sell`, `early`, `lawyer`,
+  `broker`, `maint`, `rate` with the tax's name), so `c` and `t` keep one meaning each.
 
 - **Three kinds of "yearly rate"**, each named where it is used and compared once, on the XIRR page:
   - an *effective* rate over 365.25 days (every return the planner reports);

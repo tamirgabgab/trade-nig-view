@@ -46,6 +46,15 @@ CONCEPT_PAGES: dict[str, str] = {
     "glossary": "Glossary",
     "forecasting": "Forecasting OHLC",
     "trade-plan": "Trade plan",
+    # The planner (Phase H, ADR 0025).
+    "xirr": "Yearly return (XIRR)",
+    "mortgage-tracks": "Mortgage tracks",
+    "rent-or-buy": "The apartment's ledger",
+    "same-money": "The same money rule",
+    "overlapping-windows": "Overlapping windows",
+    "simulated-worlds": "Simulated worlds",
+    "risk-metrics": "Risk metrics",
+    "what-the-answer-depends-on": "What the answer depends on",
 }
 _HEADING_ID = re.compile(r"\s*\(`[^`]*`\)\s*$")
 _CATEGORY_ORDER: dict[str | None, int] = {c: i for i, c in enumerate(get_args(Category))}

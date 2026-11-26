@@ -14,6 +14,12 @@
   animation: drawer-in var(--duration-base) var(--ease-out);
 }
 
+/* Over the planner (z-index 50), which also covers the bottom bar. */
+.raised {
+  bottom: 0;
+  z-index: 60;
+}
+
 @keyframes drawer-in {
   from {
     opacity: 0;

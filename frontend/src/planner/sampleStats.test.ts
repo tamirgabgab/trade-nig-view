@@ -36,3 +36,23 @@ describe('sampleStats', () => {
     expect(bins([], 0, 1, 3)).toEqual([0, 0, 0]);
   });
 });
+
+// The learn page's worked example is this module's own arithmetic.
+const PAGES = import.meta.glob<string>('../../../docs/indicators/risk-metrics.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+
+describe('the Risk metrics learn page', () => {
+  it('prints the interval this module computes for 13 worlds of 20', () => {
+    const [page] = Object.values(PAGES);
+    const worlds = [820, 910, 950, 1010, 1040, 1080, 1120, 1150, 1190, 1230];
+    worlds.push(1260, 1300, 1340, 1380, 1430, 1480, 1540, 1620, 1730, 1900);
+    const { p, low, high } = intervalProbability(worlds, 1000, 1500);
+    const percent = (share: number) => `${String(Math.round(share * 100))} %`;
+    expect(p).toBe(13 / 20);
+    expect(page).toContain(`interval of ${percent(low)} to ${percent(high)}`);
+    expect(page).toContain(`5 % percentile:** ${String(quantile(worlds, 0.05))},`);
+  });
+});

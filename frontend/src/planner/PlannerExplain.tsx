@@ -6,6 +6,7 @@ import { PlannerHeading } from './PlannerHeading.tsx';
 import { PlannerLeadChart } from './PlannerLeadChart.tsx';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
 import { PlannerTornado } from './PlannerTornado.tsx';
+import { PlannerLearn } from './PlannerLearn.tsx';
 
 type Decomposition = NonNullable<ScenarioResult['decomposition']>;
 type Liquidity = ScenarioResult['liquidity']['x'];
@@ -67,6 +68,7 @@ export function PlannerExplain({
   return (
     <>
       <h2 className={styles.heading}>What the answer depends on</h2>
+      <PlannerLearn page="what-the-answer-depends-on">What the answer depends on</PlannerLearn>
       {decomposition && (
         <>
           <PlannerTable

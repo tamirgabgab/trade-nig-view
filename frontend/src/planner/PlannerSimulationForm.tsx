@@ -2,6 +2,7 @@ import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
 import type { SimulationSettings } from './simulation.ts';
+import { PlannerLearn } from './PlannerLearn.tsx';
 
 const METHODS: readonly (readonly [SimulationSettings['method'], string])[] = [
   ['bootstrap', 'Block bootstrap (history in blocks)'],
@@ -126,6 +127,7 @@ export function PlannerSimulationForm({ settings, onChange }: PlannerSimulationF
           : 'The market is the mix’s own history, in the same blocks.'}{' '}
         The income rises with the CPI; leave it at 0 to skip the payment stress.
       </p>
+      <PlannerLearn page="simulated-worlds">Simulated worlds</PlannerLearn>
     </fieldset>
   );
 }

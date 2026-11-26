@@ -4,6 +4,7 @@ import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { percent, shekels } from './plannerFormat.ts';
 import { PlannerSelect } from './PlannerSelect.tsx';
+import { PlannerLearn } from './PlannerLearn.tsx';
 
 const VALUE_MODES = [
   ['assumed', 'Assumed growth'],
@@ -127,6 +128,7 @@ export function PlannerHomeBasics() {
         is used by a simulation only: there this apartment moves around its index by that much a
         year, since one apartment moves more than the average of all of them.
       </p>
+      <PlannerLearn page="rent-or-buy">The apartment’s ledger</PlannerLearn>
     </fieldset>
   );
 }

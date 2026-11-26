@@ -10,6 +10,7 @@ import {
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
+import { PlannerLearn } from './PlannerLearn.tsx';
 
 const TYPES = [
   ['fixed', 'Fixed rate, unlinked'],
@@ -212,6 +213,7 @@ export function PlannerHomeTracks() {
         moves by the change in the Bank of Israel rate since the last one. A shock moves the assumed
         rate once, to test the payments.
       </p>
+      <PlannerLearn page="mortgage-tracks">Mortgage tracks</PlannerLearn>
     </fieldset>
   );
 }

@@ -377,3 +377,27 @@ test('planner: two options of their own, a saved scenario and a CSV file', async
   await compare.getByRole('button', { name: 'Delete “Two apartments”' }).click();
   await expect(compare.getByText('No saved scenario yet.')).toBeVisible();
 });
+
+test('planner: a learn page opens over the planner, from the section it explains', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  await planner.getByRole('tab', { name: 'Apartment' }).click();
+  const home = planner.getByRole('tabpanel', { name: 'Apartment' });
+  await home.getByRole('link', { name: 'Mortgage tracks' }).click();
+  const drawer = page.getByRole('complementary', { name: 'Mortgage tracks' });
+  // Really on top of the planner: a covered link could not be clicked.
+  await expect(
+    drawer.getByRole('heading', { name: 'The payment, by repayment type' }),
+  ).toBeVisible();
+  await expect(drawer.getByText('₪3,635.88', { exact: false }).first()).toBeVisible();
+  await drawer.getByRole('link', { name: 'the three kinds of yearly rate' }).click();
+  const xirr = page.getByRole('complementary', { name: 'Yearly return (XIRR)' });
+  await expect(xirr.getByRole('heading', { name: 'Three kinds of yearly rate' })).toBeVisible();
+  await expect(xirr.locator('.katex').first()).toBeVisible();
+  await xirr.getByRole('button', { name: 'Close learn panel' }).click();
+  await expect(xirr).toBeHidden();
+  // The planner is still there, as it was.
+  await expect(home.getByLabel('Price ₪')).toBeVisible();
+});

@@ -10,6 +10,7 @@ import { PlannerDeposits } from './PlannerDeposits.tsx';
 import { PlannerDepositsTable } from './PlannerDepositsTable.tsx';
 import { PlannerHeading } from './PlannerHeading.tsx';
 import { PlannerInflation } from './PlannerInflation.tsx';
+import { PlannerLearn } from './PlannerLearn.tsx';
 import { PlannerOptions } from './PlannerOptions.tsx';
 import { PlannerSlot } from './PlannerSlot.tsx';
 import { PlannerSummary } from './PlannerSummary.tsx';
@@ -104,6 +105,7 @@ export function PlannerMarket({ hidden }: { hidden: boolean }) {
         {result !== null && depths === null && (
           <>
             <PlannerSummary summary={result.summary} />
+            <PlannerLearn page="xirr">Yearly return (XIRR)</PlannerLearn>
             {result.warnings.map((warning) => (
               <p key={warning} className={styles.warning}>
                 {warning}

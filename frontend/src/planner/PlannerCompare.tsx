@@ -23,6 +23,7 @@ import { PlannerSimulationForm } from './PlannerSimulationForm.tsx';
 import { PlannerStudy } from './PlannerStudy.tsx';
 import { toSimulation } from './simulation.ts';
 import { useHomeTaxes } from './useHomeTaxes.ts';
+import { PlannerLearn } from './PlannerLearn.tsx';
 
 type Status = 'idle' | 'comparing' | 'studying' | 'simulating';
 /** The names of the two options and the rents of their apartments, as a comparison ran. */
@@ -171,6 +172,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
             less the rent, or a deposit), the other invests in its own mix. Everything is sold on
             one day: the sale of the first apartment ticked, or option A’s market end with none.
           </p>
+          <PlannerLearn page="same-money">The same money rule</PlannerLearn>
           <div className={styles.grid}>
             {SLOTS.map((slot) =>
               CONTENTS.map(([part, name]) => (
@@ -263,6 +265,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
             rate of the window’s purchase day minus today’s. It needs historical rates in the
             Apartment tab.
           </p>
+          <PlannerLearn page="overlapping-windows">Overlapping windows</PlannerLearn>
         </fieldset>
         <PlannerSimulationForm
           settings={settings}

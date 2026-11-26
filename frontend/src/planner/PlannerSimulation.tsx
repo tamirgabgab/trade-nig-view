@@ -8,6 +8,7 @@ import { inline, percent, shekels } from './plannerFormat.ts';
 import { PlannerHistogram } from './PlannerHistogram.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
+import { PlannerLearn } from './PlannerLearn.tsx';
 
 type Measure = 'wealth_real' | 'wealth' | 'xirr_real' | 'xirr';
 const MEASURES: readonly (readonly [Measure, string])[] = [
@@ -185,6 +186,7 @@ export function PlannerSimulation({
         real end values. Sharpe and Sortino are against a return of zero, on yearly returns of the
         net worth with the money put in taken out; a last part of a year is left out.
       </p>
+      <PlannerLearn page="risk-metrics">Risk metrics</PlannerLearn>
     </>
   );
 }

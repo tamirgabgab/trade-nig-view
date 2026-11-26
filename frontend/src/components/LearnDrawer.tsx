@@ -37,6 +37,8 @@ export function LearnDrawer({
   attrs: OverlayAttrs;
 }) {
   const openLearn = useUiStore((s) => s.openLearn);
+  // The drawer lives in the chart area, which the planner covers: there it is raised above it.
+  const overPlanner = useUiStore((s) => s.view === 'planner');
   const learnNav = useUiStore((s) => s.learnNav);
   const [tab, setTab] = useState<Tab>('page');
   const titleId = useId();
@@ -97,7 +99,7 @@ export function LearnDrawer({
 
   return (
     <aside
-      className={styles.drawer}
+      className={overPlanner ? `${styles.drawer ?? ''} ${styles.raised ?? ''}` : styles.drawer}
       style={{ width: `min(${String(width)}px, 100vw)` }}
       {...attrs}
       aria-labelledby={titleId}
