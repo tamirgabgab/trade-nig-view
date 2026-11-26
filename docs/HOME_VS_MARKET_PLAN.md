@@ -241,40 +241,62 @@ Notes:
 - **Outputs:** the histogram of the final net worth (nominal or real), or of the **annual net return** (XIRR);
   P(a ≤ X ≤ b) with its 95 % interval; the percentiles 5/25/50/75/95.
 
-## Metrics (proposals for the user; the basic two first)
-**Return**
-1. Final net worth at t, nominal and **real** (in today's shekels by the CPI).
-2. **Annual net return = XIRR** (money-weighted). CAGR is wrong with many deposits; XIRR answers "what yearly rate
-   gives these cash flows this end value". Nominal and real.
+## Metrics (accepted by the user on 2026-11-26: all of them, for H3)
+The page leads with five: P(A > B) with the median difference, the real net XIRR, the breakeven rates, the 5 %
+percentile, and the win map. The rest sit in a detail tab.
 
-**Comparison**
-3. **P(A > B)** on the same realization (same window, same draws), and the **median of A − B**: the most direct
-   answer to "which is better", with the uncertainty included.
-4. **Breakeven time:** the first t after which one side stays ahead, and the share of the time each side leads.
+**Layer 1: which is better**
+1. **P(A > B)** on the same realization (same window, same draws), and the **median of A − B**: the most direct
+   answer, with the uncertainty included.
+2. **Annual net return = XIRR** (money-weighted), nominal and real, and the final net worth nominal and real. CAGR is
+   wrong with many deposits.
+3. **Breakeven rates:** the yearly apartment appreciation at which the apartment equals the market, and the yearly
+   market return at which the market equals the apartment; the same for the mortgage rate and the rent. Solved by
+   bisection on the deterministic scenario. No forecast is needed: the user compares the number with their own
+   expectation.
+4. **Win map:** start year × horizon, each cell coloured by the winner (and by how much). Shows whether the answer
+   is stable or depends on timing.
+5. **Time-averaged net worth** (the user's "sum up to t"): (1/t) ∫ net worth, the expected net worth at an exit
+   time drawn uniformly before t. An apartment loses early because of its purchase costs.
 
-**Risk**
-5. **Tail of the end value:** the 5 % percentile and CVaR 5 % (the mean of the worst 5 %).
-6. P(end value < the money put in); P(a ≤ X ≤ b).
-7. **Max drawdown of net worth** and the time under water. Leverage makes the apartment's equity swing more than its
-   price.
-8. **Risk-adjusted:** Sharpe and Sortino of the yearly net-worth returns. A **certainty equivalent**: the sure amount
-   worth as much as the distribution to a risk-averse investor (CRRA utility, risk aversion γ = 2 by default).
+**Layer 2: how risky**
+6. **The bad tail:** the 5 % percentile and CVaR 5 % of the end value; P(end value < the money put in);
+   P(a ≤ X ≤ b). Variance alone also punishes good surprises.
+7. **Regret:** E[max(other − chosen, 0)] and its 95 % percentile: how much is lost by choosing the wrong side.
+8. **Path risks**, which the end value hides:
+   - negative equity: P(the apartment is worth less than the mortgage balance at some point);
+   - payment stress: P(the payment exceeds a share of income), income being an optional input;
+   - time under water: how long the market account is worth less than the deposits; max drawdown of net worth.
+9. **Stochastic dominance:** first and second order between the two end-value distributions. If one dominates, it
+   is better for every risk-averse investor; if neither does, the answer depends on the investor.
+10. **Certainty equivalent** (CRRA utility, risk aversion γ = 2 by default), and Sharpe and Sortino of the yearly
+    net-worth returns.
 
-**Liquidity and pressure**
-9. **Cash available at t:** a market account can be sold in days, an apartment in months.
-10. **The mortgage payment as % of income** (income is an optional input).
-11. **Interest stress:** +2 or +3 % on prime and on the variable tracks; the new payment and the net worth after.
+**Layer 3: what the answer depends on**
+11. **Decomposition of the apartment's return:** appreciation, rent, the mortgage's leverage, and costs and taxes
+    (each as a contribution to the XIRR, by switching one off at a time).
+12. **Sensitivity (tornado):** the change of the result for a fixed move of each input (appreciation, interest,
+    rent, market return, taxes).
+13. **Breakeven time:** the first t after which one side stays ahead, and the share of the time each side leads.
+14. **Liquidity:** the cash available at once, and the apartment's value in a forced sale at a discount the user
+    sets.
+15. **The benefit of combining (A+B):** the correlation between dwelling prices and stocks, and the combined
+    portfolio's risk against each side alone.
 
-**Totals**
-12. The interest paid over the term, the total cash out of pocket, and the total rent paid or received.
+**Also reported:** the interest paid over the term, the total cash out of pocket, the rent paid or received; the
+interest stress test (+2 or +3 % on prime and the variable tracks) is H5.
+
+**Not measurable, stated on the page:** the stability of living in one's own home, the freedom to move, the effort
+of renting out; and the model assumes both sides keep to the plan (a mortgage forces saving, monthly deposits need
+discipline).
 
 ## Rounds
 | Round | What | Size |
 |---|---|---|
 | **H0** ✅ 2026-11-26 | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
 | **H1** ✅ 2026-11-26 | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
-| **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0019. | L |
-| **H3** | Scenarios and statistics: modes A, B and A+B, mirrored cash flows, rolling windows, block bootstrap, Monte Carlo, every metric above, histograms and P(a ≤ X ≤ b) with its interval. Tests: known answers (constant returns), bootstrap reproducibility by seed, the effective-sample count, P(A > B) = 0.5 for identical sides. | L |
+| **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0020. | L |
+| **H3** | Scenarios and statistics: modes A, B and A+B, mirrored cash flows, rolling windows, block bootstrap, Monte Carlo, the fifteen metrics above (breakeven rates, win map, regret, path risks, dominance, decomposition, sensitivity among them), histograms and P(a ≤ X ≤ b) with its interval. Tests: known answers (constant returns), bootstrap reproducibility by seed, the effective-sample count, P(A > B) = 0.5 and zero regret for identical sides, a breakeven rate that reproduces equality, dominance of X + c over X. May split into H3a (scenarios, layer 1) and H3b (layers 2 and 3). | XL |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
 | **H5** | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
 

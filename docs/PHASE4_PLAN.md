@@ -194,8 +194,8 @@ B6 M, B7 L.
 
 ## Architecture notes
 - New backend package `app/backtest/` (`strategy.py` models, `signals.py`, `engine.py`, `metrics.py`,
-  `evaluation.py`), routers `api/strategies.py` and `api/backtest.py`; ADR 0020 (engine and fill conventions) at B1,
-  ADR 0021 (evaluation and overfitting statistics) at B4 (0018 and 0019 go to Phase H, which runs first).
+  `evaluation.py`), routers `api/strategies.py` and `api/backtest.py`; the engine and fill conventions get an ADR at B1 and the evaluation statistics one at B4 (numbered
+  after Phase H's, which runs first).
 - Frontend: `components/StrategyPanel` and friends, `api/backtest.ts`, a `strategyStore`; trades drawn by a
   `TradeLayer` primitive in `chart/` (the only place that imports the chart library).
 - Performance targets: one daily backtest over 25 years under 200 ms on the server; a 100-point sweep under 5 s.
