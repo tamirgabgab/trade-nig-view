@@ -77,7 +77,7 @@ def test_the_table_is_symmetric_under_reflection_and_time_reversal(level: Granul
 def rejection(u: float, v: float, paths: int = 400_000, delta: float = 0.05) -> np.ndarray:
     """The user's algorithm as written: simulate, normalise, keep the paths near (u, v)."""
     rng = np.random.default_rng(11)
-    kept = []
+    kept: list[np.ndarray] = []
     for _ in range(paths // 50_000):
         x = np.cumsum(rng.standard_normal((50_000, 390)), axis=1)
         x = np.concatenate([np.zeros((50_000, 1)), x], axis=1)

@@ -21,7 +21,7 @@ DAYS_PER_YEAR = 365.25
 LOW, HIGH = -0.9999, 100.0
 
 
-def xirr(days: Sequence[int] | np.ndarray, flows: Sequence[float] | np.ndarray) -> float | None:
+def xirr(days: Sequence[float] | np.ndarray, flows: Sequence[float] | np.ndarray) -> float | None:
     d = np.asarray(days, dtype=np.float64)
     c = np.asarray(flows, dtype=np.float64)
     if len(c) == 0 or not (np.any(c > 0) and np.any(c < 0)):

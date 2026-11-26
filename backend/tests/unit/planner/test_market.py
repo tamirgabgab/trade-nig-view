@@ -255,7 +255,7 @@ def test_month_ends() -> None:
 # ---------------------------------------------------------------- the golden model
 
 
-def golden(  # a deliberately plain day-by-day loop
+def golden(  # noqa: PLR0912, PLR0915 - a deliberately plain day-by-day loop
     assets: list[AssetData],
     deposits: list[Deposit],
     end: date,
@@ -329,10 +329,10 @@ def golden(  # a deliberately plain day-by-day loop
     for lot in lots:
         a = int(lot["asset"])
         t = bar_on_or_before(a, day_number(end))
-        worth = lot["units"] * assets[a].close[t] * assets[a].fx[t]
-        value += worth
+        final = lot["units"] * assets[a].close[t] * assets[a].fx[t]
+        value += final
         reinvested += lot["reinvested"]
-        gain += (1 - fees.sell) * worth + lot["fees"] - lot["indexed"] * level(a, t)
+        gain += (1 - fees.sell) * final + lot["fees"] - lot["indexed"] * level(a, t)
     tax = taxes.gains * gain if gain > 0 else 0.0
     return {
         "value": value,
