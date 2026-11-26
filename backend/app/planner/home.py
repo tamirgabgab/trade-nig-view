@@ -54,7 +54,7 @@ import numpy as np
 from app.models.bars import FloatArray
 from app.planner.deposits import add_months, day_number
 from app.planner.market import PlanError
-from app.planner.mortgage import RateKind, Schedule, Track, amortize, combine
+from app.planner.mortgage import Schedule, Track, amortize, combine
 from app.planner.xirr import xirr
 
 LINEAR_FROM = date(2014, 1, 1)
@@ -208,22 +208,22 @@ def rate_stress(plan: HomePlan, series: HomeSeries) -> list[Stress]:
     :math:`a_k` becomes :math:`a_k + \\text{rise}` for :math:`k \\ge 1`: a prime track pays more
     from month 2, a variable one from its next reset. The highest payment is over the whole
     term, not until the sale: a reset after the planned sale would otherwise read as no risk.
-    Empty when no track follows the anchor.
+    Empty when no payment would change.
     """
-    if all(track.kind is RateKind.FIXED for track in plan.tracks):
-        return []
     months = max([plan.months, *(track.months for track in plan.tracks)])
-    rows: list[Stress] = []
-    for rise in STRESS_RISES:
+
+    def payments(rise: float) -> FloatArray:
         anchor = series.anchor.copy()
         anchor[1:] += rise
-        mortgage = combine([amortize(t, anchor, series.cpi) for t in plan.tracks], months)
-        rows.append(
-            Stress(
-                rise, float(mortgage.payment.max()), float(mortgage.payment[: plan.months].sum())
-            )
-        )
-    return rows
+        return combine([amortize(t, anchor, series.cpi) for t in plan.tracks], months).payment
+
+    stressed = [(rise, payments(rise)) for rise in STRESS_RISES]
+    # Fixed tracks, or a variable one that never resets within its term: nothing would move.
+    if np.allclose(stressed[-1][1], payments(0.0)):
+        return []
+    return [
+        Stress(rise, float(paid.max()), float(paid[: plan.months].sum())) for rise, paid in stressed
+    ]
 
 
 def run_home(plan: HomePlan, series: HomeSeries) -> HomeResult:

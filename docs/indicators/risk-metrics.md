@@ -13,8 +13,9 @@ and the path. Two options with the same median can be very different to live wit
 
 ## Formula
 
-Throughout, an option has $N$ end values $W^{(1)}, \dots, W^{(N)}$, one per world, in real shekels (shekels of the
-first day).
+Throughout, an option has $N$ end values $W^{(1)}, \dots, W^{(N)}$, one per world. The percentiles, CVaR, regret,
+dominance and the certainty equivalent are computed on **real** end values (shekels of the first day). The
+shortfall alone compares **nominal** shekels: the end value against the shekels put in, as they were counted.
 
 ### The bad tail
 
@@ -44,8 +45,8 @@ $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $\text{money put in}^{(w)}$ | everything the option spent in world $w$, in the same real shekels | ₪ |
-| $P(\text{shortfall})$ | the share of worlds that end with less than was put in | 0 % to 100 % |
+| $\text{money put in}^{(w)}$ | everything the option spent in world $w$, in nominal shekels (not adjusted for inflation); the end value here is nominal too | ₪ |
+| $P(\text{shortfall})$ | the share of worlds that end with fewer shekels than were put in | 0 % to 100 % |
 
 ### Regret
 
@@ -209,6 +210,8 @@ there for half of it: $D_t/2$ is added to the base it earned on.
   ([Simulated worlds](learn:simulated-worlds)).
 - **Dominance is tested on the samples as they are.** Sampling noise in a tail can break a dominance that holds in
   truth, so "neither" is the cautious answer.
+- **The shortfall is nominal.** A world that ends just above the shekels put in is not counted, although after
+  twenty years of inflation it is a real loss. The real percentiles beside it show that.
 - **$\gamma = 2$ is a convention.** Your own aversion may differ, and with it which option has the higher
   certainty equivalent.
 - **Sharpe and Sortino use yearly returns of net worth**, with a last partial year left out. For an apartment the

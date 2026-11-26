@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 import panel from '../components/IndicatorSettingsPanel.module.css';
 import { homesOf, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
@@ -19,7 +19,18 @@ function differ(): boolean {
 export function PlannerSlot() {
   const same = usePlannerStore((s) => s.same);
   const slot = usePlannerStore((s) => s.slot);
-  const [confirming, setConfirming] = useState(false);
+  const confirming = usePlannerStore((s) => s.joining);
+  const box = useRef<HTMLInputElement>(null);
+  const keep = useRef<HTMLButtonElement>(null);
+  // The safe answer takes the focus, so the question is heard and Enter keeps both options.
+  useEffect(() => {
+    if (confirming) keep.current?.focus();
+  }, [confirming]);
+  const setConfirming = (joining: boolean) => {
+    usePlannerStore.setState({ joining });
+    // Answered: the keyboard goes back to the box the question came from.
+    if (!joining) box.current?.focus();
+  };
   const group = useId();
   const market = usePlannerStore.getState();
   const home = usePlannerHomeStore.getState();
@@ -43,6 +54,7 @@ export function PlannerSlot() {
     <div className={styles.slot}>
       <label>
         <input
+          ref={box}
           type="checkbox"
           checked={same}
           onChange={(event) => {
@@ -71,13 +83,18 @@ export function PlannerSlot() {
         ))}
       </div>
       {confirming && (
-        <div className={styles.buttons} role="group" aria-label="Replace option B with option A?">
+        <div
+          className={styles.buttons}
+          role="alertdialog"
+          aria-label="Option B’s forms differ from option A’s. Replace option B with option A?"
+        >
           <button type="button" className={panel.secondary} onClick={join}>
             Replace option B with option A
           </button>
           <button
             type="button"
             className={panel.secondary}
+            ref={keep}
             onClick={() => {
               setConfirming(false);
             }}

@@ -191,7 +191,7 @@ class HomeResponse(BaseModel):
     schedule: list[ScheduleRow] = Field(description="All tracks, the whole term")
     path: list[HomePoint]
     stress: list[StressOut] = Field(
-        description="The payments at a higher Bank of Israel rate; empty with fixed tracks only"
+        description="The payments at a higher Bank of Israel rate; empty when none would change"
     )
     warnings: list[str]
 

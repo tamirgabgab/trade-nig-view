@@ -63,8 +63,9 @@ $$
 
 ### The rates of a window
 
-The rates typed into the Apartment tab are today's quotes. With "Move the tracks' rates" ticked, a window that
-starts in the past gets the rates of its own day:
+The rates typed into the Apartment tab are today's quotes. With "Move the tracks' rates" ticked **and the
+Apartment tab's Bank of Israel rate set to "historical"**, a window that starts in the past gets the rates of its
+own day:
 
 $$
 q^{(w)} = q + \mathrm{BoI}(\text{start of window } w) - \mathrm{BoI}(\text{today})
@@ -76,7 +77,8 @@ $$
 | $q^{(w)}$ | the rate that track gets in window $w$ | per year |
 | $\mathrm{BoI}(\cdot)$ | the Bank of Israel rate on a day; "today" is the last published one | per year |
 
-Prime tracks follow the Bank of Israel rate by themselves, and linked tracks keep their real rate.
+Prime tracks follow the Bank of Israel rate by themselves, and linked tracks keep their real rate. With an assumed
+Bank of Israel rate there is no history to follow: every window runs at the rates typed in, and the page warns.
 
 ## Worked example
 
@@ -92,8 +94,8 @@ The 241 windows hold about **three** independent decades.
 **The probability.** Five windows end with differences $W_A - W_B$ of +5, +3, −2, 0 and +4 (thousand shekels).
 Three wins, one tie, one loss: $P(A > B) = (1 + 1 + 0 + \tfrac12 + 1) / 5 =$ **70 %**.
 
-**The rates.** A fixed track quoted today at 4.6 %, with the Bank of Israel rate at 4.5 % today. A window that
-starts when it was 10 % gets $4.6 + 10 - 4.5 =$ 10.1 %.
+**The rates.** A fixed track quoted today at 5 %, with the Bank of Israel rate at 0.25 % today. A window that
+starts when it was 10 % gets $5 + 10 - 0.25 =$ 14.75 %.
 
 ## How to read it
 

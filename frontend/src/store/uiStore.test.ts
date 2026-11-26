@@ -41,3 +41,16 @@ describe('forgetIndicator', () => {
     });
   });
 });
+
+describe('the view', () => {
+  it('closes a learn page when the other view is opened: it is read where it was opened', () => {
+    const { openLearn, setView } = useUiStore.getState();
+    openLearn('page:rsi');
+    expect(useUiStore.getState().learnFor).toBe('page:rsi');
+    setView('planner');
+    expect(useUiStore.getState()).toMatchObject({ view: 'planner', learnFor: null });
+    openLearn('page:xirr');
+    setView('chart');
+    expect(useUiStore.getState().learnFor).toBeNull();
+  });
+});

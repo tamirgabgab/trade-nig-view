@@ -64,9 +64,16 @@ describe('PlannerSlot', () => {
     // Option B's forms differ from A's: they are not replaced without a yes.
     await user.click(same());
     expect(usePlannerStore.getState().same).toBe(false);
-    await user.click(screen.getByRole('button', { name: 'Keep both options' }));
+    // The question takes the focus on its safe answer, and gives it back to the box.
+    expect(screen.getByRole('alertdialog')).toHaveAccessibleName(
+      /Replace option B with option A\?$/,
+    );
+    expect(screen.getByRole('button', { name: 'Keep both options' })).toHaveFocus();
+    await user.keyboard('{Enter}');
     expect(homesOf(usePlannerHomeStore.getState()).b.price).toBe(3_000_000);
     expect(same()).not.toBeChecked();
+    expect(same()).toHaveFocus();
+    expect(usePlannerStore.getState().joining).toBe(false);
     await user.click(same());
     await user.click(screen.getByRole('button', { name: 'Replace option B with option A' }));
     expect(usePlannerStore.getState()).toMatchObject({ same: true, slot: 'a' });

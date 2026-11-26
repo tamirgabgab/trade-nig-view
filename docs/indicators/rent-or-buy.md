@@ -127,7 +127,7 @@ The apartment's yearly return is the [XIRR](learn:xirr) of the owner's own cash:
 $$
 \begin{aligned}
 c_0 &= -(E + C_0) \\[4pt]
-c_k &= -\text{out}_k \quad (1 \le k \le T) \\[4pt]
+c_k &= -\text{out}_k \quad (1 \le k < T) \\[4pt]
 c_T &= -\text{out}_T + \mathrm{NW}_T
 \end{aligned}
 $$

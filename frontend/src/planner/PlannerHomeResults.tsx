@@ -127,7 +127,8 @@ export function PlannerHomeResults({ result }: { result: HomeResult }) {
             </>
           ) : (
             <p className={styles.note}>
-              Every track has a fixed rate: the Bank of Israel rate does not move the payments.
+              No payment would change: a fixed track does not follow the Bank of Israel rate, and a
+              variable one only at a reset inside its term.
             </p>
           )}
         </>

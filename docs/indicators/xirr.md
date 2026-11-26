@@ -59,8 +59,8 @@ The sign changes between them, so the root is in between. Bisection gives **r = 
 
 Compare with the two shortcuts people use:
 - "I put in 150,000 and got 180,000": +20.00 %, which is not a yearly rate at all;
-- $(180{,}000 / 150{,}000)^{1/2} - 1 = 9.54\,\%$ a year, which pretends all 150,000 was in for two years. Half of the
-  second deposit's money was in for one year only, so the true rate is higher: 11.47 %.
+- $(180{,}000 / 150{,}000)^{1/2} - 1 = 9.54\,\%$ a year, which pretends all 150,000 was in for two years. The second
+  deposit, a third of the money, was in for one year only, so the true rate is higher: 11.47 %.
 
 With inflation of 2.5 % a year the prices rose by 1.025 and 1.0506 on the two later days, the real flows are
 −100,000, −48,780 and +171,327, and the **real return is 8.75 %**.

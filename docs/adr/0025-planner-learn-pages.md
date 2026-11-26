@@ -84,7 +84,8 @@ price and a probability; `m`, `s`, `a`, `b` and `X` each mean two or three thing
   payment **over the whole term of the loan** and what is paid until the sale.
   - The whole term, not "until the sale" like the summary's highest payment: a variable track moves only at its
     reset, and a reset after the planned sale would read as "no risk".
-  - Only prime and variable tracks move. A plan without one has no stress rows, and the page says why.
+  - Only prime and variable tracks move. A plan in which no payment would change has no stress rows, and the page
+    says why.
   - It is a what-if on the rate alone: the CPI, the value and the rent stay as entered.
 - **Polish (a UX audit of the Planner against the project's profile).** Three things changed:
   - making option B the same as option A again asks first when B's forms differ from A's, since they would be
@@ -93,6 +94,20 @@ price and a probability; `m`, `s`, `a`, `b` and `X` each mean two or three thing
   - a note right above a grid of fields keeps its distance from the first row.
   Left as they are, by the profile: native checkboxes with their labels as the hit target, "Reset inputs" without a
   confirmation (the forms are a draft, not saved work), and no phone layout (the profile supports 960 px and up).
+
+## What the review settled
+- The question before option B is replaced is one for both tabs (it lives in the store), is announced, takes the
+  focus on its safe answer and gives it back to the box.
+- The risk page said the shortfall is in real shekels; the engine compares nominal ones. The page now says so,
+  and names it as a limit.
+- A learn page is closed when the other view is opened: one left open on the chart used to cover the Planner.
+- The stress table is empty whenever no payment would change, which includes a variable track that never resets
+  within its term; the note under it says that, not "every track is fixed".
+- Four examples were pinned to the page's text only. The forced sale, the tilt of the sensitivity, Fisher's
+  interval and the rate of a window now go through the engine too; the window example uses the test data's rates.
+- The window's rate follows history only with historical rates in the Apartment tab: the page says it.
+- Two slips in the pages: "half of the second deposit" (it is a third of the money), and a cash-flow formula that
+  defined the last month twice.
 
 ## Consequences
 - A page's numbers cannot drift from the engine without a failing test; its prose still can, and is reviewed by

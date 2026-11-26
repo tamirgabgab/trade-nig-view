@@ -14,6 +14,30 @@ beforeEach(() => {
 });
 
 describe('PlannerPage', () => {
+  it('asks once, for both tabs, before option B is replaced', async () => {
+    const user = userEvent.setup();
+    stubApi({ '/api/planner/tax-presets': { body: TAX_PRESETS } });
+    usePlannerStore.setState({ same: false });
+    usePlannerHomeStore.setState({ other: { ...sanitizeHome(null).home, price: 3_000_000 } });
+    renderWithQuery(<PlannerPage className={undefined} />);
+    const box = (tab: string) =>
+      within(screen.getByRole('tabpanel', { name: tab, hidden: true })).getByRole('checkbox', {
+        name: 'Option B is the same as option A',
+        hidden: true,
+      });
+    await user.click(box('Market'));
+    await user.click(screen.getByRole('tab', { name: 'Apartment' }));
+    // The question opened in the Market tab is the same one here, and one answer closes it.
+    await user.click(screen.getByRole('button', { name: 'Replace option B with option A' }));
+    expect(box('Apartment')).toBeChecked();
+    await user.click(screen.getByRole('tab', { name: 'Market' }));
+    expect(box('Market')).toBeChecked();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Replace option B with option A', hidden: true }),
+    ).not.toBeInTheDocument();
+  });
+
   it('drops a tab’s results when its forms become another option’s or a loaded scenario’s', async () => {
     const user = userEvent.setup();
     stubApi({

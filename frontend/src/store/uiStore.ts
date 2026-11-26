@@ -108,7 +108,8 @@ export function selectModalOpen(s: UiState): boolean {
 export const useUiStore = create<UiState>()((set) => ({
   view: 'chart',
   setView: (view) => {
-    set({ view });
+    // A learn page is opened from where it is read: it does not follow to the other view.
+    set({ view, learnFor: null });
   },
   modal: null,
   symbolSeed: '',

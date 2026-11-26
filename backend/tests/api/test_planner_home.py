@@ -257,3 +257,6 @@ def test_a_variable_track_moves_only_at_its_reset_so_the_whole_term_is_stressed(
 def test_fixed_tracks_have_nothing_to_stress(client: TestClient) -> None:
     assert run(client)["stress"] == []
     assert run(client, equity=1_000_000, tracks=[])["stress"] == []
+    # A variable track that never resets within its term is a fixed one.
+    once = {"months": 60, "kind": "variable", "rate_pct": 4, "reset_years": 5}
+    assert run(client, tracks=[once])["stress"] == []

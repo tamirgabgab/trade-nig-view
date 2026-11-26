@@ -1893,7 +1893,7 @@ export interface components {
             path: components["schemas"]["HomePoint"][];
             /**
              * Stress
-             * @description The payments at a higher Bank of Israel rate; empty with fixed tracks only
+             * @description The payments at a higher Bank of Israel rate; empty when none would change
              */
             stress: components["schemas"]["StressOut"][];
             /** Warnings */

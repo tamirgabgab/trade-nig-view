@@ -94,7 +94,7 @@ describe('PlannerHome', () => {
       expect(run).toBeEnabled();
     });
     await user.click(run);
-    expect(await screen.findByText(/^Every track has a fixed rate/)).toBeVisible();
+    expect(await screen.findByText(/^No payment would change/)).toBeVisible();
     expect(screen.queryByRole('table', { name: 'Rate stress' })).not.toBeInTheDocument();
 
     stress = [

@@ -18,7 +18,7 @@ import pytest
 from app.config import REPO_ROOT
 from app.models.bars import FloatArray
 from app.planner.deposits import Deposit, add_months, day_number
-from app.planner.explain import lead, shapley
+from app.planner.explain import forced_sale, lead, shapley, yearly_correlation
 from app.planner.home import Betterment, HomePlan, HomeSeries, RentMode, rate_stress, run_home
 from app.planner.inflation import assumed_cpi
 from app.planner.mortgage import RateKind, Repayment, Track, amortize
@@ -34,10 +34,12 @@ from app.planner.risk import (
     sortino,
 )
 from app.planner.scenario import Account, Side, run_pair
+from app.planner.scenario_data import Change, build
 from app.planner.study import effective_samples, win_probability
 from app.planner.tax_presets import PURCHASE
 from app.planner.xirr import xirr
 from tests.unit.planner.test_scenario import FLAT_CPI, NO_TAX, account, grower, home
+from tests.unit.planner.test_scenario_data import MACRO, scenario
 
 START = date(2026, 1, 15)
 
@@ -235,7 +237,8 @@ def test_mortgage_tracks_page() -> None:
 # ---------------------------------------------------------------- rent-or-buy.md
 
 
-def test_rent_or_buy_page() -> None:
+def ledger() -> tuple[HomePlan, HomeSeries]:
+    """The apartment of the ledger page's worked example, on its assumed series."""
     months, term = 120, 300
     grid = np.arange(term + 1)
     value, cpi = 1.03 ** (grid / 12), 1.025 ** (grid / 12)
@@ -256,9 +259,19 @@ def test_rent_or_buy_page() -> None:
         selling=0.024,
         betterment=Betterment(single_home=True),
     )
-    result = run_home(plan, HomeSeries(value, cpi, np.full(term + 1, 0.04), cpi))
+    return plan, HomeSeries(value, cpi, np.full(term + 1, 0.04), cpi)
+
+
+def test_rent_or_buy_page() -> None:
+    months, term = 120, 300
+    grid = np.arange(term + 1)
+    value, cpi = 1.03 ** (grid / 12), 1.025 ** (grid / 12)
+    plan, series = ledger()
+    result = run_home(plan, series)
 
     # The page's ledger as a loop.
+    single = PURCHASE[0].brackets
+    assert plan.purchase_tax == single
     tax = 0.035 * (2_000_000 - 1_978_745)
     costs = tax + (0.006 + 0.024) * 2_000_000
     loan = table(1_400_000, term, [0.04] * term)
@@ -393,8 +406,19 @@ def test_overlapping_windows_page() -> None:
         f"correlate at {(term - 1) / term:.3f}, and windows two years apart at "
         f"{(term - 24) / term:.2f}",
         f"that is {(0.7 * 0.3 / golden) ** 0.5:.2f}:",
-        "$4.6 + 10 - 4.5 =$ 10.1 %",
     )
+    # The rate of a window, through the engine: bought at a Bank of Israel rate of 10 %, against
+    # 0.25 % at the last one published; the fixed track was typed in at 5 %.
+    spec = scenario(value_mode="historical", rates_mode="historical")
+    early = build(spec, MACRO, Change(shift=-96, historical=True))[0]
+    assert early.home is not None
+    golden_rate = 0.05 + 0.10 - 0.0025
+    assert early.home.tracks[0].rate == pytest.approx(golden_rate)
+    shows("overlapping-windows", f"$5 + 10 - 0.25 =$ {pct(golden_rate)}")
+    # With an assumed rate there is no history to follow, as the page says.
+    assumed = build(scenario(value_mode="historical"), MACRO, Change(shift=-96, historical=True))
+    assert assumed[0].home is not None
+    assert assumed[0].home.tracks[0].rate == 0.05
 
 
 # ---------------------------------------------------------------- simulated-worlds.md
@@ -528,27 +552,52 @@ def test_what_the_answer_depends_on_page() -> None:
         f"**{golden['leverage'] * 100:.1f} points**",
     )
     # The forced sale of the ledger page's apartment (no tax: its real gain is negative).
-    value, owed = 2_000_000 * 1.03**10, 999_031.5521349199
+    plan, series = ledger()
+    sold = run_home(plan, series)
+    value, owed = 2_000_000 * 1.03**10, float(sold.balance[-1])
     normal = value * 0.976 - owed
-    forced = value * 0.9 * 0.976 - owed
+    forced = value * 0.9 * 0.976 - owed  # the page's formula, with no betterment tax
+    assert float(sold.net_worth[-1]) == pytest.approx(normal)
+    assert forced_sale(plan, series, sold, 0.10) == pytest.approx(forced)
     shows(
         "what-the-answer-depends-on",
+        f"with {shekels(owed)} still owed",
         f"=$ {shekels(forced)}, against {shekels(normal)} in a\nnormal sale: "
         f"{shekels(normal - forced)} less",
         f"took {(normal - forced) / normal:.0%}".replace("%", " %"),
         f"1.1046: an apartment worth {shekels(value)} at the sale is worth "
         f"{shekels(value * 1.01**10)}",
     )
+    # The tilt of the sensitivity, through the engine's own move of the value.
+    spec = scenario()
+    entered = build(spec, MACRO, Change())[0].series
+    moved = build(spec, MACRO, Change(value_drift=0.01))[0].series
+    assert entered is not None
+    assert moved is not None
+    assert moved.value[120] / entered.value[120] == pytest.approx(1.01**10)
     assert pytest.approx(1.1046, abs=5e-5) == 1.01**10
     # Who leads.
     found = lead([12, 24, 36, 48, 60], np.array([1.0, 2, 5, 6, 9]), np.array([2.0, 3, 4, 7, 8]))
     assert (found.leader, found.since, found.x_share) == ("x", 60, 0.4)
-    # Fisher's interval.
+    # Fisher's interval: the engine's, on twenty simulated years, is the page's formula.
+    rng = np.random.default_rng(7)
+    shared = rng.normal(0.0, 0.01, 240)
+    a, b = np.exp(shared + rng.normal(0.0, 0.02, 240)), np.exp(shared + rng.normal(0.0, 0.02, 240))
+    found_rho = yearly_correlation(a, b)
+    assert found_rho is not None
+    assert found_rho.years == 20
+
+    def fisher(rho: float, years: int) -> tuple[float, float]:
+        z, half = math.atanh(rho), 1.96 / math.sqrt(years - 3)
+        return math.tanh(z - half), math.tanh(z + half)
+
+    assert (found_rho.low, found_rho.high) == pytest.approx(fisher(found_rho.value, 20), abs=1e-4)
     z, half = math.atanh(0.30), 1.96 / math.sqrt(20 - 3)
+    low, high = fisher(0.30, 20)
     shows(
         "what-the-answer-depends-on",
         f"= {z:.4f}$",
         f"= {half:.4f}$",
         f"$\\tanh({z - half:.4f})$ to $\\tanh({z + half:.4f})$",
-        f"**{math.tanh(z - half):.2f} to {math.tanh(z + half):.2f}**".replace("-", MINUS),
+        f"**{low:.2f} to {high:.2f}**".replace("-", MINUS),
     )

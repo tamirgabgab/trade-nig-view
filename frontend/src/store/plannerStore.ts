@@ -180,6 +180,8 @@ interface PlannerData {
 interface PlannerState extends PlannerData {
   /** Counts the scenarios loaded: the tabs drop the results of the forms that were replaced. */
   loads: number;
+  /** The question "replace option B with option A?" is open (in both tabs: it is one). */
+  joining: boolean;
   /** Replace part of the form on screen (the inflation is one for both options). */
   update: (changes: Partial<PlannerForm>) => void;
   /** Show another option's form. */
@@ -272,6 +274,7 @@ export const usePlannerStore = create<PlannerState>()(
     (set) => ({
       ...sanitizePersisted(null),
       loads: 0,
+      joining: false,
       update: (changes) => {
         set((s) => ({
           form: { ...s.form, ...changes },
