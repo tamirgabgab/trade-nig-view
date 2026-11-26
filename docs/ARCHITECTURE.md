@@ -37,6 +37,7 @@ flowchart LR
     Cache["data/cache<br/>SQLite bars.db"]
     Prov["data/providers<br/>Yahoo · Tiingo · Fixtures"]
     Macro["macro/<br/>Bank of Israel series · cache · fixtures"]
+    Plan["planner/<br/>deposits · fills · market account"]
     Ind["indicators/<br/>pure functions + registry"]
     Ana["analysis/<br/>gaps · filter response · transforms"]
     Store2["storage/<br/>SQLite app.db (watchlists, layouts, drawings)"]
@@ -210,6 +211,8 @@ turned into `frontend/src/api/schema.ts` (`scripts/gen-api.ps1`); tests fail whe
 | `GET /drawings/{symbol}` / `PUT` | PUT body `{revision, drawings}` (`DrawingsUpdate`, at most 500 drawings, unique ids) | drawings document (§5.2) with `revision`; GET returns revision 0 and no drawings when none was saved | R4 |
 | `GET /layouts` · `GET/PUT/DELETE /layouts/{name}` | PUT body `{revision, symbol, interval, chart_type, ...}` (layout fields, §5.3; revision 0 = create); DELETE `?revision=` | `GET /layouts` → `{layouts:[{name, revision, updated_at, symbol, interval}]}` (newest first); GET/PUT → layout document; DELETE → 204 | R6 |
 | `GET /macro/series` · `GET /macro/series/{id}` | `start?`, `end?` (inclusive dates) | list → `[{id, name, unit, frequency:"daily"\|"monthly", source_series}]`; one → the same plus `{source:"boi"\|"fixtures", stale, warnings, points:[{date, value}]}` (a monthly value is dated the 1st); 404 `series_not_found`, 503 `data_unavailable`; ADR 0018 | H0 |
+| `POST /planner/assets` | `{assets:[{symbol, currency?}]}` (any Yahoo ticker, at most 60) | `[{symbol, currency, first, last, bars, has_dividends, sell_date, sell_price, sell_fx, error}]`: the depth of each ticker's daily history (a row with `error` for one that fails) | H1 |
+| `POST /planner/market` | `{assets:[{symbol, weight, currency, dividend_yield_pct}], use_fx, deposits:[{date, amount, time?}], recurring:[{start, amount, every_months, count, indexed, time?}], end, fees:{deposit_pct, buy_pct, sell_pct, management_pct, monthly_fee}, taxes:{gains_pct, dividend_pct, base:"nominal"\|"real"\|"currency"}, fill:{mode:"close"\|"open"\|"mid"\|"linear"\|"piecewise"\|"piecewise_random"\|"estimated", granularity:"coarse"\|"medium"\|"fine", seed?}, inflation:{mode:"assumed"\|"historical", mean_pct, sd_pct, persistence, seed?}, timezone}` (percentages in %, money in shekels) | `{assets, earliest_start, fx_market_from, summary:{deposited, value, proceeds, gross_gain, taxable_gain, tax, net_value, net_gain, deposit_fees, commissions, account_fees, dividend_tax, xirr_gross, xirr_net, net_value_real, xirr_net_real, inflation_yearly}, deposits:[{date, amount, value, proceeds, gross_gain, tax, net_gain, lots:[{symbol, date, price, fx, units, cost, value}]}], path:[{date, value, deposited}], warnings}`; ADR 0019; 422 `invalid_plan`, 503 `data_unavailable` | H1 |
 | `GET /watchlists` · `PUT/DELETE /watchlists/{name}` | PUT body `{revision, sections:[{title, symbols:[...]}]}` (revision 0 = create); DELETE `?revision=` | `GET /watchlists` → `{watchlists:[{schema_version, name, revision, updated_at, sections}]}` (newest first; one unsaved `Default` from the universe when none is saved); PUT → watchlist document; DELETE → 204 | R2 (read default) / R6 (edit) |
 
 Concurrency for PUT/DELETE documents: optimistic, `revision` integer; a stale `revision` → `409 Conflict`

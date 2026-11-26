@@ -272,7 +272,7 @@ Notes:
 | Round | What | Size |
 |---|---|---|
 | **H0** ✅ 2026-11-26 | Macro data: `app/macro`, BoI source (USD/ILS, the dwelling indices, the mortgage-rate series, the BoI rate, and the CPI from 1994 for the optional mode), cache, fixtures, `GET /macro/series`. Check the depth of `^SP500TR`, `SPY`, `^NDX`, `QQQ` and `^TA125.TA` on the user's machine (`make-fixtures`). ADR 0018. | M |
-| **H1** | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
+| **H1** ✅ 2026-11-26 | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
 | **H2** | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0019. | L |
 | **H3** | Scenarios and statistics: modes A, B and A+B, mirrored cash flows, rolling windows, block bootstrap, Monte Carlo, every metric above, histograms and P(a ≤ X ≤ b) with its interval. Tests: known answers (constant returns), bootstrap reproducibility by seed, the effective-sample count, P(A > B) = 0.5 for identical sides. | L |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
@@ -287,6 +287,18 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H1 results (2026-11-26, ADR 0019)
+- The user's choices before H1: free tickers typed in the planner; the start limited to the youngest asset of the
+  mix; dividends net of 25 % tax by default; a basic Planner page already in H1 (so H4 shrinks to the apartment
+  side, A/B, the charts and saved scenarios).
+- The fill table was generated with 8 million paths (at least 3,412 samples in every fine cell).
+- The tax base has a third option beside nominal and real: the gain in the asset's own currency (the cost indexed
+  by USD/ILS).
+- A price-only index can take an assumed dividend yield, since a total-return index cannot carry the dividend tax.
+- A yearly management fee of μ takes 1 − (1 − μ)^(1/12) of the value each month, so a year leaves 1 − μ.
+- "Check data history" reports the depth of every ticker in one call: no need to open them one by one.
+- Still open: the depth of `^SP500TR`, `^XNDX`, `^TA125.TA` and `ILS=X` on Yahoo (read it from the page).
 
 ## H0 results (2026-11-26)
 - The USD/ILS rate for the planner is **Yahoo's market rate** (`ILS=X`, in the universe; the user's choice). The BoI
