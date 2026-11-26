@@ -27,6 +27,7 @@
 | U3 | Chart tools: compare, patterns, icons, eraser, zoom box, Go to date, forecast pointer, animated backgrounds (ADR 0016) | L | ✅ (2026-11-26) |
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
+| PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | planned |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -318,6 +319,16 @@ Phase-2 plan.
 - [x] G1: market regime (ADR 0014): Variance Ratio (Chow-Denning), Hurst (DFA) and a regime tint on the chart;
   the Regime tab with the wild bootstrap, MF-DFA, the regime map and an event study by regime; the learn page.
 - Deferred: the Python plugin API (`plugins/` folder, hot reload, `chartlab test-indicator`), if ever needed.
+
+### Phase H — Home vs Market (before Phase 4)
+- Compare buying an apartment with investing in the market on the same money: deposit schedules with or without
+  USD/ILS, a table per deposit with gross and net gain, a mortgage mix of up to three tracks (Spitzer, equal
+  principal, grace, balloon; fixed, CPI-linked or prime), the rent switch (live in it or rent it out), the dwelling
+  index or an assumed appreciation, net worth = assets − liabilities, modes A, B and A+B.
+- Statistics over rolling historical windows, block bootstrap and Monte Carlo: histograms of the final net worth or
+  the net XIRR, P(a ≤ X ≤ b), P(A > B), CVaR, drawdown, certainty equivalent.
+- Data from the Bank of Israel (USD/ILS daily from 1980, CPI from 1951, the CBS dwelling index from 1994, mortgage
+  rates by track). The round plan is in [HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md) (H0–H5).
 
 ### Phase 4 — Strategies & backtesting
 - Organised by **four trader profiles** set by trade frequency (Day ≤ 10 a day, Swing ≤ 10 a week, Position ≤ 10 a
