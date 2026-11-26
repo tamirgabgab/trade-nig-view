@@ -53,6 +53,35 @@ describe('PlannerCompare', () => {
     expect(card('Rent')).toHaveTextContent('₪8,250 a month');
     expect(screen.getByText('After the last published CPI it is held flat')).toBeVisible();
     expect(screen.queryByRole('table', { name: 'Win map' })).not.toBeInTheDocument();
+    // What the answer depends on: the apartment's return by source, adding up to it.
+    const cells = (table: string, label: string) =>
+      within(
+        within(screen.getByRole('table', { name: table }))
+          .getByText(label)
+          .closest('tr') ?? document.body,
+      )
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent);
+    expect(cells('Apartment return', 'Appreciation')).toEqual(['Appreciation', '+4.10']);
+    expect(cells('Apartment return', 'Costs and taxes')).toEqual(['Costs and taxes', '−2.09']);
+    expect(cells('Apartment return', 'The apartment’s yearly return')).toEqual([
+      'The apartment’s yearly return',
+      '9.91%',
+    ]);
+    expect(screen.getByRole('table', { name: 'Sensitivity' })).toBeVisible();
+    expect(card('Leads at the end')).toHaveTextContent('Market');
+    expect(card('Stays ahead from')).toHaveTextContent('Month 120');
+    expect(card('Exit months apartment leads')).toHaveTextContent('33.33%');
+    expect(
+      screen.getByRole('img', { name: 'End value by exit month: Apartment and Market' }),
+    ).toBeVisible();
+    expect(cells('Liquidity', 'Cash at once')).toEqual(['Cash at once', '₪0', '₪2,500,000']);
+    expect(cells('Liquidity', 'Apartment, forced sale at −10%')).toEqual([
+      'Apartment, forced sale at −10%',
+      '₪1,900,000',
+      '—',
+    ]);
+    expect(card('Dwelling prices and the market')).toHaveTextContent('0.12');
     // A later edit of the apartment's rent does not rescale the result that is on screen.
     act(() => {
       usePlannerHomeStore.getState().update({ rent: { ...DEFAULT_HOME.rent, monthly: 9_000 } });
@@ -63,6 +92,7 @@ describe('PlannerCompare', () => {
       x: { home: { start: '2015-01-15', price: 2_000_000 }, market: null },
       y: { market: { assets: [{ symbol: 'SPY' }] } },
       end: '2025-01-15',
+      forced_discount_pct: 10,
     });
   });
 

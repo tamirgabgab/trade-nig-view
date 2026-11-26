@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from types import SimpleNamespace
 from typing import cast
@@ -28,12 +29,14 @@ from app.planner.scenario_data import (
     first_day,
     growing_asset,
     run,
+    sensitivity,
     spending_gap,
     term_months,
 )
 from app.planner.study import breakeven
 
 START = date(2010, 3, 15)
+END_10 = date(2020, 3, 15)
 
 
 def monthly(first: date, months: int, start: float, growth: float) -> MacroSeries:
@@ -280,3 +283,98 @@ def test_a_seeded_fill_draws_the_same_prices_in_every_run() -> None:
         OptionSpec(account=account, recurring=spec.x.recurring), spec.y, spec.end
     )
     assert run(unseeded, MACRO).x.wealth != first
+
+
+# ---------------------------------------------------------------- one input moved
+
+
+def test_a_move_of_nothing_is_the_plan_itself() -> None:
+    spec = scenario(**HISTORICAL)
+    base = run(spec, MACRO)
+    still = run(spec, MACRO, Change(value_drift=0.0, market_drift=0.0, tax_shift=0.0))
+    assert (still.x.wealth, still.y.wealth) == (base.x.wealth, base.y.wealth)
+
+
+def test_a_drift_moves_the_path_in_use_not_a_constant_one() -> None:
+    # The apartment bought outright: its end value is its value, on the historical index.
+    spec = bought_outright()
+    assert spec.x.home is not None
+    spec = replace(spec, x=replace(spec.x, home=replace(spec.x.home, value_mode="historical")))
+    base, up = run(spec, MACRO), run(spec, MACRO, Change(value_drift=0.01))
+    assert up.x.wealth / base.x.wealth == pytest.approx(1.01**10, rel=1e-12)
+    # The market side of one deposit: one more point a year on every day held.
+    saver = ScenarioSpec(
+        OptionSpec(account=MARKET, one_off=[Deposit(START, 1_000.0)]), OptionSpec(), spec.end
+    )
+    grown = run(saver, MACRO, Change(market_drift=0.01)).x.wealth / run(saver, MACRO).x.wealth
+    years = (spec.end - START).days / 365.25
+    assert grown == pytest.approx(1.01**years, rel=1e-12)
+
+
+def test_a_rent_that_follows_the_value_follows_its_drift() -> None:
+    spec = scenario(rent_growth="value")
+    base, up = run(spec, MACRO).x.home, run(spec, MACRO, Change(value_drift=0.01)).x.home
+    assert base is not None
+    assert up is not None
+    assert up.rent[-1] / base.rent[-1] == pytest.approx(1.01 ** (119 / 12), rel=1e-12)
+    assert up.payment == pytest.approx(base.payment)
+
+
+def test_a_tax_shift_moves_the_gains_tax_and_the_betterment_tax() -> None:
+    taxed = replace(MARKET, taxes=Taxes(gains=0.25, dividend=0.0))
+    saver = ScenarioSpec(
+        OptionSpec(account=taxed, one_off=[Deposit(START, 1_000.0)]), OptionSpec(), END_10
+    )
+    base, up = run(saver, MACRO).x.market, run(saver, MACRO, Change(tax_shift=0.05)).x.market
+    assert base is not None
+    assert up is not None
+    assert up.tax - base.tax == pytest.approx(0.05 * base.taxable_gain)
+    spec = scenario()
+    home_base = run(spec, MACRO, Change(historical=True)).x.home  # no linear rule in the way
+    home_up = run(spec, MACRO, Change(historical=True, tax_shift=0.05)).x.home
+    assert home_base is not None
+    assert home_up is not None
+    assert home_up.betterment[-1] == pytest.approx(home_base.betterment[-1] * 0.30 / 0.25)
+
+
+def test_the_sensitivity_moves_each_input_both_ways() -> None:
+    moves = {m.input: m for m in sensitivity(scenario(), MACRO)}
+    assert list(moves) == ["appreciation", "mortgage_rates", "rent", "market_return", "taxes"]
+    assert [moves[name].step for name in moves] == [0.01, 0.01, 0.10, 0.01, 0.05]
+    # What is good for the apartment raises "apartment minus market", and the other way.
+    for name, sign in (
+        ("appreciation", 1),
+        ("rent", 1),
+        ("mortgage_rates", -1),
+        ("market_return", -1),
+    ):
+        move = moves[name]
+        assert move.up is not None
+        assert move.down is not None
+        assert move.up * sign > 0, name
+        assert move.down * sign < 0, name
+    # A rate cannot go below zero: a track at half a percent falls by less than it rises.
+    spec = scenario()
+    assert spec.x.home is not None
+    low = [replace(t, rate=0.005) for t in spec.x.home.plan.tracks if t.kind is RateKind.FIXED]
+    cheap = replace(spec.x.home, plan=replace(spec.x.home.plan, tracks=low, equity=1_200_000))
+    rates = {m.input: m for m in sensitivity(replace(spec, x=replace(spec.x, home=cheap)), MACRO)}[
+        "mortgage_rates"
+    ]
+    assert rates.up is not None
+    assert rates.down is not None
+    assert abs(rates.down) < abs(rates.up)
+
+
+def test_the_sensitivity_leaves_out_what_the_scenario_does_not_have() -> None:
+    saver = ScenarioSpec(
+        OptionSpec(account=MARKET, one_off=[Deposit(START, 1_000.0)]),
+        OptionSpec(account=replace(MARKET, taxes=Taxes(gains=0.25, dividend=0.0))),
+        END_10,
+    )
+    assert [m.input for m in sensitivity(saver, MACRO)] == ["market_return", "taxes"]
+    no_rent = scenario()
+    assert no_rent.x.home is not None
+    plan = replace(no_rent.x.home.plan, rent_mode=RentMode.NONE)
+    bare = replace(no_rent, x=replace(no_rent.x, home=replace(no_rent.x.home, plan=plan)))
+    assert "rent" not in [m.input for m in sensitivity(bare, MACRO)]

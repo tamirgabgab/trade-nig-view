@@ -148,6 +148,57 @@ def test_what_a_run_leaves_out_is_said(client: TestClient) -> None:
     assert "The net worth is averaged over 48 of 60 exit months" in " ".join(notes)
 
 
+def test_what_the_answer_depends_on(client: TestClient) -> None:
+    body = post(client, "run")
+    # The apartment's return, shared between its four sources: they add up to it.
+    parts = body["decomposition"]
+    assert sum(parts[name] for name in ("appreciation", "rent", "leverage", "costs")) == (
+        pytest.approx(parts["total"], abs=1e-12)
+    )
+    assert parts["total"] == pytest.approx(body["x"]["xirr"], abs=1e-9)  # no surplus month
+    assert parts["appreciation"] > 0
+    # One input moved each way, as a change of "apartment minus market".
+    moves = {m["input"]: m for m in body["sensitivity"]}
+    assert list(moves) == ["appreciation", "mortgage_rates", "rent", "market_return", "taxes"]
+    assert moves["appreciation"]["down"] < 0 < moves["appreciation"]["up"]
+    assert moves["market_return"]["up"] < 0 < moves["market_return"]["down"]
+    assert (moves["rent"]["step"], moves["taxes"]["step"]) == (0.1, 0.05)
+    # Who leads over the exit months, from the same points as the time average.
+    lead = body["lead"]
+    points = body["average"]["points"]
+    ahead = [p["x"] > p["y"] for p in points]
+    assert lead["step_months"] == 2
+    assert lead["x_share"] == pytest.approx(sum(ahead) / len(ahead))
+    assert lead["leader"] == ("x" if ahead[-1] else "y")
+    assert lead["since_months"] in [p["months"] for p in points]
+    # A forced sale takes 10 % off the apartment's value; the account is cash as it is.
+    liquid = body["liquidity"]
+    assert liquid["discount"] == 0.10
+    x, y = liquid["x"], liquid["y"]
+    assert (x["cash"], y["apartment"], y["forced"]) == (0, None, None)
+    assert y["cash"] == pytest.approx(body["y"]["account"]["net_value"])
+    assert x["apartment"] == pytest.approx(body["x"]["home"]["net_worth"])
+    lost = x["apartment"] - x["forced"]
+    assert 0 < lost <= 0.10 * body["x"]["home"]["value"]
+    assert x["wealth_forced"] == pytest.approx(body["x"]["wealth"] - lost)
+    assert y["wealth_forced"] == pytest.approx(body["y"]["wealth"])
+    assert points[-1]["x_forced"] == pytest.approx(x["wealth_forced"])
+    assert all(p["x_forced"] < p["x"] and p["y_forced"] is None for p in points)
+    # The synthetic dwelling index never moves off its trend: no correlation to report.
+    assert body["correlation"] is None
+    free = post(client, "run", forced_discount_pct=0)
+    assert all(p["x_forced"] == pytest.approx(p["x"]) for p in free["average"]["points"])
+    assert free["liquidity"]["discount"] == 0
+
+
+def test_two_market_options_have_no_apartment_to_explain(client: TestClient) -> None:
+    saver = {**MARKET, "deposits": [{"date": "2012-01-05", "amount": 1_000}]}
+    body = post(client, "run", x={"market": saver}, y={}, end="2014-01-05")
+    assert body["decomposition"] is None
+    assert [m["input"] for m in body["sensitivity"]] == ["market_return", "taxes"]
+    assert body["correlation"] is None
+
+
 # ---------------------------------------------------------------- rolling windows
 
 

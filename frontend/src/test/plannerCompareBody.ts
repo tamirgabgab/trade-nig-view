@@ -27,7 +27,57 @@ export const SCENARIO_RESULT = {
   difference: -400_000,
   difference_real: -300_000,
   breakeven: { appreciation: 0.0625, market_return: 0.12, mortgage_shift: null, rent_scale: 1.5 },
-  average: { x: 1_200_000, y: 1_400_000, points: [] },
+  average: {
+    x: 1_200_000,
+    y: 1_400_000,
+    points: [
+      {
+        months: 40,
+        date: '2018-05-15',
+        x: 900_000,
+        y: 1_000_000,
+        x_forced: 800_000,
+        y_forced: null,
+      },
+      {
+        months: 80,
+        date: '2021-09-15',
+        x: 1_700_000,
+        y: 1_600_000,
+        x_forced: 1_500_000,
+        y_forced: null,
+      },
+      {
+        months: 120,
+        date: '2025-01-15',
+        x: 2_100_000,
+        y: 2_500_000,
+        x_forced: 1_900_000,
+        y_forced: null,
+      },
+    ],
+  },
+  decomposition: {
+    appreciation: 0.041,
+    rent: 0.032,
+    leverage: 0.047,
+    costs: -0.0209,
+    total: 0.0991,
+  },
+  sensitivity: [
+    { input: 'appreciation', step: 0.01, down: -210_000, up: 230_000 },
+    { input: 'mortgage_rates', step: 0.01, down: 60_000, up: -90_000 },
+    { input: 'rent', step: 0.1, down: -45_000, up: 45_000 },
+    { input: 'market_return', step: 0.01, down: 300_000, up: -340_000 },
+    { input: 'taxes', step: 0.05, down: null, up: -20_000 },
+  ],
+  lead: { leader: 'y', since_months: 120, x_share: 1 / 3, step_months: 40 },
+  liquidity: {
+    discount: 0.1,
+    x: { cash: 0, apartment: 2_100_000, forced: 1_900_000, wealth_forced: 1_900_000 },
+    y: { cash: 2_500_000, apartment: null, forced: null, wealth_forced: 2_500_000 },
+  },
+  correlation: { value: 0.12, years: 30, low: -0.25, high: 0.46 },
   warnings: ['After the last published CPI it is held flat'],
 };
 
@@ -120,5 +170,10 @@ export const SIMULATION_RESULT = {
     x_xirr_real: [-0.01, 0.01, 0.03, 0.05],
     y_xirr_real: [0, 0.02, 0.04, 0.045],
   },
+  split: [
+    { weight: 0, p50: 2_300_000, p5: 900_000, cvar5: 700_000 },
+    { weight: 0.5, p50: 2_150_000, p5: 1_200_000, cvar5: 1_000_000 },
+    { weight: 1, p50: 2_000_000, p5: 1_000_000, cvar5: 800_000 },
+  ],
   warnings: ['Inflation has no spread: it is the same in every world'],
 };

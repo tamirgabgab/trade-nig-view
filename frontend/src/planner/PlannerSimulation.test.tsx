@@ -34,6 +34,21 @@ describe('PlannerSimulation', () => {
     expect(cells('Apartment below its loan at some point').slice(1)).toEqual(['5.00%', '—']);
     expect(cells('Time the account is below its deposits').slice(1)).toEqual(['—', '30.00%']);
     expect(cells('Sharpe of the yearly returns').slice(1)).toEqual(['0.80', '—']);
+    // The same money split between the two: the share in the apartment, and what it ends at.
+    const split = screen.getByRole('table', { name: 'Split' });
+    const shares = within(split)
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
+    expect(shares).toEqual([
+      ['0%', '₪2,300,000', '₪900,000', '₪700,000'],
+      ['50%', '₪2,150,000', '₪1,200,000', '₪1,000,000'],
+      ['100%', '₪2,000,000', '₪1,000,000', '₪800,000'],
+    ]);
   });
 
   it('switches the measure of the distribution, returns in percent', async () => {

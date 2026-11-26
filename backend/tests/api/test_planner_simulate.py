@@ -67,6 +67,22 @@ def test_a_bootstrap_resamples_the_history_the_series_share(client: TestClient) 
     assert body["x"]["stress"] is None  # no income given
 
 
+def test_the_same_money_split_between_the_two_options(client: TestClient) -> None:
+    body = simulate(client)
+    rows = body["split"]
+    assert [row["weight"] for row in rows] == [0.0, 0.25, 0.5, 0.75, 1.0]
+    # All of it in one option is that option's own spread of real end values.
+    for row, option in ((rows[0], "y"), (rows[-1], "x")):
+        spread = body[option]["wealth_real"]
+        assert (row["p50"], row["p5"], row["cvar5"]) == pytest.approx(
+            (spread["p50"], spread["p5"], spread["cvar5"])
+        )
+    x = np.array(body["samples"]["x_wealth_real"])
+    y = np.array(body["samples"]["y_wealth_real"])
+    assert rows[2]["p50"] == pytest.approx(float(np.median(0.5 * x + 0.5 * y)), abs=0.02)
+    assert all(row["cvar5"] <= row["p5"] <= row["p50"] for row in rows)
+
+
 def test_the_worlds_depend_only_on_the_seed(client: TestClient) -> None:
     first = simulate(client)["samples"]
     assert simulate(client)["samples"] == first

@@ -150,6 +150,28 @@ test('planner: the apartment against the same money in the market, for one plan 
   await expect(card('Apartment appreciation')).toContainText(/% a year|None in range/);
   await expect(compare.getByRole('table', { name: 'Win map' })).toBeHidden();
 
+  // What the answer depends on: the apartment's return by source, the moves, who leads.
+  const parts = compare.getByRole('table', { name: 'Apartment return' });
+  await expect(parts.getByRole('row')).toHaveCount(6);
+  await expect(parts.getByRole('row').last()).toContainText(/The apartment’s yearly return.*%/);
+  const moves = compare.getByRole('table', { name: 'Sensitivity' });
+  await expect(moves.getByRole('row')).toHaveCount(6);
+  await expect(moves.getByRole('row').filter({ hasText: 'Rent, 10%' })).toContainText('₪');
+  await expect(
+    compare.getByRole('img', { name: 'How apartment minus market changes when one input moves' }),
+  ).toBeVisible();
+  await expect(card('Leads at the end')).toContainText(/Apartment|Market|A tie/);
+  const lead = compare.getByRole('img', { name: 'End value by exit month: Apartment and Market' });
+  await expect(lead.locator('polyline')).toHaveCount(3);
+  // A forced sale at the default 10 % off; at 0 % it is the sale itself, and the line is gone.
+  const liquidity = compare.getByRole('table', { name: 'Liquidity' });
+  await expect(liquidity.getByRole('row').filter({ hasText: 'forced sale at −10%' })).toBeVisible();
+  await compare.getByLabel('Forced sale discount %').fill('0');
+  await compare.getByRole('button', { name: 'Compare' }).click();
+  await expect(liquidity.getByRole('row').filter({ hasText: 'forced sale at −0%' })).toBeVisible();
+  await expect(lead.locator('polyline')).toHaveCount(2);
+  await compare.getByLabel('Forced sale discount %').fill('10');
+
   // Over history: a start every month from AAPL's first bar to a sale inside the index.
   await compare.getByRole('button', { name: 'Run history' }).click();
   await expect(
@@ -220,6 +242,10 @@ test('planner: a simulation of the comparison, its distribution and the handles 
   await expect(row('Time the account is below its deposits').getByRole('cell').nth(1)).toHaveText(
     '—',
   );
+  // The same money split between the two, from all in the market to all in the apartment.
+  const split = compare.getByRole('table', { name: 'Split' });
+  await expect(split.getByRole('row')).toHaveCount(6);
+  await expect(split.getByRole('row').nth(3)).toContainText('50%');
 
   // The handles: sliders that move with the keyboard and by dragging; the share follows.
   const a = compare.getByRole('slider', { name: 'Lower bound a' });
