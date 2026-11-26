@@ -18,16 +18,16 @@ export function PlannerAssetsTable({ assets }: { assets: AssetDepth[] }) {
         </tr>
       </thead>
       <tbody>
-        {assets.map((asset) =>
+        {assets.map((asset, index) =>
           asset.error ? (
-            <tr key={asset.symbol}>
+            <tr key={`${String(index)} ${asset.symbol}`}>
               <td>{asset.symbol}</td>
               <td colSpan={6} className={styles.bad}>
                 {asset.error}
               </td>
             </tr>
           ) : (
-            <tr key={asset.symbol}>
+            <tr key={`${String(index)} ${asset.symbol}`}>
               <td>{asset.symbol}</td>
               <td>{asset.first}</td>
               <td>{asset.last}</td>

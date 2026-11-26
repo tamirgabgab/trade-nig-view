@@ -21,6 +21,9 @@ on one day, with a row per deposit and gross and net results. The user's choices
   - `data`: loading.
 - **Tickers.** A universe symbol is used as it is. Any other ticker becomes an ad-hoc symbol in the currency the
   request states (USD or ILS); the bar cache keys it by its Yahoo symbol. The universe and the chart are unchanged.
+  - A `.TA` ticker is always a Tel Aviv one: shekels, Jerusalem time, the exchange's hours.
+  - A ticker Yahoo does not know is an empty answer, not a provider failure, so typos never open Yahoo's circuit
+    breaker for the chart.
 - **USD/ILS.** Yahoo's `ILS=X` daily close. Before its first bar, or when it cannot be loaded, the Bank of Israel's
   official rate (ADR 0018), with a warning. A bar's rate is the last one on or before its day.
 - **The account** (`market.run_market`):
@@ -30,7 +33,8 @@ on one day, with a row per deposit and gross and net results. The user's choices
     is a purchase, so it joins the cost basis. A price-only series can take an assumed yearly yield.
   - *Account fees.* A yearly management fee μ takes 1 − (1 − μ)^(1/12) of the value at each month end. The monthly
     fee is in shekels. Both are paid by selling the same fraction of every lot. The fee is not deductible.
-  - *The sale.* Everything is sold on the end date, less the sell commission.
+  - *The sale.* Everything is sold on the end date, less the sell commission. An asset whose last bar is more than
+    7 days before the end date has stopped trading, and the plan is refused (a weekend or a holiday is fine).
   - *The tax.* The rate times the **sum** of the lots' gains, so a loss offsets a gain; nothing is paid on a total
     loss. The gain is everything sold minus everything bought. Costs are optionally indexed by the CPI (real) or by
     the asset's currency (the dollar gain).
@@ -45,7 +49,8 @@ on one day, with a row per deposit and gross and net results. The user's choices
     the close, so the ends are exact.
   - *Granularity.* Coarse 10 × 10 cells × 14 times, medium 20 × 20 × 27, fine 40 × 40 × 79.
   - *A deposit with a time of day.* It is filled inside the finest intraday bar that holds it (1m, 5m, 1h). Without
-    such a bar it is placed inside the daily bar by the exchange's session.
+    such a bar it is placed inside the daily bar by the exchange's session. A deposit on a day without trading
+    buys at the next bar's open.
 - **Inflation.**
   - *Assumed, by default.* Yearly rates π_y = μ + φ(π_{y−1} − μ) + σ√(1 − φ²)ε, spread evenly over months. The
     mean path is used unless a draw is asked for.

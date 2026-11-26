@@ -119,3 +119,13 @@ def test_xirr_without_a_sign_change_has_no_answer() -> None:
     assert xirr([0, 100], [-100.0, -5.0]) is None
     assert xirr([0, 100], [100.0, 5.0]) is None
     assert xirr([], []) is None
+
+
+def test_xirr_of_a_plan_of_a_century_does_not_overflow() -> None:
+    year = 365.25
+    got = xirr([0, 80 * year, 96 * year], [-100.0, -100.0, 5000.0])
+    assert got is not None
+    assert 0.0 < got < 0.3
+    # The answer really is a root.
+    flows, years = np.array([-100.0, -100.0, 5000.0]), np.array([0.0, 80.0, 96.0])
+    assert float(np.sum(flows * (1 + got) ** -years)) == pytest.approx(0.0, abs=1e-6)

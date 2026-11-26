@@ -31,6 +31,9 @@ export function PlannerPage({ className }: { className: string | undefined }) {
     work()
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'The request failed');
+        // Never an error above the results of an earlier, different request.
+        setResult(null);
+        setDepths(null);
       })
       .finally(() => {
         setStatus('idle');

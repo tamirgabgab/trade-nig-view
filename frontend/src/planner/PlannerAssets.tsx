@@ -40,7 +40,12 @@ export function PlannerAssets() {
                   spellCheck={false}
                   placeholder="e.g. SPY"
                   onChange={(event) => {
-                    change(index, { symbol: event.target.value.toUpperCase() });
+                    const symbol = event.target.value.toUpperCase();
+                    // A Tel Aviv ticker is priced in shekels (the backend treats it so too).
+                    change(
+                      index,
+                      symbol.endsWith('.TA') ? { symbol, currency: 'ILS' } : { symbol },
+                    );
                   }}
                 />
               </td>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import panel from '../components/IndicatorSettingsPanel.module.css';
 
@@ -13,8 +13,9 @@ interface PlannerNumberProps {
 }
 
 /**
- * A number input that can be cleared and retyped: the typed text is kept while editing; every
- * valid number in [min, max] is applied at once, anything else is dropped when the field is left.
+ * A number input that can be cleared and retyped: the typed text is kept while editing and
+ * every number in [min, max] is applied at once. If the field is left holding anything else
+ * (empty, out of range), the value from before the edit comes back, never a typed prefix.
  */
 export function PlannerNumber({
   label,
@@ -25,6 +26,8 @@ export function PlannerNumber({
   onChange,
 }: PlannerNumberProps) {
   const [draft, setDraft] = useState<string | null>(null);
+  const before = useRef(value);
+  const valid = (typed: number) => Number.isFinite(typed) && typed >= min && typed <= max;
   return (
     <input
       className={panel.control}
@@ -34,12 +37,17 @@ export function PlannerNumber({
       max={max}
       step={step}
       value={draft ?? String(value)}
+      onFocus={() => {
+        before.current = value;
+      }}
       onChange={(event) => {
         setDraft(event.target.value);
-        const typed = event.target.valueAsNumber;
-        if (Number.isFinite(typed) && typed >= min && typed <= max) onChange(typed);
+        if (valid(event.target.valueAsNumber)) onChange(event.target.valueAsNumber);
       }}
       onBlur={() => {
+        if (draft !== null && !valid(Number(draft === '' ? Number.NaN : draft))) {
+          onChange(before.current);
+        }
         setDraft(null);
       }}
     />

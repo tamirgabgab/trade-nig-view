@@ -54,6 +54,9 @@ from app.planner.xirr import xirr
 
 DAYS_PER_YEAR = 365.25
 MAX_FEE_FRACTION = 1.0 - 1e-9  # keeps the logarithm of the fee factor finite
+#: An end date this many days past an asset's last bar still sells on that bar (a weekend, a
+#: holiday); later than that the asset has stopped trading and the plan is refused.
+MAX_STALE_DAYS = 7
 
 
 class TaxBase(StrEnum):
@@ -169,13 +172,14 @@ def month_ends(first: int, last: int) -> IntArray:
         day = month_end + timedelta(days=1)
 
 
-def growth(asset: AssetData, dividend_tax: float) -> FloatArray:
-    """:math:`G_s`: units per unit bought at bar 0, from net dividends reinvested."""
+def growth(asset: AssetData, dividend_tax: float) -> tuple[FloatArray, FloatArray]:
+    """:math:`(G_s, r_s)`: units per unit bought at bar 0 from net dividends reinvested, and the
+    gross growth of each bar."""
     gross = np.ones(len(asset.days))
     gross[1:] = asset.factor[1:] / asset.factor[:-1]
     if asset.dividend_yield:
         gross[1:] *= (1.0 + asset.dividend_yield) ** (np.diff(asset.days) / DAYS_PER_YEAR)
-    return np.cumprod(1.0 + (1.0 - dividend_tax) * (gross - 1.0))
+    return np.cumprod(1.0 + (1.0 - dividend_tax) * (gross - 1.0)), gross
 
 
 def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring is the map
@@ -220,6 +224,8 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
     cost: list[FloatArray] = []
     prices: list[FloatArray] = []
     g_all: list[FloatArray] = []
+    gross_all: list[FloatArray] = []
+    invested_day = dep_days.copy()  # the day a deposit is fully invested (its last purchase)
     shekel: list[FloatArray] = []
     event_index: list[IntArray] = []
     last_index: list[int] = []
@@ -246,6 +252,10 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
         t_last = int(np.searchsorted(asset.days, end_day, side="right")) - 1
         if np.any(i > t_last):
             raise PlanError(f"{asset.symbol} has no bar between a deposit and the end date")
+        if end_day - asset.days[t_last] > MAX_STALE_DAYS:
+            last = date(1970, 1, 1) + timedelta(days=int(asset.days[t_last]))
+            raise PlanError(f"{asset.symbol} has no data after {last}: end the plan by then")
+        invested_day = np.maximum(invested_day, asset.days[i])
         o, h, lo, c = (x[i] for x in (asset.open, asset.high, asset.low, asset.close))
         if not np.all(np.isfinite(asset.fx[i])):
             raise PlanError(f"No exchange rate for {asset.symbol} on a deposit day")
@@ -259,7 +269,8 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
         if fill_override is not None:
             price = np.where(np.isnan(fill_override[:, a]), price, fill_override[:, a])
         money = amounts * (1.0 - fees.deposit) * (asset.weight / total_weight)
-        g = growth(asset, taxes.dividend)
+        g, gross = growth(asset, taxes.dividend)
+        gross_all.append(gross)
         q0 = money / ((1.0 + fees.buy) * price * asset.fx[i])
         buy_index.append(i)
         units0.append(q0)
@@ -296,7 +307,7 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
     lots: list[Lot] = []
     value_by_deposit = np.zeros(n)
     gain_by_deposit = np.zeros(n)
-    reinvested_total = 0.0
+    dividend_tax = 0.0
     for a, asset in enumerate(used):
         g, e, t_last, i, k = g_all[a], event_index[a], last_index[a], buy_index[a], first_event[a]
         if taxes.base is TaxBase.REAL:
@@ -310,6 +321,9 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
         step[1:] = g[:-1] * (g[1:] / g[:-1] - 1.0) * shekel[a][1:]
         reinvest = np.cumsum(step)
         reinvest_indexed = np.cumsum(step / level)
+        taxed = np.zeros(len(g))  # the dividend tax taken on each bar, per "bar 0 unit"
+        taxed[1:] = taxes.dividend * g[:-1] * (gross_all[a][1:] - 1.0) * shekel[a][1:]
+        taxed = np.cumsum(taxed)
         # rel[j, m]: the lot's units factor before fee event m (0 before the lot exists).
         active = np.arange(events)[None, :] >= k[:, None]
         rel = np.where(active, np.exp(log_factor[:-1][None, :] - log_factor[k][:, None]), 0.0)
@@ -319,21 +333,21 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
         seg_start = np.concatenate((e_safe, [t_last]))  # bar of event m; the end after the last
         first_stop = seg_start[k]
         after = rel * (1.0 - phi)[None, :]  # the factor after event m
-        plain, indexed = (
+        plain, indexed, withheld = (
             per_g[a]
             * (
                 cum[first_stop]
                 - cum[i]
                 + (after * (cum[seg_start[1:]] - cum[seg_start[:-1]])[None, :]).sum(axis=1)
             )
-            for cum in (reinvest, reinvest_indexed)
+            for cum in (reinvest, reinvest_indexed, taxed)
         )
         final_factor = np.exp(log_factor[-1] - log_factor[k])
         final_units = per_g[a] * g[t_last] * final_factor
         value = final_units * shekel[a][t_last]
         indexed_cost = (cost[a] / level[i] + indexed) * level[t_last]
         gain = (1.0 - fees.sell) * value + fees_paid - indexed_cost
-        reinvested_total += float(plain.sum())
+        dividend_tax += float(withheld.sum())
         value_by_deposit += value
         gain_by_deposit += gain
         lots.extend(
@@ -391,14 +405,12 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
         deposit_fees=deposited * fees.deposit,
         commissions=trade_value * fees.buy + value_total * fees.sell,
         account_fees=float(paid.sum()),
-        dividend_tax=reinvested_total * taxes.dividend / (1.0 - taxes.dividend)
-        if taxes.dividend < 1.0
-        else 0.0,
+        dividend_tax=dividend_tax,
         xirr_gross=xirr(flow_days, np.concatenate((-amounts, [proceeds]))),
         xirr_net=xirr(flow_days, net_flows),
         net_value_real=net_value * float(deflate[-1]),
         xirr_net_real=xirr(flow_days, net_flows * deflate),
         path_days=path_days,
         path_value=[*path_value.tolist(), value_total],
-        path_deposited=[float(amounts[dep_days <= d].sum()) for d in path_days],
+        path_deposited=[float(amounts[invested_day <= d].sum()) for d in path_days],
     )

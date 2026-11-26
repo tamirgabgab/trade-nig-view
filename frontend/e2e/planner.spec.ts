@@ -42,6 +42,8 @@ test('planner: deposits into AAPL give a row per deposit, the totals and the dat
   await planner.getByLabel('Deposit date 1').fill('1990-01-02');
   await planner.getByRole('button', { name: 'Run' }).click();
   await expect(planner.getByRole('alert')).toContainText(`AAPL has no data before ${first}`);
+  // The earlier run's results are gone: never an error above someone else's numbers.
+  await expect(deposits).toBeHidden();
   await page.reload();
   await page.getByRole('button', { name: 'Planner: home vs market' }).click();
   await expect(planner.getByLabel('Ticker 1')).toHaveValue('AAPL');

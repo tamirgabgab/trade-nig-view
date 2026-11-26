@@ -7,8 +7,8 @@ The rate :math:`r` that solves
 
 for cash flows :math:`c_k` (deposits negative, the final value positive) on days :math:`d_k`.
 With many deposits a CAGR of "final value over total deposited" is wrong: it ignores when the
-money went in. Solved by bisection on :math:`(-0.9999, 100)`; ``None`` when the flows do not
-change sign (no root).
+money went in. Solved by bisection between the lowest rate whose present value is finite (from
+-99.99 %; very long plans overflow there) and 10,000 %; ``None`` when there is no root.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from collections.abc import Sequence
 import numpy as np
 
 DAYS_PER_YEAR = 365.25
-LOW, HIGH = -0.9999, 100.0
+LOWS, HIGH = (-0.9999, -0.99, -0.9, -0.5, 0.0), 100.0
 
 
 def xirr(days: Sequence[float] | np.ndarray, flows: Sequence[float] | np.ndarray) -> float | None:
@@ -31,7 +31,11 @@ def xirr(days: Sequence[float] | np.ndarray, flows: Sequence[float] | np.ndarray
     def npv(rate: float) -> float:
         return float(np.sum(c * (1.0 + rate) ** -years))
 
-    lo, hi = LOW, HIGH
+    with np.errstate(over="ignore", invalid="ignore"):
+        lo = next((rate for rate in LOWS if np.isfinite(npv(rate))), None)
+    if lo is None:
+        return None
+    hi = HIGH
     f_lo, f_hi = npv(lo), npv(hi)
     if f_lo * f_hi > 0:
         return None

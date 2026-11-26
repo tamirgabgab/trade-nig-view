@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import datetime as dt
+import zoneinfo
 from http import HTTPStatus
 from typing import Annotated, Literal
 
 import numpy as np
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.api.deps import get_bar_service, get_macro_service, get_universe
 from app.data.bar_service import BarService
@@ -116,6 +117,15 @@ class MarketRequest(AssetsRequest):
     fill: FillIn = FillIn()
     inflation: InflationIn = InflationIn()
     timezone: str = Field(default="Asia/Jerusalem", description="Of the deposit times")
+
+    @field_validator("timezone")
+    @classmethod
+    def _known_zone(cls, value: str) -> str:
+        try:
+            zoneinfo.ZoneInfo(value)
+        except (zoneinfo.ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError(f"unknown time zone {value!r}") from exc
+        return value
 
 
 class AssetDepth(BaseModel):
@@ -270,11 +280,11 @@ def _run(
     if not one_off and not recurring:
         raise PlanError("A plan needs at least one deposit")
     starts = [d.day for d in one_off] + [r.start for r in recurring]
+    if body.end <= min(starts):
+        raise PlanError("The end date must be after the first deposit")
     first, last = day_number(min(starts)), day_number(body.end)
     cpi = _cpi(body, macro, first, last)
     deposits = [d for d in expand(one_off, recurring, cpi) if d.day < body.end]
-    if not deposits:
-        raise PlanError("The end date must be after the first deposit")
 
     warnings: list[str] = []
     fx: FxSeries | None = usd_ils(service, macro, universe) if body.use_fx else None

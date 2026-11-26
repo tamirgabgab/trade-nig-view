@@ -2,7 +2,7 @@
 
 The user's algorithm (Monte Carlo with rejection, 2026-11-26), amortised: instead of rejecting the
 paths that do not match one bar, every path is binned by its own (u, v), so one run serves every
-bar. Run from ``backend/`` (about ten minutes; the result is committed)::
+bar. Run from ``backend/`` (about five minutes for the committed table's 8 million paths)::
 
     uv run python ../scripts/make_fill_table.py
 
@@ -59,9 +59,8 @@ def simulate(paths: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         for z in (y, 1.0 - y, y[:, ::-1], 1.0 - y[:, ::-1]):
             u, v = z[:, :1], z[:, -1:]
             resid = z - (u + t * (v - u))
-            cell = (
-                np.minimum((u[:, 0] * CELLS).astype(np.int64), CELLS - 1) * CELLS
-                + np.minimum((v[:, 0] * CELLS).astype(np.int64), CELLS - 1)
+            cell = np.minimum((u[:, 0] * CELLS).astype(np.int64), CELLS - 1) * CELLS + np.minimum(
+                (v[:, 0] * CELLS).astype(np.int64), CELLS - 1
             )
             counts += np.bincount(cell, minlength=CELLS * CELLS)
             flat = (cell[:, None] * times + np.arange(times)).ravel()
@@ -88,7 +87,9 @@ def quantiles(hist: np.ndarray) -> np.ndarray:
     return out
 
 
-def level(sums: np.ndarray, counts: np.ndarray, hist: np.ndarray, merge: int, skip: int):
+def level(
+    sums: np.ndarray, counts: np.ndarray, hist: np.ndarray, merge: int, skip: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     cells = CELLS // merge
     s = sums[:, :, ::skip].reshape(cells, merge, cells, merge, -1).sum(axis=(1, 3))
     n = counts.reshape(cells, merge, cells, merge).sum(axis=(1, 3))
@@ -108,11 +109,13 @@ def main(paths: int) -> int:
         mean, q, n = level(sums, counts, hist, merge, skip)
         arrays[f"{name}_mean"], arrays[f"{name}_quantiles"] = mean, q
         arrays[f"{name}_count"] = n.astype(np.int64)
-        print(f"{name:6} cells {mean.shape[0]:2}  times {mean.shape[2]:2}  fewest samples {n.min():,}")
+        print(
+            f"{name:6} cells {mean.shape[0]:2}  times {mean.shape[2]:2}  fewest samples {n.min():,}"
+        )
     np.savez_compressed(OUT, **arrays)
     print(f"wrote {OUT} ({OUT.stat().st_size / 1e6:.1f} MB)")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main(int(sys.argv[1]) if len(sys.argv) > 1 else 6_000_000))
+    sys.exit(main(int(sys.argv[1]) if len(sys.argv) > 1 else 8_000_000))

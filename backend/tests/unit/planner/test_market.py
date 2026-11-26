@@ -405,3 +405,45 @@ def test_no_fx_equals_fx_at_a_constant_rate() -> None:
     assert scaled.value == pytest.approx(plain.value, rel=1e-12)
     assert scaled.tax == pytest.approx(plain.tax, rel=1e-12)
     assert scaled.xirr_net == pytest.approx(plain.xirr_net, abs=1e-12)
+
+
+# ---------------------------------------------------------------- review fixes
+
+
+def shortened(a: AssetData, last: date) -> AssetData:
+    keep = a.days <= day_number(last)
+    return AssetData(
+        a.symbol, a.weight, a.days[keep], a.open[keep], a.high[keep], a.low[keep], a.close[keep],
+        a.factor[keep], a.fx[keep], a.dividend_yield,
+    )  # fmt: skip
+
+
+def test_an_asset_that_stopped_trading_long_before_the_end_refuses_the_plan() -> None:
+    deposits = [Deposit(START, 1000.0)]
+    # A weekend or a holiday before the end date is fine: the last bar is sold.
+    recent = shortened(asset(price=10.0), END - timedelta(days=4))
+    assert run([recent], deposits).value == pytest.approx(1000.0)
+    stale = shortened(asset(price=10.0), date(2022, 6, 30))
+    with pytest.raises(PlanError, match="AAA has no data after 2022-06-30"):
+        run([stale], deposits)
+
+
+def test_a_full_dividend_tax_is_reported_not_zero() -> None:
+    a = asset(price=10.0, dividends=True)
+    result = run([a], [Deposit(START, 1000.0)], taxes=Taxes(gains=0.0, dividend=1.0))
+    i = int(np.searchsorted(a.days, day_number(START)))
+    t = int(np.searchsorted(a.days, day_number(END), side="right")) - 1
+    exes = round(np.log(a.factor[t] / a.factor[i]) / np.log(1 / 0.99))
+    assert result.value == pytest.approx(1000.0)  # nothing is left to reinvest
+    assert result.dividend_tax == pytest.approx(exes * 1000.0 * (1 / 0.99 - 1))
+
+
+def test_the_path_counts_a_deposit_once_it_is_invested() -> None:
+    # Saturday 2022-12-31 is a month end; the money is invested on Monday 2023-01-02, the end.
+    result = run(
+        [asset(price=10.0)],
+        [Deposit(date(2022, 12, 30), 500.0), Deposit(date(2022, 12, 31), 700.0)],
+    )
+    assert result.path_days == [day_number(date(2022, 12, 31)), day_number(END)]
+    assert result.path_deposited == [500.0, 1200.0]
+    assert result.path_value == pytest.approx([500.0, 1200.0])

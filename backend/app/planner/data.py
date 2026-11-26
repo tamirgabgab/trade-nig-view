@@ -2,15 +2,17 @@
 CPI, and fills from intraday bars when a deposit has a time of day.
 
 * **Tickers.** A universe symbol is used as it is; any other ticker becomes an ad-hoc symbol in
-  the currency the request states (``.TA`` tickers trade in Jerusalem time). Yahoo quotes
-  Tel Aviv shares in agorot: the unit cancels between buying and selling.
+  the currency the request states. A ``.TA`` ticker is a Tel Aviv one whatever the request says:
+  shekels, Jerusalem time, the exchange's hours. Yahoo quotes Tel Aviv shares in agorot: the unit
+  cancels between buying and selling.
 * **USD/ILS.** Yahoo's market rate (``ILS=X``, daily closes); before its first bar, or when it
   cannot be loaded, the Bank of Israel's official rate. A bar's rate is the last one on or before
   its day.
 * **A deposit with a time** is filled from the finest intraday bar that contains that instant
   (1m, then 5m, then 1h; the fill model runs inside that bar). Without such a bar, the time
   becomes a position inside the daily bar: the fraction of the exchange's cash session that has
-  passed (0 before the open, 1 after the close).
+  passed (0 before the open, 1 after the close). A deposit on a day without trading buys at the
+  next bar's open.
 """
 
 from __future__ import annotations
@@ -29,15 +31,18 @@ from app.errors import DataUnavailableError
 from app.macro.service import MacroService
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, IntArray, Interval
 from app.models.symbols import SymbolInfo, parse_session_start
-from app.planner.deposits import Deposit
+from app.planner.deposits import Deposit, day_number
 from app.planner.fills import fill_prices
 from app.planner.market import AssetData, FillSpec, PlanError
 
 TICKER = re.compile(r"^[A-Za-z0-9.^=\-]{1,20}$")
 USD_ILS = "ILS=X"
 US_CASH_HOURS = "09:30-16:00"
+#: Tel Aviv: approximate, from secondary sources (see ``config/universe.toml``).
+TASE_HOURS = {"cash_hours": "09:59-17:14", "friday_hours": "10:00-14:00"}
 INTRADAY_BASES = (Interval.MIN1, Interval.MIN5, Interval.H1)
 DIVIDEND_TOLERANCE = 1e-9
+FRIDAY = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +81,7 @@ def asset_info(universe: Universe, request: AssetRequest) -> SymbolInfo:
     symbol = request.symbol.strip().upper()
     if not TICKER.fullmatch(symbol):
         raise PlanError(f"'{request.symbol}' is not a ticker")
-    return SymbolInfo(
+    info = SymbolInfo(
         symbol=symbol,
         display=symbol,
         name=symbol,
@@ -84,8 +89,13 @@ def asset_info(universe: Universe, request: AssetRequest) -> SymbolInfo:
         group="",
         exchange="",
         currency=request.currency,
-        timezone="Asia/Jerusalem" if symbol.endswith(".TA") else "America/New_York",
     )
+    if symbol.endswith(".TA"):
+        return info.model_copy(
+            update={"exchange": "TASE", "currency": "ILS", "timezone": "Asia/Jerusalem"}
+            | TASE_HOURS
+        )
+    return info
 
 
 def usd_ils(service: BarService, macro: MacroService, universe: Universe) -> FxSeries:
@@ -150,15 +160,20 @@ def load_asset(
     return LoadedAsset(info, data, bool(np.ptp(factor) > DIVIDEND_TOLERANCE))
 
 
-def session_fraction(info: SymbolInfo, deposit_day: date, instant: datetime) -> float:
-    """Where ``instant`` falls in the exchange's cash session of ``deposit_day`` (0 .. 1; NaN for
-    markets without one, such as futures and forex)."""
+def session_fraction(info: SymbolInfo, bar_day: date, instant: datetime) -> float:
+    """Where ``instant`` falls in the exchange's cash session of ``bar_day``, the day of the bar
+    the purchase lands on (0 .. 1; NaN for markets without a cash session: futures, forex).
+
+    An instant before that day (a weekend or holiday deposit, or an evening before the session)
+    is 0: the purchase waits for the open.
+    """
     if info.session_start is not None:
         return float("nan")
     local = instant.astimezone(ZoneInfo(info.timezone))
-    if local.date() != deposit_day:
-        return 0.0 if local.date() < deposit_day else 1.0
-    start, _, end = (info.cash_hours or US_CASH_HOURS).partition("-")
+    if local.date() != bar_day:
+        return 0.0 if local.date() < bar_day else 1.0
+    friday = info.friday_hours if bar_day.weekday() == FRIDAY else None
+    start, _, end = (friday or info.cash_hours or US_CASH_HOURS).partition("-")
     opened, closed = parse_session_start(start), parse_session_start(end)
     minutes = local.hour * 60 + local.minute + local.second / 60
     return float(np.clip((minutes - opened) / (closed - opened), 0.0, 1.0))
@@ -188,7 +203,12 @@ def timed_fills(
         for j, deposit in timed:
             assert deposit.at is not None  # noqa: S101 - filtered above
             instant = datetime.combine(deposit.day, deposit.at, zone)
-            session_t[j, a] = session_fraction(asset.info, deposit.day, instant)
+            days = asset.data.days
+            bar = int(np.searchsorted(days, day_number(deposit.day), side="left"))
+            if bar >= len(days):
+                continue  # no bar to buy on: run_market reports it
+            bar_day = date(1970, 1, 1) + timedelta(days=int(days[bar]))
+            session_t[j, a] = session_fraction(asset.info, bar_day, instant)
             stamp = instant.timestamp()
             for base, frame in frames:
                 k = int(np.searchsorted(frame.time, stamp, side="right")) - 1

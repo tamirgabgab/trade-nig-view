@@ -147,6 +147,34 @@ def test_plans_that_cannot_run_are_422(
     assert detail in response.json()["detail"]
 
 
+def test_a_timed_deposit_on_a_day_without_trading_buys_at_the_next_open(
+    client: TestClient,
+) -> None:
+    # Saturday 2026-01-31, 20:00 in Israel: the purchase lands on Monday's bar (open 105).
+    saturday = [{"date": "2026-01-31", "amount": 1000, "time": "20:00"}]
+    lot = run(client, deposits=saturday, fill={"mode": "linear"})["deposits"][0]["lots"][0]
+    assert (lot["date"], lot["price"]) == ("2026-02-02", 105.0)
+
+
+def test_an_end_date_long_after_the_data_or_before_the_first_deposit_is_422(
+    client: TestClient,
+) -> None:
+    late = client.post("/api/planner/market", json={**BASE, "end": "2031-02-20"})
+    assert (late.status_code, late.json()["code"]) == (422, "invalid_plan")
+    assert "AAA has no data after 2026-02-20" in late.json()["detail"]
+    early = client.post(
+        "/api/planner/market",
+        json={**BASE, "end": "2025-10-01", "inflation": {"sd_pct": 1, "seed": 1}},
+    )
+    assert (early.status_code, early.json()["code"]) == (422, "invalid_plan")
+    assert "after the first deposit" in early.json()["detail"]
+
+
+def test_an_unknown_time_zone_is_a_validation_error(client: TestClient) -> None:
+    bad = client.post("/api/planner/market", json={**BASE, "timezone": "Mars/Phobos"})
+    assert (bad.status_code, bad.json()["code"]) == (422, "validation_error")
+
+
 def test_bad_fields_and_missing_data(client: TestClient) -> None:
     bad = client.post("/api/planner/market", json={**BASE, "taxes": {"gains_pct": 150}})
     assert (bad.status_code, bad.json()["code"]) == (422, "validation_error")

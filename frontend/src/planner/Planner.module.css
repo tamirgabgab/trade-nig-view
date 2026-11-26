@@ -1,6 +1,8 @@
 .page {
   position: relative;
-  z-index: 5;
+  /* Above the chart's own overlays (the replay bar, toasts, the floating sidebar: up to 7),
+     below menus and tooltips (100) and dialogs (200). */
+  z-index: 50;
   display: grid;
   grid-template-columns: minmax(360px, 480px) minmax(0, 1fr);
   gap: 1px;
