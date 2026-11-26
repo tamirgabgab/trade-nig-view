@@ -1,0 +1,19 @@
+const WHOLE = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const PRICE = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+});
+
+/** Shekels, rounded to whole ones: `₪12,345`, `−₪12,345`. */
+export function shekels(value: number): string {
+  const sign = value < -0.5 ? '−' : '';
+  return `${sign}₪${WHOLE.format(Math.abs(value))}`;
+}
+
+/** A fraction as a percentage with two decimals (`0.0712` → `7.12%`); a dash for null. */
+export function percent(value: number | null | undefined): string {
+  return value === null || value === undefined ? '—' : `${(value * 100).toFixed(2)}%`;
+}
+
+/** A price or an exchange rate: 2 to 4 decimals. */
+export const price = (value: number) => PRICE.format(value);

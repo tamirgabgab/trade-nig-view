@@ -30,3 +30,8 @@
 .bottom {
   grid-area: bottom;
 }
+
+/* The planner covers everything under the top bar. */
+.planner {
+  grid-area: 2 / 1 / -1 / -1;
+}

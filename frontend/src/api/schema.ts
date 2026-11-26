@@ -644,6 +644,18 @@ export interface components {
              * @default false
              */
             has_dividends: boolean;
+            /**
+             * Sell Date
+             * @description The bar a plan is sold on
+             */
+            sell_date?: string | null;
+            /** Sell Price */
+            sell_price?: number | null;
+            /**
+             * Sell Fx
+             * @description Shekels per unit of its currency
+             */
+            sell_fx?: number | null;
             /** Error */
             error?: string | null;
         };

@@ -62,3 +62,10 @@
   display: flex;
   gap: 2px;
 }
+
+/* Narrow windows: the symbol button gives its spare width to the toolbar's buttons. */
+@media (max-width: 1099px) {
+  .symbolButton {
+    min-width: 96px;
+  }
+}

@@ -53,6 +53,9 @@ export type Modal =
 
 /** Transient UI state (not persisted): which overlay is open. */
 export interface UiState {
+  /** What fills the window under the top bar: the chart, or the home-vs-market planner. */
+  view: 'chart' | 'planner';
+  setView: (view: 'chart' | 'planner') => void;
   /** The open modal dialog, or null. */
   modal: Modal | null;
   /** Text the symbol search opens with (the key typed on the chart). */
@@ -97,12 +100,16 @@ export interface UiState {
   dismissToast: () => void;
 }
 
-/** Any modal dialog open: the global hotkeys stay quiet. */
+/** A modal dialog is open or the planner covers the chart: the chart's hotkeys stay quiet. */
 export function selectModalOpen(s: UiState): boolean {
-  return s.modal !== null;
+  return s.modal !== null || s.view === 'planner';
 }
 
 export const useUiStore = create<UiState>()((set) => ({
+  view: 'chart',
+  setView: (view) => {
+    set({ view });
+  },
   modal: null,
   symbolSeed: '',
   openModal: (modal, symbolSeed = '') => {

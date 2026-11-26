@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import calendar
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from enum import StrEnum
 
@@ -224,12 +224,27 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
     shekel: list[FloatArray] = []
     event_index: list[IntArray] = []
     last_index: list[int] = []
-    for a, asset in enumerate(assets):
+    used: list[AssetData] = []
+    for a, whole in enumerate(assets):
+        first = date(1970, 1, 1) + timedelta(days=int(whole.days[0]))
+        if dep_days.min() < whole.days[0]:
+            raise PlanError(f"{whole.symbol} has no data before {first}: start the plan later")
+        # Only the bars from the first purchase on: earlier ones (and a rate missing there)
+        # must not reach the running sums.
+        cut = slice(int(np.searchsorted(whole.days, dep_days.min(), side="left")), None)
+        asset = replace(
+            whole,
+            days=whole.days[cut],
+            open=whole.open[cut],
+            high=whole.high[cut],
+            low=whole.low[cut],
+            close=whole.close[cut],
+            factor=whole.factor[cut],
+            fx=whole.fx[cut],
+        )
+        used.append(asset)
         i = np.searchsorted(asset.days, dep_days, side="left")
         t_last = int(np.searchsorted(asset.days, end_day, side="right")) - 1
-        first = date(1970, 1, 1) + timedelta(days=int(asset.days[0]))
-        if dep_days.min() < asset.days[0]:
-            raise PlanError(f"{asset.symbol} has no data before {first}: start the plan later")
         if np.any(i > t_last):
             raise PlanError(f"{asset.symbol} has no bar between a deposit and the end date")
         o, h, lo, c = (x[i] for x in (asset.open, asset.high, asset.low, asset.close))
@@ -284,7 +299,7 @@ def run_market(  # noqa: PLR0912, PLR0915 - one account, one pass; the docstring
     value_by_deposit = np.zeros(n)
     gain_by_deposit = np.zeros(n)
     reinvested_total = 0.0
-    for a, asset in enumerate(assets):
+    for a, asset in enumerate(used):
         g, e, t_last, i, k = g_all[a], event_index[a], last_index[a], buy_index[a], first_event[a]
         if index_of == "cpi":
             level = cpi.at(asset.days)

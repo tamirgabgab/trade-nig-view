@@ -36,6 +36,9 @@ def test_depth_table_reports_each_ticker_and_its_errors(client: TestClient) -> N
         "last": "2026-02-20",
         "bars": 19,
         "has_dividends": True,
+        "sell_date": None,
+        "sell_price": None,
+        "sell_fx": None,
         "error": None,
     }
     assert rows[1]["symbol"] == "NOPE"
@@ -53,6 +56,8 @@ def test_one_deposit_without_fx_fees_or_tax(client: TestClient) -> None:
     assert body["earliest_start"] == "2026-01-26"
     assert body["fx_market_from"] is None
     assert body["warnings"] == []
+    sold = body["assets"][0]
+    assert (sold["sell_date"], sold["sell_price"], sold["sell_fx"]) == ("2026-02-20", 119.0, 1.0)
     (row,) = body["deposits"]
     assert row["lots"] == [
         {"symbol": "AAA", "date": "2026-01-26", "price": 101.0, "fx": 1.0, "units": 10.0,

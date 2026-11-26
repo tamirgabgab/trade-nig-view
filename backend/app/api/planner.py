@@ -125,6 +125,9 @@ class AssetDepth(BaseModel):
     last: dt.date | None = None
     bars: int = 0
     has_dividends: bool = Field(default=False, description="The adjusted close differs from it")
+    sell_date: dt.date | None = Field(default=None, description="The bar a plan is sold on")
+    sell_price: float | None = None
+    sell_fx: float | None = Field(default=None, description="Shekels per unit of its currency")
     error: str | None = None
 
 
@@ -192,14 +195,20 @@ def _to_date(day: int) -> dt.date:
     return dt.date(1970, 1, 1) + dt.timedelta(days=int(day))
 
 
-def _depth(asset: LoadedAsset) -> AssetDepth:
+def _depth(asset: LoadedAsset, end: int | None = None) -> AssetDepth:
+    """The asset's history; with ``end`` (a day number), also the bar a plan sells on."""
+    data = asset.data
+    t = None if end is None else int(np.searchsorted(data.days, end, side="right")) - 1
     return AssetDepth(
         symbol=asset.info.symbol,
         currency=asset.info.currency,
         first=first_day(asset),
         last=last_day(asset),
-        bars=len(asset.data.days),
+        bars=len(data.days),
         has_dividends=asset.has_dividends,
+        sell_date=None if t is None else _to_date(data.days[t]),
+        sell_price=None if t is None else float(data.close[t]),
+        sell_fx=None if t is None else float(data.fx[t]),
     )
 
 
@@ -321,7 +330,7 @@ def _run(
     years = (last - first) / 365.25
     growth = float(cpi.at(last) / cpi.at(first))
     return MarketResponse(
-        assets=[_depth(a) for a in assets],
+        assets=[_depth(a, last) for a in assets],
         earliest_start=max(first_day(a) for a in assets),
         fx_market_from=_to_date(fx.market_from)
         if fx is not None and fx_used and fx.market_from is not None

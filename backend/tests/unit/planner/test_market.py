@@ -234,6 +234,22 @@ def test_a_holiday_deposit_buys_on_the_next_bar_and_fills_follow_the_model() -> 
     assert fixed.lots[0].price == 42.0
 
 
+def test_a_rate_missing_before_the_first_deposit_does_not_matter() -> None:
+    a = asset(seed=5, dividends=True, fx=3.5)
+    fx = a.fx.copy()
+    fx[a.days < day_number(START)] = np.nan  # the rate series starts on the first deposit day
+    late = AssetData(a.symbol, 1.0, a.days, a.open, a.high, a.low, a.close, a.factor, fx)
+    deposits = [Deposit(START, 1000.0), Deposit(date(2021, 3, 1), 500.0)]
+    want, got = run([a], deposits), run([late], deposits)
+    assert np.isfinite(got.taxable_gain)
+    assert (got.value, got.tax) == pytest.approx((want.value, want.tax), rel=1e-12)
+    # A rate missing on a deposit day itself is an error.
+    fx[a.days <= day_number(START)] = np.nan
+    missing = AssetData(a.symbol, 1.0, a.days, a.open, a.high, a.low, a.close, a.factor, fx)
+    with pytest.raises(PlanError, match="No exchange rate"):
+        run([missing], deposits)
+
+
 def test_plans_that_cannot_run_say_why() -> None:
     young = asset(first=date(2021, 1, 1))
     with pytest.raises(PlanError, match="AAA has no data before 2021-01-01"):

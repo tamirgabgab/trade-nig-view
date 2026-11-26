@@ -8,6 +8,7 @@ import {
   Plus,
   Redo2,
   Rewind,
+  Scale,
   Search,
   Settings,
   Sun,
@@ -46,6 +47,7 @@ export function TopToolbar({ className }: TopToolbarProps) {
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const fullscreen = useFullscreen();
   const replaying = useReplayStore((s) => s.mode !== 'off');
+  const planner = useUiStore((s) => s.view === 'planner');
   const canUndo = useHistoryStore((s) => s.past.length > 0);
   const canRedo = useHistoryStore((s) => s.future.length > 0);
   const undo = useHistoryStore((s) => s.undo);
@@ -123,6 +125,15 @@ export function TopToolbar({ className }: TopToolbarProps) {
         onClick={redo}
       />
       <span className={styles.spacer} />
+      <IconButton
+        label={planner ? 'Back to the chart' : 'Planner: home vs market'}
+        text="Planner"
+        icon={<Scale size={ICON_SIZE} />}
+        pressed={planner}
+        onClick={() => {
+          useUiStore.getState().setView(planner ? 'chart' : 'planner');
+        }}
+      />
       <LayoutMenu />
       <IconButton
         label={isLightTheme(theme) ? 'Switch to dark theme' : 'Switch to light theme'}

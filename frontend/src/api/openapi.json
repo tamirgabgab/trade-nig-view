@@ -2100,6 +2100,42 @@
             "description": "The adjusted close differs from it",
             "default": false
           },
+          "sell_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Date",
+            "description": "The bar a plan is sold on"
+          },
+          "sell_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Price"
+          },
+          "sell_fx": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Fx",
+            "description": "Shekels per unit of its currency"
+          },
           "error": {
             "anyOf": [
               {
