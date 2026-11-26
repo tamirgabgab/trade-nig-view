@@ -54,7 +54,7 @@ import numpy as np
 from app.models.bars import FloatArray
 from app.planner.deposits import add_months, day_number
 from app.planner.market import PlanError
-from app.planner.mortgage import Schedule, Track, amortize, combine
+from app.planner.mortgage import RateKind, Schedule, Track, amortize, combine
 from app.planner.xirr import xirr
 
 LINEAR_FROM = date(2014, 1, 1)
@@ -186,6 +186,44 @@ def assumed_values(
     else:
         steps = rng.normal(drift - sigma * sigma / 24.0, sigma / np.sqrt(12.0), months)
     return np.exp(np.concatenate(([0.0], np.cumsum(steps))))
+
+
+#: The rises of the Bank of Israel rate the stress test tries, in yearly points.
+STRESS_RISES = (0.01, 0.02, 0.03)
+
+
+@dataclass(frozen=True, slots=True)
+class Stress:
+    rise: float
+    #: The highest monthly payment over the whole term of the loan.
+    highest_payment: float
+    #: Paid to the bank until the sale.
+    paid: float
+
+
+def rate_stress(plan: HomePlan, series: HomeSeries) -> list[Stress]:
+    """The mortgage if the anchor rate were higher from the second month on, all else as it is.
+
+    The rate of month 1 is already set on the purchase day, so the anchor :math:`a_0` stays and
+    :math:`a_k` becomes :math:`a_k + \\text{rise}` for :math:`k \\ge 1`: a prime track pays more
+    from month 2, a variable one from its next reset. The highest payment is over the whole
+    term, not until the sale: a reset after the planned sale would otherwise read as no risk.
+    Empty when no track follows the anchor.
+    """
+    if all(track.kind is RateKind.FIXED for track in plan.tracks):
+        return []
+    months = max([plan.months, *(track.months for track in plan.tracks)])
+    rows: list[Stress] = []
+    for rise in STRESS_RISES:
+        anchor = series.anchor.copy()
+        anchor[1:] += rise
+        mortgage = combine([amortize(t, anchor, series.cpi) for t in plan.tracks], months)
+        rows.append(
+            Stress(
+                rise, float(mortgage.payment.max()), float(mortgage.payment[: plan.months].sum())
+            )
+        )
+    return rows
 
 
 def run_home(plan: HomePlan, series: HomeSeries) -> HomeResult:

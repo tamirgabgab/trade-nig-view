@@ -72,10 +72,11 @@ export type BettermentSpec = Schemas['BettermentIn'];
 /** Checks the shape the page relies on (the lists and the summary's numbers). */
 export function parseHome(body: unknown): HomeResult {
   if (!isRecord(body)) throw new Error('Unexpected /api/planner/home response');
-  const { summary, tracks, schedule, path, warnings } = body;
+  const { summary, tracks, schedule, path, stress, warnings } = body;
   if (
     !isRecord(summary) ||
     !Array.isArray(tracks) ||
+    !Array.isArray(stress) ||
     !Array.isArray(schedule) ||
     !Array.isArray(path) ||
     !Array.isArray(warnings)

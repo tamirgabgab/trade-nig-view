@@ -81,6 +81,42 @@ describe('PlannerHome', () => {
     expect(screen.getByRole('button', { name: 'Run' })).toBeEnabled();
   });
 
+  it('shows what a higher Bank of Israel rate does to the payments, or why nothing moves', async () => {
+    const user = userEvent.setup();
+    let stress: unknown[] = [];
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/home': () => jsonResponse({ ...HOME_RESULT, stress }),
+    });
+    renderWithQuery(<PlannerHome hidden={false} />);
+    const run = screen.getByRole('button', { name: 'Run' });
+    await vi.waitFor(() => {
+      expect(run).toBeEnabled();
+    });
+    await user.click(run);
+    expect(await screen.findByText(/^Every track has a fixed rate/)).toBeVisible();
+    expect(screen.queryByRole('table', { name: 'Rate stress' })).not.toBeInTheDocument();
+
+    stress = [
+      { rise: 0.01, highest_payment: 3_950.5, paid: 7_500 },
+      { rise: 0.02, highest_payment: 4_325.55, paid: 7_900 },
+    ];
+    await user.click(run);
+    const table = await screen.findByRole('table', { name: 'Rate stress' });
+    const rows = within(table)
+      .getAllByRole('row')
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
+    // Against the plan's own highest payment over the whole term (3,635.88).
+    expect(rows.slice(1)).toEqual([
+      ['+1 point', '₪3,951', '+₪315', '₪7,500'],
+      ['+2 points', '₪4,326', '+₪690', '₪7,900'],
+    ]);
+  });
+
   it('never runs without the tax tables', async () => {
     stubApi({ '/api/planner/tax-presets': { status: 503, body: { detail: 'down' } } });
     renderWithQuery(<PlannerHome hidden={false} />);

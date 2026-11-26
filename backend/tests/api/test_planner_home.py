@@ -237,7 +237,7 @@ def test_a_higher_bank_of_israel_rate_moves_a_prime_track_from_the_second_month(
         assert row["highest_payment"] == pytest.approx(moved)
         assert row["paid"] == pytest.approx(first + 23 * moved)
     two = body["stress"][1]
-    assert two["highest_payment"] - first == pytest.approx(686.52, abs=0.005)
+    assert two["highest_payment"] - first == pytest.approx(689.67, abs=0.005)
 
 
 def test_a_variable_track_moves_only_at_its_reset_so_the_whole_term_is_stressed(

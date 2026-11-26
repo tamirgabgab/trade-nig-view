@@ -4685,6 +4685,14 @@
             "type": "array",
             "title": "Path"
           },
+          "stress": {
+            "items": {
+              "$ref": "#/components/schemas/StressOut"
+            },
+            "type": "array",
+            "title": "Stress",
+            "description": "The payments at a higher Bank of Israel rate; empty with fixed tracks only"
+          },
           "warnings": {
             "items": {
               "type": "string"
@@ -4699,6 +4707,7 @@
           "tracks",
           "schedule",
           "path",
+          "stress",
           "warnings"
         ],
         "title": "HomeResponse"
@@ -9180,6 +9189,32 @@
           "hit_rate"
         ],
         "title": "StatsBlock"
+      },
+      "StressOut": {
+        "properties": {
+          "rise": {
+            "type": "number",
+            "title": "Rise",
+            "description": "Added to the Bank of Israel rate from the second month on"
+          },
+          "highest_payment": {
+            "type": "number",
+            "title": "Highest Payment",
+            "description": "Over the whole term of the loan"
+          },
+          "paid": {
+            "type": "number",
+            "title": "Paid",
+            "description": "Paid to the bank until the sale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rise",
+          "highest_payment",
+          "paid"
+        ],
+        "title": "StressOut"
       },
       "StudyRequest": {
         "properties": {

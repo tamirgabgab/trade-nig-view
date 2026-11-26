@@ -96,5 +96,6 @@ export const HOME_RESULT = {
       rent: 0,
     },
   ],
+  stress: [],
   warnings: ['After the last published CPI it is held flat'],
 };

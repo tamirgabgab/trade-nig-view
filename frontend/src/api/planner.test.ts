@@ -48,6 +48,8 @@ describe('parseHome', () => {
   it('accepts a result; only the returns may be null', () => {
     expect(parseHome(HOME_RESULT).summary.first_payment).toBe(3635.88);
     expect(() => parseHome({ ...HOME_RESULT, schedule: undefined })).toThrow('Unexpected');
+    // An older backend, without the stress test: an error, not a table that breaks.
+    expect(() => parseHome({ ...HOME_RESULT, stress: undefined })).toThrow('Unexpected');
     const summary = { ...HOME_RESULT.summary, net_worth: null };
     expect(() => parseHome({ ...HOME_RESULT, summary })).toThrow('net_worth');
   });

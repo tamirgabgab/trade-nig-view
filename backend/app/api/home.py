@@ -14,7 +14,7 @@ from app.macro.service import MacroService
 from app.planner import tax_presets
 from app.planner.data import Macro, cpi_path
 from app.planner.deposits import add_months
-from app.planner.home import Betterment, Bracket, HomePlan, RentMode, run_home
+from app.planner.home import Betterment, Bracket, HomePlan, RentMode, rate_stress, run_home
 from app.planner.home_data import HomeSpec, home_series, month_days
 from app.planner.market import PlanError
 from app.planner.mortgage import RateKind, Repayment, Schedule, Track
@@ -179,11 +179,20 @@ class HomeSummary(BaseModel):
     xirr_real: float | None
 
 
+class StressOut(BaseModel):
+    rise: float = Field(description="Added to the Bank of Israel rate from the second month on")
+    highest_payment: float = Field(description="Over the whole term of the loan")
+    paid: float = Field(description="Paid to the bank until the sale")
+
+
 class HomeResponse(BaseModel):
     summary: HomeSummary
     tracks: list[TrackOut]
     schedule: list[ScheduleRow] = Field(description="All tracks, the whole term")
     path: list[HomePoint]
+    stress: list[StressOut] = Field(
+        description="The payments at a higher Bank of Israel rate; empty with fixed tracks only"
+    )
     warnings: list[str]
 
 
@@ -414,6 +423,10 @@ def _run(body: HomeRequest, macro: Macro) -> HomeResponse:
                 rent=float(result.rent[k]),
             )
             for k in range(held + 1)
+        ],
+        stress=[
+            StressOut(rise=s.rise, highest_payment=s.highest_payment, paid=s.paid)
+            for s in rate_stress(plan, series)
         ],
         warnings=warnings,
     )

@@ -1891,6 +1891,11 @@ export interface components {
             schedule: components["schemas"]["ScheduleRow"][];
             /** Path */
             path: components["schemas"]["HomePoint"][];
+            /**
+             * Stress
+             * @description The payments at a higher Bank of Israel rate; empty with fixed tracks only
+             */
+            stress: components["schemas"]["StressOut"][];
             /** Warnings */
             warnings: string[];
         };
@@ -3875,6 +3880,24 @@ export interface components {
              * @description Share of returns > 0
              */
             hit_rate: number | null;
+        };
+        /** StressOut */
+        StressOut: {
+            /**
+             * Rise
+             * @description Added to the Bank of Israel rate from the second month on
+             */
+            rise: number;
+            /**
+             * Highest Payment
+             * @description Over the whole term of the loan
+             */
+            highest_payment: number;
+            /**
+             * Paid
+             * @description Paid to the bank until the sale
+             */
+            paid: number;
         };
         /** StudyRequest */
         StudyRequest: {

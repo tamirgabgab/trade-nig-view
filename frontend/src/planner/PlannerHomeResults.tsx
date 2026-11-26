@@ -2,7 +2,7 @@ import type { HomeResult } from '../api/planner.ts';
 import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
 import { PlannerHeading } from './PlannerHeading.tsx';
-import { percent, shekels } from './plannerFormat.ts';
+import { percent, shekels, signedShekels } from './plannerFormat.ts';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
 
 type TrackRow = HomeResult['tracks'][number];
@@ -40,9 +40,17 @@ const SCHEDULE: PlannerColumn<ScheduleRow>[] = [
   ['Rate', (r) => percent(r.rate)],
 ];
 
+/** A rise of a yearly rate in whole points: `+1 point`, `+2 points`. */
+const rise = (fraction: number) => {
+  const points = Math.round(fraction * 100);
+  return `+${String(points)} point${points === 1 ? '' : 's'}`;
+};
+
 /** An apartment run: the totals, each track, and the months until the sale and of the loan. */
 export function PlannerHomeResults({ result }: { result: HomeResult }) {
   const s = result.summary;
+  // The stress rows are over the loan's whole term, so they are set against its highest payment.
+  const highest = Math.max(0, ...result.schedule.map((row) => row.payment));
   const cards: PlannerCard[] = [
     ['Loan', shekels(s.loan), `With ${shekels(s.equity)} of equity`],
     ['Purchase tax', shekels(s.purchase_tax)],
@@ -94,6 +102,30 @@ export function PlannerHomeResults({ result }: { result: HomeResult }) {
           <h2 className={styles.heading}>Mortgage tracks</h2>
           <PlannerTable label="Mortgage tracks" columns={TRACKS} rows={result.tracks} />
         </>
+      )}
+      <h2 className={styles.heading}>If the Bank of Israel rate rose</h2>
+      {result.stress.length > 0 ? (
+        <PlannerTable
+          label="Rate stress"
+          columns={[
+            ['Bank of Israel rate', (row) => rise(row.rise)],
+            ['Highest payment, whole term', (row) => shekels(row.highest_payment)],
+            ['Against the plan', (row) => signedShekels(row.highest_payment - highest)],
+            ['Paid until the sale', (row) => shekels(row.paid)],
+          ]}
+          rows={result.stress}
+        />
+      ) : (
+        <p className={styles.note}>
+          Every track has a fixed rate: the Bank of Israel rate does not move the payments.
+        </p>
+      )}
+      {result.stress.length > 0 && (
+        <p className={styles.note}>
+          The same loan with the Bank of Israel rate that much higher from the second month on,
+          everything else as entered: a prime track pays more at once, a variable one from its next
+          reset. The highest payment is over the whole term of the loan, not only until the sale.
+        </p>
       )}
       <PlannerHeading
         csv="apartment path"
