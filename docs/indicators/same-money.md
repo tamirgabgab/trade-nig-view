@@ -36,7 +36,10 @@ $$
 An option whose own spending is below $F(d)$ invests the rest in its market account:
 
 $$
-u_A(d) = F(d) - f_A(d) \ \ge 0, \qquad u_B(d) = F(d) - f_B(d) \ \ge 0
+\begin{aligned}
+u_A(d) &= F(d) - f_A(d) \ \ge 0 \\[4pt]
+u_B(d) &= F(d) - f_B(d) \ \ge 0
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -67,8 +70,10 @@ The comparison's headline is the difference, and each option's yearly return is 
 shared spending going out and its end value coming in:
 
 $$
-\Delta = W_A - W_B, \qquad
--\sum_{d} F(d)\,(1 + r_A)^{-\tau_d} + W_A\,(1 + r_A)^{-\tau_{\text{end}}} = 0
+\begin{aligned}
+\Delta &= W_A - W_B \\[4pt]
+0 &= -\sum_{d} F(d)\,(1 + r_A)^{-\tau_d} + W_A\,(1 + r_A)^{-\tau_{\text{end}}}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |

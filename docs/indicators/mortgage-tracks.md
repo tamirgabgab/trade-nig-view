@@ -55,9 +55,11 @@ then moves by as much as the Bank of Israel rate moved since the loan began. No 
 Every month does the same four things to the balance:
 
 $$
-B_k^{+} = B_{k-1} \cdot \frac{\mathrm{CPI}_k}{\mathrm{CPI}_{k-1}} \quad (\text{linked tracks only}), \qquad
-\text{interest}_k = B_k^{+}\, i_k, \qquad
-B_k = B_k^{+} + \text{interest}_k - M_k
+\begin{aligned}
+B_k^{+} &= B_{k-1} \cdot \frac{\mathrm{CPI}_k}{\mathrm{CPI}_{k-1}} \quad (\text{linked tracks only}) \\[4pt]
+\text{interest}_k &= B_k^{+}\, i_k \\[4pt]
+B_k &= B_k^{+} + \text{interest}_k - M_k
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -79,7 +81,10 @@ that month.
 **Spitzer** (a level payment) repays what is owed over the months that are left:
 
 $$
-M_k = \frac{B_k^{+}\, i_k}{1 - (1 + i_k)^{-m_k}}, \qquad m_k = n - k + 1
+\begin{aligned}
+M_k &= \frac{B_k^{+}\, i_k}{1 - (1 + i_k)^{-m_k}} \\[4pt]
+m_k &= n - k + 1
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -111,7 +116,10 @@ months left. **Balloon** is a grace of all the months but the last: the whole lo
 The table "If the Bank of Israel rate rose" runs the same loan again with a higher rate from the second month on:
 
 $$
-\mathrm{BoI}_k' = \mathrm{BoI}_k + \delta \quad \text{for } k \ge 1, \qquad \mathrm{BoI}_0' = \mathrm{BoI}_0
+\begin{aligned}
+\mathrm{BoI}_0' &= \mathrm{BoI}_0 \\[4pt]
+\mathrm{BoI}_k' &= \mathrm{BoI}_k + \delta \quad \text{for } k \ge 1
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |

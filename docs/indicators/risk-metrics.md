@@ -19,8 +19,11 @@ first day).
 ### The bad tail
 
 $$
-Q_p = \text{the value that } p \text{ of the worlds end below}, \qquad
-\mathrm{CVaR}_{5\,\%} = \frac{1}{N_{\text{worst}}} \sum_{w \,\in\, \text{worst}} W^{(w)}, \quad N_{\text{worst}} = \lceil 0.05\, N \rceil
+\begin{aligned}
+Q_p &= \text{the value that } p \text{ of the worlds end below} \\[4pt]
+\mathrm{CVaR}_{5\,\%} &= \frac{1}{N_{\text{worst}}} \sum_{w \,\in\, \text{worst}} W^{(w)} \\[4pt]
+N_{\text{worst}} &= \lceil 0.05\, N \rceil
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -75,8 +78,10 @@ below; the table then says "Ruin".
 ### The share between the handles
 
 $$
-\hat p = \frac{\#\{w : a \le W^{(w)} \le b\}}{N}, \qquad
-\text{interval} = \frac{\hat p + \dfrac{1.96^2}{2N} \pm 1.96 \sqrt{\dfrac{\hat p (1 - \hat p)}{N} + \dfrac{1.96^2}{4N^2}}}{1 + \dfrac{1.96^2}{N}}
+\begin{aligned}
+\hat p &= \frac{\#\{w : a \le W^{(w)} \le b\}}{N} \\[4pt]
+\text{interval} &= \frac{\hat p + \dfrac{1.96^2}{2N} \pm 1.96 \sqrt{\dfrac{\hat p (1 - \hat p)}{N} + \dfrac{1.96^2}{4N^2}}}{1 + \dfrac{1.96^2}{N}}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -89,7 +94,10 @@ $$
 ### One world's path
 
 $$
-\text{drawdown} = \max_{k} \frac{\text{peak}_k - \mathrm{NW}_k}{\text{peak}_k}, \qquad \text{peak}_k = \max_{j \le k} \mathrm{NW}_j
+\begin{aligned}
+\text{peak}_k &= \max_{j \le k} \mathrm{NW}_j \\[4pt]
+\text{drawdown} &= \max_{k} \frac{\text{peak}_k - \mathrm{NW}_k}{\text{peak}_k}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -99,9 +107,11 @@ $$
 | $\text{drawdown}$ | the deepest fall from a peak, as a share of that peak | 0 % to 100 % |
 
 $$
-y_t = \frac{\mathrm{NW}_{t} - \mathrm{NW}_{t-1} - D_t}{\mathrm{NW}_{t-1} + D_t / 2}, \qquad
-\text{Sharpe} = \frac{\bar y}{\operatorname{sd}(y)}, \qquad
-\text{Sortino} = \frac{\bar y}{\sqrt{\frac{1}{n_y}\sum_t \min(y_t, 0)^2}}
+\begin{aligned}
+y_t &= \frac{\mathrm{NW}_{t} - \mathrm{NW}_{t-1} - D_t}{\mathrm{NW}_{t-1} + D_t / 2} \\[4pt]
+\text{Sharpe} &= \frac{\bar y}{\operatorname{sd}(y)} \\[4pt]
+\text{Sortino} &= \frac{\bar y}{\sqrt{\frac{1}{n_y}\sum_t \min(y_t, 0)^2}}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -174,9 +184,10 @@ that is risk aversion. The average usefulness of the spread is $\bar U = \frac1N
 equivalent is the sure amount with exactly that usefulness: solve $U(\mathrm{CE}) = \bar U$,
 
 $$
-\frac{\mathrm{CE}^{1 - \gamma}}{1 - \gamma} = \frac{1}{N}\sum_w \frac{(W^{(w)})^{1-\gamma}}{1 - \gamma}
-\quad\Longrightarrow\quad
-\mathrm{CE} = \left(\frac1N \sum_w (W^{(w)})^{1-\gamma}\right)^{\frac{1}{1-\gamma}}
+\begin{aligned}
+\frac{\mathrm{CE}^{1 - \gamma}}{1 - \gamma} &= \frac{1}{N}\sum_w \frac{(W^{(w)})^{1-\gamma}}{1 - \gamma} \\[4pt]
+\Longrightarrow\quad \mathrm{CE} &= \left(\frac1N \sum_w (W^{(w)})^{1-\gamma}\right)^{\frac{1}{1-\gamma}}
+\end{aligned}
 $$
 
 With $\gamma = 2$ the power is $-1$: $\mathrm{CE} = N / \sum_w (1/W^{(w)})$, the harmonic mean. With $\gamma = 0$

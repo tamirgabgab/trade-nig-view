@@ -35,13 +35,10 @@ Each window $w$ gives a pair of end values, $W_A^{(w)}$ and $W_B^{(w)}$, by [the
 ### How often A wins
 
 $$
-P(A > B) = \frac{1}{N} \sum_{w=1}^{N} \mathbb{1}^{(w)}, \qquad
-\mathbb{1}^{(w)} =
-\begin{cases}
-1 & W_A^{(w)} > W_B^{(w)} \\
-\tfrac12 & W_A^{(w)} = W_B^{(w)} \\
-0 & W_A^{(w)} < W_B^{(w)}
-\end{cases}
+\begin{aligned}
+P(A > B) &= \frac{1}{N} \sum_{w=1}^{N} \mathbb{1}^{(w)} \\[4pt]
+\mathbb{1}^{(w)} &= \begin{cases} 1 & W_A^{(w)} > W_B^{(w)} \\ \tfrac12 & W_A^{(w)} = W_B^{(w)} \\ 0 & W_A^{(w)} < W_B^{(w)} \end{cases}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |

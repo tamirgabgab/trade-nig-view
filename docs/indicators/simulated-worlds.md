@@ -24,8 +24,10 @@ drawn from its model. The method decides only what the **market** is.
 A modelled series (the market under Monte Carlo, an apartment's assumed value) moves by one random step a month:
 
 $$
-x_k = \frac{\ln(1 + \mu)}{12} - \frac{\sigma^2}{24} + \frac{\sigma}{\sqrt{12}}\, z_k, \qquad
-G_k = G_{k-1}\, e^{x_k}, \qquad G_0 = 1
+\begin{aligned}
+x_k &= \frac{\ln(1 + \mu)}{12} - \frac{\sigma^2}{24} + \frac{\sigma}{\sqrt{12}}\, z_k \\[4pt]
+G_k &= G_{k-1}\, e^{x_k}, \qquad G_0 = 1
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -43,7 +45,10 @@ derivation), and the month's noise.
 ### What the model implies for a year
 
 $$
-\mathbb{E}[G_{12}] = 1 + \mu, \qquad \operatorname{median}(G_{12}) = (1 + \mu)\, e^{-\sigma^2 / 2}
+\begin{aligned}
+\mathbb{E}[G_{12}] &= 1 + \mu \\[4pt]
+\operatorname{median}(G_{12}) &= (1 + \mu)\, e^{-\sigma^2 / 2}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -59,7 +64,10 @@ With "Estimate the market from the mix's history" ticked, $\mu$ and $\sigma$ are
 growth in shekels (dividends included, the weights restored every month):
 
 $$
-\sigma = \operatorname{sd}(x) \sqrt{12}, \qquad \mu = e^{\,12\,(\bar x + \operatorname{sd}(x)^2 / 2)} - 1
+\begin{aligned}
+\sigma &= \operatorname{sd}(x) \sqrt{12} \\[4pt]
+\mu &= e^{\,12\,(\bar x + \operatorname{sd}(x)^2 / 2)} - 1
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -157,7 +165,10 @@ $0.5 \cdot 1 + 0.866 \cdot (-0.4) = +0.154$: pulled up by the market, held back 
 independent normal shocks is normal, so $X$ is normal with
 
 $$
-\text{mean} = \ln(1 + \mu) - \frac{\sigma^2}{2}, \qquad \text{variance} = 12 \cdot \frac{\sigma^2}{12} = \sigma^2
+\begin{aligned}
+\text{mean} &= \ln(1 + \mu) - \frac{\sigma^2}{2} \\[4pt]
+\text{variance} &= 12 \cdot \frac{\sigma^2}{12} = \sigma^2
+\end{aligned}
 $$
 
 The growth itself is $G_{12} = e^{X}$. For a normal $X$, the average of $e^{X}$ is

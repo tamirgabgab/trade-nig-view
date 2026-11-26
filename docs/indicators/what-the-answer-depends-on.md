@@ -23,7 +23,10 @@ The apartment's return is recomputed with some of its four sources switched off,
 what it adds:
 
 $$
-\phi_j = \sum_{K \subseteq \text{sources} \setminus \{j\}} \frac{|K|!\,\big(4 - |K| - 1\big)!}{4!}\,\Big( v\big(K \cup \{j\}\big) - v(K) \Big)
+\begin{aligned}
+\phi_j &= \sum_{K \subseteq \text{sources} \setminus \{j\}} \text{weight}_K \cdot \Big( v\big(K \cup \{j\}\big) - v(K) \Big) \\[4pt]
+\text{weight}_K &= \frac{\lvert K \rvert!\,\big(4 - \lvert K \rvert - 1\big)!}{4!}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -31,9 +34,10 @@ $$
 | $\text{sources}$ | the four sources: appreciation, rent, leverage (the mortgage), costs and taxes | — |
 | $j$ | one of the sources | — |
 | $K$ | a set of *other* sources that are switched on | — |
-| $|K|$ | how many sources are in $K$ | 0 to 3 |
+| $\lvert K \rvert$ | how many sources are in $K$ | 0 to 3 |
 | $v(K)$ | the apartment's yearly return ([XIRR](learn:xirr)) with only the sources in $K$ switched on | per year |
 | $v(K \cup \{j\}) - v(K)$ | what source $j$ adds when it is switched on after the sources in $K$ | points of yearly return |
+| $\text{weight}_K$ | the share of the 24 possible orders in which exactly the sources in $K$ are switched on before source $j$ | 1/12 to 1/4 |
 | $\phi_j$ | the share of source $j$: its average addition over every order of switching the four on (the Shapley value) | points of yearly return |
 
 "Switched off" means: no appreciation (the value stays at the price), no rent, no loan (bought in cash), no costs
@@ -73,7 +77,10 @@ $$
 A move **tilts** the path in use, it does not replace it. An apartment's value and an asset's price become
 
 $$
-V_k' = V_k\,(1 + \delta)^{k/12}, \qquad \text{price}_d' = \text{price}_d\,(1 + \delta)^{\tau_d}
+\begin{aligned}
+V_k' &= V_k\,(1 + \delta)^{k/12} \\[4pt]
+\text{price}_d' &= \text{price}_d\,(1 + \delta)^{\tau_d}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -87,7 +94,10 @@ So history stays history, with its crashes, only a little steeper or flatter.
 ### A forced sale
 
 $$
-\mathrm{NW}^{\text{forced}} = V_T\,(1 - \kappa)(1 - \text{sell}) - B_T\,(1 + \text{early}) - \text{betterment}\big(V_T (1 - \kappa)\big)
+\begin{aligned}
+\mathrm{NW}^{\text{forced}} ={}& V_T\,(1 - \kappa)(1 - \text{sell}) - B_T\,(1 + \text{early}) \\[4pt]
+& - \text{betterment}\big(V_T (1 - \kappa)\big)
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -100,8 +110,10 @@ $$
 ### Do the two move together
 
 $$
-\hat\rho = \operatorname{corr}(y^{\text{home}}, y^{\text{market}}), \qquad
-\text{interval} = \tanh\!\left(\operatorname{artanh}(\hat\rho) \pm \frac{1.96}{\sqrt{n_y - 3}}\right)
+\begin{aligned}
+\hat\rho &= \operatorname{corr}(y^{\text{home}}, y^{\text{market}}) \\[4pt]
+\text{interval} &= \tanh\!\left(\operatorname{artanh}(\hat\rho) \pm \frac{1.96}{\sqrt{n_y - 3}}\right)
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -179,8 +191,8 @@ $$
 $$
 
 Every order sums to the same total, the full return minus the empty one, so the average of the orders does too.
-The Shapley value is that average; the weight $|K|!\,(4 - |K| - 1)!/4!$ in the formula is just the share of the
-24 orders in which exactly the sources in $K$ come before source $j$.
+The Shapley value is that average; $\text{weight}_K$ in the formula is just the share of the 24 orders in which
+exactly the sources in $K$ come before source $j$.
 
 **Why bisection finds a breakeven.** If $\Delta$ is positive at one end of a range and negative at the other, and
 changes smoothly in between, it is zero somewhere inside. Halving the range and keeping the half where the sign

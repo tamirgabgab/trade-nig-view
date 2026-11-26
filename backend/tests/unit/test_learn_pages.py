@@ -334,6 +334,10 @@ def test_planner_page_has_its_sections_and_a_symbol_table_for_every_formula(slug
     assert missing_sections(markdown, PLANNER_SECTIONS) == [], f"{slug}.md: missing or out of order"
     assert formulas_without_symbols(markdown) == [], f"{slug}.md: a formula without its symbols"
     assert SYMBOL_TABLE in markdown
+    # A bar inside math in a table row ends the cell: the row would lose its columns.
+    for line in markdown.splitlines():
+        if line.startswith("|"):
+            assert not any("|" in math for math in _MATH.findall(line)), f"{slug}.md: {line[:60]}"
     # An unescaped % starts a TeX comment: the rest of the formula would vanish without an error.
     for math in _MATH.findall(markdown):
         assert not re.search(r"(?<!\\)%", math), f"{slug}.md: write \\% inside math: {math[:60]}"

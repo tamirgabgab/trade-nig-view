@@ -18,8 +18,10 @@ tab's question ([the same money rule](learn:same-money)).
 The owner pays the equity and the purchase costs out of pocket; the bank lends the rest.
 
 $$
-C_0 = \text{tax}(V_0) + (\text{lawyer} + \text{broker})\, V_0 + \text{renovation}, \qquad
-L = V_0 - E
+\begin{aligned}
+C_0 &= \text{tax}(V_0) + (\text{lawyer} + \text{broker})\, V_0 + \text{renovation} \\[4pt]
+L &= V_0 - E
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -61,9 +63,11 @@ With "Assumed growth" and no volatility, $J_k = (1 + g)^{k/12}$ for the yearly g
 ### Each month
 
 $$
-\text{out}_k = M_k + \text{own}_k - \text{rent}_k, \qquad
-\text{own}_k = \frac{\text{maint}\, V_k}{12} + \frac{\text{ins}}{12} \cdot \frac{\mathrm{CPI}_k}{\mathrm{CPI}_0}, \qquad
-\text{rent}_k = \text{rent}_1 \cdot \frac{Y_{k-1}}{Y_0}
+\begin{aligned}
+\text{out}_k &= M_k + \text{own}_k - \text{rent}_k \\[4pt]
+\text{own}_k &= \frac{\text{maint}\, V_k}{12} + \frac{\text{ins}}{12} \cdot \frac{\mathrm{CPI}_k}{\mathrm{CPI}_0} \\[4pt]
+\text{rent}_k &= \text{rent}_1 \cdot \frac{Y_{k-1}}{Y_0}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -99,8 +103,10 @@ $$
 **Betterment tax** is charged on the gain above inflation:
 
 $$
-\text{gain}_k = V_k (1 - \text{sell}) - (V_0 + C_0) \cdot \frac{\mathrm{CPI}_k}{\mathrm{CPI}_0}, \qquad
-\text{betterment}_k = \text{rate}_b \cdot \theta_k \cdot \max(\text{gain}_k, 0)
+\begin{aligned}
+\text{gain}_k &= V_k (1 - \text{sell}) - (V_0 + C_0) \cdot \frac{\mathrm{CPI}_k}{\mathrm{CPI}_0} \\[4pt]
+\text{betterment}_k &= \text{rate}_b \cdot \theta_k \cdot \max(\text{gain}_k, 0)
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
@@ -119,12 +125,16 @@ home bought before 2014 and sold after it, it is also multiplied by the share of
 The apartment's yearly return is the [XIRR](learn:xirr) of the owner's own cash:
 
 $$
-c_0 = -(E + C_0), \qquad c_k = -\text{out}_k \quad (1 \le k \le T), \qquad c_T \mathrel{+}= \mathrm{NW}_T
+\begin{aligned}
+c_0 &= -(E + C_0) \\[4pt]
+c_k &= -\text{out}_k \quad (1 \le k \le T) \\[4pt]
+c_T &= -\text{out}_T + \mathrm{NW}_T
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $c_k$ | the owner's cash flow in month $k$: negative when money goes out | ₪ |
+| $c_k$ | the owner's cash flow in month $k$: negative when money goes out. The last one also receives the net worth | ₪ |
 | $T$ | the month of the sale | months |
 
 ## Worked example
