@@ -297,7 +297,7 @@ discipline).
 | **H1** ✅ 2026-11-26 | Market engine: deposit schedules, the symbol mix (rebalancing optional), lots, FX on/off, the four fees, the six fill options (close, open, mid-range, linear, piecewise by direction or random, the ABC table at three granularities, generated offline from the user's algorithm), the model CPI, taxes (nominal or real base), the table per deposit, XIRR. Tests: a scalar golden model of the whole account, hand-computed lots and fees, XIRR against known cash flows, "no FX" equals FX at a constant rate, each fill option's hand vectors, the fill table's symmetries and its agreement with direct rejection sampling within the Monte Carlo error, the CPI generator's mean, σ and autocorrelation. | L |
 | **H2** ✅ 2026-11-26 | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0020. | L |
 | **H3a** ✅ 2026-11-26 | Scenarios: modes A, B and A+B, mirrored cash flows (with an independent golden model), rolling historical windows with the effective-sample count, and layer 1 of the metrics (P(A > B) and the median difference, XIRR, breakeven rates, the win map, time-averaged net worth). Tests: known answers (constant returns), P(A > B) = 0.5 for identical sides, a breakeven rate that reproduces equality. | L |
-| **H3b** | Statistics: block bootstrap and Monte Carlo on paired realizations, histograms, percentiles, P(a ≤ X ≤ b) with its interval, and layer 2 (the bad tail, regret, path risks, stochastic dominance, certainty equivalent). Tests: reproducibility by seed, zero regret for identical sides, dominance of X + c over X, the correlations kept by the blocks. | L |
+| **H3b** ✅ 2026-11-26 | Statistics: block bootstrap and Monte Carlo on paired realizations, histograms, percentiles, P(a ≤ X ≤ b) with its interval, and layer 2 (the bad tail, regret, path risks, stochastic dominance, certainty equivalent). Tests: reproducibility by seed, zero regret for identical sides, dominance of X + c over X, the correlations kept by the blocks. | L |
 | **H3c** | Layer 3: the decomposition of the apartment's return, sensitivity, breakeven time, liquidity, the benefit of combining. | M |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
 | **H5** | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
@@ -312,6 +312,22 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H3b results (2026-11-26, ADR 0022)
+- The user's choices before H3b: the Bank of Israel rate's level travels with its block; a modelled market
+  estimated from the mix's history and editable, with a correlation to a modelled apartment (a single apartment's
+  own volatility is deferred); a histogram with draggable handles already now; payment stress against an income
+  that rises with the CPI.
+- One rule for both methods: what a tab marks historical is resampled, what it marks assumed is drawn from its
+  model; the method decides only the market.
+- A world depends only on the seed and its number, so both options, a longer plan and H3c's one-input changes all
+  see the same worlds.
+- The mean of a modelled series is its expected growth, on both sides.
+- A world of a 10-year plan takes about 6 ms; 1,000 worlds are the default.
+- The Compare tab now has the histogram with handles, so H4 keeps the net-worth path charts, the forms of a free
+  second option, saved scenarios and CSV export.
+- Still open: a single apartment's own volatility on top of the index; a simulation on real data on the user's
+  machine.
 
 ## H3a results (2026-11-26, ADR 0021)
 - The user's choices before H3a: a general engine (each option holds an apartment, a market account, both or
