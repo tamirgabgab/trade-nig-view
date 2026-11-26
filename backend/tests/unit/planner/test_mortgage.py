@@ -42,9 +42,6 @@ def test_spitzer_is_the_textbook_constant_payment() -> None:
     assert s.balance[-1] == 0.0
     assert s.principal.sum() == pytest.approx(LOAN, rel=1e-12)
     assert s.interest[0] == pytest.approx(LOAN * R)
-    assert s.outstanding(0, LOAN) == LOAN
-    assert s.outstanding(12, LOAN) == pytest.approx(closed[11])
-    assert s.outstanding(N + 5, LOAN) == 0.0
 
 
 def test_a_zero_rate_divides_the_loan_evenly() -> None:

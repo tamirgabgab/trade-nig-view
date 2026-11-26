@@ -88,12 +88,6 @@ class Schedule:
     balance: FloatArray
     rate: FloatArray
 
-    def outstanding(self, months: int, amount: float) -> float:
-        """The balance after ``months`` payments (the loan itself before the first)."""
-        if months <= 0:
-            return amount
-        return float(self.balance[months - 1]) if months <= len(self.balance) else 0.0
-
 
 def track_rates(track: Track, anchor: FloatArray) -> FloatArray:
     """The yearly rate of each month; ``anchor[k]`` is the anchor rate at :math:`d_k`."""

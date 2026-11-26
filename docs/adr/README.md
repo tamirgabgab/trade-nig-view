@@ -21,3 +21,7 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0014](0014-market-regime.md) | Market regime: Chow–Denning variance ratios with a wild bootstrap, DFA, and a background tint | Accepted |
 | [0015](0015-appearance.md) | Appearance: theme presets, a transparent chart over a static backdrop | Accepted |
 | [0016](0016-chart-tools.md) | Chart tools: compare, patterns, icons, eraser, zoom box, forecast pointer | Accepted |
+| [0017](0017-minute-intervals.md) | Minute intervals: base intervals, resampled ones, accumulated history | Accepted |
+| [0018](0018-macro-series.md) | Macro series from the Bank of Israel | Accepted |
+| [0019](0019-planner-market-account.md) | The planner's market account and fill model | Accepted |
+| [0020](0020-planner-mortgage-apartment.md) | The planner's mortgage and apartment | Accepted |
