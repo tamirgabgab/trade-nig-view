@@ -27,7 +27,7 @@
 | U3 | Chart tools: compare, patterns, icons, eraser, zoom box, Go to date, forecast pointer, animated backgrounds (ADR 0016) | L | ✅ (2026-11-26) |
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
-| PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | planned |
+| PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0 ✅ (2026-11-26); H1–H5 planned |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
