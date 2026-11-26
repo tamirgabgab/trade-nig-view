@@ -72,7 +72,9 @@ def test_the_better_asset_wins_every_window_by_a_known_margin() -> None:
     # The same plan in every window: its end values differ only by the days in its months.
     differences = [w.result.x.wealth - w.result.y.wealth for w in windows]
     assert summary.median_difference == pytest.approx(float(np.median(differences)))
-    assert summary.median_difference == pytest.approx(35_000, rel=0.05)
+    years = (120 - np.arange(120)) / 12.0
+    by_hand = float(np.sum(1_000.0 * (1.06**years - 1.02**years)))
+    assert summary.median_difference == pytest.approx(by_hand, rel=1e-3)
 
 
 # ---------------------------------------------------------------- overlapping windows

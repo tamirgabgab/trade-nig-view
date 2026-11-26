@@ -130,9 +130,9 @@ def test_the_cheaper_option_invests_the_difference() -> None:
 
 
 def test_plans_on_different_days_both_spend_the_sum() -> None:
-    early = Side(account=account(), deposits=[Deposit(date(2020, 1, 5), 1_000.0)])
-    late = Side(account=account(), deposits=[Deposit(date(2020, 1, 20), 1_000.0)])
-    result = run_pair(early, late, date(2021, 1, 20), FLAT_CPI)
+    early = Side(account=account(), deposits=[Deposit(date(2020, 2, 5), 1_000.0)])
+    late = Side(account=account(), deposits=[Deposit(date(2020, 2, 20), 1_000.0)])
+    result = run_pair(early, late, date(2021, 2, 20), FLAT_CPI)
     assert result.budget == pytest.approx([1_000.0, 1_000.0])
     assert (result.x.wealth, result.y.wealth) == pytest.approx((2_000.0, 2_000.0))
 
@@ -240,7 +240,7 @@ def test_the_pair_equals_the_golden_model(seed: int) -> None:
         series=HomeSeries(value, index, anchor, index),
         deposits=[Deposit(date(2020, 6, 15), 20_000.0), Deposit(date(2021, 3, 2), 5_000.0)],
     )
-    fx = 3.5 * np.exp(np.cumsum(rng.normal(0, 0.004, 786)))
+    fx = 3.5 * np.exp(np.cumsum(rng.normal(0, 0.004, len(asset().days))))
     mix = Account(
         [asset("AAA", 70, seed=seed, dividends=True, fx=fx), asset("BBB", 30, seed=seed + 9)],
         fees=Fees(deposit=0.004, buy=0.001, sell=0.002, management=0.005, monthly=12.0),
