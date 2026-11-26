@@ -298,7 +298,7 @@ discipline).
 | **H2** ✅ 2026-11-26 | Mortgage and apartment engine: three tracks × four repayment types × three interest types, CPI linkage, prime path, purchase, owner and sale costs, the purchase-tax brackets and the betterment-tax model with saved presets, the rent switch, the value path (historical or assumed), net worth. Tests: closed-form Spitzer, equal principal sums to the loan, balance never negative, a golden scalar loop per track, CPI-linked with a flat CPI equals unlinked. ADR 0020. | L |
 | **H3a** ✅ 2026-11-26 | Scenarios: modes A, B and A+B, mirrored cash flows (with an independent golden model), rolling historical windows with the effective-sample count, and layer 1 of the metrics (P(A > B) and the median difference, XIRR, breakeven rates, the win map, time-averaged net worth). Tests: known answers (constant returns), P(A > B) = 0.5 for identical sides, a breakeven rate that reproduces equality. | L |
 | **H3b** ✅ 2026-11-26 | Statistics: block bootstrap and Monte Carlo on paired realizations, histograms, percentiles, P(a ≤ X ≤ b) with its interval, and layer 2 (the bad tail, regret, path risks, stochastic dominance, certainty equivalent). Tests: reproducibility by seed, zero regret for identical sides, dominance of X + c over X, the correlations kept by the blocks. | L |
-| **H3c** | Layer 3: the decomposition of the apartment's return, sensitivity, breakeven time, liquidity, the benefit of combining. | M |
+| **H3c** ✅ 2026-11-26 | Layer 3: the decomposition of the apartment's return, sensitivity, breakeven time, liquidity, the benefit of combining. | M |
 | **H4** | The Planner page: the A/B/A+B switch, input forms per side, the deposits and amortization tables, the net-worth paths, the histograms with a and b handles, the metric cards, saved scenarios, CSV export. Vitest + E2E. | L |
 | **H5** | Learn pages (XIRR, mortgage tracks, rent vs buy, why overlapping windows overstate certainty), the interest stress test and the district indices, and polish. | M |
 
@@ -312,6 +312,16 @@ whole page works.
 - **Tax rules** (nominal vs real gain on foreign securities, rent tax tracks, purchase-tax brackets, betterment tax)
   are modelled as parameters and presets with their source and date, not as tax advice.
 - **Overlapping windows** make history look more certain than it is; the effective sample size is always shown.
+
+## H3c results (2026-11-26, ADR 0023)
+- The user's choices before H3c: the apartment's return shared by the Shapley value, so the four sources add up
+  (the plan said one at a time); the benefit of combining as the same money split between the options over the
+  simulated worlds, with the historical correlation; the sensitivity on the plan as entered; and the chart of who
+  leads over time already now.
+- A move of the sensitivity tilts the path in use; a breakeven rate replaces it. Both are on the page.
+- The mortgage's share of the return can be negative even when borrowing pays: stated on the page.
+- A run of the comparison takes about a second with everything in it.
+- H4 keeps: the forms of a free second option, saved scenarios, CSV export.
 
 ## H3b results (2026-11-26, ADR 0022)
 - The user's choices before H3b: the Bank of Israel rate's level travels with its block; a modelled market
