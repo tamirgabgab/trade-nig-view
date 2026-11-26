@@ -327,7 +327,7 @@ Phase-2 plan.
   index or an assumed appreciation, net worth = assets − liabilities, modes A, B and A+B.
 - Statistics over rolling historical windows, block bootstrap and Monte Carlo: histograms of the final net worth or
   the net XIRR, P(a ≤ X ≤ b), P(A > B), CVaR, drawdown, certainty equivalent.
-- Data from the Bank of Israel (USD/ILS daily from 1980, CPI from 1951, the CBS dwelling index from 1994, mortgage
+- Data from the Bank of Israel (USD/ILS daily from 1976, CPI from 1951, the CBS dwelling index from 1994, mortgage
   rates by track). The round plan is in [HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md) (H0–H5).
 - [x] H0: macro series from the Bank of Israel (`app/macro`, `/api/macro`, ADR 0018), the Benchmarks group and
   USD/ILS in the universe (2026-11-26).

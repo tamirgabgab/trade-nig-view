@@ -83,6 +83,10 @@ exchange = "TASE"
 currency = "ILS"
 timezone = "Asia/Jerusalem"
 has_volume = false
+# TASE trades Monday to Friday since 2026-01-05. Hours from secondary sources (TradingHours,
+# Globes, Ynet; approximate, check tase.co.il): continuous trading to 17:14, Fridays 10:00-14:00.
+cash_hours = "09:59-17:14"
+friday_hours = "10:00-14:00"
 
 [[symbols]]
 symbol = "SPY"

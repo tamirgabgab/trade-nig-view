@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from app.config import REPO_ROOT
 from app.data.universe import Universe
@@ -17,8 +18,10 @@ def test_real_universe_loads_with_expected_sections() -> None:
     # Phase H: total-return benchmarks, Israel, and the shekel.
     assert [i.display for i in universe.search(group="Benchmarks")] == ["SPXTR", "XNDX", "TA125"]
     ta125, usd_ils = universe.resolve("TA125"), universe.resolve("USDILS")
-    assert ta125 is not None and ta125.timezone == "Asia/Jerusalem"
-    assert usd_ils is not None and usd_ils.symbol == "ILS=X"
+    assert ta125 is not None
+    assert (ta125.timezone, ta125.friday_hours) == ("Asia/Jerusalem", "10:00-14:00")
+    assert usd_ils is not None
+    assert usd_ils.symbol == "ILS=X"
     assert universe.resolve("AAPL") is not None
     indices = universe.search(group="Indices")
     assert all(not info.has_volume for info in indices)
@@ -45,3 +48,12 @@ def test_sessions_spanning_midnight_have_a_session_start() -> None:
         overnight = info.type in {"future", "forex"} or info.symbol == "DX-Y.NYB"
         assert (info.session_start is not None) == overnight, info.symbol
     assert universe.resolve("GC1!") == universe.resolve("GC=F")
+
+
+@pytest.mark.parametrize("hours", ["10:00", "17:00-09:00", "9-17", "10:00-25:00"])
+def test_trading_hours_are_validated(hours: str) -> None:
+    with pytest.raises(ValidationError):
+        SymbolInfo(
+            symbol="X", display="X", name="X", type="index", group="G", exchange="E",
+            cash_hours=hours,
+        )  # fmt: skip

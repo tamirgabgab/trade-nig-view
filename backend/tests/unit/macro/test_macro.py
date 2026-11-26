@@ -176,3 +176,57 @@ def test_fixture_source_reads_the_snapshot(tmp_path: Path) -> None:
     assert source.fetch(SERIES["cpi"]).values.tolist() == [104.6, 104.9, 105.2]
     with pytest.raises(ProviderError, match="boi_rate"):
         source.fetch(SERIES["boi_rate"])
+
+
+# ---------------------------------------------------------------- review fixes
+
+
+def test_parser_skips_non_finite_values_and_rejects_unreadable_rows() -> None:
+    ok = parse_boi_csv("TIME_PERIOD,OBS_VALUE\n2026-01,NaN\n2026-02,inf\n2026-03,1.5\n")
+    assert ok.days.tolist() == [day("2026-03-01")]
+    with pytest.raises(ProviderError, match="Unreadable"):
+        parse_boi_csv("TIME_PERIOD,OBS_VALUE\n2026-01,n/a\n")
+    with pytest.raises(ProviderError, match="Unreadable"):
+        parse_boi_csv("TIME_PERIOD,OBS_VALUE\n2026-Q1,1.0\n")
+
+
+def test_fixture_reader_sorts_dedupes_and_rejects_empty_files(tmp_path: Path) -> None:
+    path = tmp_path / "x.csv"
+    path.write_text("date,value\n2026-02-01,2\n2026-01-01,1\n2026-02-01,3\n", "utf-8")
+    series = read_macro_fixture(path)
+    assert series.days.tolist() == [day("2026-01-01"), day("2026-02-01")]
+    assert series.values.tolist() == [1.0, 3.0]
+    path.write_text("date,value\n", "utf-8")
+    with pytest.raises(ProviderError, match="empty"):
+        read_macro_fixture(path)
+    path.write_text("date,value\n2026-01-01,abc\n", "utf-8")
+    with pytest.raises(ProviderError, match="unreadable"):
+        read_macro_fixture(path)
+
+
+class PerSeriesSource(FakeSource):
+    """Fails for one series only."""
+
+    def fetch(self, spec: SeriesSpec) -> MacroSeries:
+        self.calls += 1
+        if spec.id == "mortgage_fixed_cpi":
+            raise ProviderError("renamed code")
+        return CPI
+
+
+def test_one_broken_series_does_not_pause_the_others(tmp_path: Path) -> None:
+    source = PerSeriesSource("boi")
+    service, _ = make(tmp_path, source)
+    for _ in range(3):
+        with pytest.raises(DataUnavailableError):
+            service.get("mortgage_fixed_cpi")
+    assert service.get("cpi").source == "boi"
+
+
+def test_a_copy_cached_by_another_source_is_refreshed(tmp_path: Path) -> None:
+    cache = MacroCache(tmp_path / "bars.db")
+    cache.store("cpi", CPI, fetched_at=Clock.now, source="fixtures")  # cached with OFFLINE=1
+    live = FakeSource("boi", MacroSeries(CPI.days[:1], np.array([1.0])))
+    service = MacroService(cache, [live], clock=Clock(), retry_sleep=lambda _s: None)
+    got = service.get("cpi")
+    assert (got.source, live.calls, got.data.values.tolist()) == ("boi", 1, [1.0])

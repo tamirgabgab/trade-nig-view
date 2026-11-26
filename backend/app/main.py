@@ -101,6 +101,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.macro_service = MacroService(
         MacroCache(settings.chartlab_data_dir / "bars.db"),
         [MacroFixtureSource(settings.fixtures_dir)] if settings.offline else [BoiSource()],
+        ttl_s=settings.macro_ttl_s,
     )
     app_db = settings.chartlab_data_dir / "app.db"
     app.state.drawings = DrawingsRepository(app_db)

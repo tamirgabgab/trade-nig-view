@@ -24,7 +24,7 @@ their numbers.
 ## Data (checked from this environment on 2026-11-26)
 | Series | Source | Frequency | From | Use |
 |---|---|---|---|---|
-| USD/ILS official rate (`EXR/RER_USD_ILS`) | Bank of Israel SDMX API | daily | 1980-01-02 | converting deposits and the final value |
+| USD/ILS official rate (`EXR/RER_USD_ILS`) | Bank of Israel SDMX API | daily | 1976 (sparse back to 1954) | the fallback before Yahoo's `ILS=X` (the planner's FX, H0) |
 | Consumer price index, general (`PRI/CP`) | Bank of Israel (CBS data) | monthly | 1951-09 | optional: the "historical CPI from 1994" inflation mode (the default inflation is assumed, below) |
 | Dwelling price index, national, quality-adjusted (`REAL_ES_DF/IND_FLT_M`), and by district (`IND_FLT_TELAVIV_M`, `…_CENTER_M`, `…_HAIFA_M`, `…_JERUSALEM_M`, `…_NORTH_M`, `…_SOUTH_M`) | Bank of Israel (CBS data) | monthly | 1994-01 | the historical apartment value |
 | Mortgage rates by track (`BIR_MRTG_99`, about 114 series) | Bank of Israel | monthly | (to map in H0) | historical rates of new mortgages per track |

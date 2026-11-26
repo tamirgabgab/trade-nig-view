@@ -11,6 +11,8 @@ const info = (symbol: string, display: string, name: string, group: string): Sym
   currency: 'USD',
   timezone: 'America/New_York',
   sessionStart: null,
+  cashHours: null,
+  fridayHours: null,
   hasVolume: true,
   decimals: 2,
 });

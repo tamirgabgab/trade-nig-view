@@ -30,6 +30,21 @@ describe('isMarketOpen', () => {
     expect(isMarketOpen(FOREX, ny('2026-11-28T10:00:00'))).toBe(false); // Saturday
   });
 
+  it("uses a symbol's own hours and Friday hours (TASE)", () => {
+    const tase = {
+      timezone: 'Asia/Jerusalem',
+      sessionStart: null,
+      cashHours: '09:59-17:14',
+      fridayHours: '10:00-14:00',
+    };
+    const il = (iso: string) => new Date(`${iso}+02:00`); // Israel in November
+    expect(isMarketOpen(tase, il('2026-11-23T16:30:00'))).toBe(true); // Monday
+    expect(isMarketOpen(tase, il('2026-11-23T17:14:00'))).toBe(false);
+    expect(isMarketOpen(tase, il('2026-11-27T13:59:00'))).toBe(true); // Friday
+    expect(isMarketOpen(tase, il('2026-11-27T15:00:00'))).toBe(false);
+    expect(isMarketOpen(tase, il('2026-11-22T12:00:00'))).toBe(false); // Sunday
+  });
+
   it('uses the exchange time zone, not the browser one', () => {
     const tokyo = { timezone: 'Asia/Tokyo', sessionStart: null };
     // 10:00 in Tokyo on a Monday is 20:00 on Sunday in New York.

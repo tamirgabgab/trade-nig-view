@@ -2240,6 +2240,16 @@ export interface components {
              * @description Local 'HH:MM' start of a trading session that spans midnight (CME futures '18:00', forex '17:00'); null when each session lies within one calendar day
              */
             session_start?: string | null;
+            /**
+             * Cash Hours
+             * @description Local 'HH:MM-HH:MM' regular session Monday to Thursday (and Friday unless friday_hours is set); null = the US cash session 09:30-16:00
+             */
+            cash_hours?: string | null;
+            /**
+             * Friday Hours
+             * @description Local 'HH:MM-HH:MM' Friday session when it differs
+             */
+            friday_hours?: string | null;
         };
         /** SymbolSource */
         SymbolSource: {

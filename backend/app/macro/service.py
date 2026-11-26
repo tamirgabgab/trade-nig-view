@@ -125,7 +125,10 @@ class MacroService:
         self._clock = clock
         self._ttl_s = ttl_s
         self._retry_sleep = retry_sleep
-        self._breakers = {s.id: CircuitBreaker() for s in self._sources}
+        # Per source and series: one broken series (a renamed code) must not pause the others.
+        self._breakers = {
+            (s.id, series): CircuitBreaker() for s in self._sources for series in SERIES
+        }
         self._locks = {series: threading.Lock() for series in SERIES}
 
     def get(self, series: str) -> CachedSeries:
@@ -138,11 +141,13 @@ class MacroService:
     def _ensure(self, spec: SeriesSpec) -> CachedSeries:
         cached = self._cache.read(spec.id)
         now = self._clock()
-        if cached is not None and now - cached[1] < self._ttl_s:
+        # A copy from a source not in use (cached before OFFLINE changed) is never fresh.
+        own = cached is not None and cached[2] in {s.id for s in self._sources}
+        if cached is not None and own and now - cached[1] < self._ttl_s:
             return CachedSeries(spec, cached[0], cached[2], stale=False, fetched_at=cached[1])
         errors: list[str] = []
         for source in self._sources:
-            breaker = self._breakers[source.id]
+            breaker = self._breakers[source.id, spec.id]
             if not breaker.allow():
                 errors.append(f"{source.id}: paused after repeated failures")
                 continue

@@ -43,11 +43,29 @@ class SymbolInfo(BaseModel):
         " '18:00', forex '17:00'); null when each session lies within one calendar day",
     )
 
+    cash_hours: str | None = Field(
+        default=None,
+        description="Local 'HH:MM-HH:MM' regular session Monday to Thursday (and Friday unless "
+        "friday_hours is set); null = the US cash session 09:30-16:00",
+    )
+    friday_hours: str | None = Field(
+        default=None, description="Local 'HH:MM-HH:MM' Friday session when it differs"
+    )
+
     @field_validator("session_start")
     @classmethod
     def _check_session_start(cls, value: str | None) -> str | None:
         if value is not None:
             parse_session_start(value)
+        return value
+
+    @field_validator("cash_hours", "friday_hours")
+    @classmethod
+    def _check_hours(cls, value: str | None) -> str | None:
+        if value is not None:
+            start, sep, end = value.partition("-")
+            if not sep or parse_session_start(start) >= parse_session_start(end):
+                raise ValueError(f"hours must be 'HH:MM-HH:MM' with start < end, not {value!r}")
         return value
 
     @property

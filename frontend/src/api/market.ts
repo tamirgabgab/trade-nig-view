@@ -18,6 +18,10 @@ export interface SymbolInfo {
   timezone: string;
   /** Local 'HH:MM' start of a session spanning midnight (futures, forex), else null. */
   sessionStart: string | null;
+  /** Local 'HH:MM-HH:MM' weekday session when not the US 09:30-16:00 (TASE), else null. */
+  cashHours: string | null;
+  /** Local 'HH:MM-HH:MM' Friday session when it differs, else null. */
+  fridayHours: string | null;
 }
 
 /** Last close vs previous close (GET /api/quotes). */
@@ -84,6 +88,12 @@ export function parseSymbols(body: unknown): SymbolInfo[] {
       sessionStart:
         typeof field('session_start') === 'string'
           ? str(field('session_start'), 'session_start')
+          : null,
+      cashHours:
+        typeof field('cash_hours') === 'string' ? str(field('cash_hours'), 'cash_hours') : null,
+      fridayHours:
+        typeof field('friday_hours') === 'string'
+          ? str(field('friday_hours'), 'friday_hours')
           : null,
     };
   });

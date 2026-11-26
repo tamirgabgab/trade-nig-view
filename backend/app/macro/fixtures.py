@@ -8,18 +8,22 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-import numpy as np
-
 from app.data.providers.base import ProviderError
 from app.macro.boi import period_day
 from app.macro.series import MacroSeries, SeriesSpec
 
 
 def read_macro_fixture(path: Path) -> MacroSeries:
+    """The snapshot, sorted, one value per day; an empty or unreadable file is a ProviderError."""
     with path.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
-    days = np.array([period_day(row["date"]) for row in rows], dtype=np.int64)
-    return MacroSeries(days, np.array([float(row["value"]) for row in rows], dtype=np.float64))
+    try:
+        series = MacroSeries.from_pairs({period_day(r["date"]): float(r["value"]) for r in rows})
+    except (KeyError, ValueError) as exc:
+        raise ProviderError(f"{path.name}: unreadable macro fixture ({exc})") from exc
+    if len(series) == 0:
+        raise ProviderError(f"{path.name}: empty macro fixture")
+    return series
 
 
 def write_macro_fixture(path: Path, series: MacroSeries) -> None:

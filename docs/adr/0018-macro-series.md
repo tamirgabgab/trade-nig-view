@@ -19,13 +19,18 @@ the cloud sessions as well, and republishes the CBS series.
   - `SERIES` is the registry: an id, a name, a unit, a frequency, and the BoI `dataflow/code`.
   - `MacroSeries` holds the values: day numbers and values. A monthly value is dated the first of its month, and
     callers that need causality must allow for the CBS publication lag.
+  - **An exception to "store UTC epoch seconds":** these series have dates without a time of day, so they are
+    stored as day numbers (days since 1970-01-01, the same as `time // 86400` of a daily bar).
 - **The source.** `BoiSource` downloads a whole series per request (`format=csv`, `startperiod=1950-01-01`). It is
-  rate-limited (1 request a second, bursts of 2), and a 429 is retried with backoff. Every source sits behind a
-  circuit breaker. `MacroFixtureSource` reads `<fixtures>/macro/<id>.csv` (`date,value`) and serves `OFFLINE=1` and
+  rate-limited (1 request a second, bursts of 2), and a 429 is retried with backoff. Each (source, series) pair has
+  its own circuit breaker, so one broken series never pauses the others.
+  - A non-finite value counts as missing.
+  - An unreadable row is a provider error, so the cached copy is served instead. `MacroFixtureSource` reads `<fixtures>/macro/<id>.csv` (`date,value`) and serves `OFFLINE=1` and
   the tests.
 - **The cache.** `MacroService` keeps the series in `bars.db` (tables `macro`, `macro_fetch`).
-  - A series is served from the cache for 6 hours. After that the whole series is downloaded again, so revisions
-    arrive.
+  - A series is served from the cache for `MACRO_TTL_S` (6 hours by default). After that the whole series is
+    downloaded again, so revisions arrive.
+  - A copy cached by a source that is not in use (for example, from before `OFFLINE` changed) is never fresh.
   - When every source fails, the cached copy is served with `stale: true`; with no copy at all the request is a 503.
 - **The API.** `GET /api/macro/series` lists the series; `GET /api/macro/series/{id}?start&end` returns one series.
   An unknown id is a 404 (`series_not_found`).
@@ -43,6 +48,9 @@ the cloud sessions as well, and republishes the CBS series.
   | `mortgage_fixed_unlinked`, `mortgage_fixed_cpi` | monthly from 2011-07 | average rate of new housing loans |
 
   The variable-rate mortgage series are not mapped: their codes are ambiguous without the BoI's names.
+- **Trading hours.** `SymbolInfo` gains optional `cash_hours` and `friday_hours` (`HH:MM-HH:MM`) for markets that
+  are not on the US cash session. TA-125 uses 09:59–17:14, and 10:00–14:00 on Fridays (TASE trades Monday to Friday
+  since 2026). These are approximate, from secondary sources.
 - **USD/ILS for the planner** is Yahoo's market rate, `ILS=X`, now in the universe (the user's choice): one source
   with the stock prices, and intraday bars where they exist. The BoI rate is the documented fallback before Yahoo's
   first bar. The planner decides this in H1.

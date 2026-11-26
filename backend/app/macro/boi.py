@@ -28,21 +28,26 @@ def period_day(period: str) -> int:
 
 
 def parse_boi_csv(text: str) -> MacroSeries:
-    """The (day, value) pairs of a BoI CSV answer, sorted, one per day (the last one wins)."""
+    """The (day, value) pairs of a BoI CSV answer, sorted, one per day (the last one wins).
+
+    Empty and non-finite values are skipped; an unreadable period or value is a ProviderError,
+    so the service serves its cached copy instead of failing.
+    """
     pairs: dict[int, float] = {}
-    for row in csv.DictReader(io.StringIO(text.lstrip("﻿"))):
+    for row in csv.DictReader(io.StringIO(text.lstrip("\ufeff"))):
         value = (row.get("OBS_VALUE") or "").strip()
         period = (row.get("TIME_PERIOD") or "").strip()
         if value and period:
-            pairs[period_day(period)] = float(value)
-    if not pairs:
-        return MacroSeries.empty()
-    days = np.array(sorted(pairs), dtype=np.int64)
-    return MacroSeries(days, np.array([pairs[int(d)] for d in days], dtype=np.float64))
+            try:
+                pairs[period_day(period)] = float(value)
+            except ValueError as exc:
+                raise ProviderError(f"Unreadable BoI row {period!r}, {value!r}") from exc
+    return MacroSeries.from_pairs(pairs)
 
 
 class BoiSource:
-    """Downloads a whole series per request (the longest, USD/ILS since 1980, is ~12,000 rows)."""
+    """Downloads a whole series per request (the longest, USD/ILS, has ~13,300 rows: sparse from
+    1954, daily from 1976)."""
 
     id = "boi"
 
