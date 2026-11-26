@@ -192,7 +192,7 @@ test('planner: the apartment against the same money in the market, for one plan 
   await expect(row('2017').getByRole('cell').nth(1)).toHaveText('—');
 
   // With its own account the apartment's side is renamed, and the mirror follows its deposits.
-  await compare.getByLabel('The apartment’s side also makes the Market tab’s deposits').check();
+  await compare.getByLabel('Option A: its own market deposits').check();
   await compare.getByRole('button', { name: 'Compare' }).click();
   await expect(
     compare.getByRole('heading', { name: /^Apartment and account against market/ }),
@@ -298,4 +298,82 @@ test('planner: a simulation of the comparison, its distribution and the handles 
     compare.getByRole('heading', { name: 'Simulation: 60 worlds, Monte Carlo' }),
   ).toBeVisible();
   await expect(card('Modelled market')).toContainText('6.00% a year, σ 15.00%');
+});
+
+test('planner: two options of their own, a saved scenario and a CSV file', async ({ page }) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  const market = planner.getByRole('tabpanel', { name: 'Market' });
+  await market.getByLabel('Ticker 1').fill('aapl');
+  await market.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
+  // Option B starts as a copy of A; here it becomes a dearer apartment.
+  await market.getByRole('button', { name: 'Copy to option B' }).click();
+  await planner.getByRole('tab', { name: 'Apartment' }).click();
+  const home = planner.getByRole('tabpanel', { name: 'Apartment' });
+  await home.getByRole('radio', { name: 'Option B' }).click();
+  await home.getByLabel('Price ₪').fill('3000000');
+  await home.getByLabel('Equity ₪').fill('900000');
+  // The switch is one for both tabs: the Market tab now shows option B's mix too.
+  await planner.getByRole('tab', { name: 'Market' }).click();
+  await expect(market.getByRole('radio', { name: 'Option B' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(market.getByLabel('Ticker 1')).toHaveValue('AAPL');
+
+  await planner.getByRole('tab', { name: 'Compare' }).click();
+  const compare = planner.getByRole('tabpanel', { name: 'Compare' });
+  await compare.getByLabel('Option B: apartment').check();
+  await compare.getByRole('button', { name: 'Compare' }).click();
+  await expect(
+    compare.getByRole('heading', { name: /^Apartment A against apartment b: 2015-01-15/ }),
+  ).toBeVisible();
+  const card = (label: string) =>
+    compare.locator('dl').getByText(label, { exact: true }).locator('..');
+  await expect(card('Apartment B: worth at the end')).toContainText('₪');
+
+  // Saved under a name, lost from the forms, and loaded back as it was.
+  await compare.getByLabel('Scenario name').fill('Two apartments');
+  await compare.getByRole('button', { name: 'Save scenario' }).click();
+  await expect(compare.getByRole('status')).toContainText('Saved “Two apartments”');
+  await planner.getByRole('tab', { name: 'Apartment' }).click();
+  await home.getByLabel('Price ₪').fill('1234567');
+  await planner.getByRole('tab', { name: 'Compare' }).click();
+  await compare.getByLabel('Saved scenario').selectOption('Two apartments');
+  await compare.getByRole('button', { name: 'Load scenario' }).click();
+  await expect(compare.getByRole('status')).toContainText('Loaded “Two apartments”');
+  await planner.getByRole('tab', { name: 'Apartment' }).click();
+  await expect(home.getByRole('radio', { name: 'Option A' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await home.getByRole('radio', { name: 'Option B' }).click();
+  await expect(home.getByLabel('Price ₪')).toHaveValue('3000000');
+  // It survives a reload: it is kept by the backend, not by the browser.
+  await page.reload();
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  await planner.getByRole('tab', { name: 'Compare' }).click();
+  await expect(compare.getByLabel('Saved scenario').getByRole('option')).toHaveText([
+    'Choose…',
+    'Two apartments',
+  ]);
+
+  // The exit months as a file: raw numbers, a row a month checked.
+  await compare.getByRole('button', { name: 'Compare' }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    compare.getByRole('button', { name: 'Download exit months as CSV' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('exit months.csv');
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  const lines = Buffer.concat(chunks).toString('utf8').trim().split('\r\n');
+  expect(lines[0]).toBe('\uFEFFmonths,date,x,y,x_forced,y_forced');
+  expect(lines).toHaveLength(61);
+  expect(lines[60]).toMatch(/^120,2025-01-15,\d+\.?\d*,\d+\.?\d*,/);
+
+  await compare.getByRole('button', { name: 'Delete scenario' }).click();
+  await compare.getByRole('button', { name: 'Delete “Two apartments”' }).click();
+  await expect(compare.getByText('No saved scenario yet.')).toBeVisible();
 });

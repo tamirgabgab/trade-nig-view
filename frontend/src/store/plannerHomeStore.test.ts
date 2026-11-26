@@ -2,6 +2,7 @@ import type { TaxPresets } from '../api/planner.ts';
 import { TAX_PRESETS } from '../test/plannerHomeBody.ts';
 import {
   DEFAULT_HOME,
+  homesOf,
   newTrack,
   resolveTaxes,
   sanitizeHome,
@@ -18,7 +19,7 @@ const [SINGLE, ADDITIONAL] = PRESETS.purchase.map((p) => p.brackets);
 const BETTERMENT = { rate_pct: 25, single_home: false, ceiling: 5_008_000, linear: true };
 
 beforeEach(() => {
-  usePlannerHomeStore.setState({ home: DEFAULT_HOME, saved: NO_SAVED });
+  usePlannerHomeStore.setState({ ...sanitizeHome(null) });
 });
 
 describe('resolveTaxes', () => {
@@ -152,5 +153,67 @@ describe('sanitizeHome', () => {
     const older: Record<string, unknown> = { ...DEFAULT_HOME };
     delete older['rent'];
     expect(sanitizeHome({ home: older, saved })).toEqual({ home: DEFAULT_HOME, saved });
+  });
+});
+
+describe('two apartments', () => {
+  const B: HomeForm = { ...DEFAULT_HOME, price: 3_000_000, equity: 900_000 };
+
+  it('edits the active one and keeps the other, with the saved tax tables shared', () => {
+    const { update, swap, savePurchaseTax } = usePlannerHomeStore.getState();
+    update({ price: 1_500_000 });
+    swap('b');
+    expect(usePlannerHomeStore.getState().home.price).toBe(DEFAULT_HOME.price);
+    update({ price: 3_000_000 });
+    savePurchaseTax('Mine', SINGLE ?? []);
+    const state = usePlannerHomeStore.getState();
+    const { a, b } = homesOf(state);
+    expect([a.price, b.price]).toEqual([1_500_000, 3_000_000]);
+    // The table is saved once; only the option that saved it names it.
+    expect([a.purchaseTax.preset, b.purchaseTax.preset]).toEqual([
+      DEFAULT_HOME.purchaseTax.preset,
+      savedKey('Mine'),
+    ]);
+    expect(Object.keys(state.saved.purchase)).toEqual(['Mine']);
+  });
+
+  it('forgets a deleted table in both options', () => {
+    const { savePurchaseTax, swap, update, deleteSaved } = usePlannerHomeStore.getState();
+    savePurchaseTax('Mine', SINGLE ?? []);
+    swap('b');
+    update({ purchaseTax: { preset: savedKey('Mine'), edited: null } });
+    deleteSaved('purchase', 'Mine');
+    const { a, b } = homesOf(usePlannerHomeStore.getState());
+    expect([a.purchaseTax, b.purchaseTax]).toEqual([
+      DEFAULT_HOME.purchaseTax,
+      DEFAULT_HOME.purchaseTax,
+    ]);
+  });
+
+  it('copies the active apartment over the other', () => {
+    usePlannerHomeStore.setState({ home: B });
+    usePlannerHomeStore.getState().copyToOther();
+    expect(homesOf(usePlannerHomeStore.getState())).toEqual({ a: B, b: B });
+  });
+
+  it('reads a state saved before there were two as option A, with its tables', () => {
+    const saved = { purchase: { Mine: SINGLE ?? [] }, betterment: {} };
+    const old = sanitizeHome({ home: B, saved });
+    expect([old.slot, old.home, old.other, old.saved]).toEqual(['a', B, B, saved]);
+  });
+
+  it('gives an older form the fields it lacks', () => {
+    const { ownSd: _ownSd, ...value } = DEFAULT_HOME.value;
+    const old = sanitizeHome({ home: { ...B, value }, saved: NO_SAVED });
+    expect(old.home.value.ownSd).toBe(0);
+    expect(old.home.price).toBe(3_000_000);
+  });
+
+  it('sends the apartment’s own volatility', () => {
+    const home = { ...DEFAULT_HOME, value: { ...DEFAULT_HOME.value, ownSd: 8 } };
+    const taxes = { purchase: SINGLE ?? [], betterment: BETTERMENT };
+    expect(toHomeRequest(home, DEFAULT_FORM.inflation, taxes).value).toMatchObject({
+      own_sd_pct: 8,
+    });
   });
 });

@@ -1,16 +1,16 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { DEFAULT_HOME, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
-import { DEFAULT_FORM, usePlannerStore } from '../store/plannerStore.ts';
+import { DEFAULT_HOME, sanitizeHome, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
+import { sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
 import { SCENARIO_RESULT, SIMULATION_RESULT, STUDY_RESULT } from '../test/plannerCompareBody.ts';
 import { TAX_PRESETS } from '../test/plannerHomeBody.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
 import { PlannerCompare } from './PlannerCompare.tsx';
 
 beforeEach(() => {
-  usePlannerStore.setState({ form: DEFAULT_FORM });
-  usePlannerHomeStore.setState({ home: DEFAULT_HOME, saved: { purchase: {}, betterment: {} } });
+  usePlannerStore.setState({ ...sanitizePersisted(null) });
+  usePlannerHomeStore.setState({ ...sanitizeHome(null) });
 });
 
 const body = (init: RequestInit | undefined): unknown =>
@@ -94,7 +94,10 @@ describe('PlannerCompare', () => {
     expect(card('Rent')).toHaveTextContent('₪8,250 a month');
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
-      x: { home: { start: '2015-01-15', price: 2_000_000 }, market: null },
+      x: {
+        home: { start: '2015-01-15', price: 2_000_000 },
+        market: { assets: [{ symbol: 'SPY' }] },
+      },
       y: { market: { assets: [{ symbol: 'SPY' }] } },
       end: '2025-01-15',
       forced_discount_pct: 10,
@@ -120,9 +123,7 @@ describe('PlannerCompare', () => {
     await user.type(screen.getByLabelText('First start'), '2002-01-01');
     await user.selectOptions(screen.getByLabelText('A start every'), '3');
     await user.click(screen.getByRole('checkbox', { name: /^Move the tracks’ rates/ }));
-    await user.click(
-      screen.getByRole('checkbox', { name: /also makes the Market tab’s deposits/ }),
-    );
+    await user.click(screen.getByRole('checkbox', { name: 'Option A: its own market deposits' }));
     await user.click(history);
 
     expect(
@@ -254,6 +255,44 @@ describe('PlannerCompare', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Unexpected /api/planner/run response',
     );
+  });
+
+  it('compares two apartments when both options contain one, each from its own form', async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, price: 3_000_000 } });
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': (_url, init) => {
+        sent.push(body(init));
+        return jsonResponse(SCENARIO_RESULT);
+      },
+    });
+    renderWithQuery(<PlannerCompare hidden={false} />);
+    const compare = screen.getByRole('button', { name: 'Compare' });
+    await vi.waitFor(() => {
+      expect(compare).toBeEnabled();
+    });
+    // Option A is the apartment and option B the same money in the market, until told otherwise.
+    const box = (name: string) => screen.getByRole('checkbox', { name });
+    expect(
+      ['Option A: apartment', 'Option A: its own market deposits', 'Option B: apartment'].map(
+        (name) => (box(name) as HTMLInputElement).checked,
+      ),
+    ).toEqual([true, false, false]);
+    await user.click(box('Option B: apartment'));
+    await user.click(compare);
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Apartment A against apartment b: 2015-01-15 to 2025-01-15',
+      }),
+    ).toBeInTheDocument();
+    expect(sent[0]).toMatchObject({
+      x: { home: { price: 2_000_000 } },
+      y: { home: { price: 3_000_000 }, market: { assets: [{ symbol: 'SPY' }] } },
+    });
+    expect(card('Apartment A: worth at the end')).toHaveTextContent('₪2,100,000');
+    expect(usePlannerStore.getState().contents.b.home).toBe(true);
   });
 
   it('shows why a comparison cannot run and drops the earlier results', async () => {

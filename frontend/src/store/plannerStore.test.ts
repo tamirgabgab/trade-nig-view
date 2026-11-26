@@ -1,4 +1,11 @@
-import { DEFAULT_FORM, sanitizePersisted, toRequest, type PlannerForm } from './plannerStore.ts';
+import {
+  DEFAULT_FORM,
+  formsOf,
+  sanitizePersisted,
+  toRequest,
+  usePlannerStore,
+  type PlannerForm,
+} from './plannerStore.ts';
 
 describe('toRequest', () => {
   it('maps the form to the API body, in the API’s units', () => {
@@ -56,5 +63,86 @@ describe('sanitizePersisted', () => {
     const older: Record<string, unknown> = { ...DEFAULT_FORM };
     delete older['fees'];
     expect(sanitizePersisted({ form: older }).form).toBe(DEFAULT_FORM);
+  });
+});
+
+describe('two options', () => {
+  const B: PlannerForm = { ...DEFAULT_FORM, end: '2031-01-02', useFx: false };
+
+  beforeEach(() => {
+    usePlannerStore.setState({ ...sanitizePersisted(null) });
+  });
+
+  it('edits the active option and keeps the other as it is', () => {
+    const { update, swap } = usePlannerStore.getState();
+    update({ end: '2030-01-01' });
+    swap('b');
+    expect(usePlannerStore.getState().slot).toBe('b');
+    expect(usePlannerStore.getState().form.end).toBe(DEFAULT_FORM.end);
+    update({ useFx: false });
+    const { a, b } = formsOf(usePlannerStore.getState());
+    expect([a.end, a.useFx, b.end, b.useFx]).toEqual(['2030-01-01', true, DEFAULT_FORM.end, false]);
+    swap('b'); // already there: nothing moves
+    expect(formsOf(usePlannerStore.getState()).a.end).toBe('2030-01-01');
+    swap('a');
+    expect(usePlannerStore.getState().form.end).toBe('2030-01-01');
+  });
+
+  it('keeps one inflation for both options', () => {
+    const inflation = { ...DEFAULT_FORM.inflation, mean: 4 };
+    usePlannerStore.getState().update({ inflation });
+    const { a, b } = formsOf(usePlannerStore.getState());
+    expect([a.inflation.mean, b.inflation.mean]).toEqual([4, 4]);
+  });
+
+  it('copies the active option over the other, and resets only the active one', () => {
+    usePlannerStore.setState({ form: B });
+    usePlannerStore.getState().copyToOther();
+    expect(formsOf(usePlannerStore.getState()).b).toEqual(B);
+    usePlannerStore.getState().reset();
+    const { a, b } = formsOf(usePlannerStore.getState());
+    expect([a, b]).toEqual([DEFAULT_FORM, B]);
+  });
+
+  it('says what each option contains, and holds the comparison’s settings', () => {
+    const { setContents, setCompare } = usePlannerStore.getState();
+    expect(usePlannerStore.getState().contents).toEqual({
+      a: { home: true, deposits: false },
+      b: { home: false, deposits: false },
+    });
+    setContents('b', { deposits: true });
+    setCompare({ discount: 15 });
+    const state = usePlannerStore.getState();
+    expect(state.contents.b).toEqual({ home: false, deposits: true });
+    expect([state.compare.discount, state.compare.followRates, state.compare.step]).toEqual([
+      15,
+      true,
+      1,
+    ]);
+    expect(state.compare.simulation.runs).toBe(1000);
+  });
+
+  it('reads a form saved before there were two options as option A, and copies it to B', () => {
+    const old = sanitizePersisted({ form: B });
+    expect([old.slot, old.form, old.other]).toEqual(['a', B, B]);
+    expect(old.contents.a).toEqual({ home: true, deposits: false });
+    expect(old.compare.discount).toBe(10);
+  });
+
+  it('keeps every good part of a saved state and replaces only what is damaged', () => {
+    const kept = sanitizePersisted({
+      slot: 'b',
+      form: B,
+      other: 'broken',
+      contents: { a: { home: false, deposits: true }, b: 7 },
+      compare: { discount: 25, step: 'x' },
+    });
+    expect([kept.slot, kept.form, kept.other]).toEqual(['b', B, DEFAULT_FORM]);
+    expect(kept.contents).toEqual({
+      a: { home: false, deposits: true },
+      b: { home: false, deposits: false },
+    });
+    expect([kept.compare.discount, kept.compare.step]).toEqual([25, 1]);
+    expect(sanitizePersisted({ slot: 'c', form: B }).slot).toBe('a');
   });
 });
