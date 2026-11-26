@@ -89,7 +89,7 @@ def compute(frame: BarFrame, params: Params) -> dict[str, FloatArray]:
 
 SPEC = IndicatorSpec(
     id="hurst_dfa",
-    version=1,
+    version=2,  # 2: NaN on a straight-line profile (returns equal to within 1e-6)
     name="Hurst Exponent (DFA)",
     short_name="Hurst",
     category="oscillators",

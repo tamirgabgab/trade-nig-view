@@ -755,7 +755,8 @@ def golden_dfa(
     close: Sequence[float], w: int, scales: Sequence[int] = (8, 16, 32, 64)
 ) -> list[float]:
     """DFA Hurst over the last w returns: the window's own profile, boxes from its end, a line
-    fitted in each box by least squares."""
+    fitted in each box by least squares. Undefined (NaN) when the window's returns are equal to
+    within 1e-6 of their mean (population std): a straight-line profile has nothing to scale."""
     r = [NAN] + [math.log(close[t] / close[t - 1]) for t in range(1, len(close))]
     used = [s for s in scales if s <= w // 4]
     out: list[float] = []
@@ -765,6 +766,9 @@ def golden_dfa(
             continue
         x = r[t - w + 1 : t + 1]
         mu = sum(x) / w
+        if math.sqrt(sum((v - mu) ** 2 for v in x) / w) <= 1e-6 * abs(mu):
+            out.append(NAN)
+            continue
         profile: list[float] = []
         acc = 0.0
         for v in x:

@@ -141,6 +141,16 @@ def test_variance_ratio_and_hurst_match_golden_models(data: str, scoreboard: lis
     _record(scoreboard, "variance_ratio", "80", data, compare(z, golden_vr_z(c, 80)))
     h = CATALOG["hurst_dfa"].run(frame, {"length": 128})["hurst"]
     _record(scoreboard, "hurst_dfa", "128", data, compare(h, golden_dfa(c, 128)))
+    # Directed: a window of equal returns (a pure exponential, then noise) is NaN in both.
+    flat = [100 * math.exp(0.01 * i) for i in range(200)]
+    noisy = flat + [flat[-1] * math.exp(0.01 * math.sin(i)) for i in range(1, 100)]
+    eq = BarFrame.from_columns(
+        time=np.arange(len(noisy)) * 86_400, open=noisy, high=noisy, low=noisy, close=noisy
+    )
+    he = CATALOG["hurst_dfa"].run(eq, {"length": 64})["hurst"]
+    compare(he, golden_dfa(noisy, 64))
+    assert math.isnan(he[150])
+    assert not math.isnan(he[-1])
     regime = CATALOG["regime"].run(frame, {"length": 80})["regime"]
     want = [
         NAN if math.isnan(v) else (1.0 if v >= 2.49 else -1.0 if v <= -2.49 else 0.0)
