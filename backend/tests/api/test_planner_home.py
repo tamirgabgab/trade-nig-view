@@ -39,13 +39,14 @@ def test_months_between_counts_whole_months() -> None:
 def test_one_fixed_track_on_a_constant_value(client: TestClient) -> None:
     body = run(client)
     summary = body["summary"]
-    payment = annuity(600_000, R, 240)
+    payment = 3635.88  # 600,000 at 4 % over 20 years, as a bank calculator shows it
+    assert annuity(600_000, R, 240) == pytest.approx(payment, abs=0.005)
     balance = 600_000 * (1 + R) ** 24 - payment * ((1 + R) ** 24 - 1) / R
     assert (summary["months"], summary["loan"]) == (24, 600_000)
-    assert summary["first_payment"] == pytest.approx(payment)
-    assert summary["paid"] == pytest.approx(24 * payment)
-    assert summary["balance"] == pytest.approx(balance)
-    assert summary["net_worth"] == pytest.approx(1_000_000 - balance)
+    assert summary["first_payment"] == pytest.approx(payment, abs=0.005)
+    assert summary["paid"] == pytest.approx(24 * payment, abs=0.1)
+    assert summary["balance"] == pytest.approx(balance, abs=1)
+    assert summary["net_worth"] == pytest.approx(1_000_000 - balance, abs=1)
     assert summary["betterment_tax"] == 0.0
     assert len(body["schedule"]) == 240
     assert (body["schedule"][0]["date"], body["schedule"][-1]["date"]) == (
@@ -143,6 +144,33 @@ def test_the_dwelling_index_moves_the_value_inside_its_dates(client: TestClient)
     )
     assert (outside.status_code, outside.json()["code"]) == (422, "invalid_plan")
     assert "covers 2026-06-01" in outside.json()["detail"]
+
+
+def test_published_indices_are_used_as_ratios_to_the_purchase_day(client: TestClient) -> None:
+    # The test CPI: 104.6, 104.9, 105.2 on the first of 2026-08, -09, -10.
+    plan: dict[str, Any] = {
+        "start": "2026-08-01",
+        "end": "2026-10-01",
+        "tracks": [{"months": 240, "rate_pct": 4, "linked": True}],
+        "inflation": {"mode": "historical"},
+        "owner": {"insurance": 1200},
+        "rent": {"mode": "live", "monthly": 4000},
+    }
+    body = run(client, **plan)
+    first, second = body["schedule"][:2]
+    assert first["linkage"] == pytest.approx(600_000 * (104.9 / 104.6 - 1))
+    assert first["payment"] == pytest.approx(3635.88 * 104.9 / 104.6, abs=0.01)
+    assert second["payment"] == pytest.approx(3635.88 * 105.2 / 104.6, abs=0.01)
+    assert [p["rent"] for p in body["path"]] == pytest.approx([0, 4000, 4000 * 104.9 / 104.6])
+    assert body["path"][1]["costs"] == pytest.approx(100 * 104.9 / 104.6)
+    assert body["warnings"] == []
+    late = run(client, **{**plan, "end": "2027-10-01"})
+    assert late["warnings"] == ["After the last published CPI the index is held flat"]
+    # Rent that follows the apartment's index (580.1, 584.0, 588.2 from 2026-06).
+    rent = {"mode": "live", "monthly": 4000, "growth": "value"}
+    dates = {"start": "2026-06-01", "end": "2026-08-01", "inflation": {"mean_pct": 0}}
+    indexed = run(client, **{**plan, **dates, "rent": rent, "value": {"mode": "historical"}})
+    assert [p["rent"] for p in indexed["path"]] == pytest.approx([0, 4000, 4000 * 584.0 / 580.1])
 
 
 @pytest.mark.parametrize(

@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from app.api.deps import get_macro_service
 from app.api.planner import InflationIn, InvalidPlanError, Percent
 from app.macro.service import MacroService
+from app.models.bars import IntArray
 from app.planner import tax_presets
 from app.planner.home import (
     Betterment,
@@ -23,6 +24,7 @@ from app.planner.home import (
     run_home,
 )
 from app.planner.home_data import (
+    MONTH_DAYS,
     assumed_anchor,
     historical_anchor,
     historical_values,
@@ -262,15 +264,12 @@ def run_home_plan(
         raise InvalidPlanError(str(exc)) from exc
 
 
-def _cpi(body: HomeRequest, macro: MacroService, days: np.ndarray, warnings: list[str]) -> CpiPath:
+def _cpi(body: HomeRequest, macro: MacroService, days: IntArray) -> CpiPath:
     spec = body.inflation
     if spec.mode == "historical":
         if days[0] < HISTORICAL_FROM:
             raise PlanError("The historical CPI is used from 1994 on: start later or assume one")
-        cpi = historical_cpi(macro.get("cpi").data)
-        if days[-1] > cpi.days[-1]:
-            warnings.append("Beyond the last published CPI the index is held flat")
-        return cpi
+        return historical_cpi(macro.get("cpi").data)
     rng = None if spec.seed is None else np.random.default_rng(spec.seed)
     return assumed_cpi(
         int(days[0]),
@@ -309,9 +308,14 @@ def _run(body: HomeRequest, macro: MacroService) -> HomeResponse:
     horizon = max([held, *(t.months for t in tracks)])
     days = month_days(body.start, horizon)
     warnings: list[str] = []
-    cpi = _cpi(body, macro, days, warnings).at(days)
+    path = _cpi(body, macro, days)
+    if days[held] > path.days[-1] + MONTH_DAYS:
+        warnings.append("After the last published CPI the index is held flat")
+    cpi = path.at(days)
     if body.rates.mode == "historical":
         anchor = historical_anchor(macro, days)
+        if days[held] > macro.get("boi_rate").data.days[-1] + MONTH_DAYS:
+            warnings.append("After the last published Bank of Israel rate it is held flat")
     else:
         anchor = assumed_anchor(
             horizon,
