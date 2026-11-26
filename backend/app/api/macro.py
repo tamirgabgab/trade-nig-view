@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_macro_service
-from app.macro.series import SERIES
+from app.macro.series import SERIES, SeriesSpec
 from app.macro.service import MacroService
 from app.models.bars import date_to_ts, ts_to_iso_dates
 
@@ -37,19 +37,20 @@ class MacroSeriesResponse(MacroSeriesInfo):
     points: list[MacroPoint]
 
 
+def _info(spec: SeriesSpec) -> dict[str, str]:
+    return {
+        "id": spec.id,
+        "name": spec.name,
+        "unit": spec.unit,
+        "frequency": spec.frequency,
+        "source_series": f"{spec.dataflow}/{spec.code}",
+    }
+
+
 @router.get("/macro/series", response_model=list[MacroSeriesInfo])
 def list_series() -> list[MacroSeriesInfo]:
     """Every macro series ChartLab can serve."""
-    return [
-        MacroSeriesInfo(
-            id=s.id,
-            name=s.name,
-            unit=s.unit,
-            frequency=s.frequency,
-            source_series=f"{s.dataflow}/{s.code}",
-        )
-        for s in SERIES.values()
-    ]
+    return [MacroSeriesInfo(**_info(spec)) for spec in SERIES.values()]
 
 
 @router.get("/macro/series/{series_id}", response_model=MacroSeriesResponse)
@@ -67,13 +68,8 @@ def get_series(
         keep &= days >= date_to_ts(start) // 86_400
     if end is not None:
         keep &= days <= date_to_ts(end) // 86_400
-    spec = cached.spec
     return MacroSeriesResponse(
-        id=spec.id,
-        name=spec.name,
-        unit=spec.unit,
-        frequency=spec.frequency,
-        source_series=f"{spec.dataflow}/{spec.code}",
+        **_info(cached.spec),
         source=cached.source,
         stale=cached.stale,
         warnings=list(cached.warnings),
