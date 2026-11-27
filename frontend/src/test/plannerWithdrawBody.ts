@@ -2,6 +2,7 @@
 const row = (month: number, date: string, net: number, balance: number) => ({
   month,
   date,
+  prices: 1,
   due: month === 0 ? 0 : 10_000,
   sold: net === 0 ? 0 : net + 500,
   commission: 0,

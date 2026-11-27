@@ -99,6 +99,7 @@ class WithdrawSummary(BaseModel):
 class WithdrawRow(BaseModel):
     month: int
     date: dt.date
+    prices: float = Field(description="The CPI's rise since the first day (1 on it)")
     due: float = Field(description="What a fixed rule owes the month")
     sold: float
     commission: float
@@ -229,6 +230,7 @@ def _run(
             WithdrawRow(
                 month=k,
                 date=dates[k],
+                prices=float(prices[k]),
                 due=float(result.due[k]),
                 sold=float(result.sold[k]),
                 commission=float(result.commission[k]),

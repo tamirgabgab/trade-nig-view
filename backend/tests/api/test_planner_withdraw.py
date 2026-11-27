@@ -94,6 +94,7 @@ def test_an_indexed_amount_rises_with_the_plans_inflation(client: TestClient) ->
     )
     rows = body["rows"]
     assert rows[12]["due"] == pytest.approx(4_000 * 1.025)
+    assert [rows[k]["prices"] for k in (0, 12)] == pytest.approx([1, 1.025])
     assert rows[60]["due"] == pytest.approx(4_000 * 1.025**5)
     assert [row["net_real"] for row in rows[1:]] == pytest.approx([4_000] * 60)
     assert body["summary"]["lowest_net_real"] == pytest.approx(4_000)

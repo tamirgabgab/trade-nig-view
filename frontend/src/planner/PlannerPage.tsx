@@ -6,16 +6,18 @@ import styles from './Planner.module.css';
 import { PlannerCompare } from './PlannerCompare.tsx';
 import { PlannerHome } from './PlannerHome.tsx';
 import { PlannerMarket } from './PlannerMarket.tsx';
+import { PlannerWithdraw } from './PlannerWithdraw.tsx';
 
 const TABS = [
   ['market', 'Market'],
   ['home', 'Apartment'],
   ['compare', 'Compare'],
+  ['withdraw', 'Withdraw'],
 ] as const;
 
 /**
- * The planner (Phase H): a market account, an apartment and their comparison, each on its own
- * tab. All stay mounted, so a tab keeps its results while another one is looked at.
+ * The planner (Phase H): a market account, an apartment, their comparison and withdrawals, each
+ * on its own tab. All stay mounted, so a tab keeps its results while another one is looked at.
  */
 export function PlannerPage({ className }: { className: string | undefined }) {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('market');
@@ -43,6 +45,7 @@ export function PlannerPage({ className }: { className: string | undefined }) {
       <PlannerMarket key={`market:${forms}`} hidden={tab !== 'market'} />
       <PlannerHome key={`home:${forms}`} hidden={tab !== 'home'} />
       <PlannerCompare hidden={tab !== 'compare'} />
+      <PlannerWithdraw key={`withdraw:${forms}`} hidden={tab !== 'withdraw'} />
     </section>
   );
 }

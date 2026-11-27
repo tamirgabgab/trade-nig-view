@@ -4853,6 +4853,11 @@ export interface components {
              */
             date: string;
             /**
+             * Prices
+             * @description The CPI's rise since the first day (1 on it)
+             */
+            prices: number;
+            /**
              * Due
              * @description What a fixed rule owes the month
              */

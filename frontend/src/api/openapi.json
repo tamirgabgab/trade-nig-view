@@ -11211,6 +11211,11 @@
             "format": "date",
             "title": "Date"
           },
+          "prices": {
+            "type": "number",
+            "title": "Prices",
+            "description": "The CPI's rise since the first day (1 on it)"
+          },
           "due": {
             "type": "number",
             "title": "Due",
@@ -11267,6 +11272,7 @@
         "required": [
           "month",
           "date",
+          "prices",
           "due",
           "sold",
           "commission",

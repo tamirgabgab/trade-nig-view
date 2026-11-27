@@ -21,6 +21,8 @@ describe('toWithdraw', () => {
       use_fx: true,
       fees: { deposit_pct: 0, buy_pct: 0, sell_pct: 0.5, management_pct: 0, monthly_fee: 0 },
       taxes: { gains_pct: 25, dividend_pct: 25, base: 'nominal' },
+      // Sent because the request's shape asks for it; a withdrawal sells at the close.
+      fill: { mode: 'close', granularity: 'medium', seed: null },
     });
   });
 });
@@ -39,12 +41,14 @@ describe('mixLabel', () => {
 
 describe('byYear', () => {
   it('adds the months up by year of the plan, the last one as long as it is', () => {
-    const rows = (WITHDRAW_RESULT as unknown as WithdrawResult).rows;
+    const { rows }: WithdrawResult = WITHDRAW_RESULT;
+    const [, first] = rows;
+    if (first === undefined) throw new Error('the fixture has months');
     expect(byYear(rows)).toEqual([
       { year: 1, months: 3, net: 27_000, netReal: 27_000, tax: 1_500, costs: 0, balance: 0 },
     ]);
     const long = Array.from({ length: 15 }, (_, month) => ({
-      ...rows[1]!,
+      ...first,
       month,
       net: month === 0 ? 0 : 100,
       net_real: month === 0 ? 0 : 50,

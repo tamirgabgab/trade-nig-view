@@ -668,3 +668,25 @@
 .slot .buttons {
   flex-basis: 100%;
 }
+
+/* The withdrawals chart: the plan's line, the band between the two tax bounds, a column a month
+   to hover. */
+.band {
+  fill: currentcolor;
+  opacity: 0.18;
+}
+
+.hover {
+  fill: currentcolor;
+  opacity: 0;
+}
+
+.hover:hover {
+  opacity: 0.12;
+}
+
+.keyBand::before {
+  height: 8px;
+  color: var(--color-series-1);
+  opacity: 0.3;
+}

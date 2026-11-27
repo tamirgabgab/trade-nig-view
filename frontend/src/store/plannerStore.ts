@@ -148,6 +148,38 @@ export interface CompareSettings {
   simulation: SimulationSettings;
 }
 
+/** The Withdraw tab's inputs (percentages in %, money in shekels). */
+export interface WithdrawSettings {
+  /** The account grows as the Market tab's mix did, or by an assumed yearly return. */
+  returns: 'mix' | 'assumed';
+  /** The assumed yearly return, in %. */
+  yearly: number;
+  start: string;
+  years: number;
+  capital: number;
+  /** The share of the capital that is cost; the rest is gain not yet taxed. */
+  costShare: number;
+  rule: 'fixed' | 'percent';
+  /** A fixed rule: net a month, in shekels of the first day. */
+  amount: number;
+  indexed: boolean;
+  /** A percent rule: the share of the account sold a year. */
+  percent: number;
+}
+
+export const DEFAULT_WITHDRAW: WithdrawSettings = {
+  returns: 'mix',
+  yearly: 5,
+  start: '2015-01-02',
+  years: 10,
+  capital: 1_000_000,
+  costShare: 50,
+  rule: 'fixed',
+  amount: 4_000,
+  indexed: true,
+  percent: 4,
+};
+
 const DEFAULT_CONTENTS: Record<Slot, OptionContents> = {
   a: { home: true, deposits: false },
   b: { home: false, deposits: false },
@@ -175,6 +207,7 @@ interface PlannerData {
   other: PlannerForm;
   contents: Record<Slot, OptionContents>;
   compare: CompareSettings;
+  withdraw: WithdrawSettings;
 }
 
 interface PlannerState extends PlannerData {
@@ -193,6 +226,7 @@ interface PlannerState extends PlannerData {
   reset: () => void;
   setContents: (slot: Slot, changes: Partial<OptionContents>) => void;
   setCompare: (changes: Partial<CompareSettings>) => void;
+  setWithdraw: (changes: Partial<WithdrawSettings>) => void;
 }
 
 /** The two options of a store that keeps one on screen and the other aside. */
@@ -266,6 +300,7 @@ export function sanitizePersisted(persisted: unknown): PlannerData {
     other: slot === 'a' ? b : a,
     contents: readContents(from['contents']),
     compare: readCompare(from['compare']),
+    withdraw: sameKinds(DEFAULT_WITHDRAW, from['withdraw']),
   };
 }
 
@@ -303,18 +338,22 @@ export const usePlannerStore = create<PlannerState>()(
       setCompare: (changes) => {
         set((s) => ({ compare: { ...s.compare, ...changes } }));
       },
+      setWithdraw: (changes) => {
+        set((s) => ({ withdraw: { ...s.withdraw, ...changes } }));
+      },
     }),
     {
       name: 'chartlab.planner',
       version: 2,
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ same, slot, form, other, contents, compare }) => ({
+      partialize: ({ same, slot, form, other, contents, compare, withdraw }) => ({
         same,
         slot,
         form,
         other,
         contents,
         compare,
+        withdraw,
       }),
       migrate: (persisted) => sanitizePersisted(persisted),
       merge: (persisted, current) => ({ ...current, ...sanitizePersisted(persisted) }),

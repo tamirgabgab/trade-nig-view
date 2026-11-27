@@ -175,3 +175,27 @@ export function parseSimulation(body: unknown): SimulationResult {
 
 export const simulateScenario = (request: SimulateRequest) =>
   apiPost('/planner/simulate', request, parseSimulation);
+
+/** POST /api/planner/withdraw: a starting capital, a withdrawal rule, and what is left. */
+export type WithdrawRequest = Schemas['WithdrawRequest'];
+export type WithdrawResult = Schemas['WithdrawResponse'];
+export type WithdrawSummary = Schemas['WithdrawSummary'];
+export type WithdrawRow = Schemas['WithdrawRow'];
+
+/** Checks the shape the tab relies on (the rows, and every number of the three summaries). */
+export function parseWithdraw(body: unknown): WithdrawResult {
+  if (!isRecord(body) || !Array.isArray(body['rows']) || !Array.isArray(body['warnings'])) {
+    throw new Error('Unexpected /api/planner/withdraw response');
+  }
+  for (const part of ['summary', 'floor', 'ceiling']) {
+    const summary = body[part];
+    if (!isRecord(summary)) throw new Error('Unexpected /api/planner/withdraw response');
+    for (const key of ['balance', 'taken', 'tax', 'liquidation', 'lowest_net_real']) {
+      if (typeof summary[key] !== 'number') throw new Error(`Expected a number for ${key}`);
+    }
+  }
+  return body as unknown as WithdrawResult;
+}
+
+export const runWithdraw = (request: WithdrawRequest) =>
+  apiPost('/planner/withdraw', request, parseWithdraw);

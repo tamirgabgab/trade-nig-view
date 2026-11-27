@@ -202,8 +202,8 @@ describe('the Withdraw tab’s settings', () => {
 
   it('come with their defaults into a planner stored before the tab existed', async () => {
     const before = sanitizePersisted(null);
-    const { withdraw: _withdraw, ...stored } = { ...before, slot: 'a', same: false };
-    void _withdraw;
+    const stored: Record<string, unknown> = { ...before, slot: 'a', same: false };
+    delete stored['withdraw'];
     const compare = { ...before.compare, discount: 25 };
     localStorage.setItem(
       'chartlab.planner',
