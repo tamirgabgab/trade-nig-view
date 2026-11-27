@@ -1,4 +1,4 @@
-import { useReturnPreview, type ReturnShape } from '../api/synthetic.ts';
+import { useReturnPreview, type ParametricDefinition } from '../api/synthetic.ts';
 import { DistributionChart } from './DistributionChart.tsx';
 import { useDebounced } from './lab/useDebounced.ts';
 import styles from './SyntheticSymbolDialog.module.css';
@@ -6,20 +6,11 @@ import styles from './SyntheticSymbolDialog.module.css';
 const pct = (v: number) => `${v.toFixed(1)} %`;
 const moment = (v: number | null) => (v === null ? '∞' : v.toFixed(2));
 
-/** What a parametric symbol's statistics draw (null: nothing to ask): the daily returns as a
- *  histogram over the family's density, and the drawn numbers next to the targets. */
-export function ReturnPreview({
-  shape,
-  seed,
-  bars,
-}: {
-  shape: ReturnShape | null;
-  seed: number;
-  bars: number;
-}) {
-  const request = useDebounced(shape === null ? null : { shape, seed, bars }, 300);
-  const preview = useReturnPreview(request);
-  if (shape === null) return null;
+/** What a parametric symbol draws (null: nothing to ask): its daily returns as a histogram over
+ *  the family's density, and the drawn numbers next to the asked ones. */
+export function ReturnPreview({ def }: { def: ParametricDefinition | null }) {
+  const preview = useReturnPreview(useDebounced(def, 300));
+  if (def === null) return null;
   if (preview.error !== null) {
     return (
       <p className={styles.error} role="alert">
@@ -49,12 +40,12 @@ export function ReturnPreview({
           <tr>
             <th scope="row">Mean a year</th>
             <td>{pct(p.meanPct)}</td>
-            <td>{pct(shape.meanPct)}</td>
+            <td>{pct(def.meanPct)}</td>
           </tr>
           <tr>
             <th scope="row">Daily σ × √year</th>
             <td>{pct(p.volPct)}</td>
-            <td>{pct(shape.volPct)}</td>
+            <td>{pct(def.volPct)}</td>
           </tr>
           <tr>
             <th scope="row">Skewness</th>
@@ -70,7 +61,7 @@ export function ReturnPreview({
       </table>
       <p className={styles.hint}>
         Asked skewness and kurtosis are the distribution&apos;s; memory, jumps and GARCH change them
-        {shape.memory !== 0 && ', and with memory σ is the spread of a whole year'}.
+        {def.memory !== 0 && ', and with memory σ is the spread of a whole year'}.
       </p>
       {p.floored > 0 && (
         <p className={styles.warning} role="note">

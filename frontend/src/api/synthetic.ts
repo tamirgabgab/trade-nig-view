@@ -343,16 +343,14 @@ function parsePreview(body: unknown): ReturnPreview {
 
 /** What a parametric symbol with these statistics, seed and length draws (none for null); the
  *  last preview stays while the next one loads. */
-export function useReturnPreview(
-  request: { shape: ReturnShape; seed: number; bars: number } | null,
-) {
+export function useReturnPreview(def: ParametricDefinition | null) {
   const body =
-    request === null
+    def === null
       ? null
       : ({
-          ...shapeToWire(request.shape),
-          seed: request.seed,
-          bars: request.bars,
+          ...shapeToWire(def),
+          seed: def.seed,
+          bars: def.bars,
         } satisfies Schemas['PreviewRequest']);
   return useQuery({
     queryKey: ['syntheticPreview', body],

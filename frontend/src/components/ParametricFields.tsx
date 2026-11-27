@@ -1,6 +1,12 @@
-import { DISTRIBUTIONS, type Distribution, type ReturnShape } from '../api/synthetic.ts';
+import {
+  DISTRIBUTIONS,
+  type Distribution,
+  type ParametricDefinition,
+  type ReturnShape,
+} from '../api/synthetic.ts';
 import panel from './IndicatorSettingsPanel.module.css';
 import { ReturnPreview } from './ReturnPreview.tsx';
+import { previewProblem } from './syntheticChecks.ts';
 import styles from './SyntheticSymbolDialog.module.css';
 
 type NumberKey = Exclude<keyof ReturnShape, 'distribution' | 'exact'>;
@@ -29,21 +35,16 @@ const LAYERS: readonly NumberSpec[] = [
   { key: 'garchBeta', label: 'GARCH β (persistence)', min: 0, max: 0.99, step: 0.01 },
 ];
 
-/** A parametric symbol's statistics (K2): the targets, the family, the layers, and what they draw.
- *  `problem` is what is wrong with them (no preview then). */
+/** A parametric symbol's statistics (K2): the targets, the family, the layers, and what they draw
+ *  (or why nothing is drawn). */
 export function ParametricFields({
-  shape,
-  seed,
-  bars,
-  problem,
+  def,
   onChange,
 }: {
-  shape: ReturnShape;
-  seed: number;
-  bars: number;
-  problem: string | null;
+  def: ParametricDefinition;
   onChange: (change: Partial<ReturnShape>) => void;
 }) {
+  const problem = previewProblem(def);
   const row = (spec: NumberSpec) => (
     <div key={spec.key} className={styles.field}>
       <label htmlFor={`synthetic-${spec.key}`}>{spec.label}</label>
@@ -54,7 +55,7 @@ export function ParametricFields({
         min={spec.min}
         max={spec.max}
         step={spec.step}
-        value={shape[spec.key]}
+        value={def[spec.key]}
         onChange={(event) => {
           const change: Partial<ReturnShape> = {};
           change[spec.key] = event.target.valueAsNumber;
@@ -63,9 +64,9 @@ export function ParametricFields({
       />
     </div>
   );
-  const family = DISTRIBUTIONS.find((d) => d.id === shape.distribution);
+  const family = DISTRIBUTIONS.find((d) => d.id === def.distribution);
   const layered =
-    shape.memory !== 0 || shape.jumpsPerYear > 0 || shape.garchAlpha > 0 || shape.garchBeta > 0;
+    def.memory !== 0 || def.jumpsPerYear > 0 || def.garchAlpha > 0 || def.garchBeta > 0;
   return (
     <>
       {TARGETS.map(row)}
@@ -74,7 +75,7 @@ export function ParametricFields({
         <select
           id="synthetic-distribution"
           className={panel.control}
-          value={shape.distribution}
+          value={def.distribution}
           onChange={(event) => {
             onChange({ distribution: event.target.value as Distribution });
           }}
@@ -87,14 +88,14 @@ export function ParametricFields({
         </select>
       </div>
       {family && <p className={styles.hint}>{family.hint}</p>}
-      {shape.distribution === 'student_t' && row(DF)}
-      {shape.distribution === 'skew_normal' && row(SKEW)}
+      {def.distribution === 'student_t' && row(DF)}
+      {def.distribution === 'skew_normal' && row(SKEW)}
       <div className={styles.field}>
         <label htmlFor="synthetic-exact">Mean and σ</label>
         <select
           id="synthetic-exact"
           className={panel.control}
-          value={shape.exact ? 'exact' : 'expected'}
+          value={def.exact ? 'exact' : 'expected'}
           onChange={(event) => {
             onChange({ exact: event.target.value === 'exact' });
           }}
@@ -107,7 +108,7 @@ export function ParametricFields({
         <summary>Layers: memory, jumps, GARCH</summary>
         {LAYERS.map(row)}
       </details>
-      <ReturnPreview shape={problem === null ? shape : null} seed={seed} bars={bars} />
+      <ReturnPreview def={problem === null ? def : null} />
       {problem !== null && <p className={styles.hint}>No preview: {problem}</p>}
     </>
   );

@@ -35,7 +35,6 @@ import {
   lastDate,
   MAX_LAG,
   MAX_NOISE_PCT,
-  previewProblem,
 } from './syntheticChecks.ts';
 import styles from './SyntheticSymbolDialog.module.css';
 
@@ -55,16 +54,15 @@ type Common = Pick<SyntheticDefinition, 'name' | 'fullName' | 'seed' | 'firstPri
 /** The length, first date and currency: a lab scenario's and a parametric symbol's. */
 type Dated = Pick<ScenarioDefinition, 'firstDate' | 'bars' | 'currency'>;
 
-function blankDated(): Dated {
+function blankScenario(common: Common): ScenarioDefinition {
   return {
+    ...common,
+    kind: 'scenario',
+    scenario: 'random_walk',
     firstDate: firstDateEndingBefore(today(), DEFAULT_BARS),
     bars: DEFAULT_BARS,
     currency: 'ILS',
   };
-}
-
-function blankScenario(common: Common): ScenarioDefinition {
-  return { ...common, ...blankDated(), kind: 'scenario', scenario: 'random_walk' };
 }
 
 function blankDwelling(common: Common): DwellingDefinition {
@@ -563,15 +561,7 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             </select>
           </div>
         )}
-        {kind === 'parametric' && (
-          <ParametricFields
-            shape={parametricDraft}
-            seed={parametricDraft.seed}
-            bars={parametricDraft.bars}
-            problem={previewProblem(parametricDraft)}
-            onChange={setShape}
-          />
-        )}
+        {kind === 'parametric' && <ParametricFields def={parametricDraft} onChange={setShape} />}
         <p className={styles.hint}>
           {kind === 'dwelling'
             ? dwellingDraft.causal
