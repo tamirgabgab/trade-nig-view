@@ -29,7 +29,7 @@
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
-| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅ (2026-11-27, ADR 0031, 0032) |
+| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅, K2 ✅ (2026-11-27, ADR 0031 to 0033) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -418,7 +418,9 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   the family's density, and the realized mean, standard deviation, skewness and kurtosis. The formulas in a **new
   part of the `synthetic-symbols` page**. Hours **as in K0** (a bridge from the open to the close, so the daily
   return is exactly the family's). Defaults **μ 7 %, σ 18 %, normal**.
-- [ ] **K2: an independent synthetic symbol.** The user sets its statistics: expected yearly return, yearly
+- [x] **K2: an independent synthetic symbol** (ADR 0033, 2026-11-27: five families, in the distribution or exact in
+  the path, AR(1) memory, Merton jumps and GARCH(1,1) keeping μ and σ, a preview in the dialog, the formulas on the
+  `synthetic-symbols` page). The user sets its statistics: expected yearly return, yearly
   volatility, and what shapes the bars: the overnight gap's share, the day's range, fat tails, memory (trend or
   mean reversion), jumps; plus the seed, the first price, the first date and the length.
   - Open, high, low and close cannot each have a distribution of their own: a bar needs low ≤ open, close ≤ high.
@@ -480,7 +482,7 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   market status, exchange "Synthetic", the intraday collector skips them; at most 100 definitions.
 - **K2's bar-shape defaults** start from the recipe in `app/analysis/synthetic.py` (asked again at K2).
 - **K2's return distributions** (user, 2026-11-27): the user picks the family of the daily return, and the yearly
-  mean and standard deviation he sets hold exactly whatever the family: **normal, Student-t** (degrees of freedom
+  mean and standard deviation they set hold exactly whatever the family: **normal, Student-t** (degrees of freedom
   set the tails), **uniform, Laplace**, and a **skewed** one (skew-normal or a skewed t), each with its formulas on
   the page. (Mixtures and Merton jumps were not picked as families; the roadmap's jumps are asked again at K2.)
 - **Refined while building K0 (ADR 0031):** the bars are never stored in `bars.db` but are memoised in memory by
