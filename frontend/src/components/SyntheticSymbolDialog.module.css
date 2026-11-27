@@ -58,17 +58,24 @@
   padding: 0;
 }
 
-/* Kept in view while a long form (a parametric symbol's) scrolls. */
-.actions {
+/* The warning, the error and the buttons, kept in view while a long form (a parametric
+   symbol's) scrolls. */
+.footer {
   position: sticky;
   /* Over the form's bottom padding too, so nothing scrolls by under the buttons. */
   bottom: calc(-1 * var(--space-4));
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-2);
   margin-bottom: calc(-1 * var(--space-4));
   padding: var(--space-2) 0 var(--space-4);
   background: var(--color-surface);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .spacer {

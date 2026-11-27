@@ -32,8 +32,8 @@ variance, :math:`q` its innovation's), and
     k_t \sim \operatorname{Poisson}(\lambda/N), \quad y_t \sim N(0, 1)
 
 .. math::
-    R_t = m + D_t + J_t, \qquad (1 + m)^N \Big(1 + \frac{C}{(1+m)^2}\Big) = 1 + \mu, \qquad
-    C = \gamma_0 \sum_{k=1}^{n-1} (n - k)\varphi^k
+    R_t = m + D_t + J_t, \qquad (1 + m)^N \Big(1 + \frac{C}{(1+m_0)^2}\Big) = 1 + \mu, \qquad
+    C = \gamma_0 \sum_{k=1}^{n-1} (n - k)\varphi^k, \qquad (1 + m_0)^N = 1 + \mu
 
 :math:`D` (GARCH) and :math:`J` (compensated) are martingale differences, so without memory
 :math:`E[\prod (1 + R_t)] = (1 + m)^N = 1 + \mu` exactly over a year; with memory the year's
@@ -41,7 +41,9 @@ covariances :math:`C` enter the product, and :math:`m` holds :math:`\mu` to seco
 
 **Exact.** The path's returns are shifted and scaled, :math:`R \leftarrow m + (R - \bar R)\, s /
 \hat s` with :math:`s^2 = \gamma_0 + \frac{\lambda}{N}(\mu_J^2 + \sigma_J^2)`, so the path's own
-mean and standard deviation are the targets (not prefix-stable: the whole path sets them).
+mean and standard deviation are the targets (not prefix-stable: the whole path sets them); each
+day's diffusion standard deviation and jump, which the bars' wicks and open use, are scaled by the
+same :math:`s / \hat s`.
 
 **Floor.** :math:`1 + R_t \ge 0.01` (a fall of at most 99 % a day), applied last; with sane
 parameters it never binds, and the preview counts the days it does.

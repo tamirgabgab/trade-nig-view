@@ -220,7 +220,8 @@ $$
 | $\bar R$, $\hat s$ | the path's own mean and standard deviation of its daily returns | % a day |
 | $s$ | the targeted daily standard deviation | % a day |
 
-The shape, the clusters and the jumps stay, scaled. Since the whole path sets $\bar R$ and $\hat s$, a longer exact
+The shape, the clusters and the jumps stay, scaled; the day's $\sqrt{h_t}$ and jump in the bars' wicks and open
+(below) are scaled by the same $s / \hat s$. Since the whole path sets $\bar R$ and $\hat s$, a longer exact
 path is not the shorter one extended (without Exact, it is). The last rule is the **floor**: a day falls 99 % at
 most. With sane statistics it never binds; the dialog's preview counts the days it does.
 

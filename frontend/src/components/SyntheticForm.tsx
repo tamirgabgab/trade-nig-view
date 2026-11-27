@@ -583,48 +583,51 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             How it is built
           </button>
         </p>
-        {editing && refs !== null && 'text' in refs && refs.text && (
-          <p className={styles.warning} role="note">
-            Saving changes its bars everywhere it is used: {refs.text}.
-          </p>
-        )}
-        {error !== null && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
-        <div className={styles.actions}>
-          {editing && (
-            <>
-              <button
-                type="button"
-                className={confirm.cancel}
-                onClick={() => {
-                  setDeleting(true);
-                }}
-              >
-                Delete…
-              </button>
-              <button
-                type="button"
-                className={confirm.cancel}
-                onClick={() => {
-                  setCopying(true);
-                  setCommon({ name: '' });
-                  nameRef.current?.focus();
-                }}
-              >
-                Save as copy…
-              </button>
-            </>
+        {/* In view at the bottom of the scrolling form, with what is wrong and what saving changes. */}
+        <div className={styles.footer}>
+          {editing && refs !== null && 'text' in refs && refs.text && (
+            <p className={styles.warning} role="note">
+              Saving changes its bars everywhere it is used: {refs.text}.
+            </p>
           )}
-          <span className={styles.spacer} />
-          <button type="button" className={confirm.cancel} onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className={panel.primary} disabled={busy}>
-            {editing ? 'Save' : copying ? 'Save copy' : 'Create symbol'}
-          </button>
+          {error !== null && (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          )}
+          <div className={styles.actions}>
+            {editing && (
+              <>
+                <button
+                  type="button"
+                  className={confirm.cancel}
+                  onClick={() => {
+                    setDeleting(true);
+                  }}
+                >
+                  Delete…
+                </button>
+                <button
+                  type="button"
+                  className={confirm.cancel}
+                  onClick={() => {
+                    setCopying(true);
+                    setCommon({ name: '' });
+                    nameRef.current?.focus();
+                  }}
+                >
+                  Save as copy…
+                </button>
+              </>
+            )}
+            <span className={styles.spacer} />
+            <button type="button" className={confirm.cancel} onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className={panel.primary} disabled={busy}>
+              {editing ? 'Save' : copying ? 'Save copy' : 'Create symbol'}
+            </button>
+          </div>
         </div>
       </form>
     </>

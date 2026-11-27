@@ -214,6 +214,10 @@ test('a parametric symbol: its statistics previewed, then charted with volume', 
     .click();
   const dialog = page.getByRole('dialog', { name: 'New synthetic symbol' });
   await dialog.getByLabel('Kind').selectOption('parametric');
+  // The form scrolls, its buttons stay at the bottom: a problem shows where they are, in view.
+  await dialog.getByRole('button', { name: 'Create symbol' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Name');
+  await expect(dialog.getByRole('alert')).toBeInViewport();
   await dialog.getByLabel('Name', { exact: true }).fill(STATS.slice(4).toLowerCase());
   await dialog.getByLabel('Full name').fill('Fat tails and jumps');
   await dialog.getByLabel('Bars (days)').fill('600');

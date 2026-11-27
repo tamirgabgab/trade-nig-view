@@ -43,7 +43,8 @@ new part of the `synthetic-symbols` learn page; the hours as in K0; defaults μ 
   the t, α for the skew-normal; a hidden one that is not valid goes back to its default when the family changes),
   Exact, the layers (folded at first while all are off, then opened and closed only by the user), the preview, and
   the reason when there is none. The length, first date and currency are shared with the lab scenario's draft. The form checks every
-  rule itself (`noValidate`: a typed 7.3 % is off the spinner's step but valid).
+  rule itself (`noValidate`: a typed 7.3 % is off the spinner's step but valid). The form scrolls inside the
+  dialog; its footer (what saving changes, the error, the buttons) stays in view at the bottom, for every kind.
 
 ## What holds (the tests)
 - Each family's shocks have mean 0, variance 1 and the documented skewness and kurtosis (400,000 draws); each

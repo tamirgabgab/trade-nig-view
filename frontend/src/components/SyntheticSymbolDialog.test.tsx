@@ -414,7 +414,8 @@ describe('SyntheticSymbolDialog', () => {
         },
       },
       '/api/synthetic/SYN%3ASTAT/references': { body: { ...REFERENCES, layouts: [] } },
-      '/api/synthetic/preview': { body: PREVIEW },
+      // A Student-t with 3 degrees of freedom or fewer has no skewness.
+      '/api/synthetic/preview': { body: { ...PREVIEW, family_skewness: null } },
     });
     renderWithQuery(<SyntheticSymbolDialog />);
     useUiStore.getState().openModal('synthetic', 'SYN:STAT');
@@ -423,6 +424,8 @@ describe('SyntheticSymbolDialog', () => {
     expect(within(dialog).getByLabelText('Kind')).toHaveValue('parametric');
     expect(within(dialog).getByLabelText('GARCH β (persistence)')).toBeVisible();
     expect(within(dialog).getByLabelText('Bars (days)')).toHaveValue(1000);
+    const preview = await within(dialog).findByRole('region', { name: 'Preview' });
+    expect(within(preview).getByRole('row', { name: /^Skewness/ })).toHaveTextContent('none');
   });
 
   it('reads the learn page inside the dialog and comes back to the form as it was', async () => {
