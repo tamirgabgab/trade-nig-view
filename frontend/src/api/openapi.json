@@ -3130,6 +3130,16 @@
         ],
         "title": "Calibration"
       },
+      "Cause": {
+        "type": "string",
+        "enum": [
+          "planned",
+          "empty",
+          "forced"
+        ],
+        "title": "Cause",
+        "description": "Why it was sold."
+      },
       "Coefficient": {
         "properties": {
           "feature": {
@@ -4459,6 +4469,176 @@
           "effective"
         ],
         "title": "HistoryUsed"
+      },
+      "HomeIn": {
+        "properties": {
+          "value": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Value",
+            "description": "Its value on the first day, in shekels"
+          },
+          "growth": {
+            "type": "string",
+            "enum": [
+              "assumed",
+              "index"
+            ],
+            "title": "Growth",
+            "description": "An assumed yearly rate, or the national dwelling index",
+            "default": "assumed"
+          },
+          "growth_pct": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": -20.0,
+            "title": "Growth Pct",
+            "description": "Yearly, assumed mode",
+            "default": 3.0
+          },
+          "use": {
+            "type": "string",
+            "enum": [
+              "live",
+              "rent_out"
+            ],
+            "title": "Use",
+            "description": "Lived in (no cash), or rented out",
+            "default": "live"
+          },
+          "rent": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Rent",
+            "description": "A month, in shekels of the first day",
+            "default": 0.0
+          },
+          "vacancy_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Vacancy Pct",
+            "default": 4.0
+          },
+          "rent_tax_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Rent Tax Pct",
+            "default": 10.0
+          },
+          "maintenance_pct": {
+            "type": "number",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Maintenance Pct",
+            "description": "Of the value, a year",
+            "default": 0.5
+          },
+          "insurance": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Insurance",
+            "description": "A year; follows the CPI",
+            "default": 1500.0
+          },
+          "loan": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Loan",
+            "description": "What is left of its mortgage",
+            "default": 0.0
+          },
+          "loan_rate_pct": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Loan Rate Pct",
+            "description": "Fixed, a year",
+            "default": 4.0
+          },
+          "loan_months": {
+            "type": "integer",
+            "maximum": 600.0,
+            "minimum": 1.0,
+            "title": "Loan Months",
+            "description": "Payments left",
+            "default": 180
+          },
+          "loan_linked": {
+            "type": "boolean",
+            "title": "Loan Linked",
+            "description": "Linked to the CPI",
+            "default": false
+          },
+          "role": {
+            "$ref": "#/components/schemas/Sale",
+            "default": "kept"
+          },
+          "sell_after_months": {
+            "type": "integer",
+            "maximum": 1200.0,
+            "minimum": 1.0,
+            "title": "Sell After Months",
+            "description": "On a date",
+            "default": 120
+          },
+          "selling_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Selling Pct",
+            "default": 2.4
+          },
+          "early_repayment_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Early Repayment Pct",
+            "default": 0.0
+          },
+          "betterment": {
+            "type": "string",
+            "enum": [
+              "single_home",
+              "full"
+            ],
+            "title": "Betterment",
+            "description": "A single home, exempt up to the ceiling; or 25 % of the real gain",
+            "default": "single_home"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost",
+            "description": "What it cost, in shekels of the day it was bought"
+          },
+          "bought": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bought"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "HomeIn",
+        "description": "An apartment owned on the first day."
       },
       "HomeOptionIn": {
         "properties": {
@@ -8702,6 +8882,16 @@
         ],
         "title": "RunResponse"
       },
+      "Sale": {
+        "type": "string",
+        "enum": [
+          "kept",
+          "on_date",
+          "when_empty"
+        ],
+        "title": "Sale",
+        "description": "When the apartment is sold (a forced sale aside)."
+      },
       "SaleIn": {
         "properties": {
           "costs_pct": {
@@ -11139,9 +11329,9 @@
           },
           "capital": {
             "type": "number",
-            "exclusiveMinimum": 0.0,
+            "minimum": 0.0,
             "title": "Capital",
-            "description": "The account's value on the first day, in shekels"
+            "description": "The account's value on the first day (zero only with an apartment)"
           },
           "cost_share_pct": {
             "type": "number",
@@ -11173,6 +11363,16 @@
               "sd_pct": 0.0,
               "persistence": 0.0
             }
+          },
+          "home": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -11304,6 +11504,19 @@
           "net_ceiling": {
             "type": "number",
             "title": "Net Ceiling"
+          },
+          "home": {
+            "type": "number",
+            "title": "Home",
+            "description": "The apartment's worth while it is held"
+          },
+          "home_cash": {
+            "type": "number",
+            "title": "Home Cash"
+          },
+          "invested": {
+            "type": "number",
+            "title": "Invested"
           }
         },
         "type": "object",
@@ -11322,7 +11535,10 @@
           "balance_floor",
           "balance_ceiling",
           "net_floor",
-          "net_ceiling"
+          "net_ceiling",
+          "home",
+          "home_cash",
+          "invested"
         ],
         "title": "WithdrawRow"
       },
@@ -11402,6 +11618,63 @@
             "type": "number",
             "title": "Lowest Net Real",
             "description": "The lowest month's income, in first-day shekels"
+          },
+          "home_worth": {
+            "type": "number",
+            "title": "Home Worth",
+            "description": "What the apartment's sale would leave at the end"
+          },
+          "net_worth": {
+            "type": "number",
+            "title": "Net Worth",
+            "description": "The account and the apartment at the end"
+          },
+          "net_worth_real": {
+            "type": "number",
+            "title": "Net Worth Real"
+          },
+          "home_cash": {
+            "type": "number",
+            "title": "Home Cash",
+            "description": "The apartment's cash, all months"
+          },
+          "invested": {
+            "type": "number",
+            "title": "Invested",
+            "description": "Put into the account: rent surplus, the sale"
+          },
+          "home_sold_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Sold Month"
+          },
+          "home_sold_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Sold On"
+          },
+          "home_sale": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Cause"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -11418,7 +11691,15 @@
           "depleted_month",
           "depleted_on",
           "months_paid",
-          "lowest_net_real"
+          "lowest_net_real",
+          "home_worth",
+          "net_worth",
+          "net_worth_real",
+          "home_cash",
+          "invested",
+          "home_sold_month",
+          "home_sold_on",
+          "home_sale"
         ],
         "title": "WithdrawSummary"
       }

@@ -1099,6 +1099,12 @@ export interface components {
              */
             brier_base: number;
         };
+        /**
+         * Cause
+         * @description Why it was sold.
+         * @enum {string}
+         */
+        Cause: "planned" | "empty" | "forced";
         /** Coefficient */
         Coefficient: {
             /** Feature */
@@ -1728,6 +1734,121 @@ export interface components {
              * @description About how many independent terms it holds
              */
             effective: number;
+        };
+        /**
+         * HomeIn
+         * @description An apartment owned on the first day.
+         */
+        HomeIn: {
+            /**
+             * Value
+             * @description Its value on the first day, in shekels
+             */
+            value: number;
+            /**
+             * Growth
+             * @description An assumed yearly rate, or the national dwelling index
+             * @default assumed
+             * @enum {string}
+             */
+            growth: "assumed" | "index";
+            /**
+             * Growth Pct
+             * @description Yearly, assumed mode
+             * @default 3
+             */
+            growth_pct: number;
+            /**
+             * Use
+             * @description Lived in (no cash), or rented out
+             * @default live
+             * @enum {string}
+             */
+            use: "live" | "rent_out";
+            /**
+             * Rent
+             * @description A month, in shekels of the first day
+             * @default 0
+             */
+            rent: number;
+            /**
+             * Vacancy Pct
+             * @default 4
+             */
+            vacancy_pct: number;
+            /**
+             * Rent Tax Pct
+             * @default 10
+             */
+            rent_tax_pct: number;
+            /**
+             * Maintenance Pct
+             * @description Of the value, a year
+             * @default 0.5
+             */
+            maintenance_pct: number;
+            /**
+             * Insurance
+             * @description A year; follows the CPI
+             * @default 1500
+             */
+            insurance: number;
+            /**
+             * Loan
+             * @description What is left of its mortgage
+             * @default 0
+             */
+            loan: number;
+            /**
+             * Loan Rate Pct
+             * @description Fixed, a year
+             * @default 4
+             */
+            loan_rate_pct: number;
+            /**
+             * Loan Months
+             * @description Payments left
+             * @default 180
+             */
+            loan_months: number;
+            /**
+             * Loan Linked
+             * @description Linked to the CPI
+             * @default false
+             */
+            loan_linked: boolean;
+            /** @default kept */
+            role: components["schemas"]["Sale"];
+            /**
+             * Sell After Months
+             * @description On a date
+             * @default 120
+             */
+            sell_after_months: number;
+            /**
+             * Selling Pct
+             * @default 2.4
+             */
+            selling_pct: number;
+            /**
+             * Early Repayment Pct
+             * @default 0
+             */
+            early_repayment_pct: number;
+            /**
+             * Betterment
+             * @description A single home, exempt up to the ceiling; or 25 % of the real gain
+             * @default single_home
+             * @enum {string}
+             */
+            betterment: "single_home" | "full";
+            /**
+             * Cost
+             * @description What it cost, in shekels of the day it was bought
+             */
+            cost?: number | null;
+            /** Bought */
+            bought?: string | null;
         };
         /**
          * HomeOptionIn
@@ -3679,6 +3800,12 @@ export interface components {
             /** Warnings */
             warnings: string[];
         };
+        /**
+         * Sale
+         * @description When the apartment is sold (a forced sale aside).
+         * @enum {string}
+         */
+        Sale: "kept" | "on_date" | "when_empty";
         /** SaleIn */
         SaleIn: {
             /**
@@ -4822,7 +4949,7 @@ export interface components {
             months: number;
             /**
              * Capital
-             * @description The account's value on the first day, in shekels
+             * @description The account's value on the first day (zero only with an apartment)
              */
             capital: number;
             /**
@@ -4850,6 +4977,7 @@ export interface components {
              *     }
              */
             inflation: components["schemas"]["InflationIn"];
+            home?: components["schemas"]["HomeIn"] | null;
         };
         /** WithdrawResponse */
         WithdrawResponse: {
@@ -4923,6 +5051,15 @@ export interface components {
             net_floor: number;
             /** Net Ceiling */
             net_ceiling: number;
+            /**
+             * Home
+             * @description The apartment's worth while it is held
+             */
+            home: number;
+            /** Home Cash */
+            home_cash: number;
+            /** Invested */
+            invested: number;
         };
         /** WithdrawSummary */
         WithdrawSummary: {
@@ -4976,6 +5113,33 @@ export interface components {
              * @description The lowest month's income, in first-day shekels
              */
             lowest_net_real: number;
+            /**
+             * Home Worth
+             * @description What the apartment's sale would leave at the end
+             */
+            home_worth: number;
+            /**
+             * Net Worth
+             * @description The account and the apartment at the end
+             */
+            net_worth: number;
+            /** Net Worth Real */
+            net_worth_real: number;
+            /**
+             * Home Cash
+             * @description The apartment's cash, all months
+             */
+            home_cash: number;
+            /**
+             * Invested
+             * @description Put into the account: rent surplus, the sale
+             */
+            invested: number;
+            /** Home Sold Month */
+            home_sold_month: number | null;
+            /** Home Sold On */
+            home_sold_on: string | null;
+            home_sale: components["schemas"]["Cause"] | null;
         };
     };
     responses: never;

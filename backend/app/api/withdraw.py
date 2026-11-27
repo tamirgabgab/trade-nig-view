@@ -4,6 +4,10 @@ is left (Phase J, ``docs/WITHDRAWAL_PLAN.md``).
 The account is the Market tab's (its mix over history, its fees and its tax settings) or grows
 by an assumed yearly return. The plan runs three times: at the cost share asked for and at its
 two bounds, 0 (everything sold is gain) and 1 (only growth from the start is).
+
+An apartment owned on the first day (J1) joins the balance: ``app.planner.home.run_home`` gives
+its cash each month and what its sale would leave, read as "today" (no purchase costs; what is
+left of its mortgage as one track).
 """
 
 from __future__ import annotations
@@ -34,10 +38,26 @@ from app.data.bar_service import BarService
 from app.data.universe import Universe
 from app.macro.service import MacroService
 from app.models.bars import FloatArray
-from app.planner.data import cpi_path
+from app.planner.data import Macro, cpi_path
 from app.planner.deposits import add_months, day_number
+from app.planner.home import HomePlan, RentMode, run_home
+from app.planner.home_data import HomeSpec, home_series
+from app.planner.inflation import CpiPath
 from app.planner.market import PlanError, TaxBase
-from app.planner.withdraw import MAX_PERCENT, Plan, Result, Rule, assumed_grid, run, sample
+from app.planner.mortgage import RateKind, Track
+from app.planner.tax_presets import BETTERMENT
+from app.planner.withdraw import (
+    MAX_PERCENT,
+    Cause,
+    Home,
+    Plan,
+    Result,
+    Rule,
+    Sale,
+    assumed_grid,
+    run,
+    sample,
+)
 
 router = APIRouter(tags=["planner"])
 
@@ -79,10 +99,46 @@ class AccountIn(BaseModel):
     taxes: TaxesIn = TaxesIn()
 
 
+class HomeIn(BaseModel):
+    """An apartment owned on the first day."""
+
+    value: float = Field(gt=0, description="Its value on the first day, in shekels")
+    growth: Literal["assumed", "index"] = Field(
+        default="assumed", description="An assumed yearly rate, or the national dwelling index"
+    )
+    growth_pct: float = Field(default=3.0, ge=-20, le=30, description="Yearly, assumed mode")
+    use: Literal["live", "rent_out"] = Field(
+        default="live", description="Lived in (no cash), or rented out"
+    )
+    rent: float = Field(default=0.0, ge=0, description="A month, in shekels of the first day")
+    vacancy_pct: Percent = 4.0
+    rent_tax_pct: Percent = 10.0
+    maintenance_pct: float = Field(default=0.5, ge=0, le=10, description="Of the value, a year")
+    insurance: float = Field(default=1_500.0, ge=0, description="A year; follows the CPI")
+    loan: float = Field(default=0.0, ge=0, description="What is left of its mortgage")
+    loan_rate_pct: float = Field(default=4.0, ge=0, le=30, description="Fixed, a year")
+    loan_months: int = Field(default=180, ge=1, le=600, description="Payments left")
+    loan_linked: bool = Field(default=False, description="Linked to the CPI")
+    role: Sale = Sale.KEPT
+    sell_after_months: int = Field(default=120, ge=1, le=MAX_MONTHS, description="On a date")
+    selling_pct: Percent = 2.4
+    early_repayment_pct: Percent = 0.0
+    betterment: Literal["single_home", "full"] = Field(
+        default="single_home",
+        description="A single home, exempt up to the ceiling; or 25 % of the real gain",
+    )
+    cost: float | None = Field(
+        default=None, gt=0, description="What it cost, in shekels of the day it was bought"
+    )
+    bought: dt.date | None = None
+
+
 class WithdrawRequest(BaseModel):
     start: dt.date
     months: int = Field(ge=1, le=MAX_MONTHS)
-    capital: float = Field(gt=0, description="The account's value on the first day, in shekels")
+    capital: float = Field(
+        ge=0, description="The account's value on the first day (zero only with an apartment)"
+    )
     cost_share_pct: Percent = Field(
         default=50.0, description="The share of the capital that is cost; the rest is gain"
     )
@@ -93,6 +149,7 @@ class WithdrawRequest(BaseModel):
         description="The mix (unused on an assumed return), the fees and the taxes",
     )
     inflation: InflationIn = InflationIn()
+    home: HomeIn | None = None
 
 
 class WithdrawSummary(BaseModel):
@@ -109,6 +166,14 @@ class WithdrawSummary(BaseModel):
     depleted_on: dt.date | None
     months_paid: int = Field(description="Months paid in full")
     lowest_net_real: float = Field(description="The lowest month's income, in first-day shekels")
+    home_worth: float = Field(description="What the apartment's sale would leave at the end")
+    net_worth: float = Field(description="The account and the apartment at the end")
+    net_worth_real: float
+    home_cash: float = Field(description="The apartment's cash, all months")
+    invested: float = Field(description="Put into the account: rent surplus, the sale")
+    home_sold_month: int | None
+    home_sold_on: dt.date | None
+    home_sale: Cause | None
 
 
 class WithdrawRow(BaseModel):
@@ -127,6 +192,9 @@ class WithdrawRow(BaseModel):
     balance_ceiling: float = Field(description="At a cost share of 1")
     net_floor: float
     net_ceiling: float
+    home: float = Field(description="The apartment's worth while it is held")
+    home_cash: float
+    invested: float
 
 
 class WithdrawResponse(BaseModel):
@@ -161,6 +229,78 @@ def _summary(
         depleted_on=None if depleted is None else dates[depleted],
         months_paid=months if depleted is None else depleted - 1,
         lowest_net_real=float(real.min()),
+        home_worth=float(result.home[-1]),
+        net_worth=float(result.balance[-1] + result.home[-1]),
+        net_worth_real=float((result.balance[-1] + result.home[-1]) / prices[-1]),
+        home_cash=float(result.home_cash.sum()),
+        invested=float(result.invested.sum()),
+        home_sold_month=result.home_sold,
+        home_sold_on=None if result.home_sold is None else dates[result.home_sold],
+        home_sale=result.cause,
+    )
+
+
+def _apartment(
+    body: WithdrawRequest, home: HomeIn, cpi: CpiPath, macro: Macro
+) -> tuple[Home, list[str]]:
+    """The apartment's cash and worth on the month dates, read as "today"."""
+    if home.loan > home.value:
+        raise PlanError("The mortgage left cannot be more than the apartment's value")
+    if (home.cost is None) != (home.bought is None):
+        raise PlanError("What the apartment cost and the day it was bought go together")
+    notes: list[str] = []
+    cost = None
+    if home.cost is not None and home.bought is not None:
+        if home.bought > body.start:
+            raise PlanError("The apartment must be bought on or before the first day")
+        series = macro.get("cpi").data
+        published = CpiPath(series.days, series.values)
+        if day_number(home.bought) < int(series.days[0]):
+            first = dt.date(1970, 1, 1) + dt.timedelta(days=int(series.days[0]))
+            raise PlanError(f"The CPI starts on {first}: the purchase must be after it")
+        bought, start = published.at(np.array([day_number(home.bought), day_number(body.start)]))
+        cost = home.cost * float(start / bought)
+        if day_number(body.start) > int(series.days[-1]) + MONTH_DAYS:
+            notes.append("The apartment's cost is indexed by the CPI to its last published value")
+    plan = HomePlan(
+        start=body.start,
+        months=body.months,
+        price=home.value,
+        equity=home.value - home.loan,
+        tracks=[
+            Track(
+                home.loan,
+                home.loan_months,
+                RateKind.FIXED,
+                home.loan_rate_pct / 100,
+                home.loan_linked,
+            )
+        ]
+        if home.loan > 0
+        else [],
+        rent_mode=RentMode.RENT_OUT if home.use == "rent_out" else RentMode.NONE,
+        rent=home.rent,
+        vacancy=home.vacancy_pct / 100,
+        rent_tax=home.rent_tax_pct / 100,
+        maintenance=home.maintenance_pct / 100,
+        insurance=home.insurance,
+        selling=home.selling_pct / 100,
+        early_repayment=home.early_repayment_pct / 100,
+        betterment=BETTERMENT[0 if home.betterment == "single_home" else 1].spec,
+        cost=cost,
+        bought=home.bought,
+    )
+    spec = HomeSpec(
+        plan,
+        value_mode="historical" if home.growth == "index" else "assumed",
+        value_mean=home.growth_pct / 100,
+    )
+    monthly, warnings = home_series(spec, cpi, macro)
+    result = run_home(plan, monthly)
+    cash = result.rent - result.payment - result.costs
+    return (
+        Home(cash, result.net_worth, home.role, home.sell_after_months),
+        notes + warnings,
     )
 
 
@@ -190,7 +330,10 @@ def _run(
         raise PlanError(f"Dates after {MAX_YEAR} are not supported")
     dates = [add_months(body.start, k) for k in range(body.months + 1)]
     first, last = day_number(dates[0]), day_number(dates[-1])
-    cpi = cpi_path(inflation_spec(body.inflation), first, last, macro)
+    # A mortgage that ends after the plan still needs its index (its balance at a sale).
+    loan_months = body.home.loan_months if body.home is not None and body.home.loan > 0 else 0
+    horizon = day_number(add_months(body.start, max(body.months, loan_months)))
+    cpi = cpi_path(inflation_spec(body.inflation), first, horizon, macro)
     account = body.market
     # The fee and tax helpers read a market option; a ticker stands in when the mix is empty.
     option = MarketOptionIn(
@@ -224,6 +367,10 @@ def _run(
         warnings.extend(notes)
         grid = sample([a.data for a in assets], body.start, body.months, taxes, cpi)
         weights = [a.data.weight for a in assets]
+    home = None
+    if body.home is not None:
+        home, notes = _apartment(body, body.home, cpi, macro)
+        warnings.extend(note for note in notes if note not in warnings)
 
     def at(share: float) -> Result:
         return run(
@@ -239,12 +386,19 @@ def _run(
                 management=fees.management,
                 monthly_fee=fees.monthly,
                 gains_tax=taxes.gains,
+                buy=fees.buy,
             ),
             grid,
+            home,
         )
 
     share = body.cost_share_pct / 100
     result, floor, ceiling = at(share), at(0.0), at(1.0)
+    if result.cause is Cause.FORCED and result.home_sold is not None:
+        warnings.append(
+            f"The apartment is sold on {dates[result.home_sold]}: the account could not pay its "
+            "costs (a forced sale)"
+        )
     prices = grid.cpi / grid.cpi[0]
     return WithdrawResponse(
         start=dates[0],
@@ -270,6 +424,9 @@ def _run(
                 balance_ceiling=float(ceiling.balance[k]),
                 net_floor=float(floor.net[k]),
                 net_ceiling=float(ceiling.net[k]),
+                home=float(result.home[k]),
+                home_cash=float(result.home_cash[k]),
+                invested=float(result.invested[k]),
             )
             for k in range(body.months + 1)
         ],
