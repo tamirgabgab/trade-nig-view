@@ -56,16 +56,37 @@ export function PlannerWithdrawHistogram({
   const of = (count: number) =>
     `${String(count)} of ${String(total)} (${wholePercent(count / total)})`;
   const median = none ? null : quantile(sorted, 0.5);
-  // A mark's label goes right of its line, or left when the line is near the right edge. Two
-  // marks close together put their labels outward, the left one leftward, so they never overlap.
+  // A mark's label goes right of its line, or left when the line is near the right edge, the two
+  // on two rows. Two marks close together put their labels outward on one row instead, the left
+  // one leftward, when both fit inside the chart.
   const marks: [value: number, text: string, row: number, left: boolean][] = [];
   const shown = start > lo && start < hi;
-  const near = median !== null && shown && Math.abs(px(start) - px(median)) < 120;
   const edge = (value: number) => px(value) > W * 0.7;
+  const medianText = median === null ? '' : `Median ${format(median)}`;
+  // shortcut: a label's width from its length at the 12 px font, not measured; measure if a font
+  // much wider than the system one is ever used.
+  const wide = (text: string) => 7 * text.length + 4;
+  const [low, high] =
+    median !== null && median < start ? [median, start] : [start, median ?? start];
+  const [lowText, highText] =
+    low === median ? [medianText, 'The start'] : ['The start', medianText];
+  const outward =
+    median !== null &&
+    shown &&
+    Math.abs(px(start) - px(median)) < 120 &&
+    px(low) - wide(lowText) >= left &&
+    px(high) + wide(highText) <= W - SIDE;
   if (median !== null) {
-    marks.push([median, `Median ${format(median)}`, 0, near ? median < start : edge(median)]);
+    marks.push([median, medianText, 0, outward ? median === low : edge(median)]);
   }
-  if (shown) marks.push([start, 'The start', near ? 0 : 1, near ? start <= median : edge(start)]);
+  if (shown) {
+    marks.push([
+      start,
+      'The start',
+      outward ? 0 : 1,
+      outward ? start === low && start !== median : edge(start),
+    ]);
+  }
 
   return (
     <figure className={styles.histogram}>

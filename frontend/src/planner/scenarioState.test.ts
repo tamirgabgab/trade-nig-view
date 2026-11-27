@@ -87,6 +87,13 @@ describe('a saved scenario', () => {
     expect([state.withdrawOther.rule, state.withdrawOther.percent]).toEqual(['percent', 5]);
   });
 
+  it('takes a damaged Withdraw entry for a missing one', () => {
+    const saved = captureScenario(PRESETS);
+    for (const withdraw of [{}, [], { a: 1, b: null }]) {
+      expect(parseScenarioState({ ...saved, withdraw }).withdraw).toBeUndefined();
+    }
+  });
+
   it('reads stored Withdraw settings field by field', () => {
     const saved = captureScenario(PRESETS);
     const odd = { ...saved, withdraw: { a: { rule: 'monthly', years: 20 }, b: { capital: -1 } } };

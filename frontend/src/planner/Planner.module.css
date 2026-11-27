@@ -277,6 +277,8 @@
 
 /* Inside a pane that scrolls itself, the pane does both axes, so the sticky header still holds. */
 .scroll .tableFrame {
+  width: max-content;
+  min-width: 100%;
   overflow: visible;
 }
 

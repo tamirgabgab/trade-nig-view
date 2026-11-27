@@ -84,7 +84,8 @@ export function parseScenarioState(value: unknown): ScenarioState {
   const market = pair(state['market'], readForm);
   const home = pair(state['home'], readHome);
   // Read field by field; a scenario saved before the tab had settings has none.
-  const withdraw = pair(state['withdraw'], readWithdraw);
+  // Both options' entries must be there: anything else is a scenario without these settings.
+  const withdraw = pair(state['withdraw'], (v) => (isRecord(v) ? readWithdraw(v) : null));
   if (version !== VERSION || market === null || home === null) {
     throw new Error('This is not a planner scenario.');
   }
@@ -99,7 +100,8 @@ export function parseScenarioState(value: unknown): ScenarioState {
   };
 }
 
-/** Put a scenario into the three tabs, option A on screen. */
+/** Put a scenario into the tabs, option A on screen; one saved before the Withdraw tab had
+ * settings leaves them as they are. */
 export function applyScenario(state: ScenarioState): void {
   usePlannerStore.setState((s) => ({
     loads: s.loads + 1,

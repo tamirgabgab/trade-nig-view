@@ -521,6 +521,38 @@ describe('PlannerWithdraw', () => {
     expect(within(panel).getByRole('table', { name: 'Side by side' })).toBeVisible();
   });
 
+  it('says which option its results were run for once the two options are apart', async () => {
+    const user = userEvent.setup();
+    stub();
+    renderWithQuery(<PlannerPage className={undefined} />);
+    await user.click(screen.getByRole('tab', { name: 'Withdraw' }));
+    const panel = screen.getByRole('tabpanel', { name: 'Withdraw' });
+    await user.click(within(panel).getByRole('button', { name: 'Run' }));
+    await within(panel).findByRole('heading', { name: /^Withdrawals:/ });
+    await user.click(
+      within(panel).getByRole('checkbox', { name: 'Option B is the same as option A' }),
+    );
+    await user.click(within(panel).getByRole('radio', { name: 'Option B' }));
+    expect(within(panel).getByRole('heading', { name: /^Option A: withdrawals/ })).toBeVisible();
+  });
+
+  it('opens the apartment’s section when the option put on screen has one', async () => {
+    const user = userEvent.setup();
+    stub();
+    const store = usePlannerStore.getState();
+    store.copyToOther();
+    store.setSame(false);
+    store.swap('b');
+    store.setWithdraw({ home: { ...store.withdraw.home, include: true } });
+    store.swap('a');
+    renderWithQuery(<PlannerPage className={undefined} />);
+    await user.click(screen.getByRole('tab', { name: 'Withdraw' }));
+    const panel = screen.getByRole('tabpanel', { name: 'Withdraw' });
+    expect(fold('The apartment').closest('details')?.open).toBe(false);
+    await user.click(within(panel).getByRole('radio', { name: 'Option B' }));
+    expect(fold('The apartment').closest('details')?.open).toBe(true);
+  });
+
   it('shows why a plan cannot run and drops the earlier results', async () => {
     const user = userEvent.setup();
     let fail = false;

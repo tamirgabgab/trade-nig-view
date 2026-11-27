@@ -23,12 +23,15 @@ export function PlannerWithdrawMany({
   result,
   fixed,
   home,
+  option,
 }: {
   result: WithdrawManyResult;
   /** The rule the plan was run with: a fixed amount (true) or a percent. */
   fixed: boolean;
   /** It was run with an apartment. */
   home: boolean;
+  /** "Option A" while the two options are apart. */
+  option?: string | undefined;
 }) {
   const [asPercent, setAsPercent] = useState(true);
   const [real, setReal] = useState(true);
@@ -107,6 +110,7 @@ export function PlannerWithdrawMany({
   return (
     <>
       <h2 className={styles.heading}>
+        {option === undefined ? '' : `${option}, `}
         {windows
           ? `History: ${String(count)} starts, ${first} to ${last}`
           : `Simulation: ${String(count)} worlds, ${result.method === 'bootstrap' ? 'cut from history' : 'a modelled market'}`}

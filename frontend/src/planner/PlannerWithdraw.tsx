@@ -8,7 +8,7 @@ import {
   type WithdrawResult,
 } from '../api/planner.ts';
 import panel from '../components/IndicatorSettingsPanel.module.css';
-import { usePlannerStore } from '../store/plannerStore.ts';
+import { usePlannerStore, type Slot } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { PlannerLearn } from './PlannerLearn.tsx';
@@ -66,7 +66,8 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
     home: boolean;
     /** Both options, A first, when each has settings of its own; `option` names the one shown. */
     beside: BesidePlan[] | null;
-    option: string | undefined;
+    /** The option on screen when it ran: its results stay while the other one is shown. */
+    slot: Slot;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +107,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
                   ...plan,
                   label: `${index === 0 ? 'A' : 'B'}: ${plan.label}`,
                 })),
-          option: theirs === null ? undefined : `Option ${slot.toUpperCase()}`,
+          slot,
         });
       })
       .catch((cause: unknown) => {
@@ -121,6 +122,8 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
   const run = () => {
     start('running', Promise.resolve(null));
   };
+  // While the two options are apart, results name the option they were run for.
+  const option = shown === null || same ? undefined : `Option ${shown.slot.toUpperCase()}`;
   const whose = same
     ? 'the Market tab’s mix'
     : `option ${slot.toUpperCase()}’s mix (the one on screen)`;
@@ -213,6 +216,8 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
           <PlannerLearn page="cost-basis">The cost of what is sold</PlannerLearn>
         </fieldset>
         <PlannerWithdrawHome
+          // Another option on screen starts the section again: open when that one has an apartment.
+          key={slot}
           home={settings.home}
           set={(changes) => {
             set({ home: { ...settings.home, ...changes } });
@@ -346,7 +351,12 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
         )}
         {/* The study a button ran leads; the plan it was run with follows. */}
         {shown !== null && shown.many !== null && (
-          <PlannerWithdrawMany result={shown.many} fixed={shown.fixed} home={shown.home} />
+          <PlannerWithdrawMany
+            result={shown.many}
+            fixed={shown.fixed}
+            home={shown.home}
+            option={option}
+          />
         )}
         {shown?.beside != null && <PlannerWithdrawBeside plans={shown.beside} />}
         {shown !== null &&
@@ -359,7 +369,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
               result={shown.result}
               fixed={shown.fixed}
               home={shown.home}
-              option={shown.option}
+              option={option}
             />
           ))}
       </div>
