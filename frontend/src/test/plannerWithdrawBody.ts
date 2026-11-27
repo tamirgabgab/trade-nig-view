@@ -51,9 +51,16 @@ export const WITHDRAW_RESULT = {
   end: '2030-04-15',
   months: 3,
   summary: summary(0.5, 0, 3),
-  floor: summary(0, 0, 3),
-  ceiling: summary(1, 1_500, null),
+  floor: summary(0, 0, 3) as ReturnType<typeof summary> | null,
+  ceiling: summary(1, 1_500, null) as ReturnType<typeof summary> | null,
   reversed: null as ReturnType<typeof summary> | null,
+  accumulated: null as {
+    deposited: number;
+    value: number;
+    cost_share: number;
+    first: string;
+    deposits: number;
+  } | null,
   rows: [
     row(0, '2030-01-15', 0, 30_000),
     row(1, '2030-02-15', 10_000, 19_500),
@@ -155,4 +162,19 @@ export const WITHDRAW_MANY_RESULT = {
   before: 'AAPL has no data before 2001-12-24: start the plan later' as string | null,
   after: null as string | null,
   warnings: ['The CPI is assumed: every window has the same inflation'],
+};
+
+/** The plan from a Market plan's lots: no tax bounds, and what the plan handed over. */
+export const WITHDRAW_LOTS_RESULT = {
+  ...WITHDRAW_RESULT,
+  summary: { ...summary(0.62, 0, 3) },
+  floor: null,
+  ceiling: null,
+  accumulated: {
+    deposited: 190_000,
+    value: 310_000,
+    cost_share: 0.62,
+    first: '2015-01-02',
+    deposits: 120,
+  },
 };

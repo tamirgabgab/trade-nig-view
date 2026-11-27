@@ -90,6 +90,28 @@ describe('toWithdraw', () => {
   });
 });
 
+describe('toWithdraw from the Market tab’s plan', () => {
+  it('sends the plan itself, and starts the withdrawals on its last day', () => {
+    const request = toWithdraw(
+      { ...DEFAULT_WITHDRAW, source: 'plan', returns: 'assumed' },
+      DEFAULT_FORM,
+    );
+    expect(request).toMatchObject({
+      start: DEFAULT_FORM.end,
+      capital: 0,
+      returns: { mode: 'mix' },
+    });
+    expect(request.plan).toMatchObject({
+      end: DEFAULT_FORM.end,
+      deposits: [{ date: '2015-01-02', amount: 10_000 }],
+      recurring: [{ start: '2015-02-01', amount: 1500 }],
+      assets: [{ symbol: 'SPY' }],
+    });
+    // A typed capital has no plan behind it.
+    expect(toWithdraw(DEFAULT_WITHDRAW, DEFAULT_FORM).plan ?? null).toBeNull();
+  });
+});
+
 describe('mixLabel', () => {
   it('names the tickers and their shares, as the Market tab holds them', () => {
     const assets = [

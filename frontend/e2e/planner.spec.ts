@@ -540,3 +540,36 @@ test('planner: a withdrawal plan over every start of history, and over simulated
   // The simulation replaced the history: one study at a time beside the plan.
   await expect(withdraw.getByRole('heading', { name: /^History:/ })).toHaveCount(0);
 });
+
+test('planner: withdrawals from the Market plan’s own lots, and two plans side by side', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  await planner.getByRole('tab', { name: 'Market' }).click();
+  await planner.getByLabel('Ticker 1').fill('aapl');
+  await planner.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
+  await planner.getByRole('tab', { name: 'Withdraw' }).click();
+  const withdraw = planner.getByRole('tabpanel', { name: 'Withdraw' });
+  const card = (label: string) =>
+    withdraw.locator('dl').getByText(label, { exact: true }).locator('..');
+
+  // The Market tab's plan (2015 to 2025-01-02) hands its lots over; a year of withdrawals.
+  await withdraw.getByLabel('The account is').selectOption('plan');
+  await withdraw.getByLabel('Years', { exact: true }).fill('1');
+  await withdraw.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(
+    withdraw.getByRole('heading', { name: 'Withdrawals: 2025-01-02 to 2026-01-02' }),
+  ).toBeVisible();
+  await expect(card('The account')).toContainText('₪');
+  await expect(withdraw.getByRole('table', { name: 'Tax bounds' })).toHaveCount(0);
+
+  // Option B gets settings of its own: a percent instead of the amount.
+  await withdraw.getByLabel('Option B is the same as option A').uncheck();
+  await withdraw.getByRole('radio', { name: 'Option B' }).check();
+  await withdraw.getByLabel('Withdrawal rule').selectOption('percent');
+  await withdraw.getByRole('button', { name: 'Run', exact: true }).click();
+  const table = withdraw.getByRole('table', { name: 'Side by side' });
+  await expect(table.getByRole('row')).toHaveCount(3);
+  await expect(withdraw.getByRole('heading', { name: /^Option B: withdrawals/ })).toBeVisible();
+});

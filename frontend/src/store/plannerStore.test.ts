@@ -7,6 +7,7 @@ import {
   toRequest,
   usePlannerStore,
   type PlannerForm,
+  withdrawsOf,
 } from './plannerStore.ts';
 
 describe('toRequest', () => {
@@ -224,6 +225,28 @@ describe('the Withdraw tab’s settings', () => {
       ...DEFAULT_WITHDRAW,
       percent: 6,
     });
+  });
+
+  it('are each option’s own: they swap, copy and come back with the forms', () => {
+    usePlannerStore.setState({ ...sanitizePersisted(null) });
+    const store = usePlannerStore.getState();
+    expect(DEFAULT_WITHDRAW.source).toBe('capital');
+    // Option B starts as a copy of option A, as its forms do.
+    store.setWithdraw({ amount: 7_000 });
+    store.copyToOther();
+    store.setSame(false);
+    store.swap('b');
+    store.setWithdraw({ rule: 'percent' });
+    let state = usePlannerStore.getState();
+    expect([state.withdraw.amount, state.withdraw.rule]).toEqual([7_000, 'percent']);
+    expect(withdrawsOf(state).a.rule).toBe('fixed');
+    store.swap('a');
+    state = usePlannerStore.getState();
+    expect([state.withdraw.rule, state.withdrawOther.rule]).toEqual(['fixed', 'percent']);
+    // A state stored before the two had settings of their own: both get the one stored.
+    const before = sanitizePersisted({ withdraw: { ...DEFAULT_WITHDRAW, years: 20 } });
+    expect([before.withdraw.years, before.withdrawOther.years]).toEqual([20, 20]);
+    expect(sanitizePersisted({ withdraw: { source: 'gift' } }).withdraw.source).toBe('capital');
   });
 
   it('read the simulation settings part by part', () => {

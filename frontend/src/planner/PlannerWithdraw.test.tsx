@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
 import {
   WITHDRAW_HOME_RESULT,
+  WITHDRAW_LOTS_RESULT,
   WITHDRAW_MANY_RESULT,
   WITHDRAW_RESULT,
   WITHDRAW_SOLD_RESULT,
@@ -347,6 +348,64 @@ describe('PlannerWithdraw', () => {
     expect(within(chart).getByText('Ran out: 3 of 3 (100%)')).toBeVisible();
     expect(chart.textContent).not.toContain('NaN');
     expect(screen.getByText('None of the 3 worlds lasted.')).toBeVisible();
+  });
+
+  it('withdraws from what the Market tab’s plan accumulated, lot by lot', async () => {
+    const user = userEvent.setup();
+    const sent = stub(WITHDRAW_LOTS_RESULT);
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'The account is' }), ['plan']);
+    // The capital, its cost share and the first day follow from the plan: they are not typed.
+    expect(screen.queryByRole('spinbutton', { name: 'Starting capital ₪' })).toBeNull();
+    expect(screen.queryByRole('spinbutton', { name: 'Cost share %' })).toBeNull();
+    expect(screen.queryByLabelText('Starts on')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'The account grows by' })).toBeNull();
+    expect(
+      screen.getByText(/^The withdrawals start on 2025-01-02, the day the Market tab’s plan ends/),
+    ).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    await screen.findByRole('heading', { name: /^Withdrawals:/ });
+    expect(sent[0]).toMatchObject({
+      start: '2025-01-02',
+      returns: { mode: 'mix' },
+      plan: { end: '2025-01-02', assets: [{ symbol: 'SPY' }] },
+    });
+    expect(card('The account')).toHaveTextContent('₪310,000');
+    expect(card('The account')).toHaveAttribute(
+      'title',
+      expect.stringContaining('120 deposits from 2015-01-02'),
+    );
+    // The tax is known lot by lot: no bounds to show.
+    expect(screen.queryByRole('table', { name: 'Tax bounds' })).toBeNull();
+    expect(screen.getByText(/oldest lot first/)).toBeVisible();
+  });
+
+  it('runs the two options side by side when each has settings of its own', async () => {
+    const user = userEvent.setup();
+    const sent = stub();
+    const store = usePlannerStore.getState();
+    store.copyToOther();
+    store.setSame(false);
+    store.swap('b');
+    store.setWithdraw({ rule: 'percent', percent: 5 });
+    store.swap('a');
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    expect(screen.getByRole('radio', { name: 'Option A' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    const table = await screen.findByRole('table', { name: 'Side by side' });
+    expect(sent).toHaveLength(2);
+    expect(sent).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: expect.objectContaining({ kind: 'fixed' }) }),
+        expect.objectContaining({ rule: expect.objectContaining({ kind: 'percent', percent: 5 }) }),
+      ]),
+    );
+    const rows = within(table)
+      .getAllByRole('row')
+      .map((r) => within(r).queryAllByRole('cell')[0]?.textContent);
+    expect(rows.slice(1)).toEqual(['A: ₪4,000 a month, net', 'B: 5% of the account a year']);
+    // The full results are of the option on screen.
+    expect(screen.getByRole('heading', { name: /^Option A: withdrawals/ })).toBeVisible();
   });
 
   it('shows the same months in reverse order beside the plan', async () => {
