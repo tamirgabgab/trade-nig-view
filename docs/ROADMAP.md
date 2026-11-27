@@ -409,6 +409,15 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   no volume.
   - To say on the page: only the close carries information. The range inside a day is invented, and the index is
     smoothed, so its volatility is far below a single apartment's.
+- **Decided by the user before K2 (2026-11-27):** K1 approved. **μ is the expected simple yearly return**
+  (E[P₁/P₀] = 1 + μ; the median path grows about σ²/2 slower). **Exactness is a field**: in the distribution (the
+  default: one path wanders around μ and σ) or exact in the path (the drawn returns shifted and scaled so the path's
+  own mean and standard deviation are the targets). The skewed family is **skew-normal** (Azzalini) only. Beyond the
+  family: **memory (AR(1))**, **Merton jumps** and **volatility clustering (GARCH(1,1))**, μ and σ kept in each; the
+  overnight gap and the range stay K0's. A **preview** in the dialog: the histogram of the drawn daily returns under
+  the family's density, and the realized mean, standard deviation, skewness and kurtosis. The formulas in a **new
+  part of the `synthetic-symbols` page**. Hours **as in K0** (a bridge from the open to the close, so the daily
+  return is exactly the family's). Defaults **μ 7 %, σ 18 %, normal**.
 - [ ] **K2: an independent synthetic symbol.** The user sets its statistics: expected yearly return, yearly
   volatility, and what shapes the bars: the overnight gap's share, the day's range, fat tails, memory (trend or
   mean reversion), jumps; plus the seed, the first price, the first date and the length.
