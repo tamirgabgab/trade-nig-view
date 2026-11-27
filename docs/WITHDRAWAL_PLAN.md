@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **J0 and J1 approved; J2 done (2026-11-27, ADR 0026 to 0028); J3 is next.** The user's answers are under "Decided" at the end.
+Status: **J0 to J2 approved (2026-11-27, ADR 0026 to 0028); J4 in progress, J3 kept for last (the user's order).** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -156,7 +156,7 @@ Defaults to start from, each a field. **Not tax advice.**
 | Capital gains, individuals, securities | 25 % of the real gain | PwC Tax Summaries, Israel | already a field |
 | Inflationary part of a gain | exempt (the real gain is taxed) | Income Tax Ordinance §88, via secondary sources | the "real" base |
 | Losses | offset gains, carried forward | PwC Tax Summaries | new: the carried loss |
-| Order of sale of identical securities | first in, first out | a Bank Leumi explainer; a 2002 Tax Authority circular (not read) | **weak source**; only needed for lot-exact tax (J4) |
+| Order of sale of identical securities | first in, first out, unless the seller proves a specific purchase | regulation 5 of the Income Tax Regulations (capital gain on the sale of a traded security), 2002, as quoted by a Bank Leumi explainer, a law-firm case summary and a tax forum (read 2026-11-27); the regulation's own text was not read | **secondary sources**; J4 uses it and the page says so |
 | Surtax on high incomes | 3 %, plus 2 % on capital income, above ILS 721,560 a year (2025) | PwC; Globes | **verify with the Tax Authority**; a field, off by default |
 | Rent: exemption ceiling | about ILS 5,654 a month (2026) | press and CPA summaries | **verify with the Tax Authority**; the rent tax stays one rate field |
 | Rent: flat track | 10 % of the gross rent | the same | the existing field's default |
@@ -326,3 +326,25 @@ Asked before J2 (2026-11-27):
   models of J0 and J1 check the same code the studies run.
 - **The evidence** is printed beside every probability: the independent terms the windows hold, and for a
   bootstrap the history it was cut from.
+
+Asked before J4 (2026-11-27), all at the recommended answer. J2 was approved by going on to J4; J3 is kept for last.
+- **Where the lots come from:** the Market tab's plan. Its deposits accumulate until its end date, and the
+  withdrawals start on that day. The capital and the cost share are then not typed: they follow from the plan, and
+  the two tax bounds go, since the tax is known.
+- **Where lot-exact tax runs:** the single plan only. History and the simulated worlds keep the cost share and its
+  bounds.
+- **Two plans side by side:** every Withdraw setting is each option's own (the rule, the amount, the capital, the
+  apartment, and the Market tab's mix), behind the A/B switch the other tabs have.
+
+## J4: the conventions (chosen without asking, each stated on the page or in ADR 0029)
+- **First in, first out, per asset.** A sale takes the same fraction of every asset, as before, and within an asset
+  the oldest lot first. Money invested later (a rent surplus, an apartment's sale) is a new lot, sold last.
+- **The handover is exact.** A lot's cost on the first day is what `run_market` would tax it on, so selling
+  everything on that day pays the Market tab's own tax: its indexed cost, less the account fees its units already
+  paid (the Market tab counts those as proceeds).
+- **One engine still.** The loop of ADR 0028 gains a lot axis; one pooled lot is J0 to J2 unchanged, with its closed
+  form. With more than one lot the fraction is found by bisection (what a sale leaves rises with the fraction).
+- **History and worlds from a plan** use what it accumulated as the capital and its overall cost share (cost over
+  value), and say so.
+- **Side by side** is the two single plans: a table of the two, and the full results of the option on screen. A
+  study (history, worlds) runs for the option on screen.
