@@ -176,7 +176,7 @@
           "synthetic"
         ],
         "summary": "Put Synthetic",
-        "description": "Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.\n\nThe symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already\ntaken is a 409 too (the stored revision is not 0). The last bar may not be after today.",
+        "description": "Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.\n\nThe symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already\ntaken is a 409 too (the stored revision is not 0). The last bar must be before today.",
         "operationId": "put_synthetic_api_synthetic__symbol__put",
         "parameters": [
           {
@@ -227,7 +227,7 @@
           "synthetic"
         ],
         "summary": "Delete Synthetic",
-        "description": "Delete a synthetic symbol: out of every watchlist, its drawings, then the definition.",
+        "description": "Delete a synthetic symbol: out of every watchlist, its drawings, then the definition.\n\nThe clean-up runs under the store's lock after the revision check, so no edit can slip in\nbetween; a watchlist saved meanwhile elsewhere is a 409 that leaves the symbol in place.",
         "operationId": "delete_synthetic_api_synthetic__symbol__delete",
         "parameters": [
           {
@@ -9722,7 +9722,8 @@
           "first_date": {
             "type": "string",
             "format": "date",
-            "title": "First Date"
+            "title": "First Date",
+            "description": "From 1970-01-01"
           },
           "first_price": {
             "type": "number",

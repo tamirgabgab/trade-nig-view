@@ -81,13 +81,16 @@ export interface paths {
          * @description Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.
          *
          *     The symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already
-         *     taken is a 409 too (the stored revision is not 0). The last bar may not be after today.
+         *     taken is a 409 too (the stored revision is not 0). The last bar must be before today.
          */
         put: operations["put_synthetic_api_synthetic__symbol__put"];
         post?: never;
         /**
          * Delete Synthetic
          * @description Delete a synthetic symbol: out of every watchlist, its drawings, then the definition.
+         *
+         *     The clean-up runs under the store's lock after the revision check, so no edit can slip in
+         *     between; a watchlist saved meanwhile elsewhere is a 409 that leaves the symbol in place.
          */
         delete: operations["delete_synthetic_api_synthetic__symbol__delete"];
         options?: never;
@@ -4170,6 +4173,7 @@ export interface components {
             /**
              * First Date
              * Format: date
+             * @description From 1970-01-01
              */
             first_date: string;
             /**
