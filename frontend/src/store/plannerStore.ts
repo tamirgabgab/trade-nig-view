@@ -180,7 +180,7 @@ export interface WithdrawHome {
   bought: string;
 }
 
-export const DEFAULT_WITHDRAW_HOME: WithdrawHome = {
+const DEFAULT_WITHDRAW_HOME: WithdrawHome = {
   include: false,
   value: 2_000_000,
   growth: 'assumed',

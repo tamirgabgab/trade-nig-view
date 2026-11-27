@@ -295,48 +295,48 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
     worth, home_cash, invested = (np.zeros(months + 1) for _ in range(3))
     balance[0] = plan.capital
     depleted: int | None = None
-    held = home is not None
+    #: The apartment while it is held.
+    owned = home
     home_sold: int | None = None
     cause: Cause | None = None
     if home is not None:
         worth[0] = home.worth[0]
 
-    for k in range(1, months + 1):
-        basis = basis + units * grid.reinvested[k]
+    def invest(money: float, k: int) -> None:
+        nonlocal units, basis
+        units = units + money * weights / ((1.0 + plan.buy) * grid.unit[k])
+        basis = basis + money * weights / grid.level[k]
+        invested[k] += money
+        commission[k] += money * plan.buy / (1.0 + plan.buy)
 
-        def invest(money: float) -> None:
-            nonlocal units, basis
-            units = units + money * weights / ((1.0 + plan.buy) * grid.unit[k])  # noqa: B023
-            basis = basis + money * weights / grid.level[k]  # noqa: B023
-            invested[k] += money  # noqa: B023
-            commission[k] += money * plan.buy / (1.0 + plan.buy)  # noqa: B023
-
+    def account(k: int) -> tuple[float, float, float, float]:
+        """The value, the proceeds of selling all of it, their gain, and the month's fee."""
         value = float(units @ grid.unit[k])
         proceeds = value * keep
         gain = proceeds - float(basis @ grid.level[k])
-        fee_due = min(value, value * monthly_rate + plan.monthly_fee)
+        return value, proceeds, gain, min(value, value * monthly_rate + plan.monthly_fee)
+
+    for k in range(1, months + 1):
+        basis = basis + units * grid.reinvested[k]
+        value, proceeds, gain, fee_due = account(k)
         if plan.rule is Rule.FIXED:
             due[k] = plan.amount * (grid.cpi[k] / grid.cpi[0] if plan.indexed else 1.0)
-        cash = float(home.cash[k]) if home is not None and held else 0.0
+        cash = float(owned.cash[k]) if owned is not None else 0.0
         owed = 0.0
-        if home is not None and held:
+        if owned is not None:
             duty = fee_due - cash
             everything = _leaves(1.0, proceeds, gain, carried, plan.gains_tax)
-            if home.role is Sale.ON_DATE and k == home.sell_on:
+            if owned.role is Sale.ON_DATE and k == owned.sell_on:
                 cause = Cause.PLANNED
-            elif home.role is Sale.WHEN_EMPTY and everything < due[k] + duty - PAID:
+            elif owned.role is Sale.WHEN_EMPTY and everything < due[k] + duty - PAID:
                 cause = Cause.EMPTY
             elif duty > 0.0 and everything < duty - PAID:
                 cause = Cause.FORCED
             if cause is not None:
-                held, home_sold = False, k
-                money = float(home.worth[k])
+                money, owned, home_sold = float(owned.worth[k]), None, k
                 if money > 0.0:
-                    invest(money)
-                    value = float(units @ grid.unit[k])
-                    proceeds = value * keep
-                    gain = proceeds - float(basis @ grid.level[k])
-                    fee_due = min(value, value * monthly_rate + plan.monthly_fee)
+                    invest(money, k)
+                    value, proceeds, gain, fee_due = account(k)
                 else:
                     owed = -money
         duty = fee_due - cash + owed
@@ -360,14 +360,14 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
         if plan.rule is Rule.FIXED:
             net[k] = min(max(rest, 0.0), due[k])
             if rest - due[k] > PAID:
-                invest(rest - due[k])
+                invest(rest - due[k], k)
         else:
             net[k] = max(rest, 0.0)
         balance[k] = float(units @ grid.unit[k])
         home_cash[k] = cash
-        worth[k] = float(home.worth[k]) if home is not None and held else 0.0
+        worth[k] = float(owned.worth[k]) if owned is not None else 0.0
         # A fixed amount not paid in full, or nothing left to sell and no apartment.
-        if depleted is None and (due[k] - net[k] > PAID or (value <= 0.0 and not held)):
+        if depleted is None and (due[k] - net[k] > PAID or (value <= 0.0 and owned is None)):
             depleted = k
     proceeds = balance[-1] * keep
     gain = proceeds - float(basis @ grid.level[-1])
