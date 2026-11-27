@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **J0 to J2 and J4 approved (2026-11-27, ADR 0026 to 0029); J3 in progress, the last round of Phase J.** The user's answers are under "Decided" at the end.
+Status: **Phase J done: J0 to J4 (2026-11-27, ADR 0026 to 0030). J0 to J2 and J4 approved; J3 awaits approval.** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -204,7 +204,7 @@ the price of an income that moves. Those numbers are for US data and are not car
 | **J0** ✅ 2026-11-27 | The engine for an account: one lot per asset with a cost share, the two rules, net in hand, losses carried, depletion; the golden model and the known answers; `POST /planner/withdraw`; the Withdraw tab with the cards, the balance and income chart, the table and CSV; the two tax bounds on the page. | M |
 | **J1** ✅ 2026-11-27 | The apartment in the balance: an owned apartment's cash flows, its three sale options and a forced sale, at most one mortgage track, the cost fields for betterment tax. | M |
 | **J2** ✅ 2026-11-27 | Many realizations: windows of history and the simulated worlds; the survival curve, the depletion histogram, the income fan; the sustainable amount by bisection; the sequence-risk view; the evidence-depth notes. | L |
-| **J3** | The learn page with its pinned example; the tab in saved scenarios; a UX pass. | S |
+| **J3** ✅ 2026-11-27 | Three learn pages with their pinned examples; the tab in saved scenarios; a UX pass. | S |
 | **J4** ✅ 2026-11-27 | Lot-exact tax when the capital comes from a Market-tab plan (accumulate, then withdraw; first in, first out, a rule read from secondary sources only: the facts table); two withdrawal plans side by side. | M |
 
 Order: J0 → J1 → J2 → J3. After J0 the tab already answers the user's core question for a market account. Each
@@ -237,6 +237,12 @@ round: the tests before the code, the cleanup pipeline, a demo checklist, and a 
 - Known lots run through the same loop on a lot axis; the handover from the Market tab's account is exact, tested
   equal on both tax bases with commissions.
 - Not built: lots typed by hand, lots in the windows and the worlds, another order of sale.
+
+## J3 results (2026-11-27, ADR 0030)
+- Three pages, their letters an extension of ADR 0025's table; every worked example pinned through the engine.
+- Saved scenarios keep both options' Withdraw settings; the version stays 1, so older ones still load.
+- The tab: a learn link under each section, the apartment and the studies fold, the study a button ran leads,
+  and each block gives its answer, its tables, its charts and its file in that order; results tables are framed.
 
 ## Later, if wanted
 Pension and study funds with their own tax rules; an annuity against a lump sum; age-based and guardrail rules;

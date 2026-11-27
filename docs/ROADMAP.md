@@ -28,7 +28,7 @@
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
-| PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | J0–J2, J4 ✅ (2026-11-27); J3 planned (kept for last) |
+| PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
 | PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | planned (noted 2026-11-27) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
@@ -368,7 +368,7 @@ Phase-2 plan.
   evaluation: walk-forward, parameter sweeps and multiple-testing corrections (B4), portfolio and screener (B5), the
   strategy learn pages and the replay link (B6).
 
-### Phase J — Withdrawals (next)
+### Phase J — Withdrawals (done)
 - The plan is in [WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md) (2026-11-27): a Withdraw tab in the Planner, rounds J0–J4.
 - [x] J0: the withdrawal engine for an account and the Withdraw tab (ADR 0026): a starting capital with a cost
   share, a fixed net amount or a percent sold, the Market tab's mix or an assumed yearly return, the plan at the two
@@ -381,7 +381,9 @@ Phase-2 plan.
   amount, the months in reverse; `/api/planner/withdraw/study` and `/simulate` (2026-11-27).
 - [x] J4: lot-exact tax from the Market tab's plan, first in first out, and two plans side by side (ADR 0029;
   2026-11-27, before J3 at the user's request).
-- [ ] J3: the learn page, saved scenarios, polish.
+- [x] J3: three learn pages (`withdrawals`, `cost-basis`, `sustainable-withdrawals`), both options' Withdraw
+  settings in saved scenarios, and the tab's polish: learn links, folded sections, the order of the results, framed
+  results tables (ADR 0030; 2026-11-27). Phase J is closed.
 
 ### Phase K — Synthetic symbols and open completions (after Phase J, before Phase 4)
 Asked for by the user on 2026-11-27. **The order he set: Phase J, then Phase K, then Phase 4.** A note of scope,
@@ -423,8 +425,8 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   pass over anything it shows.
 - [ ] Tax facts still read from secondary sources, to check against the Tax Authority: the order of sale of
   identical securities (first in, first out), the surtax threshold, the rent exemption ceiling.
-- [ ] Phase J's optional round J4 (lot-exact tax from a Market-tab plan; two withdrawal plans side by side), if it
-  is not done there.
+- [ ] From the J3 UX audit: the Planner's SVG charts scale their text with the chart, so in the narrow results
+  column at 960 px it reads at about 8 px. Draw their text at a fixed size (measure the chart's width).
 
 **Decided by the user (2026-11-27):**
 - **The dwelling symbol** is the national index first; the districts later, where a series exists.

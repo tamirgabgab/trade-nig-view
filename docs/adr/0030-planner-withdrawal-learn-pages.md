@@ -48,7 +48,27 @@ J3 closes Phase J (`docs/WITHDRAWAL_PLAN.md`), after J4 at the user's request. T
 - **Saved scenarios** keep `withdraw` (both options, linked while option B is the same as A) beside the forms, read
   field by field. The version stays 1: a scenario saved before is still read, and loads without touching the
   Withdraw settings on screen.
+- **The tab's polish** (a `ux-audit` at 960 and 1280 px against `.ux-profile.md`):
+  - a learn link under each section (the account, the apartment, the withdrawals, the studies);
+  - the apartment and the studies fold (`PlannerFold`, a native `details`), their summary saying what will run;
+    the apartment opens by itself when it is included;
+  - the study a button ran leads the plan it was run with; within each block the answer comes first, then the
+    tables, then the charts, and the file last;
+  - the tab keeps its results when the other option is put on screen (it is keyed by loaded scenarios only), and
+    while the two are apart the results name the option they were run for;
+  - from the audit: every results table of the Planner is a framed surface that scrolls sideways in a narrow column
+    (it was cut at 960 px), two rows of fields keep their gap, and the histogram's two marks never print over each
+    other.
+
+## What the review settled
+- After switching options, the results kept from the other one were unnamed: they now name their option.
+- Two close marks' labels go outward only when both fit inside the chart; otherwise they stack on two rows.
+- The apartment's section opens for an option that has one, not only on the tab's first render.
+- A damaged Withdraw entry in a saved scenario counts as missing, so it leaves the settings on screen alone.
+- A framed table inside a scrolling pane is framed to its full width.
 
 ## Consequences
+- Left for K4: the Planner's SVG charts scale their text with the chart; at 960 px the results column makes it about
+  8 px.
 - Adding a fourth page of Phase J means its slug in `PLANNER_PAGES` and `CONCEPT_PAGES`, its sections in order and
   its pinned example.
