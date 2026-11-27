@@ -2,6 +2,8 @@ import panel from '../components/IndicatorSettingsPanel.module.css';
 import type { WithdrawMany } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
+import { PlannerFold } from './PlannerFold.tsx';
+import { PlannerLearn } from './PlannerLearn.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
 
 const METHODS = [
@@ -26,9 +28,13 @@ export function PlannerWithdrawManyForm({
   assumed,
 }: PlannerWithdrawManyFormProps) {
   const modelled = many.method === 'monte_carlo';
+  const worlds = `${many.runs.toLocaleString('en-US')} worlds ${modelled ? 'of a modelled market' : 'cut from the mix’s history'}`;
   return (
-    <fieldset className={styles.section}>
-      <legend>History and simulated worlds</legend>
+    <PlannerFold
+      title="History and simulated worlds"
+      state={fixed ? `${worlds}; lasts in ${String(many.sustain)}%` : worlds}
+      initiallyOpen={false}
+    >
       <div className={styles.grid}>
         <PlannerSelect
           className={styles.wide}
@@ -123,6 +129,7 @@ export function PlannerWithdrawManyForm({
         modelled market{assumed ? ' whose mean is the assumed return' : ''}. An assumed return has
         no history: only the modelled market can run on it.
       </p>
-    </fieldset>
+      <PlannerLearn page="sustainable-withdrawals">How much can be taken</PlannerLearn>
+    </PlannerFold>
   );
 }

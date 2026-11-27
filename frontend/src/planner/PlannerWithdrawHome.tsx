@@ -2,6 +2,9 @@ import panel from '../components/IndicatorSettingsPanel.module.css';
 import type { WithdrawHome } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
+import { PlannerFold } from './PlannerFold.tsx';
+import { shekels } from './plannerFormat.ts';
+import { PlannerLearn } from './PlannerLearn.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
 
 const GROWTH = [
@@ -27,11 +30,22 @@ interface PlannerWithdrawHomeProps {
   set: (changes: Partial<WithdrawHome>) => void;
 }
 
+const SOLD = {
+  kept: 'kept',
+  on_date: 'sold on a date',
+  when_empty: 'sold when the account runs out',
+} as const;
+
+/** The apartment in a few words, for its folded section. */
+const summary = (home: WithdrawHome) =>
+  home.include
+    ? `${shekels(home.value)}, ${home.use === 'live' ? 'lived in' : 'rented out'}, ${SOLD[home.role]}`
+    : 'Not included';
+
 /** An apartment owned on the first day of a withdrawal plan: its value, use, costs and sale. */
 export function PlannerWithdrawHome({ home, set }: PlannerWithdrawHomeProps) {
   return (
-    <fieldset className={styles.section}>
-      <legend>The apartment</legend>
+    <PlannerFold title="The apartment" state={summary(home)} initiallyOpen={home.include}>
       <label className={panel.check}>
         <input
           type="checkbox"
@@ -253,8 +267,9 @@ export function PlannerWithdrawHome({ home, set }: PlannerWithdrawHomeProps) {
             roles are one). Without its cost and purchase day, only the growth from the first day is
             taxed.
           </p>
+          <PlannerLearn page="rent-or-buy">Rent or buy: the apartment’s ledger</PlannerLearn>
         </>
       )}
-    </fieldset>
+    </PlannerFold>
   );
 }

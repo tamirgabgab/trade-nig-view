@@ -56,9 +56,16 @@ export function PlannerWithdrawHistogram({
   const of = (count: number) =>
     `${String(count)} of ${String(total)} (${wholePercent(count / total)})`;
   const median = none ? null : quantile(sorted, 0.5);
-  const marks: [value: number, text: string, row: number][] = [];
-  if (median !== null) marks.push([median, `Median ${format(median)}`, 0]);
-  if (start > lo && start < hi) marks.push([start, 'The start', 1]);
+  // A mark's label goes right of its line, or left when the line is near the right edge. Two
+  // marks close together put their labels outward, the left one leftward, so they never overlap.
+  const marks: [value: number, text: string, row: number, left: boolean][] = [];
+  const shown = start > lo && start < hi;
+  const near = median !== null && shown && Math.abs(px(start) - px(median)) < 120;
+  const edge = (value: number) => px(value) > W * 0.7;
+  if (median !== null) {
+    marks.push([median, `Median ${format(median)}`, 0, near ? median < start : edge(median)]);
+  }
+  if (shown) marks.push([start, 'The start', near ? 0 : 1, near ? start <= median : edge(start)]);
 
   return (
     <figure className={styles.histogram}>
@@ -96,14 +103,14 @@ export function PlannerWithdrawHistogram({
           })}
         </g>
         <line className={styles.baseline} x1={SIDE} x2={W - SIDE} y1={TOP + PLOT} y2={TOP + PLOT} />
-        {marks.map(([value, text, row]) => (
+        {marks.map(([value, text, row, left]) => (
           <g key={text} className={styles.mark}>
             <line x1={px(value)} x2={px(value)} y1={TOP - 6 + row * 14} y2={TOP + PLOT} />
             <text
               x={px(value)}
               y={TOP - 10 + row * 14}
-              dx={px(value) > W * 0.7 ? -4 : 4}
-              textAnchor={px(value) > W * 0.7 ? 'end' : 'start'}
+              dx={left ? -4 : 4}
+              textAnchor={left ? 'end' : 'start'}
             >
               {text}
             </text>

@@ -266,9 +266,23 @@
   font-weight: 600;
 }
 
+/* A results table: an L1 surface (a 1px frame on the surface colour) with hairlines between rows;
+   the frame scrolls sideways when the table is wider than its column. */
+.tableFrame {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+/* Inside a pane that scrolls itself, the pane does both axes, so the sticky header still holds. */
+.scroll .tableFrame {
+  overflow: visible;
+}
+
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -280,10 +294,19 @@
   white-space: nowrap;
 }
 
+.table th:first-child,
+.table td:first-child {
+  padding-left: var(--space-3);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .table th {
   position: sticky;
   top: 0;
-  background: var(--color-bg);
+  background: var(--color-surface);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 400;
@@ -661,7 +684,8 @@
 }
 
 /* A note right above a grid of fields: the first row keeps its distance. */
-.note + .grid {
+.note + .grid,
+.grid + .grid {
   margin-top: var(--space-3);
 }
 
@@ -694,4 +718,26 @@
 /* The realizations of a withdrawal plan that ran out: a bar of their own beside the histogram. */
 .ranOut rect {
   fill: var(--color-down);
+}
+
+/* A section of the form that folds: its summary is the title and what the section holds. */
+.fold > summary {
+  display: list-item;
+  min-height: 28px;
+  padding: var(--space-1) 0;
+  cursor: pointer;
+}
+
+.fold[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
+.foldTitle {
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+
+.foldState {
+  margin-left: var(--space-2);
+  color: var(--color-text-muted);
 }

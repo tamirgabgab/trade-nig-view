@@ -531,13 +531,15 @@ test('planner: a withdrawal plan over every start of history, and over simulated
   ).toBeVisible();
   await expect(withdraw.getByText(/hold only about 2\.5 separate terms of 10 years/)).toBeVisible();
 
-  // The page that explains it opens in the learn drawer, over the Planner.
+  // The studies' section folds; the page that explains it opens in the learn drawer.
+  await withdraw.locator('summary', { hasText: 'History and simulated worlds' }).click();
   await withdraw.getByRole('link', { name: 'How much can be taken' }).click();
-  await expect(page.getByRole('heading', { name: 'How much can be taken', level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'How much can be taken', level: 2 }),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
 
   // Fifty worlds cut from the same history.
-  await withdraw.locator('summary', { hasText: 'History and simulated worlds' }).click();
   await withdraw.getByLabel('Worlds', { exact: true }).fill('50');
   await withdraw.getByRole('button', { name: 'Simulate' }).click();
   await expect(

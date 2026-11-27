@@ -106,25 +106,11 @@ export function PlannerWithdrawMany({
 
   return (
     <>
-      <PlannerHeading
-        csv={`withdrawal ${noun}`}
-        rows={realizations}
-        fields={[
-          'start',
-          'left',
-          'left_real',
-          'taken_real',
-          'tax',
-          'depleted_month',
-          'lowest_net_real',
-          'drawdown',
-          'home_sold_month',
-        ]}
-      >
+      <h2 className={styles.heading}>
         {windows
           ? `History: ${String(count)} starts, ${first} to ${last}`
           : `Simulation: ${String(count)} worlds, ${result.method === 'bootstrap' ? 'cut from history' : 'a modelled market'}`}
-      </PlannerHeading>
+      </h2>
       <PlannerCards cards={cards} />
       {evidence.independent !== null && (
         <p className={styles.note}>
@@ -154,6 +140,16 @@ export function PlannerWithdrawMany({
           {warning}
         </p>
       ))}
+      <h2 className={styles.heading}>The tax, between its two bounds</h2>
+      <PlannerTable
+        label={`Tax bounds over the ${noun}`}
+        columns={columns}
+        rows={[
+          ['0%: everything sold is gain', floor],
+          [`${plainPercent(entered.cost_share)}: as entered`, entered],
+          ['100%: only growth is gain', ceiling],
+        ]}
+      />
       <h2 className={styles.heading}>What is left at the end</h2>
       <label className={panel.check}>
         <input
@@ -235,16 +231,23 @@ export function PlannerWithdrawMany({
           </>
         )
       )}
-      <h2 className={styles.heading}>The tax, between its two bounds</h2>
-      <PlannerTable
-        label={`Tax bounds over the ${noun}`}
-        columns={columns}
-        rows={[
-          ['0%: everything sold is gain', floor],
-          [`${plainPercent(entered.cost_share)}: as entered`, entered],
-          ['100%: only growth is gain', ceiling],
+      <PlannerHeading
+        csv={`withdrawal ${noun}`}
+        rows={realizations}
+        fields={[
+          'start',
+          'left',
+          'left_real',
+          'taken_real',
+          'tax',
+          'depleted_month',
+          'lowest_net_real',
+          'drawdown',
+          'home_sold_month',
         ]}
-      />
+      >
+        {`Each of the ${String(count)} ${noun}, as a file`}
+      </PlannerHeading>
     </>
   );
 }

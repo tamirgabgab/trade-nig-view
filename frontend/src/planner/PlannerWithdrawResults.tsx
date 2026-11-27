@@ -232,6 +232,14 @@ export function PlannerWithdrawResults({
           </p>
         </>
       )}
+      <h2 className={styles.heading}>By year</h2>
+      <div className={styles.scroll}>
+        <PlannerTable
+          label="Withdrawals by year"
+          columns={home ? [...YEARS, ...HOME_YEARS] : YEARS}
+          rows={byYear(rows)}
+        />
+      </div>
       <h2 className={styles.heading}>Over time</h2>
       <label className={panel.check}>
         <input
@@ -266,15 +274,8 @@ export function PlannerWithdrawResults({
           ...(home ? (['home', 'home_cash', 'invested'] as const) : []),
         ]}
       >
-        By year
+        Every month, as a file
       </PlannerHeading>
-      <div className={styles.scroll}>
-        <PlannerTable
-          label="Withdrawals by year"
-          columns={home ? [...YEARS, ...HOME_YEARS] : YEARS}
-          rows={byYear(rows)}
-        />
-      </div>
       <p className={styles.note}>
         Every month, on its date: the account fee, the sale and its tax together. A loss is carried
         forward and set against later gains. The file holds a row a month. The numbers are a model,

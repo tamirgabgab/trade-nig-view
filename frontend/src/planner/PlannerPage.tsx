@@ -24,6 +24,9 @@ export function PlannerPage({ className }: { className: string | undefined }) {
   // The results of a tab belong to the forms they were run with: another option on screen, or a
   // loaded scenario, starts the two tabs again.
   const forms = usePlannerStore((s) => `${s.slot}:${String(s.loads)}`);
+  // The Withdraw tab shows both options' results at once, and holds the switch between them: only
+  // a loaded scenario starts it again.
+  const loads = usePlannerStore((s) => s.loads);
   return (
     <section className={[styles.shell, className].join(' ')} aria-label="Planner">
       <div className={settings.tabs} role="tablist" aria-label="Planner sides">
@@ -45,7 +48,7 @@ export function PlannerPage({ className }: { className: string | undefined }) {
       <PlannerMarket key={`market:${forms}`} hidden={tab !== 'market'} />
       <PlannerHome key={`home:${forms}`} hidden={tab !== 'home'} />
       <PlannerCompare hidden={tab !== 'compare'} />
-      <PlannerWithdraw key={`withdraw:${forms}`} hidden={tab !== 'withdraw'} />
+      <PlannerWithdraw key={`withdraw:${String(loads)}`} hidden={tab !== 'withdraw'} />
     </section>
   );
 }

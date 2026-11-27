@@ -12,23 +12,26 @@ interface PlannerTableProps<T> {
 /** A read-only results table. */
 export function PlannerTable<T>({ label, columns, rows }: PlannerTableProps<T>) {
   return (
-    <table className={styles.table} aria-label={label}>
-      <thead>
-        <tr>
-          {columns.map(([header]) => (
-            <th key={header}>{header}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, index) => (
-          <tr key={index}>
-            {columns.map(([header, cell]) => (
-              <td key={header}>{cell(row, index)}</td>
+    // The frame scrolls sideways when the table is wider than its column.
+    <div className={styles.tableFrame}>
+      <table className={styles.table} aria-label={label}>
+        <thead>
+          <tr>
+            {columns.map(([header]) => (
+              <th key={header}>{header}</th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={index}>
+              {columns.map(([header, cell]) => (
+                <td key={header}>{cell(row, index)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

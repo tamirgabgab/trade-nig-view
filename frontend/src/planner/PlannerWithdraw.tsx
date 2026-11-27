@@ -11,6 +11,7 @@ import panel from '../components/IndicatorSettingsPanel.module.css';
 import { usePlannerStore } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
+import { PlannerLearn } from './PlannerLearn.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
 import { PlannerSlot } from './PlannerSlot.tsx';
 import { PlannerWithdrawBeside, type BesidePlan } from './PlannerWithdrawBeside.tsx';
@@ -209,6 +210,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
               </p>
             </>
           )}
+          <PlannerLearn page="cost-basis">The cost of what is sold</PlannerLearn>
         </fieldset>
         <PlannerWithdrawHome
           home={settings.home}
@@ -291,6 +293,9 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
               ? 'The amount is what reaches the hand after the tax and the costs, in shekels of the first day; the first one is a month after the start. With the box ticked it keeps its buying power (the Market tab’s inflation).'
               : 'A twelfth of the percent is sold every month, the first time a month after the start. The income is what is left of the sale after the tax and the costs, so it moves with the market. The withdrawals alone never empty the account; a fee larger than what is left can.'}
           </p>
+          <PlannerLearn page="withdrawals">
+            Withdrawals: what is left, and for how long
+          </PlannerLearn>
         </fieldset>
         <PlannerWithdrawManyForm
           many={settings.many}
@@ -339,6 +344,10 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             data allows, and Simulate many possible worlds.
           </p>
         )}
+        {/* The study a button ran leads; the plan it was run with follows. */}
+        {shown !== null && shown.many !== null && (
+          <PlannerWithdrawMany result={shown.many} fixed={shown.fixed} home={shown.home} />
+        )}
         {shown?.beside != null && <PlannerWithdrawBeside plans={shown.beside} />}
         {shown !== null &&
           (typeof shown.result === 'string' ? (
@@ -353,9 +362,6 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
               option={shown.option}
             />
           ))}
-        {shown !== null && shown.many !== null && (
-          <PlannerWithdrawMany result={shown.many} fixed={shown.fixed} home={shown.home} />
-        )}
       </div>
     </div>
   );
