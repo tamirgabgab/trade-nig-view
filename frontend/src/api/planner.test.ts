@@ -1,5 +1,6 @@
 import { HOME_RESULT, TAX_PRESETS } from '../test/plannerHomeBody.ts';
-import { parseDepths, parseHome, parseMarket, parseTaxPresets } from './planner.ts';
+import { WITHDRAW_RESULT } from '../test/plannerWithdrawBody.ts';
+import { parseDepths, parseHome, parseMarket, parseTaxPresets, parseWithdraw } from './planner.ts';
 
 const SUMMARY = {
   deposited: 1000,
@@ -59,5 +60,15 @@ describe('parseTaxPresets', () => {
   it('accepts the two lists only', () => {
     expect(parseTaxPresets(TAX_PRESETS).purchase).toHaveLength(2);
     expect(() => parseTaxPresets({ purchase: [] })).toThrow('Unexpected');
+  });
+});
+
+describe('parseWithdraw', () => {
+  it('accepts a withdrawal plan and rejects one without what the tab shows', () => {
+    expect(parseWithdraw(WITHDRAW_RESULT).rows).toHaveLength(4);
+    expect(() => parseWithdraw({ ...WITHDRAW_RESULT, rows: undefined })).toThrow('Unexpected');
+    expect(() => parseWithdraw({ ...WITHDRAW_RESULT, floor: undefined })).toThrow('Unexpected');
+    const summary = { ...WITHDRAW_RESULT.summary, balance: undefined };
+    expect(() => parseWithdraw({ ...WITHDRAW_RESULT, summary })).toThrow('balance');
   });
 });

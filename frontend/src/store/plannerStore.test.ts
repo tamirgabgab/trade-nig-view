@@ -1,5 +1,6 @@
 import {
   DEFAULT_FORM,
+  DEFAULT_WITHDRAW,
   formsOf,
   linked,
   sanitizePersisted,
@@ -183,5 +184,39 @@ describe('the one-time upgrade of a stored planner', () => {
       true,
       '2031-01-02',
     ]);
+  });
+});
+
+describe('the Withdraw tab’s settings', () => {
+  it('start from the defaults and change part by part', () => {
+    usePlannerStore.setState({ ...sanitizePersisted(null) });
+    expect(usePlannerStore.getState().withdraw).toEqual(DEFAULT_WITHDRAW);
+    expect(DEFAULT_WITHDRAW).toMatchObject({ returns: 'mix', costShare: 50, rule: 'fixed' });
+    usePlannerStore.getState().setWithdraw({ rule: 'percent', percent: 6 });
+    expect(usePlannerStore.getState().withdraw).toEqual({
+      ...DEFAULT_WITHDRAW,
+      rule: 'percent',
+      percent: 6,
+    });
+  });
+
+  it('come with their defaults into a planner stored before the tab existed', async () => {
+    const before = sanitizePersisted(null);
+    const { withdraw: _withdraw, ...stored } = { ...before, slot: 'a', same: false };
+    void _withdraw;
+    const compare = { ...before.compare, discount: 25 };
+    localStorage.setItem(
+      'chartlab.planner',
+      JSON.stringify({ state: { ...stored, compare }, version: 2 }),
+    );
+    await usePlannerStore.persist.rehydrate();
+    const state = usePlannerStore.getState();
+    expect(state.withdraw).toEqual(DEFAULT_WITHDRAW);
+    expect([state.same, state.compare.discount]).toEqual([false, 25]);
+    // A damaged part falls back alone.
+    expect(sanitizePersisted({ withdraw: { capital: 'x', years: 30 } }).withdraw).toEqual({
+      ...DEFAULT_WITHDRAW,
+      years: 30,
+    });
   });
 });

@@ -401,3 +401,64 @@ test('planner: a learn page opens over the planner, from the section it explains
   // The planner is still there, as it was.
   await expect(home.getByLabel('Price ₪')).toBeVisible();
 });
+
+test('planner: withdrawals from a capital, on an assumed return and on the mix', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  await planner.getByRole('tab', { name: 'Withdraw' }).click();
+  const withdraw = planner.getByRole('tabpanel', { name: 'Withdraw' });
+  const card = (label: string) =>
+    withdraw.locator('dl').getByText(label, { exact: true }).locator('..');
+
+  // A known answer through the whole stack: 1,000,000 that does not grow, all of it cost,
+  // 10,000 a month not indexed. Five years leave 400,000.
+  await withdraw.getByLabel('The account grows by').selectOption('assumed');
+  await withdraw.getByLabel('Yearly return %').fill('0');
+  await withdraw.getByLabel('Starts on').fill('2030-01-15');
+  await withdraw.getByLabel('Years', { exact: true }).fill('5');
+  await withdraw.getByLabel('Cost share %').fill('100');
+  await withdraw.getByLabel('Amount ₪ a month, net').fill('10000');
+  await withdraw.getByLabel('Rises with the CPI').uncheck();
+  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await expect(
+    withdraw.getByRole('heading', { name: 'Withdrawals: 2030-01-15 to 2035-01-15' }),
+  ).toBeVisible();
+  await expect(card('Lasts')).toContainText('All 5 years');
+  await expect(card('Left at the end')).toContainText('₪400,000');
+  await expect(card('Taken, net')).toContainText('₪600,000');
+  await expect(card('Tax paid')).toContainText('₪0');
+  // Ten years: the hundredth month takes the last of it.
+  await withdraw.getByLabel('Years', { exact: true }).fill('10');
+  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await expect(card('The money ends')).toContainText('2038-06-15');
+  await expect(
+    withdraw.getByRole('table', { name: 'Withdrawals by year' }).getByRole('row'),
+  ).toHaveCount(11);
+
+  // A percent of AAPL's history: the balance moves with the market and never ends.
+  await planner.getByRole('tab', { name: 'Market' }).click();
+  await planner.getByLabel('Ticker 1').fill('aapl');
+  await planner.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
+  await planner.getByRole('tab', { name: 'Withdraw' }).click();
+  await withdraw.getByLabel('The account grows by').selectOption('mix');
+  await expect(withdraw.getByText('Runs the Market tab’s mix: AAPL 100%')).toBeVisible();
+  await withdraw.getByLabel('Starts on').fill('2010-01-15');
+  await withdraw.getByLabel('Cost share %').fill('50');
+  await withdraw.getByLabel('Withdrawal rule').selectOption('percent');
+  await withdraw.getByLabel('Sold % a year').fill('4');
+  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await expect(
+    withdraw.getByRole('heading', { name: 'Withdrawals: 2010-01-15 to 2020-01-15' }),
+  ).toBeVisible();
+  await expect(card('Income, first month')).toContainText('₪');
+  const bounds = withdraw.getByRole('table', { name: 'Tax bounds' });
+  await expect(bounds.getByRole('row')).toHaveCount(4);
+  await expect(withdraw.getByRole('img', { name: /^Balance and monthly income/ })).toBeVisible();
+  // The settings are kept: a reload shows the percent rule again.
+  await page.reload();
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  await planner.getByRole('tab', { name: 'Withdraw' }).click();
+  await expect(withdraw.getByLabel('Withdrawal rule')).toHaveValue('percent');
+});
