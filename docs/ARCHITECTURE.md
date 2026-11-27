@@ -74,7 +74,8 @@ flowchart LR
 | `config.py` | `Settings` (pydantic-settings) from env / `.env` |
 | `api/` | Thin routers: parse/validate, call services, map to response models. No business logic |
 | `models/` | `BarFrame` (column arrays) and `Interval` (`bars.py`), `SymbolInfo` (`symbols.py`), pydantic documents for drawings, layouts and watchlists |
-| `data/providers/` | `DataProvider` protocol + implementations (`yahoo.py`, `tiingo.py`, `fixtures.py`) |
+| `data/providers/` | `DataProvider` protocol + implementations (`yahoo.py`, `tiingo.py`, `fixtures.py`, and `synthetic.py`, which `BarService` asks directly for `SYN:` symbols, uncached, ADR 0031) |
+| `data/synthetic.py`, `models/synthetic.py`, `storage/synthetic.py`, `api/synthetic.py` | Synthetic symbols (ADR 0031): definitions in `app.db`, attached to the `Universe` (`with_extra`) so every `resolve` sees them; hourly bars aggregating to the scenario's daily bars |
 | `data/cache/` | `BarCache` (SQLite), coverage bookkeeping (what was requested, when, from which provider) |
 | `data/` (`bar_service.py`, `resample.py`, `sessions.py`, `validate.py`, `adjust.py`, `ratelimit.py`, `universe.py`) | Orchestration: cache → provider → validate; per request: truncate(`until`) → adjust → resample (session-anchored for intraday, `sessions.py`) → transform → window(`before`, `limit`) |
 | `indicators/` | One file per indicator (pure function) + `registry.py` (spec dataclasses, param validation) + `catalog.py` (the 35 registered specs) + `ma.py` (`MA_TYPES` dispatcher) + `core.py` (sources, filters and rolling primitives) |

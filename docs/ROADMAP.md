@@ -29,7 +29,7 @@
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
-| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | planned (noted 2026-11-27) |
+| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅ (2026-11-27, ADR 0031) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -391,9 +391,10 @@ not yet a round-by-round plan; his answers to the first questions are under "Dec
 
 **Three kinds of symbol that are not market data.** Each is a symbol like any other, so the chart, the indicators,
 Compare, the Planner's mix and (later) the backtester use it with no change of their own.
-- [ ] **K0: the frame.** A `SyntheticProvider` behind the `DataProvider` interface (no network, deterministic by a
+- [x] **K0: the frame.** A `SyntheticProvider` behind the `DataProvider` interface (no network, deterministic by a
   seed), a naming scheme, the definitions saved in `app.db`, and a "synthetic" mark wherever the symbol is shown, so
-  an invented series is never read as a market.
+  an invented series is never read as a market. Done with the lab's scenarios as the first kind (ADR 0031,
+  2026-11-27): 1h bars that aggregate to the scenario's daily bars, `/api/synthetic`, the dialog.
 - [ ] **K1: dwelling prices as a symbol.** The **close** is the CBS dwelling price index (national and by district),
   scaled to 1 on its first date. The index is monthly: on its month dates the close is the index exactly; between
   them it is interpolated geometrically, as the Planner already does, with optional noise that returns to the index

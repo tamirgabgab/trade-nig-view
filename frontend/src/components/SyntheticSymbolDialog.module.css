@@ -66,3 +66,8 @@
 .spacer {
   flex: 1;
 }
+
+/* A stored symbol's name cannot change (Save as copy gives a new one). */
+.form input:read-only {
+  color: var(--color-text-muted);
+}
