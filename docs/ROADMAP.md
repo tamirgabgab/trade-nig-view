@@ -395,6 +395,12 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   seed), a naming scheme, the definitions saved in `app.db`, and a "synthetic" mark wherever the symbol is shown, so
   an invented series is never read as a market. Done with the lab's scenarios as the first kind (ADR 0031,
   2026-11-27): 1h bars that aggregate to the scenario's daily bars, `/api/synthetic`, the dialog.
+- **Decided by the user before K1 (2026-11-27):** K0 approved. A **causality** field: interpolated between the
+  month dates (the default, as the Planner does, not causal) or causal (each value held from its publication,
+  an assumed lag, default two months, since the data carries no publication dates); **noise** 0.2 % a day by
+  default; bars **Monday to Friday**; a **first price** to choose (default 100); the **national index and the six
+  districts** now (the districts from 2017-10); **1h and 4h too**, invented like K0's; a **learn page** on the
+  synthetic symbols, linked from the dialog.
 - [ ] **K1: dwelling prices as a symbol.** The **close** is the CBS dwelling price index (national and by district),
   scaled to 1 on its first date. The index is monthly: on its month dates the close is the index exactly; between
   them it is interpolated geometrically, as the Planner already does, with optional noise that returns to the index
@@ -463,6 +469,10 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
 - **Defaults:** the scenario's volume is kept (OBV, VWAP); bars are generated on each request, not cached; no
   market status, exchange "Synthetic", the intraday collector skips them; at most 100 definitions.
 - **K2's bar-shape defaults** start from the recipe in `app/analysis/synthetic.py` (asked again at K2).
+- **K2's return distributions** (user, 2026-11-27): the user picks the family of the daily return, and the yearly
+  mean and standard deviation he sets hold exactly whatever the family: **normal, Student-t** (degrees of freedom
+  set the tails), **uniform, Laplace**, and a **skewed** one (skew-normal or a skewed t), each with its formulas on
+  the page. (Mixtures and Merton jumps were not picked as families; the roadmap's jumps are asked again at K2.)
 - **Refined while building K0 (ADR 0031):** the bars are never stored in `bars.db` but are memoised in memory by
   the whole definition (an edit still applies at once); the last bar must be *before* today (today's hours are not
   over); the first date is 1970-01-01 or later; a stored symbol keeps its name (Save as copy gives another); in the
