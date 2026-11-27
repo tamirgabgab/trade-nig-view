@@ -67,18 +67,49 @@ describe('a saved scenario', () => {
     expect([home.home.price, home.other.price]).toEqual([DEFAULT_HOME.price, 3_000_000]);
   });
 
-  it('keeps each option’s Withdraw settings its own when it is loaded with option B on screen', () => {
-    const saved = captureScenario(PRESETS);
+  it('holds both options’ Withdraw settings, and brings them back with option A in front', () => {
     const store = usePlannerStore.getState();
+    store.setWithdraw({ amount: 7_000 });
     store.copyToOther();
     store.setSame(false);
     store.swap('b');
+    store.setWithdraw({ rule: 'percent', percent: 5 });
+    const saved: unknown = JSON.parse(JSON.stringify(captureScenario(PRESETS)));
+    usePlannerStore.setState({ ...sanitizePersisted(null) });
+    // Loaded with option B on screen: the slot goes to A, and each option gets its own.
+    usePlannerStore.getState().copyToOther();
+    usePlannerStore.getState().setSame(false);
+    usePlannerStore.getState().swap('b');
+    applyScenario(parseScenarioState(saved));
+    const state = usePlannerStore.getState();
+    expect(state.slot).toBe('a');
+    expect([state.withdraw.amount, state.withdraw.rule]).toEqual([7_000, 'fixed']);
+    expect([state.withdrawOther.rule, state.withdrawOther.percent]).toEqual(['percent', 5]);
+  });
+
+  it('reads stored Withdraw settings field by field', () => {
+    const saved = captureScenario(PRESETS);
+    const odd = { ...saved, withdraw: { a: { rule: 'monthly', years: 20 }, b: { capital: -1 } } };
+    const state = parseScenarioState(JSON.parse(JSON.stringify(odd)));
+    expect(state.withdraw?.a).toEqual({ ...DEFAULT_WITHDRAW, years: 20 });
+    expect(state.withdraw?.b).toEqual(DEFAULT_WITHDRAW);
+  });
+
+  it('leaves the Withdraw settings on screen alone when a scenario saved before them is loaded', () => {
+    const before: Partial<ReturnType<typeof captureScenario>> = captureScenario(PRESETS);
+    delete before.withdraw;
+    const store = usePlannerStore.getState();
+    store.copyToOther();
+    store.setSame(false);
+    store.setWithdraw({ amount: 4_500 });
+    store.swap('b');
     store.setWithdraw({ amount: 8_000 });
-    applyScenario(saved);
+    // Loaded with option B on screen: the slot goes to A, and the two keep their own settings.
+    applyScenario(parseScenarioState(JSON.parse(JSON.stringify(before))));
     const state = usePlannerStore.getState();
     expect([state.slot, state.withdraw.amount, state.withdrawOther.amount]).toEqual([
       'a',
-      DEFAULT_WITHDRAW.amount,
+      4_500,
       8_000,
     ]);
   });
@@ -92,6 +123,7 @@ describe('a saved scenario', () => {
       true,
       DEFAULT_HOME.price,
     ]);
+    expect(state.withdraw?.b).toEqual(state.withdraw?.a);
     usePlannerStore.setState({ same: false });
     applyScenario(parseScenarioState(JSON.parse(JSON.stringify(state))));
     expect(usePlannerStore.getState().same).toBe(true);
