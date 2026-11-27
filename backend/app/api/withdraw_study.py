@@ -281,10 +281,9 @@ def _study(
         grid = sample(mix, start, body.months, account.taxes, cpi)
         if body.home is None:
             return grid, None
-        # The apartment's story moves with the window: its purchase day too.
-        bought = None if body.home.bought is None else add_months(body.home.bought, shift)
+        # The linear rule is off, as in H3a's windows, so the purchase day plays no part.
         home, found = apartment(
-            body.home, start, body.months, cpi, macro, cost, bought, strict=True
+            body.home, start, body.months, cpi, macro, cost, None, strict=True, linear=False
         )
         warnings.extend(found)
         return grid, home
@@ -309,6 +308,11 @@ def _study(
         warnings.append(
             "The apartment's value is assumed: it is the same in every window, so the windows "
             "differ only by the market"
+        )
+    if cost is not None:
+        warnings.append(
+            "The betterment tax's linear rule is off in the windows: it depends on the calendar "
+            "date 2014-01-01, and would tax them unevenly"
         )
     # The earliest window may run before the market's shekel rate, where the entered start did not.
     earliest = day_number(add_months(body.start, ran[0][0]))

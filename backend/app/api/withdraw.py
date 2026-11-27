@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Annotated, Literal
 
 import numpy as np
@@ -293,10 +293,12 @@ def apartment(
     *,
     strict: bool = False,
     value: FloatArray | None = None,
+    linear: bool = True,
 ) -> tuple[Home, list[str]]:
     """The apartment's cash and worth on the month dates from ``start``, read as "today".
     ``strict`` refuses a series held flat past its data (a window of history); ``value`` is a
-    simulated world's dwelling index."""
+    simulated world's dwelling index; ``linear`` off drops the betterment tax's linear rule, which
+    depends on the calendar date 2014-01-01 and would tax the windows unevenly."""
     plan = HomePlan(
         start=start,
         months=months,
@@ -321,7 +323,10 @@ def apartment(
         insurance=home.insurance,
         selling=home.selling_pct / 100,
         early_repayment=home.early_repayment_pct / 100,
-        betterment=BETTERMENT[0 if home.betterment == "single_home" else 1].spec,
+        betterment=replace(
+            BETTERMENT[0 if home.betterment == "single_home" else 1].spec,
+            linear=linear,
+        ),
         cost=cost,
         bought=bought,
     )

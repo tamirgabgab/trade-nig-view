@@ -31,10 +31,12 @@ simulated worlds. The user's answers:
   from the mix or typed (on an assumed return the mean is that return). A world starts on the plan's own first day,
   so a plan can start in the future.
 - **The apartment** in a realization follows its "It grows by": the window's or the world's dwelling index, or the
-  assumed rate. Its cost is fixed once, in shekels of the entered first day, and its purchase day moves with the
-  window, so the apartment's story relative to the plan is the same in every window.
+  assumed rate. Its cost is fixed once, in shekels of the entered first day. In the windows the betterment tax's
+  linear rule is off, as in H3a: it depends on the calendar date 2014-01-01 and would tax the windows unevenly (the
+  page says so). The worlds start on the plan's own day and keep it.
 - **A realization lasts** when its last month is paid in full. Those that ran out are a bar of their own beside the
-  histogram, on its scale, and are not in its bins.
+  histogram, on its scale, and are not in its bins. With an apartment they still hold its worth, so they stay in
+  the bins and their count is in the note.
 - **The sustainable amount**: the largest amount with which the target share lasts, by bisection to half a shekel,
   at the cost share entered.
 - **The months in reverse** is part of the single plan's answer: the market's monthly growths last first, the CPI

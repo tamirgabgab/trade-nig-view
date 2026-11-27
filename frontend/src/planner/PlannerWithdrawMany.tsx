@@ -38,7 +38,11 @@ export function PlannerWithdrawMany({
   const noun = windows ? 'starts' : 'worlds';
   const years = rounded(result.months / 12);
   const drawdowns = realizations.map((r) => r.drawdown).sort((a, b) => a - b);
-  const { values, ranOut } = leftValues(realizations, start, { percent: asPercent, real });
+  const { values, ranOut } = leftValues(realizations, start, {
+    percent: asPercent,
+    real,
+    all: home,
+  });
   const what = home ? 'net worth (the account and the apartment, sold)' : 'account';
 
   const cards: PlannerCard[] = [
@@ -173,7 +177,8 @@ export function PlannerWithdrawMany({
       </label>
       <PlannerWithdrawHistogram
         values={values}
-        ranOut={ranOut}
+        // With an apartment the ones that ran out still hold its worth: they are in the bars.
+        ranOut={home ? 0 : ranOut}
         start={asPercent ? 1 : start}
         noun={noun}
         unit={`${asPercent ? 'as a percent of the start' : 'in shekels'}${real ? ' (of the first day)' : ''}`}
@@ -181,9 +186,11 @@ export function PlannerWithdrawMany({
       />
       <p className={styles.note}>
         One bar a range of what is left of the {what}, a count of the {noun} in it
-        {ranOut > 0
-          ? '; the ones that ran out before the end are the bar apart, on the same scale'
-          : ''}
+        {ranOut === 0
+          ? ''
+          : home
+            ? `; the ${String(ranOut)} that ran out before the end still hold the apartment’s worth, and are among the bars`
+            : '; the ones that ran out before the end are the bar apart, on the same scale'}
         . At the cost share entered ({plainPercent(entered.cost_share)}).
       </p>
       {fixed ? (

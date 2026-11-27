@@ -145,11 +145,38 @@ def test_an_apartment_in_every_window(client: TestClient) -> None:
     # A sale on the first day would be taxed as one at the end is: the two are on one basis.
     taxed = study(client, home={**home, "betterment": "full"})
     assert taxed["start_worth"] < body["start_worth"]
-    # Its purchase day moves with the window: a start before 2005 is not refused for it.
+    # A start before its purchase day is not refused for it.
     assert runs[0]["start"] == "2002-01-15"
     # An assumed growth is the same in every window, and the page says so.
     assumed = study(client, home={**HOME, "growth": "assumed"})
     assert any("same in every window" in note for note in assumed["warnings"])
+
+
+def test_the_linear_rule_is_off_in_the_windows(client: TestClient) -> None:
+    # No account, and an apartment that does not grow whose rent is the whole withdrawal: what is
+    # left is its sale alone. The linear rule depends on 2014-01-01, so with it the windows on
+    # each side of that day would be taxed differently; without it they all leave the same.
+    home = {
+        **HOME,
+        "growth": "assumed",
+        "growth_pct": 0,
+        "use": "rent_out",
+        "rent": 5_000,
+        "vacancy_pct": 0,
+        "rent_tax_pct": 0,
+        "maintenance_pct": 0,
+        "insurance": 0,
+        "selling_pct": 0,
+        "betterment": "full",
+        "cost": 900_000,
+        "bought": "2005-01-15",
+    }
+    rule = {"kind": "fixed", "amount": 5_000, "indexed": False}
+    body = study(client, home=home, capital=0, rule=rule)
+    lefts = {round(r["left"]) for r in body["realizations"]}
+    assert lefts == {round(body["start_worth"])}
+    assert body["start_worth"] < 2_000_000
+    assert any("linear rule is off" in note for note in body["warnings"])
 
 
 def test_windows_that_cannot_run(client: TestClient) -> None:

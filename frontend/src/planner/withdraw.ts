@@ -98,18 +98,22 @@ export function toWithdrawSimulate(
 }
 
 /**
- * What is left of the realizations that lasted, as the histogram shows it (shekels or a share of
- * what there was on the first day; of the first day or nominal), and how many ran out.
+ * What is left of the realizations, as the histogram shows it (shekels or a share of what there
+ * was on the first day; of the first day or nominal), and how many ran out. The ones that ran
+ * out are counted apart: an account that ran out holds nothing. With an apartment (`all`) they
+ * still hold its worth, so they stay among the values.
  */
 export function leftValues(
   realizations: readonly WithdrawRealization[],
   startWorth: number,
-  unit: { percent: boolean; real: boolean },
+  unit: { percent: boolean; real: boolean; all?: boolean },
 ): { values: number[]; ranOut: number } {
   const lasted = realizations.filter((r) => r.depleted_month === null);
   const scale = unit.percent ? startWorth : 1;
   return {
-    values: lasted.map((r) => (unit.real ? r.left_real : r.left) / scale),
+    values: (unit.all ? realizations : lasted).map(
+      (r) => (unit.real ? r.left_real : r.left) / scale,
+    ),
     ranOut: realizations.length - lasted.length,
   };
 }

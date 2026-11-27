@@ -313,10 +313,11 @@ Asked before J2 (2026-11-27):
 - **Worlds** are H3b's: a block bootstrap of the mix's history, or a modelled market (its mean and volatility
   estimated from the mix, or typed; on an assumed return the mean is that return).
 - **The apartment** follows its own "It grows by" in every realization: the dwelling index of the window or of the
-  world, or the assumed rate (then it is the same in all). Its cost stays what it is in shekels of the first day,
-  and its purchase day moves with the window.
+  world, or the assumed rate (then it is the same in all). Its cost stays what it is in shekels of the first day;
+  in the windows the betterment tax's linear rule is off, as in H3a.
 - **A realization lasts** when its last month is paid in full (J1's depletion: none). Windows that ran out are a
-  labelled share of their own beside the histogram, not a spike in its first bin.
+  labelled share of their own beside the histogram, not a spike in its first bin (with an apartment they still hold
+  its worth and stay in the bins).
 - **The sustainable amount** (fixed rule): the largest amount that lasts in a chosen share of the realizations
   (95 % by default), by bisection, at the cost share entered.
 - **The sequence view** (one plan on the mix): the same months of the market in reverse order, the CPI and the

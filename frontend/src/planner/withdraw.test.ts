@@ -202,6 +202,9 @@ describe('leftValues', () => {
     expect(leftValues(realizations, start_worth, { percent: true, real: false }).values).toEqual([
       0.6, 1.5,
     ]);
+    // With an apartment the one that ran out still holds its worth: it stays among the values.
+    const all = leftValues(realizations, start_worth, { percent: false, real: false, all: true });
+    expect(all).toEqual({ values: [0, 600_000, 1_500_000], ranOut: 1 });
     const real = leftValues(realizations, start_worth, { percent: true, real: true }).values;
     expect(real[0]).toBeCloseTo(0.48);
     expect(real[1]).toBeCloseTo(1.2);
