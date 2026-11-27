@@ -28,7 +28,7 @@
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
-| PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | J0, J1 ✅ (2026-11-27); J2–J4 planned |
+| PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | J0–J2 ✅ (2026-11-27); J3, J4 planned |
 | PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | planned (noted 2026-11-27) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
@@ -376,8 +376,10 @@ Phase-2 plan.
 - [x] J1: an owned apartment in the balance (ADR 0027): its cash and its worth through `run_home`, kept, sold on a
   date, sold when the account runs out, or a forced sale; one mortgage track; betterment tax on its own cost and
   purchase day (2026-11-27).
-- [ ] J2: history windows and simulated worlds. J3: the learn page, saved scenarios, polish. J4 (optional):
-  lot-exact tax, two plans side by side.
+- [x] J2: the plan over many realizations (ADR 0028): every start of history and simulated worlds through one
+  vectorised engine; the histogram of what is left, the share still paying, the income fan, the sustainable
+  amount, the months in reverse; `/api/planner/withdraw/study` and `/simulate` (2026-11-27).
+- [ ] J3: the learn page, saved scenarios, polish. J4 (optional): lot-exact tax, two plans side by side.
 
 ### Phase K — Synthetic symbols and open completions (after Phase J, before Phase 4)
 Asked for by the user on 2026-11-27. **The order he set: Phase J, then Phase K, then Phase 4.** A note of scope,
