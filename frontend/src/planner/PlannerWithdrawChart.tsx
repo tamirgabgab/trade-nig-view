@@ -185,7 +185,9 @@ export function PlannerWithdrawChart({ rows, real, depleted, home }: PlannerWith
       </svg>
       <figcaption className={styles.legend}>
         <span className={styles.keyLineX}>The plan at its cost share</span>
-        <span className={styles.keyBand}>Between the tax bounds (cost share 0% to 100%)</span>
+        {rows.some(
+          (r) => r.balance_floor !== r.balance_ceiling || r.net_floor !== r.net_ceiling,
+        ) && <span className={styles.keyBand}>Between the tax bounds (cost share 0% to 100%)</span>}
         {home && (
           <span className={styles.keyLineY}>
             The account and the apartment (what its sale leaves)

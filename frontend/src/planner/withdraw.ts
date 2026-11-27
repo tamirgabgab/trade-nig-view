@@ -42,10 +42,13 @@ function toHome(home: WithdrawHome): NonNullable<WithdrawRequest['home']> {
 /** The request of the Withdraw tab: its settings, and the Market form's mix, fees and taxes. */
 export function toWithdraw(settings: WithdrawSettings, form: PlannerForm): WithdrawRequest {
   const market = toRequest(form);
+  // From the Market tab's plan: its lots are the account, from its last day on, on its own mix.
+  const plan = settings.source === 'plan';
   return {
-    start: settings.start,
+    start: plan ? form.end : settings.start,
     months: Math.round(settings.years * 12),
-    capital: settings.capital,
+    capital: plan ? 0 : settings.capital,
+    plan: plan ? market : null,
     cost_share_pct: settings.costShare,
     rule: {
       kind: settings.rule,
@@ -53,7 +56,7 @@ export function toWithdraw(settings: WithdrawSettings, form: PlannerForm): Withd
       indexed: settings.indexed,
       percent: settings.percent,
     },
-    returns: { mode: settings.returns, yearly_pct: settings.yearly },
+    returns: { mode: plan ? 'mix' : settings.returns, yearly_pct: settings.yearly },
     market: {
       assets: market.assets,
       use_fx: market.use_fx,
@@ -117,6 +120,12 @@ export function leftValues(
     ranOut: realizations.length - lasted.length,
   };
 }
+
+/** A plan's rule in words: `₪4,000 a month, net` or `5% of the account a year`. */
+export const ruleLabel = (settings: WithdrawSettings) =>
+  settings.rule === 'fixed'
+    ? `₪${settings.amount.toLocaleString('en-US')} a month, net`
+    : `${String(settings.percent)}% of the account a year`;
 
 /** A form's mix in words: `SPY 60%, QQQ 40%`, the shares as the request will carry them. */
 export function mixLabel(form: PlannerForm): string {

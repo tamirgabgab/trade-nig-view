@@ -52,12 +52,15 @@ export function PlannerWithdrawResults({
   result,
   fixed,
   home,
+  option,
 }: {
   result: WithdrawResult;
   /** The rule the plan was run with: a fixed amount (true) or a percent. */
   fixed: boolean;
   /** It was run with an apartment. */
   home: boolean;
+  /** "Option A" when the two options are shown side by side. */
+  option?: string | undefined;
 }) {
   const [real, setReal] = useState(true);
   const { summary: s, rows } = result;
@@ -105,8 +108,19 @@ export function PlannerWithdrawResults({
     ['Tax paid', shekels(s.tax), 'On the gains of the sales, as they were made'],
     ['Fees and commissions', shekels(s.fees + s.commissions)],
   ];
+  const got = result.accumulated;
+  const account: PlannerCard[] =
+    got === null
+      ? []
+      : [
+          [
+            'The account',
+            shekels(got.value),
+            `What the Market tab’s plan held on the first day: ${String(got.deposits)} deposits from ${got.first}, ${shekels(got.deposited)} put in. Its cost is ${plainPercent(got.cost_share)} of its value`,
+          ],
+        ];
   const cards: PlannerCard[] = fixed
-    ? [lasts, left, ...apartment, ...totals]
+    ? [lasts, left, ...account, ...apartment, ...totals]
     : [
         // A percent ends only when the fees take what is left: then that comes first.
         ...(s.depleted_month === null ? [] : [lasts]),
@@ -118,6 +132,7 @@ export function PlannerWithdrawResults({
         ],
         ['Income, last month', shekels(lastNet)],
         left,
+        ...account,
         ...apartment,
         ...totals,
       ];
@@ -144,7 +159,8 @@ export function PlannerWithdrawResults({
   return (
     <>
       <h2 className={styles.heading}>
-        Withdrawals: {result.start} to {result.end}
+        {option === undefined ? 'Withdrawals:' : `${option}: withdrawals`} {result.start} to{' '}
+        {result.end}
       </h2>
       <PlannerCards cards={cards} />
       {result.warnings.map((warning) => (
@@ -152,26 +168,37 @@ export function PlannerWithdrawResults({
           {warning}
         </p>
       ))}
-      <h2 className={styles.heading}>The tax, between its two bounds</h2>
-      <PlannerTable
-        label="Tax bounds"
-        columns={bounds}
-        rows={[
-          ['0%: everything sold is gain', result.floor],
-          [`${plainPercent(s.cost_share)}: as entered`, s],
-          ['100%: only growth is gain', result.ceiling],
-        ]}
-      />
-      <p className={styles.note}>
-        The purchases behind the capital are not known, so the cost share stands for them. At 0%
-        every sale is all gain: the least that can reach the hand. At 100% the capital was bought on
-        the first day and only growth since then is taxed: the most.{' '}
-        {fixed
-          ? 'A fixed net amount needs a larger sale the more of it is taxed, so the bounds differ in how long the money lasts.'
-          : 'A percent sells the same whatever the cost share, so the balance is one and the bounds differ only in the income.'}
-        {home &&
-          ' With an apartment, the bounds may also differ in when it is sold; and a percent that must sell more for its costs than its twelfth has a balance that depends on the cost share too.'}
-      </p>
+      {result.floor !== null && result.ceiling !== null ? (
+        <>
+          <h2 className={styles.heading}>The tax, between its two bounds</h2>
+          <PlannerTable
+            label="Tax bounds"
+            columns={bounds}
+            rows={[
+              ['0%: everything sold is gain', result.floor],
+              [`${plainPercent(s.cost_share)}: as entered`, s],
+              ['100%: only growth is gain', result.ceiling],
+            ]}
+          />
+          <p className={styles.note}>
+            The purchases behind the capital are not known, so the cost share stands for them. At 0%
+            every sale is all gain: the least that can reach the hand. At 100% the capital was
+            bought on the first day and only growth since then is taxed: the most.{' '}
+            {fixed
+              ? 'A fixed net amount needs a larger sale the more of it is taxed, so the bounds differ in how long the money lasts.'
+              : 'A percent sells the same whatever the cost share, so the balance is one and the bounds differ only in the income.'}
+            {home &&
+              ' With an apartment, the bounds may also differ in when it is sold; and a percent that must sell more for its costs than its twelfth has a balance that depends on the cost share too.'}
+          </p>
+        </>
+      ) : (
+        <p className={styles.note}>
+          The tax here is each lot’s own: the Market tab’s deposits are the account’s purchases,
+          sold first in, first out within each asset, so there are no bounds to show. That order is
+          the rule for identical securities (regulation 5 of the 2002 capital-gain regulations, read
+          from secondary sources); it is a model, not tax advice.
+        </p>
+      )}
       {result.reversed !== null && (
         <>
           <h2 className={styles.heading}>The order of the months</h2>

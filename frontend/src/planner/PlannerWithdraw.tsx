@@ -12,15 +12,27 @@ import { usePlannerStore } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
+import { PlannerSlot } from './PlannerSlot.tsx';
+import { PlannerWithdrawBeside, type BesidePlan } from './PlannerWithdrawBeside.tsx';
 import { PlannerWithdrawHome } from './PlannerWithdrawHome.tsx';
 import { PlannerWithdrawMany } from './PlannerWithdrawMany.tsx';
 import { PlannerWithdrawManyForm } from './PlannerWithdrawManyForm.tsx';
 import { PlannerWithdrawResults } from './PlannerWithdrawResults.tsx';
-import { mixLabel, toWithdraw, toWithdrawSimulate, toWithdrawStudy } from './withdraw.ts';
+import {
+  mixLabel,
+  ruleLabel,
+  toWithdraw,
+  toWithdrawSimulate,
+  toWithdrawStudy,
+} from './withdraw.ts';
 
 const RETURNS = [
   ['mix', 'The Market tab’s mix'],
   ['assumed', 'An assumed yearly return'],
+] as const;
+const SOURCES = [
+  ['capital', 'A capital I enter'],
+  ['plan', 'What the Market tab’s plan accumulated'],
 ] as const;
 const RULES = [
   ['fixed', 'A fixed amount'],
@@ -35,6 +47,9 @@ const RULES = [
 export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
   const settings = usePlannerStore((s) => s.withdraw);
   const form = usePlannerStore((s) => s.form);
+  // The other option's settings and mix, for the two plans side by side.
+  const otherSettings = usePlannerStore((s) => s.withdrawOther);
+  const otherForm = usePlannerStore((s) => s.other);
   const same = usePlannerStore((s) => s.same);
   const slot = usePlannerStore((s) => s.slot);
   const set = usePlannerStore((s) => s.setWithdraw);
@@ -48,12 +63,17 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
     many: WithdrawManyResult | null;
     fixed: boolean;
     home: boolean;
+    /** Both options, A first, when each has settings of its own; `option` names the one shown. */
+    beside: BesidePlan[] | null;
+    option: string | undefined;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const assumed = settings.returns === 'assumed';
+  // From the Market tab's plan: the capital, its cost and the first day follow from it.
+  const fromPlan = settings.source === 'plan';
+  const assumed = !fromPlan && settings.returns === 'assumed';
   const fixed = settings.rule === 'fixed';
-  const ready = settings.start !== '';
+  const ready = (fromPlan ? form.end : settings.start) !== '';
   const start = (next: typeof status, many: Promise<WithdrawManyResult | null>) => {
     if (!ready) return;
     setStatus(next);
@@ -62,10 +82,28 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
     // stands without it: worlds for a plan that ends after the mix's last bar, say.
     const reason = (cause: unknown) =>
       cause instanceof Error ? cause.message : 'The request failed';
-    Promise.all([runWithdraw(toWithdraw(settings, form)).catch(reason), many])
-      .then(([result, more]) => {
-        if (typeof result === 'string' && more === null) throw new Error(result);
-        setShown({ result, many: more, fixed, home: settings.home.include });
+    const own = runWithdraw(toWithdraw(settings, form)).catch(reason);
+    const other = same ? null : runWithdraw(toWithdraw(otherSettings, otherForm)).catch(reason);
+    Promise.all([own, many, other])
+      .then(([result, more, aside]) => {
+        if (typeof result === 'string' && more === null && aside === null) throw new Error(result);
+        const mine = { label: ruleLabel(settings), result };
+        const theirs = aside === null ? null : { label: ruleLabel(otherSettings), result: aside };
+        const [a, b] = slot === 'a' ? [mine, theirs] : [theirs, mine];
+        setShown({
+          result,
+          many: more,
+          fixed,
+          home: settings.home.include,
+          beside:
+            theirs === null
+              ? null
+              : [
+                  { ...(a ?? mine), label: `A: ${(a ?? mine).label}` },
+                  { ...(b ?? mine), label: `B: ${(b ?? mine).label}` },
+                ],
+          option: theirs === null ? undefined : `Option ${slot.toUpperCase()}`,
+        });
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'The request failed');
@@ -95,56 +133,79 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
         }}
       >
         <h1 className={styles.title}>Planner: withdrawals</h1>
+        <PlannerSlot />
         <fieldset className={styles.section}>
           <legend>The account</legend>
           <div className={styles.grid}>
-            <PlannerField
-              label="Starting capital ₪"
-              value={settings.capital}
-              // Zero is a plan only with an apartment; the arrows step from a round minimum.
-              min={0}
-              step={10_000}
-              onChange={(capital) => {
-                set({ capital });
-              }}
-            />
-            <PlannerField
-              label="Cost share %"
-              value={settings.costShare}
-              max={100}
-              step={5}
-              onChange={(costShare) => {
-                set({ costShare });
-              }}
-            />
             <PlannerSelect
-              label="The account grows by"
-              value={settings.returns}
-              options={RETURNS}
-              onChange={(returns) => {
-                set({ returns });
+              className={styles.wide}
+              label="The account is"
+              value={settings.source}
+              options={SOURCES}
+              onChange={(source) => {
+                set({ source });
               }}
             />
-            {assumed && (
-              <PlannerField
-                label="Yearly return %"
-                value={settings.yearly}
-                min={-50}
-                max={100}
-                step={0.5}
-                onChange={(yearly) => {
-                  set({ yearly });
-                }}
-              />
-            )}
           </div>
-          <p className={styles.note}>
-            {assumed
-              ? 'The Market tab’s mix is not used: the account grows by the assumed return, an effective yearly rate in shekels, the same every month. The Market tab’s fees and taxes still apply.'
-              : `Runs ${whose}: ${mixLabel(form)}, with its fees and taxes, over history from the start day.`}{' '}
-            The cost share is how much of the capital was paid for it; the rest is gain that is
-            taxed when sold. The results show the plan at 0% and at 100% beside it.
-          </p>
+          {fromPlan ? (
+            <p className={styles.note}>
+              The withdrawals start on {form.end}, the day the Market tab’s plan ends. Its deposits
+              are the account’s lots ({mixLabel(form)}, with its fees and taxes), so the capital and
+              its cost are not typed, and a sale takes the oldest lot first within each asset: the
+              tax is each lot’s own, with no bounds.
+            </p>
+          ) : (
+            <>
+              <div className={styles.grid}>
+                <PlannerField
+                  label="Starting capital ₪"
+                  value={settings.capital}
+                  // Zero is a plan only with an apartment; the arrows step from a round minimum.
+                  min={0}
+                  step={10_000}
+                  onChange={(capital) => {
+                    set({ capital });
+                  }}
+                />
+                <PlannerField
+                  label="Cost share %"
+                  value={settings.costShare}
+                  max={100}
+                  step={5}
+                  onChange={(costShare) => {
+                    set({ costShare });
+                  }}
+                />
+                <PlannerSelect
+                  label="The account grows by"
+                  value={settings.returns}
+                  options={RETURNS}
+                  onChange={(returns) => {
+                    set({ returns });
+                  }}
+                />
+                {assumed && (
+                  <PlannerField
+                    label="Yearly return %"
+                    value={settings.yearly}
+                    min={-50}
+                    max={100}
+                    step={0.5}
+                    onChange={(yearly) => {
+                      set({ yearly });
+                    }}
+                  />
+                )}
+              </div>
+              <p className={styles.note}>
+                {assumed
+                  ? 'The Market tab’s mix is not used: the account grows by the assumed return, an effective yearly rate in shekels, the same every month. The Market tab’s fees and taxes still apply.'
+                  : `Runs ${whose}: ${mixLabel(form)}, with its fees and taxes, over history from the start day.`}{' '}
+                The cost share is how much of the capital was paid for it; the rest is gain that is
+                taxed when sold. The results show the plan at 0% and at 100% beside it.
+              </p>
+            </>
+          )}
         </fieldset>
         <PlannerWithdrawHome
           home={settings.home}
@@ -155,17 +216,19 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
         <fieldset className={styles.section}>
           <legend>The withdrawals</legend>
           <div className={styles.grid}>
-            <label>
-              Starts on
-              <input
-                className={panel.control}
-                type="date"
-                value={settings.start}
-                onChange={(event) => {
-                  set({ start: event.target.value });
-                }}
-              />
-            </label>
+            {!fromPlan && (
+              <label>
+                Starts on
+                <input
+                  className={panel.control}
+                  type="date"
+                  value={settings.start}
+                  onChange={(event) => {
+                    set({ start: event.target.value });
+                  }}
+                />
+              </label>
+            )}
             <PlannerField
               label="Years"
               value={settings.years}
@@ -273,13 +336,19 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             data allows, and Simulate many possible worlds.
           </p>
         )}
+        {shown?.beside != null && <PlannerWithdrawBeside plans={shown.beside} />}
         {shown !== null &&
           (typeof shown.result === 'string' ? (
             <p className={styles.warning}>
               The plan from the start entered cannot run on its own: {shown.result}.
             </p>
           ) : (
-            <PlannerWithdrawResults result={shown.result} fixed={shown.fixed} home={shown.home} />
+            <PlannerWithdrawResults
+              result={shown.result}
+              fixed={shown.fixed}
+              home={shown.home}
+              option={shown.option}
+            />
           ))}
         {shown !== null && shown.many !== null && (
           <PlannerWithdrawMany result={shown.many} fixed={shown.fixed} home={shown.home} />

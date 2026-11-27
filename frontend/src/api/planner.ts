@@ -189,6 +189,8 @@ export function parseWithdraw(body: unknown): WithdrawResult {
   }
   for (const part of ['summary', 'floor', 'ceiling']) {
     const summary = body[part];
+    // From a Market plan's lots the tax is known: the two bounds are null.
+    if (summary === null && part !== 'summary') continue;
     if (!isRecord(summary)) throw new Error('Unexpected /api/planner/withdraw response');
     for (const key of ['balance', 'taken', 'tax', 'liquidation', 'lowest_net_real']) {
       if (typeof summary[key] !== 'number') throw new Error(`Expected a number for ${key}`);

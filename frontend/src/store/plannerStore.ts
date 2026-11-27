@@ -233,6 +233,8 @@ const DEFAULT_WITHDRAW_MANY: WithdrawMany = {
 
 /** The Withdraw tab's inputs (percentages in %, money in shekels). */
 export interface WithdrawSettings {
+  /** A capital that is typed, or what the Market tab's plan accumulated (its lots known). */
+  source: 'capital' | 'plan';
   /** The account grows as the Market tab's mix did, or by an assumed yearly return. */
   returns: 'mix' | 'assumed';
   /** The assumed yearly return, in %. */
@@ -253,6 +255,7 @@ export interface WithdrawSettings {
 }
 
 export const DEFAULT_WITHDRAW: WithdrawSettings = {
+  source: 'capital',
   returns: 'mix',
   yearly: 5,
   start: '2015-01-02',
@@ -294,7 +297,9 @@ interface PlannerData {
   other: PlannerForm;
   contents: Record<Slot, OptionContents>;
   compare: CompareSettings;
+  /** The Withdraw tab's settings of the option on screen, and of the other one. */
   withdraw: WithdrawSettings;
+  withdrawOther: WithdrawSettings;
 }
 
 interface PlannerState extends PlannerData {
@@ -322,6 +327,8 @@ export function bySlot<T>(slot: Slot, shown: T, other: T): Record<Slot, T> {
 }
 export const formsOf = (s: Pick<PlannerData, 'slot' | 'form' | 'other'>) =>
   bySlot(s.slot, s.form, s.other);
+export const withdrawsOf = (s: Pick<PlannerData, 'slot' | 'withdraw' | 'withdrawOther'>) =>
+  bySlot(s.slot, s.withdraw, s.withdrawOther);
 /** The two options as a comparison reads them: option A twice while the two are the same. */
 export const linked = <T>(same: boolean, pair: Record<Slot, T>): Record<Slot, T> =>
   same ? { a: pair.a, b: pair.a } : pair;
@@ -382,6 +389,7 @@ export function readWithdraw(stored: unknown): WithdrawSettings {
   const { home, many } = read;
   const ok: { [K in keyof WithdrawSettings]?: boolean } = {
     // Stored text, whatever its type says: only the tab's own choices pass.
+    source: ['capital', 'plan'].includes(read.source),
     returns: ['mix', 'assumed'].includes(read.returns),
     rule: ['fixed', 'percent'].includes(read.rule),
     start: DATE.test(read.start),
@@ -429,6 +437,12 @@ export function sanitizePersisted(persisted: unknown): PlannerData {
   // While the two are the same it is option A that is on screen, whatever was stored.
   const { a, b } = bySlot(readSlot(from['slot']), shown, aside);
   const slot = same ? 'a' : readSlot(from['slot']);
+  const typed = readWithdraw(from['withdraw']);
+  const plans = bySlot(
+    readSlot(from['slot']),
+    typed,
+    'withdrawOther' in from ? readWithdraw(from['withdrawOther']) : typed,
+  );
   return {
     same,
     slot,
@@ -436,7 +450,9 @@ export function sanitizePersisted(persisted: unknown): PlannerData {
     other: slot === 'a' ? b : a,
     contents: readContents(from['contents']),
     compare: readCompare(from['compare']),
-    withdraw: readWithdraw(from['withdraw']),
+    // Stored before the two options had settings of their own: both get the one stored.
+    withdraw: slot === 'a' ? plans.a : plans.b,
+    withdrawOther: slot === 'a' ? plans.b : plans.a,
   };
 }
 
@@ -453,10 +469,20 @@ export const usePlannerStore = create<PlannerState>()(
         }));
       },
       swap: (slot) => {
-        set((s) => (s.slot === slot ? s : { slot, form: s.other, other: s.form }));
+        set((s) =>
+          s.slot === slot
+            ? s
+            : {
+                slot,
+                form: s.other,
+                other: s.form,
+                withdraw: s.withdrawOther,
+                withdrawOther: s.withdraw,
+              },
+        );
       },
       copyToOther: () => {
-        set((s) => ({ other: s.form }));
+        set((s) => ({ other: s.form, withdrawOther: s.withdraw }));
       },
       setSame: (same) => {
         set({ same });
@@ -482,7 +508,7 @@ export const usePlannerStore = create<PlannerState>()(
       name: 'chartlab.planner',
       version: 2,
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ same, slot, form, other, contents, compare, withdraw }) => ({
+      partialize: ({ same, slot, form, other, contents, compare, withdraw, withdrawOther }) => ({
         same,
         slot,
         form,
@@ -490,6 +516,7 @@ export const usePlannerStore = create<PlannerState>()(
         contents,
         compare,
         withdraw,
+        withdrawOther,
       }),
       migrate: (persisted) => sanitizePersisted(persisted),
       merge: (persisted, current) => ({ ...current, ...sanitizePersisted(persisted) }),

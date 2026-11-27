@@ -2,14 +2,17 @@ import { useEffect, useId, useRef } from 'react';
 
 import panel from '../components/IndicatorSettingsPanel.module.css';
 import { homesOf, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
-import { formsOf, SLOTS, usePlannerStore, type Slot } from '../store/plannerStore.ts';
+import { formsOf, SLOTS, usePlannerStore, withdrawsOf, type Slot } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 
 /** Whether option B's forms differ from option A's: making the two the same would lose them. */
 function differ(): boolean {
   const forms = formsOf(usePlannerStore.getState());
+  const plans = withdrawsOf(usePlannerStore.getState());
   const homes = homesOf(usePlannerHomeStore.getState());
-  return JSON.stringify([forms.a, homes.a]) !== JSON.stringify([forms.b, homes.b]);
+  return (
+    JSON.stringify([forms.a, homes.a, plans.a]) !== JSON.stringify([forms.b, homes.b, plans.b])
+  );
 }
 
 /**
@@ -106,7 +109,7 @@ export function PlannerSlot() {
       <p className={styles.note}>
         {same
           ? 'The Compare tab makes both options from these forms: an apartment against the same money in this mix. Untick the box to give option B forms of its own.'
-          : 'The Market and the Apartment tabs show this option. Option B started as a copy of option A; ticking the box makes it a copy of option A again.'}
+          : 'The Market, the Apartment and the Withdraw tabs show this option. Option B started as a copy of option A; ticking the box makes it a copy of option A again.'}
       </p>
     </div>
   );

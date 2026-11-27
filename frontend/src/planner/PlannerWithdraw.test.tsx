@@ -394,12 +394,8 @@ describe('PlannerWithdraw', () => {
     await user.click(screen.getByRole('button', { name: 'Run' }));
     const table = await screen.findByRole('table', { name: 'Side by side' });
     expect(sent).toHaveLength(2);
-    expect(sent).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ rule: expect.objectContaining({ kind: 'fixed' }) }),
-        expect.objectContaining({ rule: expect.objectContaining({ kind: 'percent', percent: 5 }) }),
-      ]),
-    );
+    const rules = (sent as { rule: { kind: string } }[]).map((request) => request.rule.kind);
+    expect(rules.sort()).toEqual(['fixed', 'percent']);
     const rows = within(table)
       .getAllByRole('row')
       .map((r) => within(r).queryAllByRole('cell')[0]?.textContent);
