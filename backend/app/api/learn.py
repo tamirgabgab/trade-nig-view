@@ -55,6 +55,10 @@ CONCEPT_PAGES: dict[str, str] = {
     "simulated-worlds": "Simulated worlds",
     "risk-metrics": "Risk metrics",
     "what-the-answer-depends-on": "What the answer depends on",
+    # The withdrawals (Phase J, ADR 0030).
+    "withdrawals": "Withdrawals: what is left, and for how long",
+    "cost-basis": "The cost of what is sold",
+    "sustainable-withdrawals": "How much can be taken",
 }
 _HEADING_ID = re.compile(r"\s*\(`[^`]*`\)\s*$")
 _CATEGORY_ORDER: dict[str | None, int] = {c: i for i, c in enumerate(get_args(Category))}

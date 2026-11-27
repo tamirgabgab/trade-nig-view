@@ -150,6 +150,9 @@ order: **What it answers**, **Formula**, **Worked example**, **How to read it**,
 - a percent sign inside math is written `\%` (a bare one starts a TeX comment and the rest of the formula vanishes);
 - no math in a table row contains `|` (it would end the cell: write `\lvert K \rvert`).
 
-A letter means one thing in all eight pages; the table is in ADR 0025. Every number of a worked example is checked
+The three pages of the withdrawals (`withdrawals`, `cost-basis`, `sustainable-withdrawals`, Phase J) follow the
+same rules; their letters extend ADR 0025's table without reusing any of it (ADR 0030).
+
+A letter means one thing in all of these pages; the tables are in ADR 0025 and ADR 0030. Every number of a worked example is checked
 against the engine in `backend/tests/unit/planner/test_learn_examples.py`: change the example there and in the page
 together. Keep a formula narrow enough for the drawer (stack parts with `aligned`).

@@ -34,3 +34,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0027](0027-planner-withdrawals-apartment.md) | An owned apartment in a withdrawal plan: cash only, through `run_home` | Accepted |
 | [0028](0028-planner-withdrawals-many.md) | A withdrawal plan over many realizations: one engine, a batch at a time | Accepted |
 | [0029](0029-planner-withdrawals-lots.md) | Known lots in a withdrawal plan, and two plans side by side | Accepted |
+| [0030](0030-planner-withdrawal-learn-pages.md) | The learn pages of the withdrawals, saved scenarios with them, and the Withdraw tab's polish | Accepted |
