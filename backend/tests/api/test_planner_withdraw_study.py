@@ -4,6 +4,7 @@ the CPI and the dwelling index from 1994-01 to 2026-08)."""
 
 from __future__ import annotations
 
+from itertools import pairwise
 from typing import Any
 
 import pytest
@@ -93,7 +94,7 @@ def test_the_bounds_the_curve_and_the_fan(client: TestClient) -> None:
     curve = body["survival"]
     assert [p["month"] for p in curve] == list(range(0, 121, 12))
     assert curve[0]["share"] == 1
-    assert all(a["share"] >= b["share"] for a, b in zip(curve, curve[1:], strict=False))
+    assert all(a["share"] >= b["share"] for a, b in pairwise(curve))
     assert curve[-1]["share"] == pytest.approx(entered["lasts"])
     assert all(p["floor"] <= p["share"] <= p["ceiling"] for p in curve)
     # The income of every year, as percentiles over the windows.
