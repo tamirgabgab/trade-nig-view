@@ -1,6 +1,17 @@
 import { DEFAULT_FORM, DEFAULT_WITHDRAW } from '../store/plannerStore.ts';
-import { byYear, mixLabel, toWithdraw } from './withdraw.ts';
-import { WITHDRAW_HOME_RESULT, WITHDRAW_RESULT } from '../test/plannerWithdrawBody.ts';
+import {
+  byYear,
+  leftValues,
+  mixLabel,
+  toWithdraw,
+  toWithdrawSimulate,
+  toWithdrawStudy,
+} from './withdraw.ts';
+import {
+  WITHDRAW_HOME_RESULT,
+  WITHDRAW_MANY_RESULT,
+  WITHDRAW_RESULT,
+} from '../test/plannerWithdrawBody.ts';
 import type { WithdrawResult } from '../api/planner.ts';
 
 const ASSET = { symbol: 'SPY', weight: 100, currency: 'USD' as const, dividendYield: 0 };
@@ -130,5 +141,64 @@ describe('byYear', () => {
         { year: 2, months: 2, net: 200, netReal: 100, tax: 2, costs: 10, balance: 986 },
       ].map((year) => ({ ...year, homeCash: 0, home: 0 })),
     );
+  });
+});
+
+describe('the requests of many realizations', () => {
+  const many = DEFAULT_WITHDRAW.many;
+
+  it('a study is the plan with the share an amount must last in', () => {
+    const request = toWithdrawStudy(
+      { ...DEFAULT_WITHDRAW, many: { ...many, sustain: 90 } },
+      DEFAULT_FORM,
+    );
+    expect(request).toMatchObject({ months: 120, capital: 1_000_000, sustain_pct: 90 });
+    expect(request).not.toHaveProperty('runs');
+  });
+
+  it('a simulation says how its worlds are made', () => {
+    const boot = toWithdrawSimulate(DEFAULT_WITHDRAW, DEFAULT_FORM);
+    expect(boot).toMatchObject({
+      method: 'bootstrap',
+      runs: 1000,
+      seed: 1,
+      block_months: 12,
+      sustain_pct: 95,
+      market_mean_pct: null,
+      market_sd_pct: null,
+    });
+    // A modelled market: estimated from the mix, or typed.
+    const model = { ...many, method: 'monte_carlo' as const };
+    const estimated = toWithdrawSimulate({ ...DEFAULT_WITHDRAW, many: model }, DEFAULT_FORM);
+    expect(estimated).toMatchObject({ method: 'monte_carlo', market_mean_pct: null });
+    const typed = { ...model, estimate: false, mean: 6, sd: 18 };
+    expect(toWithdrawSimulate({ ...DEFAULT_WITHDRAW, many: typed }, DEFAULT_FORM)).toMatchObject({
+      market_mean_pct: 6,
+      market_sd_pct: 18,
+    });
+    // On an assumed return the mean is that return: only the volatility is sent.
+    const assumed = { ...DEFAULT_WITHDRAW, returns: 'assumed' as const, many: model };
+    expect(toWithdrawSimulate(assumed, DEFAULT_FORM)).toMatchObject({
+      market_mean_pct: null,
+      market_sd_pct: 15,
+    });
+  });
+});
+
+describe('leftValues', () => {
+  const { realizations, start_worth } = WITHDRAW_MANY_RESULT;
+
+  it('gives what is left of the realizations that lasted, in the unit asked for', () => {
+    // The window that ran out is counted apart.
+    expect(leftValues(realizations, start_worth, { percent: false, real: false })).toEqual({
+      values: [600_000, 1_500_000],
+      ranOut: 1,
+    });
+    expect(leftValues(realizations, start_worth, { percent: true, real: false }).values).toEqual([
+      0.6, 1.5,
+    ]);
+    const real = leftValues(realizations, start_worth, { percent: true, real: true }).values;
+    expect(real[0]).toBeCloseTo(0.48);
+    expect(real[1]).toBeCloseTo(1.2);
   });
 });

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
 import {
   WITHDRAW_HOME_RESULT,
+  WITHDRAW_MANY_RESULT,
   WITHDRAW_RESULT,
   WITHDRAW_SOLD_RESULT,
 } from '../test/plannerWithdrawBody.ts';
@@ -230,6 +231,116 @@ describe('PlannerWithdraw', () => {
       role: 'on_date',
       sellAfter: 3,
     });
+  });
+
+  it('runs the plan on every start of history: what is left as a histogram', async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    stubApi({
+      '/api/planner/withdraw': () => jsonResponse(WITHDRAW_RESULT),
+      '/api/planner/withdraw/study': (_url, init) => {
+        sent.push(body(init));
+        return jsonResponse(WITHDRAW_MANY_RESULT);
+      },
+    });
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(screen.getByRole('button', { name: 'Run history' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'History: 3 starts, 2002-01-15 to 2002-03-15' }),
+    ).toBeVisible();
+    expect(sent[0]).toMatchObject({ months: 120, sustain_pct: 95 });
+    // The plan itself is run with it.
+    expect(screen.getByRole('heading', { name: /^Withdrawals:/ })).toBeVisible();
+    expect(card('Lasts in')).toHaveTextContent('67% of the 3 starts');
+    expect(card('Lasts in')).toHaveAttribute('title', expect.stringContaining('33% to 100%'));
+    expect(card('Sustainable amount')).toHaveTextContent('₪5,250');
+    expect(card('Independent terms, about')).toHaveTextContent('1.0');
+    // What is left: as a percent of the start, in shekels of the first day, the ran-out apart.
+    const chart = screen.getByRole('img', { name: /^What is left, as a percent of the start/ });
+    expect(chart).toBeVisible();
+    expect(within(chart).getByText('Ran out: 1 of 3 (33%)')).toBeVisible();
+    expect(screen.getByText(/^Of the 2 that lasted, the median is 84%/)).toBeVisible();
+    await user.click(screen.getByRole('checkbox', { name: 'As a percent of the start' }));
+    expect(screen.getByRole('img', { name: /^What is left, in shekels/ })).toBeVisible();
+    expect(screen.getByText(/^Of the 2 that lasted, the median is ₪840,000/)).toBeVisible();
+    // The share still paying over the years, and the bounds as numbers.
+    expect(
+      screen.getByRole('img', { name: /^The share of the starts still paying/ }),
+    ).toBeVisible();
+    const bounds = screen.getByRole('table', { name: 'Tax bounds over the starts' });
+    expect(within(bounds).getAllByRole('row')).toHaveLength(4);
+    expect(within(bounds).getByText('33%')).toBeVisible();
+    expect(screen.getByText(/^Earlier starts cannot run: AAPL has no data before/)).toBeVisible();
+    expect(
+      screen.getByText('The CPI is assumed: every window has the same inflation'),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Download CSV: withdrawal starts' })).toBeVisible();
+  });
+
+  it('simulates worlds, and under a percent rule shows the income as a fan', async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    const worlds = {
+      ...WITHDRAW_MANY_RESULT,
+      method: 'monte_carlo' as const,
+      sustainable: null,
+      before: null,
+      evidence: { independent: null, history_months: null },
+      market: { mean_pct: 6.4, sd_pct: 17.2, estimated: true },
+      realizations: WITHDRAW_MANY_RESULT.realizations.map((r) => ({
+        ...r,
+        start: null,
+        depleted_month: null,
+      })),
+    };
+    stubApi({
+      '/api/planner/withdraw': () => jsonResponse(WITHDRAW_RESULT),
+      '/api/planner/withdraw/simulate': (_url, init) => {
+        sent.push(body(init));
+        return jsonResponse(worlds);
+      },
+    });
+    usePlannerStore.getState().setWithdraw({ rule: 'percent' });
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'The worlds’ market' }), [
+      'monte_carlo',
+    ]);
+    // A block length belongs to the bootstrap alone.
+    expect(screen.queryByRole('spinbutton', { name: 'Block, months' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Simulate' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Simulation: 3 worlds, a modelled market' }),
+    ).toBeVisible();
+    expect(sent[0]).toMatchObject({ method: 'monte_carlo', runs: 1000, market_mean_pct: null });
+    expect(
+      screen.getByText(/grows 6.4% a year with a volatility of 17.2%, both estimated/),
+    ).toBeVisible();
+    expect(screen.getByRole('img', { name: /^The monthly income by year/ })).toBeVisible();
+    expect(screen.queryByText('Sustainable amount', { selector: 'dt' })).toBeNull();
+    expect(screen.queryByText(/^Ran out/)).toBeNull();
+    expect(usePlannerStore.getState().withdraw.many.method).toBe('monte_carlo');
+  });
+
+  it('shows the same months in reverse order beside the plan', async () => {
+    const user = userEvent.setup();
+    const back = { ...WITHDRAW_RESULT.ceiling, cost_share: 0.5, balance: 9_000 };
+    stub({ ...WITHDRAW_RESULT, reversed: back });
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    const table = await screen.findByRole('table', { name: 'The months in reverse order' });
+    const rows = within(table)
+      .getAllByRole('row')
+      .map((r) =>
+        within(r)
+          .queryAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
+    expect(rows.slice(1)).toEqual([
+      ['As it happened', 'Until 2030-04-15', '₪0', '₪27,000'],
+      ['In reverse', 'All of it', '₪9,000', '₪27,000'],
+    ]);
   });
 
   it('shows why a plan cannot run and drops the earlier results', async () => {

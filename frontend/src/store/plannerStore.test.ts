@@ -226,6 +226,28 @@ describe('the Withdraw tab’s settings', () => {
     });
   });
 
+  it('read the simulation settings part by part', () => {
+    expect(DEFAULT_WITHDRAW.many).toEqual({
+      method: 'bootstrap',
+      runs: 1000,
+      seed: 1,
+      block: 12,
+      estimate: true,
+      mean: 5,
+      sd: 15,
+      sustain: 95,
+    });
+    // Settings stored before the studies existed.
+    const before = { ...DEFAULT_WITHDRAW, many: undefined, years: 20 };
+    expect(sanitizePersisted({ withdraw: before }).withdraw.many).toEqual(DEFAULT_WITHDRAW.many);
+    const odd = { method: 'guess', runs: 3, sustain: 20, seed: 9, sd: 22 };
+    expect(sanitizePersisted({ withdraw: { many: odd } }).withdraw.many).toEqual({
+      ...DEFAULT_WITHDRAW.many,
+      seed: 9,
+      sd: 22,
+    });
+  });
+
   it('read the apartment part by part, and give one stored before it its defaults', () => {
     expect(DEFAULT_WITHDRAW.home).toMatchObject({ include: false, role: 'kept', use: 'live' });
     // Settings of the tab's first version: no apartment.

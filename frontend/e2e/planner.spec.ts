@@ -499,3 +499,44 @@ test('planner: withdrawals with an apartment, kept and then sold when the accoun
   await expect(card('The apartment')).toContainText('Sold on 2038-06-15');
   await expect(card('Net worth at the end')).toContainText('₪1,800,000');
 });
+
+test('planner: a withdrawal plan over every start of history, and over simulated worlds', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  await planner.getByRole('tab', { name: 'Market' }).click();
+  await planner.getByLabel('Ticker 1').fill('aapl');
+  await planner.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
+  await planner.getByRole('tab', { name: 'Withdraw' }).click();
+  const withdraw = planner.getByRole('tabpanel', { name: 'Withdraw' });
+  const card = (label: string) =>
+    withdraw.locator('dl').getByText(label, { exact: true }).locator('..');
+
+  // Ten years of 6,000 a month from 1,000,000 of AAPL: every start its bars allow.
+  await withdraw.getByLabel('Starts on').fill('2010-01-15');
+  await withdraw.getByLabel('Amount ₪ a month, net').fill('6000');
+  await withdraw.getByRole('button', { name: 'Run history' }).click();
+  await expect(
+    withdraw.getByRole('heading', { name: 'History: 179 starts, 2002-01-15 to 2016-11-15' }),
+  ).toBeVisible();
+  await expect(card('Lasts in')).toContainText('of the 179 starts');
+  await expect(card('Sustainable amount')).toContainText('₪');
+  await expect(
+    withdraw.getByRole('img', { name: /^What is left, as a percent of the start/ }),
+  ).toBeVisible();
+  await expect(
+    withdraw.getByRole('img', { name: /^The share of the starts still paying/ }),
+  ).toBeVisible();
+  await expect(withdraw.getByText(/hold only about 2\.5 separate terms of 10 years/)).toBeVisible();
+
+  // Fifty worlds cut from the same history.
+  await withdraw.getByLabel('Worlds').fill('50');
+  await withdraw.getByRole('button', { name: 'Simulate' }).click();
+  await expect(
+    withdraw.getByRole('heading', { name: 'Simulation: 50 worlds, cut from history' }),
+  ).toBeVisible();
+  await expect(card('Lasts in')).toContainText('of the 50 worlds');
+  // The simulation replaced the history: one study at a time beside the plan.
+  await expect(withdraw.getByRole('heading', { name: /^History:/ })).toHaveCount(0);
+});

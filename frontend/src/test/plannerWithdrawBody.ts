@@ -53,6 +53,7 @@ export const WITHDRAW_RESULT = {
   summary: summary(0.5, 0, 3),
   floor: summary(0, 0, 3),
   ceiling: summary(1, 1_500, null),
+  reversed: null as ReturnType<typeof summary> | null,
   rows: [
     row(0, '2030-01-15', 0, 30_000),
     row(1, '2030-02-15', 10_000, 19_500),
@@ -102,4 +103,56 @@ export const WITHDRAW_SOLD_RESULT = {
     home_sale: 'planned' as const,
     invested: 1_900_000,
   },
+};
+
+const realization = (start: string | null, left: number, depleted: number | null) => ({
+  start,
+  left,
+  left_real: left * 0.8,
+  taken_real: 500_000,
+  tax: 20_000,
+  depleted_month: depleted,
+  lowest_net_real: depleted === null ? 5_800 : 0,
+  drawdown: 0.3,
+  home_sold_month: null as number | null,
+});
+
+const bound = (cost_share: number, lasts: number) => ({
+  cost_share,
+  lasts,
+  left_real: 480_000 * (1 + cost_share),
+  taken_real: 500_000,
+  lowest_net_real: 4_000 + 2_000 * cost_share,
+});
+
+/**
+ * A POST /api/planner/withdraw/study body: three windows of ten years from 1,000,000. One ran
+ * out in month 80; the others left 600,000 and 1,500,000.
+ */
+export const WITHDRAW_MANY_RESULT = {
+  method: 'windows' as 'windows' | 'bootstrap' | 'monte_carlo',
+  months: 120,
+  count: 3,
+  start_worth: 1_000_000,
+  realizations: [
+    realization('2002-01-15', 0, 80),
+    realization('2002-02-15', 600_000, null),
+    realization('2002-03-15', 1_500_000, null),
+  ],
+  bounds: [bound(0, 1 / 3), bound(0.5, 2 / 3), bound(1, 1)],
+  survival: [
+    { month: 0, share: 1, floor: 1, ceiling: 1 },
+    { month: 60, share: 1, floor: 2 / 3, ceiling: 1 },
+    { month: 120, share: 2 / 3, floor: 1 / 3, ceiling: 1 },
+  ],
+  income: [
+    { year: 1, p5: 5_000, p25: 5_500, p50: 6_000, p75: 6_500, p95: 7_000 },
+    { year: 2, p5: 4_000, p25: 5_000, p50: 6_000, p75: 7_000, p95: 8_000 },
+  ],
+  sustainable: { amount: 5_250, target_pct: 95 } as { amount: number; target_pct: number } | null,
+  evidence: { independent: 1.02 as number | null, history_months: null as number | null },
+  market: null as { mean_pct: number; sd_pct: number; estimated: boolean } | null,
+  before: 'AAPL has no data before 2001-12-24: start the plan later' as string | null,
+  after: null as string | null,
+  warnings: ['The CPI is assumed: every window has the same inflation'],
 };
