@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **J0 done (2026-11-27, ADR 0026); J1 is next.** The user's answers are under "Decided" at the end.
+Status: **J0 done and approved (2026-11-27, ADR 0026); J1 in progress.** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -200,7 +200,7 @@ the price of an income that moves. Those numbers are for US data and are not car
 | Round | Content | Size |
 |---|---|---|
 | **J0** ✅ 2026-11-27 | The engine for an account: one lot per asset with a cost share, the two rules, net in hand, losses carried, depletion; the golden model and the known answers; `POST /planner/withdraw`; the Withdraw tab with the cards, the balance and income chart, the table and CSV; the two tax bounds on the page. | M |
-| **J1** | The apartment in the balance: an owned apartment's cash flows, its three sale options, the cost fields for betterment tax; the percent rule on net worth if chosen. | M |
+| **J1** | The apartment in the balance: an owned apartment's cash flows, its three sale options and a forced sale, at most one mortgage track, the cost fields for betterment tax. | M |
 | **J2** | Many realizations: windows of history and the simulated worlds; the survival curve, the depletion histogram, the income fan; the sustainable amount by bisection; the sequence-risk view; the evidence-depth notes. | L |
 | **J3** | The learn page with its pinned example; the tab in saved scenarios; a UX pass. | S |
 | **J4** (optional) | Lot-exact tax when the capital comes from a Market-tab plan (accumulate, then withdraw; first in, first out), after the order-of-sale rule is confirmed from a primary source; two withdrawal plans side by side. | M |
@@ -243,3 +243,37 @@ Asked before J0:
 - **The percent is what is sold**; the income is what is left after tax and costs.
 - **An assumed yearly return** is added already in J0, beside the Market tab's mix.
 - **The default cost share is 50 %**, with both bounds always beside it.
+
+Asked before J1 (2026-11-27), all at the recommended answer:
+- **Where the apartment is typed:** a short section of its own in the Withdraw tab, for an apartment already owned
+  (its value today, its use, its costs, what is left of its mortgage, its role). The Apartment tab is not read: its
+  form describes a purchase.
+- **Its mortgage:** none, or one track (what is left, its rate, the months left, linked to the CPI or not). No prime
+  or variable track, so no Bank of Israel rate path.
+- **Betterment tax:** the Apartment tab's default, a single home exempt up to the ceiling, or 25 % of the real gain;
+  with two optional fields, what it cost and when it was bought. Without them the cost is its value on the first day
+  and it was bought then: only the growth from the start is taxed.
+- **A kept apartment whose costs the account cannot pay** is sold that month (a forced sale), with a warning.
+
+## J1: the conventions (chosen without asking, each stated on the page or in ADR 0027)
+- **Cash only.** Each month the apartment gives `rent received - mortgage payment - owner costs`: the rent after
+  vacancy and its tax when rented out, nothing when the owner lives in it. The rent follows the CPI.
+- **The month's order.** The apartment's cash and the account fee come first; the withdrawal is what is left.
+  - Fixed rule: the account sells what the amount, the fee and the apartment's shortfall need. A surplus of rent over
+    all of that is invested in the account at the plan's weights, a new lot at cost (with the buy commission, as
+    an H1 deposit).
+  - Percent rule: the account sells p/12 (more only when the fee and the apartment's shortfall need more); the
+    income is that sale's net plus the apartment's cash. So the J0 claim, that the balance does not depend on the
+    cost share, holds only while the apartment's shortfall is paid by the p/12 sale; it is stated that way.
+- **The three roles.** Kept: sold only when the account cannot pay the fee and the apartment's shortfall (a forced
+  sale); a short withdrawal alone does not sell it. Sold after a number of years. Sold when the account cannot pay
+  the month in full (the withdrawal included).
+- **A sale** on month k: the value less the selling costs, the loan's balance and its early-repayment fee, and the
+  betterment tax: `run_home`'s net worth of that month. It enters the account at the plan's weights as a new lot at
+  cost, with the buy commission, before the month's sale of units.
+- **Its value** grows by an assumed yearly rate, or by the national dwelling index over history.
+- **Depletion** is the first month the rule could not be kept: a fixed amount not paid in full (as in J0), or under
+  a percent rule an account empty with no apartment left. The sale month and its cause are reported for each of the
+  three cost-share runs, which may differ.
+- **The capital may be zero** when there is an apartment.
+- **What is left** is the account plus the apartment's net worth while it is held.
