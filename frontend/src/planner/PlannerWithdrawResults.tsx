@@ -172,6 +172,37 @@ export function PlannerWithdrawResults({
         {home &&
           ' With an apartment, the bounds may also differ in when it is sold; and a percent that must sell more for its costs than its twelfth has a balance that depends on the cost share too.'}
       </p>
+      {result.reversed !== null && (
+        <>
+          <h2 className={styles.heading}>The order of the months</h2>
+          <PlannerTable
+            label="The months in reverse order"
+            columns={[
+              ['Order', ([label]) => label],
+              ...(fixed
+                ? ([['Lasts', ([, b]) => lasting(b)]] satisfies PlannerColumn<
+                    [string, WithdrawSummary]
+                  >[])
+                : ([
+                    ['Lowest month, real', ([, b]) => shekels(b.lowest_net_real)],
+                  ] satisfies PlannerColumn<[string, WithdrawSummary]>[])),
+              ['Left at the end', ([, b]) => shekels(b.balance)],
+              ['Taken, net', ([, b]) => shekels(b.taken)],
+            ]}
+            rows={[
+              ['As it happened', s],
+              ['In reverse', result.reversed],
+            ]}
+          />
+          <p className={styles.note}>
+            The same months of the market, last first; the CPI{home ? ' and the apartment' : ''} as
+            they were.{' '}
+            {fixed
+              ? 'A fixed amount sells more units after a fall, so bad years first cost more than the same years last: the order of the returns matters when money is taken out.'
+              : 'A percent ends with the same balance in either order; what it paid on the way differs.'}
+          </p>
+        </>
+      )}
       <h2 className={styles.heading}>Over time</h2>
       <label className={panel.check}>
         <input

@@ -204,6 +204,33 @@ const DEFAULT_WITHDRAW_HOME: WithdrawHome = {
   bought: '',
 };
 
+/** How a withdrawal plan is run on many realizations (percentages in %). */
+export interface WithdrawMany {
+  /** The worlds' market: cut from the mix's history, or drawn from a model. */
+  method: 'bootstrap' | 'monte_carlo';
+  runs: number;
+  seed: number;
+  /** The block length of a bootstrap, in months. */
+  block: number;
+  /** A modelled market: its mean and volatility from the mix's history, not typed. */
+  estimate: boolean;
+  mean: number;
+  sd: number;
+  /** The share of the realizations the sustainable amount must last in. */
+  sustain: number;
+}
+
+const DEFAULT_WITHDRAW_MANY: WithdrawMany = {
+  method: 'bootstrap',
+  runs: 1000,
+  seed: 1,
+  block: 12,
+  estimate: true,
+  mean: 5,
+  sd: 15,
+  sustain: 95,
+};
+
 /** The Withdraw tab's inputs (percentages in %, money in shekels). */
 export interface WithdrawSettings {
   /** The account grows as the Market tab's mix did, or by an assumed yearly return. */
@@ -222,6 +249,7 @@ export interface WithdrawSettings {
   /** A percent rule: the share of the account sold a year. */
   percent: number;
   home: WithdrawHome;
+  many: WithdrawMany;
 }
 
 export const DEFAULT_WITHDRAW: WithdrawSettings = {
@@ -236,6 +264,7 @@ export const DEFAULT_WITHDRAW: WithdrawSettings = {
   indexed: true,
   percent: 4,
   home: DEFAULT_WITHDRAW_HOME,
+  many: DEFAULT_WITHDRAW_MANY,
 };
 
 const DEFAULT_CONTENTS: Record<Slot, OptionContents> = {
@@ -350,7 +379,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Stored Withdraw settings; a field the tab could not show or send falls back to its default. */
 export function readWithdraw(stored: unknown): WithdrawSettings {
   const read = sameKinds(DEFAULT_WITHDRAW, stored);
-  const home = read.home;
+  const { home, many } = read;
   const ok: { [K in keyof WithdrawSettings]?: boolean } = {
     // Stored text, whatever its type says: only the tab's own choices pass.
     returns: ['mix', 'assumed'].includes(read.returns),
@@ -375,6 +404,15 @@ export function readWithdraw(stored: unknown): WithdrawSettings {
       sellAfter: home.sellAfter >= 1 && home.sellAfter <= 100,
       cost: home.cost >= 0,
       bought: home.bought === '' || DATE.test(home.bought),
+    }),
+    many: keepValid(DEFAULT_WITHDRAW_MANY, many, {
+      method: ['bootstrap', 'monte_carlo'].includes(many.method),
+      runs: many.runs >= 10 && many.runs <= 5000,
+      seed: many.seed >= 0,
+      block: many.block >= 1 && many.block <= 120,
+      mean: many.mean >= -50 && many.mean <= 100,
+      sd: many.sd >= 0 && many.sd <= 200,
+      sustain: many.sustain >= 50 && many.sustain <= 100,
     }),
   };
 }

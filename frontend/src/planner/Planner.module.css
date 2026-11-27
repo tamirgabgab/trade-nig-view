@@ -690,3 +690,8 @@
   color: var(--color-series-1);
   opacity: 0.3;
 }
+
+/* The realizations of a withdrawal plan that ran out: a bar of their own beside the histogram. */
+.ranOut rect {
+  fill: var(--color-down);
+}

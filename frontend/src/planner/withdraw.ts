@@ -1,4 +1,10 @@
-import type { WithdrawRequest, WithdrawRow } from '../api/planner.ts';
+import type {
+  WithdrawRealization,
+  WithdrawRequest,
+  WithdrawRow,
+  WithdrawSimulateRequest,
+  WithdrawStudyRequest,
+} from '../api/planner.ts';
 import {
   toRequest,
   type PlannerForm,
@@ -56,6 +62,55 @@ export function toWithdraw(settings: WithdrawSettings, form: PlannerForm): Withd
     },
     inflation: market.inflation,
     home: settings.home.include ? toHome(settings.home) : null,
+  };
+}
+
+/** The plan over every start of history. */
+export const toWithdrawStudy = (
+  settings: WithdrawSettings,
+  form: PlannerForm,
+): WithdrawStudyRequest => ({
+  ...toWithdraw(settings, form),
+  sustain_pct: settings.many.sustain,
+  step_months: 1,
+});
+
+/** The plan over simulated worlds. */
+export function toWithdrawSimulate(
+  settings: WithdrawSettings,
+  form: PlannerForm,
+): WithdrawSimulateRequest {
+  const { many } = settings;
+  const assumed = settings.returns === 'assumed';
+  // A modelled market: on an assumed return the mean is that return and only the volatility is
+  // typed; on the mix both are estimated from it, or both typed.
+  const typed = many.method === 'monte_carlo' && (assumed || !many.estimate);
+  return {
+    ...toWithdraw(settings, form),
+    sustain_pct: many.sustain,
+    method: many.method,
+    runs: many.runs,
+    seed: many.seed,
+    block_months: many.block,
+    market_mean_pct: typed && !assumed ? many.mean : null,
+    market_sd_pct: typed ? many.sd : null,
+  };
+}
+
+/**
+ * What is left of the realizations that lasted, as the histogram shows it (shekels or a share of
+ * what there was on the first day; of the first day or nominal), and how many ran out.
+ */
+export function leftValues(
+  realizations: readonly WithdrawRealization[],
+  startWorth: number,
+  unit: { percent: boolean; real: boolean },
+): { values: number[]; ranOut: number } {
+  const lasted = realizations.filter((r) => r.depleted_month === null);
+  const scale = unit.percent ? startWorth : 1;
+  return {
+    values: lasted.map((r) => (unit.real ? r.left_real : r.left) / scale),
+    ranOut: realizations.length - lasted.length,
   };
 }
 

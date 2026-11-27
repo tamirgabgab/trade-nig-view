@@ -421,7 +421,7 @@ test('planner: withdrawals from a capital, on an assumed return and on the mix',
   await withdraw.getByLabel('Cost share %').fill('100');
   await withdraw.getByLabel('Amount ₪ a month, net').fill('10000');
   await withdraw.getByLabel('Rises with the CPI').uncheck();
-  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await withdraw.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(
     withdraw.getByRole('heading', { name: 'Withdrawals: 2030-01-15 to 2035-01-15' }),
   ).toBeVisible();
@@ -431,7 +431,7 @@ test('planner: withdrawals from a capital, on an assumed return and on the mix',
   await expect(card('Tax paid')).toContainText('₪0');
   // Ten years: the hundredth month takes the last of it.
   await withdraw.getByLabel('Years', { exact: true }).fill('10');
-  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await withdraw.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(card('The money ends')).toContainText('2038-06-15');
   await expect(
     withdraw.getByRole('table', { name: 'Withdrawals by year' }).getByRole('row'),
@@ -448,7 +448,7 @@ test('planner: withdrawals from a capital, on an assumed return and on the mix',
   await withdraw.getByLabel('Cost share %').fill('50');
   await withdraw.getByLabel('Withdrawal rule').selectOption('percent');
   await withdraw.getByLabel('Sold % a year').fill('4');
-  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await withdraw.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(
     withdraw.getByRole('heading', { name: 'Withdrawals: 2010-01-15 to 2020-01-15' }),
   ).toBeVisible();
@@ -487,14 +487,14 @@ test('planner: withdrawals with an apartment, kept and then sold when the accoun
   await withdraw.getByLabel('Maintenance % a year').fill('0');
   await withdraw.getByLabel('Insurance ₪ a year').fill('0');
   await withdraw.getByLabel('Selling costs %').fill('0');
-  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await withdraw.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(card('The money ends')).toContainText('2038-06-15');
   await expect(card('The apartment')).toContainText('Kept');
   await expect(card('Net worth at the end')).toContainText('₪2,000,000');
 
   // Sold when the account runs out: its 2,000,000 pays the last 20 months, and 1,800,000 is left.
   await withdraw.getByLabel('Its sale').selectOption('when_empty');
-  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await withdraw.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(card('Lasts')).toContainText('All 10 years');
   await expect(card('The apartment')).toContainText('Sold on 2038-06-15');
   await expect(card('Net worth at the end')).toContainText('₪1,800,000');
@@ -531,7 +531,7 @@ test('planner: a withdrawal plan over every start of history, and over simulated
   await expect(withdraw.getByText(/hold only about 2\.5 separate terms of 10 years/)).toBeVisible();
 
   // Fifty worlds cut from the same history.
-  await withdraw.getByLabel('Worlds').fill('50');
+  await withdraw.getByLabel('Worlds', { exact: true }).fill('50');
   await withdraw.getByRole('button', { name: 'Simulate' }).click();
   await expect(
     withdraw.getByRole('heading', { name: 'Simulation: 50 worlds, cut from history' }),

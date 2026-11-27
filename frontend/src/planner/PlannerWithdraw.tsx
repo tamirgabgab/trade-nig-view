@@ -1,14 +1,22 @@
 import { useState } from 'react';
 
-import { runWithdraw, type WithdrawResult } from '../api/planner.ts';
+import {
+  runWithdraw,
+  runWithdrawSimulate,
+  runWithdrawStudy,
+  type WithdrawManyResult,
+  type WithdrawResult,
+} from '../api/planner.ts';
 import panel from '../components/IndicatorSettingsPanel.module.css';
 import { usePlannerStore } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
 import { PlannerWithdrawHome } from './PlannerWithdrawHome.tsx';
+import { PlannerWithdrawMany } from './PlannerWithdrawMany.tsx';
+import { PlannerWithdrawManyForm } from './PlannerWithdrawManyForm.tsx';
 import { PlannerWithdrawResults } from './PlannerWithdrawResults.tsx';
-import { mixLabel, toWithdraw } from './withdraw.ts';
+import { mixLabel, toWithdraw, toWithdrawSimulate, toWithdrawStudy } from './withdraw.ts';
 
 const RETURNS = [
   ['mix', 'The Market tab’s mix'],
@@ -30,10 +38,13 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
   const same = usePlannerStore((s) => s.same);
   const slot = usePlannerStore((s) => s.slot);
   const set = usePlannerStore((s) => s.setWithdraw);
-  const [running, setRunning] = useState(false);
-  // What was run, with the rule it was run under: a later edit must not relabel it.
+  const [status, setStatus] = useState<'idle' | 'running' | 'studying' | 'simulating'>('idle');
+  const running = status !== 'idle';
+  // What was run, with the rule it was run under: a later edit must not relabel it. One study
+  // at a time beside the plan: the starts of history, or simulated worlds.
   const [shown, setShown] = useState<{
     result: WithdrawResult;
+    many: WithdrawManyResult | null;
     fixed: boolean;
     home: boolean;
   } | null>(null);
@@ -42,13 +53,14 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
   const assumed = settings.returns === 'assumed';
   const fixed = settings.rule === 'fixed';
   const ready = settings.start !== '';
-  const run = () => {
+  const start = (next: typeof status, many: Promise<WithdrawManyResult | null>) => {
     if (!ready) return;
-    setRunning(true);
+    setStatus(next);
     setError(null);
-    runWithdraw(toWithdraw(settings, form))
-      .then((result) => {
-        setShown({ result, fixed, home: settings.home.include });
+    // The plan itself is run with every study, so the two always belong together.
+    Promise.all([runWithdraw(toWithdraw(settings, form)), many])
+      .then(([result, more]) => {
+        setShown({ result, many: more, fixed, home: settings.home.include });
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'The request failed');
@@ -56,8 +68,11 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
         setShown(null);
       })
       .finally(() => {
-        setRunning(false);
+        setStatus('idle');
       });
+  };
+  const run = () => {
+    start('running', Promise.resolve(null));
   };
   const whose = same
     ? 'the Market tab’s mix'
@@ -206,9 +221,37 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
               : 'A twelfth of the percent is sold every month, the first time a month after the start. The income is what is left of the sale after the tax and the costs, so it moves with the market. The withdrawals alone never empty the account; a fee larger than what is left can.'}
           </p>
         </fieldset>
+        <PlannerWithdrawManyForm
+          many={settings.many}
+          set={(changes) => {
+            set({ many: { ...settings.many, ...changes } });
+          }}
+          fixed={fixed}
+          assumed={assumed}
+        />
         <div className={styles.actions}>
           <button type="submit" className={panel.primary} disabled={running || !ready}>
-            {running ? 'Running…' : 'Run'}
+            {status === 'running' ? 'Running…' : 'Run'}
+          </button>
+          <button
+            type="button"
+            className={panel.secondary}
+            disabled={running || !ready}
+            onClick={() => {
+              start('studying', runWithdrawStudy(toWithdrawStudy(settings, form)));
+            }}
+          >
+            {status === 'studying' ? 'Running history…' : 'Run history'}
+          </button>
+          <button
+            type="button"
+            className={panel.secondary}
+            disabled={running || !ready}
+            onClick={() => {
+              start('simulating', runWithdrawSimulate(toWithdrawSimulate(settings, form)));
+            }}
+          >
+            {status === 'simulating' ? 'Simulating…' : 'Simulate'}
           </button>
         </div>
       </form>
@@ -221,11 +264,15 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
         {shown === null && error === null && (
           <p className={styles.note}>
             Set the capital and the rule, then press Run: how long a fixed amount lasts, or what a
-            percent pays, with the tax between its two bounds.
+            percent pays, with the tax between its two bounds. Run history tries every start the
+            data allows, and Simulate many possible worlds.
           </p>
         )}
         {shown !== null && (
           <PlannerWithdrawResults result={shown.result} fixed={shown.fixed} home={shown.home} />
+        )}
+        {shown !== null && shown.many !== null && (
+          <PlannerWithdrawMany result={shown.many} fixed={shown.fixed} home={shown.home} />
         )}
       </div>
     </div>
