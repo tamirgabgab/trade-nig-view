@@ -76,7 +76,8 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             <PlannerField
               label="Starting capital ₪"
               value={settings.capital}
-              min={1}
+              // The arrows step from the minimum: a round one keeps the steps round.
+              min={10_000}
               step={10_000}
               onChange={(capital) => {
                 set({ capital });
@@ -137,7 +138,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             <PlannerField
               label="Years"
               value={settings.years}
-              min={1 / 12}
+              min={1}
               max={100}
               step={1}
               onChange={(years) => {
@@ -158,7 +159,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
                 <PlannerField
                   label="Amount ₪ a month, net"
                   value={settings.amount}
-                  min={1}
+                  min={500}
                   step={500}
                   onChange={(amount) => {
                     set({ amount });
@@ -179,7 +180,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
               <PlannerField
                 label="Sold % a year"
                 value={settings.percent}
-                min={0.1}
+                min={0.5}
                 max={1200}
                 step={0.5}
                 onChange={(percent) => {
@@ -191,7 +192,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
           <p className={styles.note}>
             {fixed
               ? 'The amount is what reaches the hand after the tax and the costs, in shekels of the first day; the first one is a month after the start. With the box ticked it keeps its buying power (the Market tab’s inflation).'
-              : 'A twelfth of the percent is sold every month, the first time a month after the start. The income is what is left of the sale after the tax and the costs, so it moves with the market and the account never runs out.'}
+              : 'A twelfth of the percent is sold every month, the first time a month after the start. The income is what is left of the sale after the tax and the costs, so it moves with the market. The withdrawals alone never empty the account; a fee larger than what is left can.'}
           </p>
         </fieldset>
         <div className={styles.actions}>

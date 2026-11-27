@@ -59,6 +59,19 @@ Phase J turns the Planner around: a starting capital, money taken out by a rule,
 - **Through the stack:** an assumed return of zero is arithmetic anyone can check (1,000,000 less 10,000 a month),
   in the API tests and in the end-to-end run.
 
+## What the review settled
+- An assumed return needs no mix: the request's account may hold no asset, and a Market tab without a ticker no
+  longer fails a plan that does not read it. On the mix, an empty one is refused with its reason.
+- A percent rule can still be emptied, by a fee larger than what is left or by a percent of 1,200. The depletion
+  month is then the first month that starts with nothing, the page shows it first, and its note no longer says the
+  account "never runs out".
+- A plan that would run past the year 2200 is refused (it was a 500), and so is a sell commission of 100 %, under
+  which no sale could pay anything.
+- The number fields' arrows step from a round minimum, so ten years plus a step is eleven, not ten and a month.
+- Stored settings are read field by field: a rule or a source the tab does not know, or a number outside its
+  field's range, falls back to its default alone.
+- "All 1 year", not "All 1 years".
+
 ## Consequences
 - One plan is three runs of a loop over its months: a 30-year plan is about a thousand steps, well under a second.
 - The engine is not yet vectorised over realizations; J2 decides how many worlds a request runs and whether the loop

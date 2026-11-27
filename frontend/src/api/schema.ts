@@ -791,6 +791,39 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AccountIn
+         * @description The account's mix, fees and taxes. The mix may be empty: an assumed return does not use
+         *     it.
+         */
+        AccountIn: {
+            /** Assets */
+            assets?: components["schemas"]["AssetIn"][];
+            /**
+             * Use Fx
+             * @description Convert dollar assets by the USD/ILS rate
+             * @default true
+             */
+            use_fx: boolean;
+            /**
+             * @default {
+             *       "deposit_pct": 0,
+             *       "buy_pct": 0,
+             *       "sell_pct": 0,
+             *       "management_pct": 0,
+             *       "monthly_fee": 0
+             *     }
+             */
+            fees: components["schemas"]["FeesIn"];
+            /**
+             * @default {
+             *       "gains_pct": 25,
+             *       "dividend_pct": 25,
+             *       "base": "nominal"
+             *     }
+             */
+            taxes: components["schemas"]["TaxesIn"];
+        };
         /** AccountOut */
         AccountOut: {
             /** Deposited */
@@ -4806,8 +4839,8 @@ export interface components {
              *     }
              */
             returns: components["schemas"]["ReturnsIn"];
-            /** @description The mix (unused on an assumed return), the fees and the taxes; no deposits */
-            market: components["schemas"]["MarketOptionIn"];
+            /** @description The mix (unused on an assumed return), the fees and the taxes */
+            market?: components["schemas"]["AccountIn"];
             /**
              * @default {
              *       "mode": "assumed",

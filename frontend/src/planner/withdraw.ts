@@ -21,7 +21,6 @@ export function toWithdraw(settings: WithdrawSettings, form: PlannerForm): Withd
       use_fx: market.use_fx,
       fees: market.fees,
       taxes: market.taxes,
-      fill: market.fill,
     },
     inflation: market.inflation,
   };

@@ -196,6 +196,22 @@ def test_the_account_fee_is_paid_from_the_months_sale() -> None:
     assert (tiny.fee[1], tiny.net[1]) == pytest.approx((50, 0))
 
 
+def test_a_percent_rule_ends_only_when_the_fees_or_the_percent_take_everything() -> None:
+    # 4 % a year of 1,000 is nothing beside a fee of 300 a month: the fee empties the account.
+    fees = run(
+        Plan(1_000, cost_share=1.0, rule=Rule.PERCENT, percent=0.04, monthly_fee=300),
+        growing(6, 0.0),
+    )
+    assert fees.balance == pytest.approx([1_000, 700, 400, 100, 0, 0, 0])
+    assert fees.depleted == 5
+    # Everything sold in the first month.
+    everything = run(Plan(1_000, cost_share=1.0, rule=Rule.PERCENT, percent=12.0), growing(3, 0.0))
+    assert everything.net[1:] == pytest.approx([1_000, 0, 0])
+    assert everything.depleted == 2
+    # An ordinary percent never gets there.
+    assert run(Plan(1_000, rule=Rule.PERCENT, percent=0.5), growing(120, -0.2)).depleted is None
+
+
 def test_what_a_sale_of_everything_would_leave_at_the_end() -> None:
     result = run(
         Plan(1_000, cost_share=0.4, rule=Rule.PERCENT, percent=0.0, sell=0.02), grid([1.0, 2.0])
@@ -213,6 +229,7 @@ def test_what_a_sale_of_everything_would_leave_at_the_end() -> None:
         (Plan(1_000, amount=-1), "amount"),
         (Plan(1_000, rule=Rule.PERCENT, percent=13.0), "percent"),
         (Plan(1_000, weights=(1.0, 1.0), amount=1), "weights"),
+        (Plan(1_000, amount=1, sell=1.0), "sell commission"),
     ],
 )
 def test_plans_that_cannot_run(plan: Plan, message: str) -> None:

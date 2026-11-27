@@ -157,6 +157,9 @@ def test_the_market_tabs_mix_over_history(client: TestClient) -> None:
             "AAPL has no data after",
         ),
         ({"rule": {"kind": "fixed", "amount": 0}}, "amount"),
+        ({"returns": {"mode": "mix"}, "market": {"assets": []}}, "The mix has no asset"),
+        ({"start": "2190-01-15", "months": 1200}, "Dates after 2200"),
+        ({"market": {"fees": {"sell_pct": 100}}}, "sell commission"),
         ({"rule": {"kind": "percent", "percent": 0}}, "percent"),
     ],
 )
@@ -166,6 +169,28 @@ def test_plans_that_cannot_run_are_422(
     response = client.post("/api/planner/withdraw", json={**FLAT, **changes})
     assert response.status_code == 422, response.text
     assert message in response.json()["detail"]
+
+
+def test_an_assumed_return_needs_no_mix(client: TestClient) -> None:
+    # The Market tab may hold no ticker at all: the assumed return does not read it.
+    markets: list[dict[str, Any]] = [{}, {"assets": []}, {"fees": {"sell_pct": 0}}]
+    for market in markets:
+        assert run(client, market=market)["summary"]["balance"] == pytest.approx(400_000)
+    response = client.post(
+        "/api/planner/withdraw", json={k: v for k, v in FLAT.items() if k != "market"}
+    )
+    assert response.status_code == 200
+
+
+def test_a_percent_that_the_fees_empty_says_when(client: TestClient) -> None:
+    body = run(
+        client,
+        capital=1_000,
+        rule={"kind": "percent", "percent": 4},
+        market={"fees": {"monthly_fee": 300}},
+    )
+    assert (body["summary"]["depleted_month"], body["summary"]["months_paid"]) == (5, 4)
+    assert body["summary"]["balance"] == 0
 
 
 def test_the_request_is_checked(client: TestClient) -> None:

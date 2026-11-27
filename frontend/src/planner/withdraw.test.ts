@@ -3,6 +3,8 @@ import { byYear, mixLabel, toWithdraw } from './withdraw.ts';
 import { WITHDRAW_RESULT } from '../test/plannerWithdrawBody.ts';
 import type { WithdrawResult } from '../api/planner.ts';
 
+const ASSET = { symbol: 'SPY', weight: 100, currency: 'USD' as const, dividendYield: 0 };
+
 describe('toWithdraw', () => {
   it('sends the settings in the API’s units, with the Market tab’s mix, fees and taxes', () => {
     const form = { ...DEFAULT_FORM, fees: { ...DEFAULT_FORM.fees, sell: 0.5 } };
@@ -21,9 +23,11 @@ describe('toWithdraw', () => {
       use_fx: true,
       fees: { deposit_pct: 0, buy_pct: 0, sell_pct: 0.5, management_pct: 0, monthly_fee: 0 },
       taxes: { gains_pct: 25, dividend_pct: 25, base: 'nominal' },
-      // Sent because the request's shape asks for it; a withdrawal sells at the close.
-      fill: { mode: 'close', granularity: 'medium', seed: null },
     });
+    // A Market tab with no ticker is still a request: an assumed return does not read the mix.
+    const empty = { ...DEFAULT_FORM, assets: [{ ...ASSET, symbol: '' }] };
+    const assumed = toWithdraw({ ...DEFAULT_WITHDRAW, returns: 'assumed' }, empty);
+    expect(assumed.market?.assets).toEqual([]);
   });
 });
 

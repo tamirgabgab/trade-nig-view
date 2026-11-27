@@ -11,8 +11,10 @@ import { PlannerWithdrawChart } from './PlannerWithdrawChart.tsx';
 import { byYear, type WithdrawYear } from './withdraw.ts';
 
 /** How long a plan of `months` is, in words. */
-const span = (months: number) =>
-  months % 12 === 0 ? `${String(months / 12)} years` : `${String(months)} months`;
+const span = (months: number) => {
+  const [count, unit] = months % 12 === 0 ? [months / 12, 'year'] : [months, 'month'];
+  return `${String(count)} ${unit}${count === 1 ? '' : 's'}`;
+};
 
 const YEARS: PlannerColumn<WithdrawYear>[] = [
   [
@@ -53,7 +55,7 @@ export function PlannerWithdrawResults({
       : [
           'The money ends',
           s.depleted_on ?? '',
-          `Month ${String(s.depleted_month)} is the first not paid in full: ${String(s.months_paid)} months were`,
+          `Month ${String(s.depleted_month)} is the first not paid in full: ${span(s.months_paid)} were`,
         ];
   const totals: PlannerCard[] = [
     ['Taken, net', shekels(s.taken), `In shekels of the first day: ${shekels(s.taken_real)}`],
@@ -63,6 +65,8 @@ export function PlannerWithdrawResults({
   const cards: PlannerCard[] = fixed
     ? [lasts, left, ...totals]
     : [
+        // A percent ends only when the fees take what is left: then that comes first.
+        ...(s.depleted_month === null ? [] : [lasts]),
         ['Income, first month', shekels(first), 'What is left of the sale after tax and costs'],
         [
           'Lowest month, real',

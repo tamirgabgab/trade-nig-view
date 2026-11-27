@@ -281,6 +281,29 @@ export function readContents(contents: unknown): Record<Slot, OptionContents> {
 
 export const readCompare = (compare: unknown) => sameKinds(DEFAULT_COMPARE, compare);
 
+/** Stored Withdraw settings; a field the tab could not show or send falls back to its default. */
+export function readWithdraw(stored: unknown): WithdrawSettings {
+  const read = sameKinds(DEFAULT_WITHDRAW, stored);
+  const ok: { [K in keyof WithdrawSettings]?: boolean } = {
+    // Stored text, whatever its type says: only the tab's own choices pass.
+    returns: ['mix', 'assumed'].includes(read.returns),
+    rule: ['fixed', 'percent'].includes(read.rule),
+    start: /^\d{4}-\d{2}-\d{2}$/.test(read.start),
+    years: read.years >= 1 && read.years <= 100,
+    capital: read.capital > 0,
+    costShare: read.costShare >= 0 && read.costShare <= 100,
+    amount: read.amount > 0,
+    percent: read.percent > 0 && read.percent <= 1200,
+  };
+  const bad = Object.entries(ok).filter(([, fine]) => !fine);
+  return {
+    ...read,
+    ...Object.fromEntries(
+      bad.map(([key]) => [key, DEFAULT_WITHDRAW[key as keyof WithdrawSettings]]),
+    ),
+  };
+}
+
 /**
  * A stored state, each damaged part replaced by its default. One of before there were two
  * options (version 1: a form alone) becomes option A, with option B the same as it.
@@ -300,7 +323,7 @@ export function sanitizePersisted(persisted: unknown): PlannerData {
     other: slot === 'a' ? b : a,
     contents: readContents(from['contents']),
     compare: readCompare(from['compare']),
-    withdraw: sameKinds(DEFAULT_WITHDRAW, from['withdraw']),
+    withdraw: readWithdraw(from['withdraw']),
   };
 }
 

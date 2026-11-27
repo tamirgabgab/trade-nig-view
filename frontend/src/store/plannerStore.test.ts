@@ -218,5 +218,11 @@ describe('the Withdraw tab’s settings', () => {
       ...DEFAULT_WITHDRAW,
       years: 30,
     });
+    // So does a value of the right kind that the tab could not show or send.
+    const odd = { rule: 'monthly', returns: 'bonds', years: 0, start: 'soon', percent: 6 };
+    expect(sanitizePersisted({ withdraw: odd }).withdraw).toEqual({
+      ...DEFAULT_WITHDRAW,
+      percent: 6,
+    });
   });
 });

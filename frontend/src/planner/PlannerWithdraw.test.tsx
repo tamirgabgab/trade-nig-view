@@ -114,6 +114,21 @@ describe('PlannerWithdraw', () => {
     expect(usePlannerStore.getState().withdraw).toMatchObject({ rule: 'percent', percent: 6 });
   });
 
+  it('shows when a percent was emptied by the fees, and counts one year as one', async () => {
+    const user = userEvent.setup();
+    stub({ ...WITHDRAW_RESULT, months: 12 });
+    usePlannerStore.getState().setWithdraw({ rule: 'percent' });
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    await screen.findByRole('heading', { name: /^Withdrawals:/ });
+    // The fixture's plan ran out in month 3: under a percent that is said first.
+    expect(card('The money ends')).toHaveTextContent('2030-04-15');
+    expect(card('The money ends')).toHaveAttribute('title', expect.stringContaining('2 months'));
+    expect(card('Income, first month')).toBeVisible();
+    // The note no longer promises that the account never ends.
+    expect(screen.getByText(/a fee larger than what is left can/)).toBeVisible();
+  });
+
   it('says whose mix it runs when the two options have forms of their own', () => {
     stub();
     usePlannerStore.setState({ same: false });

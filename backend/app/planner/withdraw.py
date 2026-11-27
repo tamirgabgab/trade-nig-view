@@ -40,7 +40,9 @@ lot whose cost is a share :math:`c` of its value: :math:`b_a = c\\,V_0 w_a / \\e
   A sale that would leave less than half an agora sells everything (no dust of rounding stays
   behind to be "paid" the month after).
 * *A percent* :math:`p` a year: :math:`\\varphi = p / 12` (more only when the fee alone needs
-  more). The balance then does not depend on :math:`c`; only the income does.
+  more). The balance then does not depend on :math:`c`; only the income does. The withdrawals
+  alone never empty the account; a fee larger than what is left can, and so can a percent of
+  1,200. The depletion month is then the first month that starts with nothing.
 
 The sale, its tax and the fee are one event on the month date. (The market account of
 ``app.planner.market`` charges fees at calendar month ends and taxes everything at the end.)
@@ -114,7 +116,9 @@ class Result:
     net: FloatArray
     #: What a fixed rule owed the month (zeros under a percent rule).
     due: FloatArray
-    #: The first month a fixed amount was not paid in full (None: every month was).
+    #: The first month the rule could not be kept: a fixed amount not paid in full, or an account
+    #: already empty (a percent rule gets there only when the fees take what is left, or when it
+    #: sells everything). None: every month was.
     depleted: int | None
     #: What selling everything on the last date would leave, after the commission and the tax.
     liquidation: float
@@ -195,6 +199,8 @@ def _weights(plan: Plan, assets: int) -> FloatArray:
         raise PlanError("The cost share must be between 0 and 100 %")
     if plan.amount < 0:
         raise PlanError("The amount cannot be negative")
+    if not 0.0 <= plan.sell < 1.0:
+        raise PlanError("The sell commission must be below 100 %: no sale could pay anything")
     if not 0.0 <= plan.percent <= MAX_PERCENT:
         raise PlanError("The yearly percent sold must be between 0 and 1,200")
     if len(weights) != assets or np.any(weights < 0) or weights.sum() <= 0:
@@ -239,7 +245,8 @@ def run(plan: Plan, grid: Grid) -> Result:
         balance[k] = (1.0 - fraction) * value
         units = units * (1.0 - fraction)
         basis = basis * (1.0 - fraction)
-        if depleted is None and due[k] - net[k] > PAID:
+        # A fixed amount not paid in full, or (under either rule) nothing left to sell.
+        if depleted is None and (due[k] - net[k] > PAID or value <= 0.0):
             depleted = k
     proceeds = balance[-1] * keep
     gain = proceeds - float(basis @ grid.level[-1])

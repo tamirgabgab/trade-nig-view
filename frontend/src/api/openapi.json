@@ -2459,6 +2459,45 @@
   },
   "components": {
     "schemas": {
+      "AccountIn": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AssetIn"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "title": "Assets"
+          },
+          "use_fx": {
+            "type": "boolean",
+            "title": "Use Fx",
+            "description": "Convert dollar assets by the USD/ILS rate",
+            "default": true
+          },
+          "fees": {
+            "$ref": "#/components/schemas/FeesIn",
+            "default": {
+              "deposit_pct": 0.0,
+              "buy_pct": 0.0,
+              "sell_pct": 0.0,
+              "management_pct": 0.0,
+              "monthly_fee": 0.0
+            }
+          },
+          "taxes": {
+            "$ref": "#/components/schemas/TaxesIn",
+            "default": {
+              "gains_pct": 25.0,
+              "dividend_pct": 25.0,
+              "base": "nominal"
+            }
+          }
+        },
+        "type": "object",
+        "title": "AccountIn",
+        "description": "The account's mix, fees and taxes. The mix may be empty: an assumed return does not use\nit."
+      },
       "AccountOut": {
         "properties": {
           "deposited": {
@@ -11123,8 +11162,8 @@
             }
           },
           "market": {
-            "$ref": "#/components/schemas/MarketOptionIn",
-            "description": "The mix (unused on an assumed return), the fees and the taxes; no deposits"
+            "$ref": "#/components/schemas/AccountIn",
+            "description": "The mix (unused on an assumed return), the fees and the taxes"
           },
           "inflation": {
             "$ref": "#/components/schemas/InflationIn",
@@ -11141,8 +11180,7 @@
           "start",
           "months",
           "capital",
-          "rule",
-          "market"
+          "rule"
         ],
         "title": "WithdrawRequest"
       },

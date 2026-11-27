@@ -16,11 +16,15 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_bar_service, get_macro_service, get_universe
+from app.api.home import MAX_YEAR
 from app.api.planner import (
+    AssetIn,
+    FeesIn,
     InflationIn,
     InvalidPlanError,
     MarketOptionIn,
     Percent,
+    TaxesIn,
     fees_of,
     inflation_spec,
     load_mix,
@@ -65,6 +69,16 @@ class ReturnsIn(BaseModel):
     )
 
 
+class AccountIn(BaseModel):
+    """The account's mix, fees and taxes. The mix may be empty: an assumed return does not use
+    it."""
+
+    assets: list[AssetIn] = Field(default_factory=list[AssetIn], max_length=60)
+    use_fx: bool = Field(default=True, description="Convert dollar assets by the USD/ILS rate")
+    fees: FeesIn = FeesIn()
+    taxes: TaxesIn = TaxesIn()
+
+
 class WithdrawRequest(BaseModel):
     start: dt.date
     months: int = Field(ge=1, le=MAX_MONTHS)
@@ -74,8 +88,9 @@ class WithdrawRequest(BaseModel):
     )
     rule: RuleIn
     returns: ReturnsIn = ReturnsIn()
-    market: MarketOptionIn = Field(
-        description="The mix (unused on an assumed return), the fees and the taxes; no deposits"
+    market: AccountIn = Field(
+        default_factory=AccountIn,
+        description="The mix (unused on an assumed return), the fees and the taxes",
     )
     inflation: InflationIn = InflationIn()
 
@@ -171,10 +186,20 @@ def _run(
         raise PlanError("A fixed rule needs an amount above zero")
     if rule.kind is Rule.PERCENT and rule.percent <= 0:
         raise PlanError("A percent rule needs a percent above zero")
+    if body.start.year + (body.start.month - 1 + body.months) // 12 > MAX_YEAR:
+        raise PlanError(f"Dates after {MAX_YEAR} are not supported")
     dates = [add_months(body.start, k) for k in range(body.months + 1)]
     first, last = day_number(dates[0]), day_number(dates[-1])
     cpi = cpi_path(inflation_spec(body.inflation), first, last, macro)
-    taxes, fees = taxes_of(body.market), fees_of(body.market)
+    account = body.market
+    # The fee and tax helpers read a market option; a ticker stands in when the mix is empty.
+    option = MarketOptionIn(
+        assets=account.assets or [AssetIn(symbol="RETURN")],
+        use_fx=account.use_fx,
+        fees=account.fees,
+        taxes=account.taxes,
+    )
+    taxes, fees = taxes_of(option), fees_of(option)
     warnings: list[str] = []
     if last > int(cpi.days[-1]) + MONTH_DAYS:
         warnings.append("After the last published CPI it is held flat")
@@ -193,7 +218,9 @@ def _run(
         )
         weights: list[float] = [1.0]
     else:
-        assets, _, notes = load_mix(body.market, service, macro, universe, first)
+        if not account.assets:
+            raise PlanError("The mix has no asset: add a ticker, or use an assumed return")
+        assets, _, notes = load_mix(option, service, macro, universe, first)
         warnings.extend(notes)
         grid = sample([a.data for a in assets], body.start, body.months, taxes, cpi)
         weights = [a.data.weight for a in assets]
