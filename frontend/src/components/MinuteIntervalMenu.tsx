@@ -1,3 +1,5 @@
+import { useSymbols } from '../api/market.ts';
+import { isSynthetic } from '../api/synthetic.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { ActionMenu } from './ActionMenu.tsx';
@@ -14,6 +16,8 @@ export function MinuteIntervalMenu() {
   const interval = useChartStore((s) => s.interval);
   const setInterval = useChartStore((s) => s.setInterval);
   const locked = useReplayStore((s) => s.mode !== 'off');
+  const symbol = useChartStore((s) => s.symbol);
+  const synthetic = isSynthetic(useSymbols().data?.find((s) => s.symbol === symbol));
   const { open, setOpen, menu, wrapperRef, menuId, close } = useMenuButton();
   const current = MINUTE_INTERVALS.find((m) => m.interval === interval);
 
@@ -23,8 +27,14 @@ export function MinuteIntervalMenu() {
         label={current === undefined ? 'Minute intervals' : `Minute intervals: ${current.label}`}
         text={`${current?.text ?? 'min'} ▾`}
         pressed={current !== undefined}
-        disabled={locked}
-        title={locked ? 'Locked during bar replay' : undefined}
+        disabled={locked || synthetic}
+        title={
+          locked
+            ? 'Locked during bar replay'
+            : synthetic
+              ? 'A synthetic symbol has 1h bars at the finest'
+              : undefined
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}

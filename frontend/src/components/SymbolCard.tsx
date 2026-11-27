@@ -2,9 +2,11 @@ import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { useSymbols, useUniverseQuotes } from '../api/market.ts';
+import { isSynthetic } from '../api/synthetic.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { direction, formatChange, formatPrice } from './formatNumber.ts';
 import { MarketStatus } from './MarketStatus.tsx';
+import { SyntheticBadge } from './SyntheticBadge.tsx';
 import { RangeBar } from './RangeBar.tsx';
 import styles from './SymbolCard.module.css';
 import { usePriceFlash } from './usePriceFlash.ts';
@@ -52,7 +54,7 @@ export function SymbolCard() {
             )}
           </div>
           <div className={styles.meta}>
-            <MarketStatus info={info} />
+            {isSynthetic(info) ? <SyntheticBadge /> : <MarketStatus info={info} />}
             <span>{info.exchange}</span>
           </div>
           {last !== null && (

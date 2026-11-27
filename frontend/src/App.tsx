@@ -12,6 +12,7 @@ import { RightSidebar } from './components/RightSidebar.tsx';
 import { SettingsDialog } from './components/SettingsDialog.tsx';
 import { ShortcutsDialog } from './components/ShortcutsDialog.tsx';
 import { SymbolSearchDialog } from './components/SymbolSearchDialog.tsx';
+import { SyntheticSymbolDialog } from './components/SyntheticSymbolDialog.tsx';
 import { TopToolbar } from './components/TopToolbar.tsx';
 import { PlannerPage } from './planner/PlannerPage.tsx';
 import { useAppHotkeys } from './components/useAppHotkeys.ts';
@@ -49,6 +50,7 @@ export function App() {
       {/* Over the chart, which stays mounted (its state and data survive the visit). */}
       {view === 'planner' && <PlannerPage className={styles.planner} />}
       <SymbolSearchDialog />
+      <SyntheticSymbolDialog />
       <IndicatorsDialog />
       <ShortcutsDialog />
       <CommandPalette />

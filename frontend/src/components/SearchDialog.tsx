@@ -40,6 +40,8 @@ interface SearchDialogProps<T> {
   status: (query: string, count: number) => ReactNode;
   /** Shown between the field and the list (e.g. "the chart is full"). */
   notice?: ReactNode;
+  /** Buttons under the list, given the highlighted item (symbol search: new or edit synthetic). */
+  footer?: (active: T | undefined) => ReactNode;
   attrs?: OverlayAttrs;
   /** Classes of the dialog's own CSS module (input, option) on top of the shared ones. */
   classNames?: { input?: string | undefined; option?: string | undefined };
@@ -65,6 +67,7 @@ export function SearchDialog<T>({
   onClose,
   status,
   notice,
+  footer,
   attrs,
   classNames,
 }: SearchDialogProps<T>) {
@@ -162,6 +165,7 @@ export function SearchDialog<T>({
           );
         })()}
       </div>
+      {footer?.(activeItem)}
     </ModalShell>
   );
 }

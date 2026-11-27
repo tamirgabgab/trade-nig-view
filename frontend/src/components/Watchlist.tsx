@@ -1,11 +1,13 @@
 import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSymbols, useUniverseQuotes, type Quote, type SymbolInfo } from '../api/market.ts';
+import { isSynthetic } from '../api/synthetic.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { useWatchlistStore } from '../store/watchlistStore.ts';
 import { ActionMenu, type MenuItem } from './ActionMenu.tsx';
+import { SyntheticBadge } from './SyntheticBadge.tsx';
 import { usePresence } from './usePresence.ts';
 import { useWatchlistEditor } from './useWatchlistEditor.ts';
 import { moveSymbol, removeSection, removeSymbol } from './watchlistEdit.ts';
@@ -146,7 +148,24 @@ export function Watchlist() {
       ];
     }
     const display = universe.get(at.symbol)?.display ?? at.symbol;
+    const synthetic = isSynthetic(universe.get(at.symbol))
+      ? [
+          {
+            label: `Edit ${display}…`,
+            onSelect: () => {
+              openModal('synthetic', at.symbol);
+            },
+          },
+          {
+            label: `Delete ${display}…`,
+            onSelect: () => {
+              openModal('syntheticDelete', at.symbol);
+            },
+          },
+        ]
+      : [];
     return [
+      ...synthetic,
       {
         label: `Remove ${display} from the watchlist`,
         onSelect: () => {
@@ -257,7 +276,10 @@ export function Watchlist() {
                       }
                     }}
                   >
-                    <td className={styles.symbol}>{info.display}</td>
+                    <td className={styles.symbol}>
+                      {info.display}
+                      {isSynthetic(info) && <SyntheticBadge />}
+                    </td>
                     <QuoteCells info={info} quote={quotes.get(symbol)} />
                   </tr>,
                 ];

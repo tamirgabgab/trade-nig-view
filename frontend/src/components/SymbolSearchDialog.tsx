@@ -2,9 +2,11 @@ import { Search } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 
 import { useSymbols } from '../api/market.ts';
+import { isSynthetic } from '../api/synthetic.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import { SearchDialog } from './SearchDialog.tsx';
+import { SyntheticBadge } from './SyntheticBadge.tsx';
 import { searchSymbols } from './symbolSearch.ts';
 import styles from './SymbolSearchDialog.module.css';
 import { usePresence } from './usePresence.ts';
@@ -21,6 +23,7 @@ export function SymbolSearchDialog() {
   const editor = useWatchlistEditor();
   const seed = useUiStore((s) => s.symbolSeed);
   const closeModal = useUiStore((s) => s.closeModal);
+  const openModal = useUiStore((s) => s.openModal);
   const setSymbol = useChartStore((s) => s.setSymbol);
   const current = useChartStore((s) => s.symbol);
   const symbols = useSymbols().data;
@@ -73,7 +76,10 @@ export function SymbolSearchDialog() {
       })}
       renderItem={(info) => (
         <>
-          <span className={styles.ticker}>{info.display}</span>
+          <span className={styles.ticker}>
+            {info.display}
+            {isSynthetic(info) && <SyntheticBadge />}
+          </span>
           <span className={styles.name}>{info.name}</span>
           <span className={styles.exchange}>{info.exchange}</span>
         </>
@@ -92,11 +98,37 @@ export function SymbolSearchDialog() {
         close();
       }}
       onClose={close}
+      footer={(active) =>
+        shown.mode === 'symbols' && (
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className={styles.footerButton}
+              onClick={() => {
+                openModal('synthetic', '');
+              }}
+            >
+              New synthetic symbol…
+            </button>
+            {isSynthetic(active) && active !== undefined && (
+              <button
+                type="button"
+                className={styles.footerButton}
+                onClick={() => {
+                  openModal('synthetic', active.symbol);
+                }}
+              >
+                Edit {active.display}…
+              </button>
+            )}
+          </div>
+        )
+      }
       status={(query, count) =>
         symbols !== undefined && count === 0 ? (
           <>
             No symbol matches “{query.trim()}”. Symbols come from{' '}
-            <code>backend/config/universe.toml</code>.
+            <code>backend/config/universe.toml</code>, or make a synthetic one below.
           </>
         ) : null
       }

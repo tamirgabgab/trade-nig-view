@@ -180,3 +180,16 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* The pencil next to a synthetic symbol's title (the legend itself lets the mouse through). */
+.legendAction {
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
+
+.legendAction:hover {
+  background: var(--color-hover);
+}

@@ -49,7 +49,9 @@ export type Modal =
   | 'learnIndex'
   | 'removeIndicators'
   | 'removeDrawings'
-  | 'removeEverything';
+  | 'removeEverything'
+  | 'synthetic'
+  | 'syntheticDelete';
 
 /** Transient UI state (not persisted): which overlay is open. */
 export interface UiState {
@@ -58,7 +60,8 @@ export interface UiState {
   setView: (view: 'chart' | 'planner') => void;
   /** The open modal dialog, or null. */
   modal: Modal | null;
-  /** Text the symbol search opens with (the key typed on the chart). */
+  /** Text the symbol search opens with (the key typed on the chart); for the synthetic symbol
+   *  dialog, the symbol to edit ('' creates one). */
   symbolSeed: string;
   /** Open a modal (replacing any other); `symbolSeed` for the symbol search. */
   openModal: (modal: Modal, symbolSeed?: string) => void;

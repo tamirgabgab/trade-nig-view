@@ -165,6 +165,8 @@ export interface ChartDisplay {
   fontSize: number;
   /** Written large and faint behind the bars (e.g. "AAPL · 1D"); null: none. */
   watermark: string | null;
+  /** A synthetic symbol: "Synthetic" is written on the chart whatever `watermark` says. */
+  synthetic: boolean;
 }
 
 const DEFAULT_DISPLAY: ChartDisplay = {
@@ -175,9 +177,14 @@ const DEFAULT_DISPLAY: ChartDisplay = {
   quietVolume: true,
   fontSize: 12,
   watermark: null,
+  synthetic: false,
 };
 const WATERMARK_ALPHA = 0.06;
 const WATERMARK_SIZE = 96;
+/** Smaller but stronger than the symbol's watermark: a synthetic series must not pass for a
+ *  market one. */
+const SYNTHETIC_ALPHA = 0.14;
+const SYNTHETIC_SIZE = 40;
 
 /** Top of each own-pane indicator's pane (by group), in px from the top of the chart. */
 export type PaneLayout = Readonly<Record<string, number>>;
@@ -700,7 +707,10 @@ export class ChartEngine {
     if (same) return;
     // Only the watermark's text changed (another symbol or interval): no repaint of the series.
     const onlyWatermark = Object.entries(display).every(
-      ([key, value]) => key === 'watermark' || this.display[key as keyof ChartDisplay] === value,
+      ([key, value]) =>
+        key === 'watermark' ||
+        key === 'synthetic' ||
+        this.display[key as keyof ChartDisplay] === value,
     );
     this.display = display;
     if (onlyWatermark) {
@@ -752,23 +762,25 @@ export class ChartEngine {
 
   /** The symbol watermark on the price pane, in the theme's text colour (a library primitive). */
   private renderWatermark(): void {
-    const text = this.display.watermark;
-    if (text === null) {
+    const { watermark: text, synthetic } = this.display;
+    if (text === null && !synthetic) {
       this.watermark?.detach();
       this.watermark = null;
       return;
     }
+    const line = (value: string, alpha: number, fontSize: number) => ({
+      text: value,
+      color: withAlpha(this.theme.text, alpha),
+      fontSize,
+      fontStyle: '600',
+      fontFamily: this.theme.fontFamily,
+    });
     const options = {
       horzAlign: 'center' as const,
       vertAlign: 'center' as const,
       lines: [
-        {
-          text,
-          color: withAlpha(this.theme.text, WATERMARK_ALPHA),
-          fontSize: WATERMARK_SIZE,
-          fontStyle: '600',
-          fontFamily: this.theme.fontFamily,
-        },
+        ...(text === null ? [] : [line(text, WATERMARK_ALPHA, WATERMARK_SIZE)]),
+        ...(synthetic ? [line('Synthetic', SYNTHETIC_ALPHA, SYNTHETIC_SIZE)] : []),
       ],
     };
     const pane = this.chart.panes()[0];

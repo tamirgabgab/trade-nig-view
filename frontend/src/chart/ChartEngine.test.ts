@@ -462,6 +462,7 @@ describe('ChartEngine', () => {
       volume: true,
       quietVolume: true,
       fontSize: 12,
+      synthetic: false,
     };
     chart.setDisplay({ ...display, watermark: 'AAPL · 1D' });
     const mark = lwc.state.watermarks[0];
@@ -474,6 +475,29 @@ describe('ChartEngine', () => {
     expect(lwc.state.removed).toHaveLength(removedBefore); // only the text: no series rebuilt
     expect(mark?.options).toMatchObject({ lines: [{ text: 'MSFT · 1W' }] });
     chart.setDisplay({ ...display, watermark: null });
+    expect(mark?.detached).toBe(true);
+  });
+
+  it('writes "Synthetic" on a synthetic symbol, with or without the symbol watermark', () => {
+    const { engine: chart } = engine();
+    const display = {
+      upColor: null,
+      downColor: null,
+      lastPriceLine: true,
+      volume: true,
+      quietVolume: true,
+      fontSize: 12,
+      synthetic: true,
+    };
+    chart.setDisplay({ ...display, watermark: 'SYN:WALK · 1D' });
+    const mark = lwc.state.watermarks[0];
+    expect(mark?.options).toMatchObject({
+      lines: [{ text: 'SYN:WALK · 1D' }, { text: 'Synthetic' }],
+    });
+    chart.setDisplay({ ...display, watermark: null });
+    expect(mark?.options).toMatchObject({ lines: [{ text: 'Synthetic' }] });
+    expect(mark?.detached).not.toBe(true);
+    chart.setDisplay({ ...display, watermark: null, synthetic: false });
     expect(mark?.detached).toBe(true);
   });
 

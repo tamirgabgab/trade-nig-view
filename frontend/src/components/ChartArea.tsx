@@ -1,8 +1,9 @@
-import { ChevronsRight } from 'lucide-react';
+import { ChevronsRight, Pencil } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { isIntraday, useBarHistory, useCompareBars, type Bar } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
+import { isSynthetic } from '../api/synthetic.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
 import type { ChartEngine, ChartPointer, CompareBars, PaneLayout } from '../chart/ChartEngine.ts';
@@ -25,6 +26,7 @@ import { EMPHASIS_MS, useUiStore } from '../store/uiStore.ts';
 import styles from './ChartArea.module.css';
 import { ChartView, type FocusRequest } from './ChartView.tsx';
 import { IconButton } from './IconButton.tsx';
+import { MINUTE_INTERVALS } from './intervals.ts';
 import { IndicatorLegend } from './IndicatorLegend.tsx';
 import { IndicatorSettingsPanel } from './IndicatorSettingsPanel.tsx';
 import { ChartBackdrop } from './ChartBackdrop.tsx';
@@ -40,6 +42,7 @@ import { useChartForecast } from './useChartForecast.ts';
 import { RemoveConfirm } from './RemoveConfirm.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
+import { SyntheticBadge } from './SyntheticBadge.tsx';
 import { legendValues } from './legendValues.ts';
 import { presentLines } from './presentLines.ts';
 import { Toast } from './Toast.tsx';
@@ -234,8 +237,10 @@ export function ChartArea({ className }: ChartAreaProps) {
       quietVolume,
       fontSize: Math.round(12 * textScale),
       watermark,
+      // Marked on the chart whatever the watermark setting: an invented series is no market.
+      synthetic: isSynthetic(info),
     }),
-    [upColor, downColor, lastPriceLine, showVolume, quietVolume, textScale, watermark],
+    [upColor, downColor, lastPriceLine, showVolume, quietVolume, textScale, watermark, info],
   );
   const selected = symbols?.find((s) => s.symbol === symbol);
   const decimals = info?.decimals ?? DEFAULT_DECIMALS;
@@ -248,6 +253,14 @@ export function ChartArea({ className }: ChartAreaProps) {
     if (symbols.some((s) => s.symbol === symbol)) return;
     setSymbol(symbols.find((s) => s.symbol === DEFAULT_SYMBOL)?.symbol ?? symbols[0]?.symbol ?? '');
   }, [symbols, symbol, setSymbol]);
+
+  // A synthetic symbol has no minute bars: on one, a minute interval moves to 1h.
+  const setInterval = useChartStore((s) => s.setInterval);
+  useEffect(() => {
+    if (isSynthetic(selected) && MINUTE_INTERVALS.some((m) => m.interval === interval)) {
+      setInterval('1h');
+    }
+  }, [selected, interval, setInterval]);
 
   // Scrolling near the oldest loaded bar fetches the page before it. The handler must be stable
   // (ChartView re-creates the chart when it changes), so it reads the latest state from a ref.
@@ -420,6 +433,7 @@ export function ChartArea({ className }: ChartAreaProps) {
             display: other?.display ?? symbol,
             bars: compareData[i]?.bars ?? [],
             decimals: other?.decimals ?? DEFAULT_DECIMALS,
+            synthetic: isSynthetic(other),
           },
         ];
       }),
@@ -575,7 +589,24 @@ export function ChartArea({ className }: ChartAreaProps) {
         decimals={decimals}
         hasVolume={hasVolume}
         status={status}
-        badge={info && <MarketStatus info={info} compact />}
+        badge={
+          info &&
+          (isSynthetic(info) ? (
+            <>
+              <SyntheticBadge />
+              <IconButton
+                className={styles.legendAction}
+                label={`Edit ${info.display}`}
+                icon={<Pencil size={12} />}
+                onClick={() => {
+                  useUiStore.getState().openModal('synthetic', info.symbol);
+                }}
+              />
+            </>
+          ) : (
+            <MarketStatus info={info} compact />
+          ))
+        }
         flashKey={
           // Not while another data set loads (the old bars are still shown): no false flash.
           hoverIndex === null && !history.isLoading
@@ -590,7 +621,7 @@ export function ChartArea({ className }: ChartAreaProps) {
           barCount={bars.length}
           decimals={decimals}
         />
-        {data !== undefined && isIntraday(data.interval) && (
+        {data !== undefined && isIntraday(data.interval) && !isSynthetic(info) && (
           <p
             className={styles.hint}
             title="Older bars stay in the local cache once downloaded, so this history grows (scripts/install-collector.ps1 collects it daily)."

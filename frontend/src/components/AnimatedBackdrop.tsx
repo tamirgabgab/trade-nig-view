@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 
 import { useSymbols, useUniverseQuotes } from '../api/market.ts';
+import { isSynthetic } from '../api/synthetic.ts';
 import { readChartTheme, withAlpha } from '../chart/theme.ts';
 import { useReplayStore } from '../store/replayStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
@@ -45,11 +46,13 @@ export function AnimatedBackdrop({ kind }: { kind: AnimatedKind }) {
       replaying
         ? ''
         : tickerText(
-            (quotes ?? []).map((q) => ({
-              display: symbols?.find((s) => s.symbol === q.symbol)?.display ?? q.symbol,
-              last: q.last,
-              changePct: q.changePct,
-            })),
+            // The market's tape: no invented (synthetic) series in it.
+            (quotes ?? []).flatMap((q) => {
+              const info = symbols?.find((s) => s.symbol === q.symbol);
+              return isSynthetic(info)
+                ? []
+                : [{ display: info?.display ?? q.symbol, last: q.last, changePct: q.changePct }];
+            }),
           ),
     [quotes, symbols, replaying],
   );

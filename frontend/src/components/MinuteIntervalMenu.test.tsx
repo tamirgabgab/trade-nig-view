@@ -1,14 +1,27 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { useChartStore } from '../store/chartStore.ts';
 import { useReplayStore } from '../store/replayStore.ts';
+import { renderWithQuery as render, stubApi, SYMBOLS } from '../test/render.tsx';
 import { MinuteIntervalMenu } from './MinuteIntervalMenu.tsx';
 
 beforeEach(() => {
+  stubApi({ '/api/symbols': { body: [...SYMBOLS, SYNTHETIC] } });
   useChartStore.setState(useChartStore.getInitialState());
   useReplayStore.setState(useReplayStore.getInitialState());
 });
+
+const SYNTHETIC = {
+  symbol: 'SYN:WALK',
+  display: 'SYN:WALK',
+  name: 'Random walk',
+  type: 'synthetic',
+  group: 'Synthetic',
+  exchange: 'Synthetic',
+  has_volume: true,
+  decimals: 2,
+};
 
 describe('MinuteIntervalMenu', () => {
   it('lists the minute intervals with the days the provider keeps', async () => {
@@ -46,5 +59,14 @@ describe('MinuteIntervalMenu', () => {
     useReplayStore.setState({ mode: 'on' });
     render(<MinuteIntervalMenu />);
     expect(screen.getByRole('button', { name: 'Minute intervals' })).toBeDisabled();
+  });
+
+  it('is off on a synthetic symbol (1h bars at the finest)', async () => {
+    useChartStore.setState({ symbol: 'SYN:WALK' });
+    render(<MinuteIntervalMenu />);
+    const button = screen.getByRole('button', { name: 'Minute intervals' });
+    await vi.waitFor(() => {
+      expect(button).toBeDisabled();
+    });
   });
 });

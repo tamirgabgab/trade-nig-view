@@ -135,4 +135,38 @@ describe('SymbolSearchDialog', () => {
     await user.type(screen.getByRole('textbox', { name: 'Other field' }), 'abc');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('offers a new synthetic symbol, and editing the highlighted one', async () => {
+    const synthetic = {
+      symbol: 'SYN:WALK',
+      display: 'SYN:WALK',
+      name: 'Random walk',
+      type: 'synthetic',
+      group: 'Synthetic',
+      exchange: 'Synthetic',
+      has_volume: true,
+      decimals: 2,
+    };
+    stubApi({
+      '/api/health': { body: HEALTH_OK },
+      '/api/symbols': { body: [...SYMBOLS, synthetic] },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': { body: barsBody('AAPL', '1D', AAPL_BARS) },
+    });
+    const user = userEvent.setup();
+    renderWithQuery(<App />);
+    await screen.findAllByText('TSLA');
+
+    useUiStore.getState().openModal('symbols', 'SYN');
+    const dialog = await screen.findByRole('dialog', { name: 'Symbol search' });
+    expect(within(dialog).getByRole('img', { name: 'Synthetic' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Edit SYN:WALK…' }));
+    expect(useUiStore.getState()).toMatchObject({ modal: 'synthetic', symbolSeed: 'SYN:WALK' });
+
+    useUiStore.getState().openModal('symbols', 'ZZZ');
+    const again = await screen.findByRole('dialog', { name: 'Symbol search' });
+    expect(within(again).queryByRole('button', { name: /^Edit/ })).toBeNull();
+    await user.click(within(again).getByRole('button', { name: 'New synthetic symbol…' }));
+    expect(useUiStore.getState()).toMatchObject({ modal: 'synthetic', symbolSeed: '' });
+  });
 });
