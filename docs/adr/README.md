@@ -36,3 +36,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0029](0029-planner-withdrawals-lots.md) | Known lots in a withdrawal plan, and two plans side by side | Accepted |
 | [0030](0030-planner-withdrawal-learn-pages.md) | The learn pages of the withdrawals, saved scenarios with them, and the Withdraw tab's polish | Accepted |
 | [0031](0031-synthetic-symbols.md) | Synthetic symbols: definitions, hourly generation, and a symbol like any other | Accepted |
+| [0032](0032-synthetic-dwelling-symbols.md) | Dwelling prices as a synthetic symbol, and two kinds of definition | Accepted |

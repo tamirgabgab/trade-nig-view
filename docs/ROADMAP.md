@@ -29,7 +29,7 @@
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
-| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅ (2026-11-27, ADR 0031) |
+| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅ (2026-11-27, ADR 0031, 0032) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -401,7 +401,8 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   default; bars **Monday to Friday**; a **first price** to choose (default 100); the **national index and the six
   districts** now (the districts from 2017-10); **1h and 4h too**, invented like K0's; a **learn page** on the
   synthetic symbols, linked from the dialog.
-- [ ] **K1: dwelling prices as a symbol.** The **close** is the CBS dwelling price index (national and by district),
+- [x] **K1: dwelling prices as a symbol** (ADR 0032, 2026-11-27: interpolated or causal, the national index and six
+  districts, the `synthetic-symbols` learn page). The **close** is the CBS dwelling price index (national and by district),
   scaled to 1 on its first date. The index is monthly: on its month dates the close is the index exactly; between
   them it is interpolated geometrically, as the Planner already does, with optional noise that returns to the index
   on every month date. Open, high and low are drawn around the close (the recipe of `app/analysis/synthetic.py`);
