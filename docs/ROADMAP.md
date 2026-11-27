@@ -437,9 +437,31 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   the symbol and can be opened and edited from wherever the symbol is shown.
 - **Before Phase 4.** The shuffled symbol (K3) is then there for the backtester's honest evaluation (B4).
 
-**Still to ask before K0:** how a definition is edited (a dialog from the symbol search, or a page of its own),
-whether editing a definition changes the symbol in place or makes a new one (a saved layout or a Planner scenario
-may point at it), and the default bar-shape parameters of K2.
+**Decided by the user before K0 (2026-11-27):**
+- **No plan document** for Phase K: K0 starts directly. **K0's first kind** is the learn lab's scenarios
+  (`random_walk`, `uptrend`, ... from `app/analysis/synthetic.py`), to prove the frame end to end.
+- **Editing:** a dialog opened from the symbol search, from a pencil in the legend and from the watchlist row's
+  context menu (Edit, Delete). It edits the definition **in place**, with a warning that lists what points at the
+  symbol (layouts, compared symbols, watchlists, drawings, Planner scenarios), plus a "Save as copy" button.
+- **Name:** a fixed `SYN:` prefix and a ticker-like part the user chooses (A–Z, digits, `.`, `-`, `_`, 1–12
+  characters, starting with a letter, upper-cased, unique), so it can never shadow a real ticker (the Planner
+  accepts any Yahoo ticker, not only the universe); plus a free full name. Definitions persist in `app.db`.
+- **Dates:** a fixed first date, a first price and a length in bars (100–10,000, default 2,500); the dialog
+  pre-fills a first date so the series ends on the last trading day before today; the last bar is never after
+  today. No series that moves with the calendar.
+- **Intervals:** 1h and 4h too. The hourly bars are the base (US stock hours, 09:30–16:00 New York, seven bars a
+  session, 4h at 09:30 and 13:30) and the daily bar is built from them, so the two agree; 1W and 1M by resample;
+  minute intervals stay disabled. The lab keeps its own generator unchanged (the same seed gives a different path).
+- **Currency:** a field, USD or ILS, default ILS (the Planner then adds no real exchange-rate noise).
+- **Deleting:** a confirmation that lists what points at the symbol; then it leaves every watchlist, its
+  drawings are deleted, a layout on it opens on AAPL (a compared one is dropped), a Planner scenario shows an error.
+- **The mark:** the `SYN:` prefix, a muted "SYN" badge in the watchlist, the search, the legend and Compare, and a
+  "Synthetic" watermark on the chart.
+- **Watchlists:** synthetic symbols get their own "Synthetic" group in the search; after creating one the chart
+  opens on it; adding it to a watchlist is manual (the search's "+").
+- **Defaults:** the scenario's volume is kept (OBV, VWAP); bars are generated on each request, not cached; no
+  market status, exchange "Synthetic", the intraday collector skips them; at most 100 definitions.
+- **K2's bar-shape defaults** start from the recipe in `app/analysis/synthetic.py` (asked again at K2).
 
 ### Phase 5 — Paper trading agent
 - Rule-based agent first (strategies from P4) running on replay windows and delayed data; later ML/LLM-assisted
