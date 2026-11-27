@@ -5100,7 +5100,7 @@ export interface components {
             liquidation_real: number;
             /**
              * Depleted Month
-             * @description The first month a fixed amount is not paid
+             * @description From this month on, no month is paid in full again
              */
             depleted_month: number | null;
             /** Depleted On */
@@ -5110,6 +5110,15 @@ export interface components {
              * @description Months paid in full
              */
             months_paid: number;
+            /**
+             * Short Months
+             * @description Months not paid in full, before the end or not
+             */
+            short_months: number;
+            /** First Short Month */
+            first_short_month: number | null;
+            /** First Short On */
+            first_short_on: string | null;
             /**
              * Lowest Net Real
              * @description The lowest month's income, in first-day shekels

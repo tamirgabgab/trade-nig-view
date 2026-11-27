@@ -11599,7 +11599,7 @@
               }
             ],
             "title": "Depleted Month",
-            "description": "The first month a fixed amount is not paid"
+            "description": "From this month on, no month is paid in full again"
           },
           "depleted_on": {
             "anyOf": [
@@ -11617,6 +11617,34 @@
             "type": "integer",
             "title": "Months Paid",
             "description": "Months paid in full"
+          },
+          "short_months": {
+            "type": "integer",
+            "title": "Short Months",
+            "description": "Months not paid in full, before the end or not"
+          },
+          "first_short_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Short Month"
+          },
+          "first_short_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Short On"
           },
           "lowest_net_real": {
             "type": "number",
@@ -11687,6 +11715,9 @@
           "depleted_month",
           "depleted_on",
           "months_paid",
+          "short_months",
+          "first_short_month",
+          "first_short_on",
           "lowest_net_real",
           "home_worth",
           "home_cash",

@@ -66,8 +66,11 @@ value less the selling costs, the loan with its early-repayment fee, and the bet
 * **Money invested** buys the plan's weights at the buy commission :math:`\\beta`: asset
   :math:`a` gains :math:`m w_a / ((1 + \\beta) u_{k,a})` units at a cost of
   :math:`m w_a / \\ell_{k,a}` (as an H1 deposit, the commission is part of the cost).
-* What is left is the account plus :math:`W_k` while the apartment is held; the plan is
-  depleted on a fixed amount not paid in full, or on an empty account with no apartment.
+* What is left is the account plus :math:`W_k` while the apartment is held. A month is *short*
+  when a fixed amount is not paid in full, or when the account is empty and no apartment is
+  left; the plan is *depleted* from the first month of the short run that lasts to the end (a
+  short month followed by full ones, as before a forced sale, is counted but is not the end).
+* shortcut: a debt left by a sale bears no interest; model a loan's rate if debts ever last.
 """
 
 from __future__ import annotations
@@ -170,9 +173,9 @@ class Result:
     net: FloatArray
     #: What a fixed rule owed the month (zeros under a percent rule).
     due: FloatArray
-    #: The first month the rule could not be kept: a fixed amount not paid in full, or an account
-    #: already empty (a percent rule gets there only when the fees take what is left, or when it
-    #: sells everything). None: every month was.
+    #: The month from which the rule is never kept again: a fixed amount not paid in full, or an
+    #: account already empty with no apartment (a percent rule gets there only when the fees take
+    #: what is left, or when it sells everything). None: the last month was kept.
     depleted: int | None
     #: What selling everything on the last date would leave, after the commission and the tax,
     #: the apartment's worth included while it is held.
@@ -185,6 +188,10 @@ class Result:
     invested: FloatArray
     home_sold: int | None = None
     cause: Cause | None = None
+    #: Months not kept, and the first of them: with an apartment, a short month can be followed by
+    #: full ones again (a forced sale, a sale on a date).
+    short: int = 0
+    first_short: int | None = None
 
 
 def assumed_grid(months: int, rate: float, cpi: FloatArray, *, real: bool = False) -> Grid:
@@ -295,7 +302,7 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
     balance, sold, commission, tax, fee, net, due = (np.zeros(months + 1) for _ in range(7))
     worth, home_cash, invested = (np.zeros(months + 1) for _ in range(3))
     balance[0] = plan.capital
-    depleted: int | None = None
+    missed = np.zeros(months + 1, dtype=np.bool_)
     #: The apartment while it is held.
     owned = home
     #: What a sale left owing (the loan above what it brought) that the account could not pay yet.
@@ -371,11 +378,13 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
         home_cash[k] = cash
         worth[k] = float(owned.worth[k]) if owned is not None else -debt
         # A fixed amount not paid in full, or nothing left to sell and no apartment.
-        if depleted is None and (due[k] - net[k] > PAID or (value <= 0.0 and owned is None)):
-            depleted = k
+        missed[k] = due[k] - net[k] > PAID or (value <= 0.0 and owned is None)
     proceeds = balance[-1] * keep
     gain = proceeds - float(basis @ grid.level[-1])
     liquidation = proceeds - plan.gains_tax * max(gain - carried, 0.0) + worth[-1]
+    kept = np.flatnonzero(~missed[1:])
+    last_kept = int(kept[-1]) + 1 if kept.size else 0
+    shorts = np.flatnonzero(missed)
     return Result(
         balance,
         sold,
@@ -384,11 +393,13 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
         fee,
         net,
         due,
-        depleted,
+        last_kept + 1 if last_kept < months else None,
         float(liquidation),
         worth,
         home_cash,
         invested,
         home_sold,
         cause,
+        int(shorts.size),
+        int(shorts[0]) if shorts.size else None,
     )

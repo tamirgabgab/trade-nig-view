@@ -135,6 +135,18 @@ def test_no_note_on_a_loan_schedule_past_the_plan(client: TestClient) -> None:
     assert not any("schedule" in warning for warning in body["warnings"])
 
 
+def test_the_money_comes_back_after_a_forced_sale(client: TestClient) -> None:
+    # The default owner costs (0.5 % of the value and 1,500 a year): month 92 pays its costs but
+    # not all of the 10,000; month 93 cannot pay the costs, and the sale pays every month after.
+    home = {"maintenance_pct": 0.5, "insurance": 1_500}
+    summary = run(client, home, months=120)["summary"]
+    assert (summary["home_sold_month"], summary["home_sale"]) == (93, "forced")
+    assert summary["depleted_month"] is None
+    assert (summary["short_months"], summary["first_short_month"]) == (1, 92)
+    assert summary["first_short_on"] == "2037-09-15"
+    assert summary["months_paid"] == 119
+
+
 def test_a_kept_apartment_whose_costs_cannot_be_paid_is_sold(client: TestClient) -> None:
     body = run(client, {"insurance": 12_000}, capital=50_000)
     summary = body["summary"]

@@ -29,11 +29,14 @@ J1 adds an apartment the user already owns to the Withdraw tab (`docs/WITHDRAWAL
     pays the duty, and the page says so.
 - **The sale:** on a date; when the account cannot pay the month in full (the withdrawal included); or, whatever the
   role, when it cannot pay the duty (a forced sale, with a warning). The sale's month still has its cash. A positive
-  worth is invested; a negative one (the loan above the value) is paid from the account.
+  worth is invested; a negative one (the loan above the value) is paid from the account, and what it cannot pay
+  stays a debt (below).
 - **Money invested** buys the plan's weights with the Market tab's buy commission, as a new lot whose cost includes
   the commission (as an H1 deposit). The deposit fee does not apply: this is not a deposit into a fund.
-- **The capital may be zero** with an apartment. **Depletion** is unchanged for a fixed amount (a month not paid in
-  full); under a percent rule an empty account is the end only when no apartment is left.
+- **The capital may be zero** with an apartment. A month is **short** when a fixed amount is not paid in full, or
+  under a percent rule when the account is empty and no apartment is left. **Depletion** is the first month of the
+  short run that lasts to the end; a short month followed by full ones is counted, with its date, but is not the
+  end. Without an apartment this is J0's depletion month, since an empty account stays empty.
 - **What is left** is the account plus the apartment's worth while it is held; the liquidation includes it.
 
 ## What the review settled
@@ -47,6 +50,12 @@ J1 adds an apartment the user already owns to the Withdraw tab (`docs/WITHDRAWAL
 - **One of the cost and the purchase day is sent as typed**, so the API says the other is missing, instead of the page
   dropping it unsaid.
 - **No note on a loan schedule past the plan**: the engine never reads those months.
+- **The money comes back after a forced sale.** A kept apartment with its default costs can leave one month short
+  and be sold the next; the page called that "the money ends" with a large net worth beside it. Depletion became
+  the start of the short run to the end, and the short months are counted apart.
+- **Under a percent rule "when the account runs out" is "kept"**: both sell when the account cannot pay the costs.
+  The section's note says so.
+- shortcut: a debt left by a sale bears no interest; model a rate if debts are ever more than a corner case.
 
 ## Consequences
 - A golden scalar model in the tests runs the same plan with bisection for every fraction, across the three roles

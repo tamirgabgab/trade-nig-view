@@ -88,11 +88,17 @@ export function PlannerWithdrawResults({
     : [];
   const lasts: PlannerCard =
     s.depleted_month === null
-      ? ['Lasts', `All ${span(result.months)}`, 'Every month was paid in full']
+      ? [
+          'Lasts',
+          `All ${span(result.months)}`,
+          s.short_months === 0
+            ? 'Every month was paid in full'
+            : `${span(s.short_months)} not paid in full, the first on ${s.first_short_on ?? ''}; the others were`,
+        ]
       : [
           'The money ends',
           s.depleted_on ?? '',
-          `Month ${String(s.depleted_month)} is the first not paid in full: ${span(s.months_paid)} were`,
+          `From month ${String(s.depleted_month)} no month is paid in full again: ${span(s.months_paid)} were`,
         ];
   const totals: PlannerCard[] = [
     ['Taken, net', shekels(s.taken), `In shekels of the first day: ${shekels(s.taken_real)}`],

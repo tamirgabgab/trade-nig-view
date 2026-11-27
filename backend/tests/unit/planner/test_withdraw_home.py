@@ -131,6 +131,18 @@ def test_a_kept_apartment_whose_costs_the_account_cannot_pay_is_sold() -> None:
     assert result.balance[24] == pytest.approx(500_000 - 10_000 - 13 * 9_000)
 
 
+def test_a_short_month_before_a_forced_sale_is_counted_but_is_not_the_end() -> None:
+    # 105,000 pays 10,000 a month (9,500 and 500 of costs) for ten months; month 11 has 5,000:
+    # the costs are paid and the withdrawal is short. Month 12 cannot pay the costs: the forced
+    # sale brings the money back, and every month after is paid in full.
+    result = run(fixed(105_000, 9_500), growing(24, 0.0), home(24, cash=-500))
+    assert result.net[11] == pytest.approx(4_500)
+    assert (result.home_sold, result.cause) == (12, Cause.FORCED)
+    assert result.depleted is None
+    assert (result.short, result.first_short) == (1, 11)
+    assert result.net[12:] == pytest.approx(9_500)
+
+
 def test_a_sale_that_owes_more_than_it_brings_is_paid_from_the_account() -> None:
     # The loan and the costs of the sale are above the value: the sale takes 10,000.
     result = run(

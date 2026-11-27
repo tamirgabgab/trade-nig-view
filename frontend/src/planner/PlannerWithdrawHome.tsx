@@ -249,8 +249,9 @@ export function PlannerWithdrawHome({ home, set }: PlannerWithdrawHomeProps) {
             withdrawal; the mortgage and the owner costs are paid from the account first. Living in
             it gives no cash. A sale puts what it leaves (after its costs, the loan and the
             betterment tax) into the account. Kept or not, it is sold in the month the account can
-            no longer pay its costs. Without its cost and purchase day, only the growth from the
-            first day is taxed.
+            no longer pay its costs (under a percent rule that is also when it runs out, so the two
+            roles are one). Without its cost and purchase day, only the growth from the first day is
+            taxed.
           </p>
         </>
       )}

@@ -100,17 +100,19 @@ A month the account cannot pay in full pays what is left and is marked as the **
 nothing (unless an apartment is then sold, below). Net worth never goes below zero from withdrawals.
 
 ### The apartment in the balance (question 4)
-An apartment the user **already owns**, taken from the Apartment tab's form read as "today": its value, what is
-still owed on its tracks, its rent and owner costs. No purchase tax or purchase costs.
+An apartment the user **already owns**, typed in a section of its own in the Withdraw tab (the user, before J1):
+its value today, what is still owed on one mortgage track, its rent and owner costs, read through `run_home` as
+"today". No purchase tax or purchase costs.
 
 - **Cash, not saved rent.** In Phase H a saved rent counts as income. Here only cash counts: rent received (less
   vacancy and its tax) pays part of the withdrawal; the mortgage payment and the owner costs are paid from the
   account on top of it. An owner who lives in the apartment gets no cash from it.
-- **Its sale:** never, on a date, or when the account is empty. The net proceeds (selling costs, the loan,
-  betterment tax) go into the account as a new lot with c = 1.
-- **Betterment tax** has the same unknown-basis problem as the lots. `HomePlan` takes its cost and its "bought on"
-  from the plan's own start, so an owned apartment needs two new optional fields (what it cost, when it was
-  bought). Without them: the single-home exemption as today, or a cost share as for the account.
+- **Its sale:** never (unless forced), on a date, or when the account is empty; whatever the role, when the account
+  cannot pay its costs. The net proceeds (selling costs, the loan, betterment tax) go into the account as a new lot
+  with c = 1. A sale that brings less than the loan leaves a debt, paid first from what comes after.
+- **Betterment tax** has the same unknown-basis problem as the lots. `HomePlan` now takes two optional fields (what
+  it cost, when it was bought). Without them its value on the first day is the cost: only growth from then on is
+  taxed (a single home under the ceiling pays nothing either way).
 - The apartment is not sold in parts, and no loan is taken against it.
 
 ## Many realizations
@@ -278,8 +280,9 @@ Asked before J1 (2026-11-27), all at the recommended answer:
   betterment tax: `run_home`'s net worth of that month. It enters the account at the plan's weights as a new lot at
   cost, with the buy commission, before the month's sale of units.
 - **Its value** grows by an assumed yearly rate, or by the national dwelling index over history.
-- **Depletion** is the first month the rule could not be kept: a fixed amount not paid in full (as in J0), or under
-  a percent rule an account empty with no apartment left. The sale month and its cause are reported for each of the
+- **Depletion** is the first month of the run of months that are not kept to the end: a fixed amount not paid in
+  full (as in J0), or under a percent rule an account empty with no apartment left. A short month followed by full
+  ones (before a forced sale, or a sale on a date) is counted and shown, but it is not the end. The sale month and its cause are reported for each of the
   three cost-share runs, which may differ.
 - **The capital may be zero** when there is an apartment.
 - **What is left** is the account plus the apartment's net worth while it is held.

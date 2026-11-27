@@ -165,9 +165,14 @@ class WithdrawSummary(BaseModel):
         description="What selling all of it then would leave, the apartment included while held"
     )
     liquidation_real: float
-    depleted_month: int | None = Field(description="The first month a fixed amount is not paid")
+    depleted_month: int | None = Field(
+        description="From this month on, no month is paid in full again"
+    )
     depleted_on: dt.date | None
     months_paid: int = Field(description="Months paid in full")
+    short_months: int = Field(description="Months not paid in full, before the end or not")
+    first_short_month: int | None
+    first_short_on: dt.date | None
     lowest_net_real: float = Field(description="The lowest month's income, in first-day shekels")
     home_worth: float = Field(description="What the apartment's sale would leave at the end")
     home_cash: float = Field(description="The apartment's cash, all months")
@@ -229,7 +234,10 @@ def _summary(
         liquidation_real=float(result.liquidation / prices[-1]),
         depleted_month=depleted,
         depleted_on=None if depleted is None else dates[depleted],
-        months_paid=months if depleted is None else depleted - 1,
+        months_paid=months - result.short,
+        short_months=result.short,
+        first_short_month=result.first_short,
+        first_short_on=None if result.first_short is None else dates[result.first_short],
         lowest_net_real=float(real.min()),
         home_worth=float(result.home[-1]),
         home_cash=float(result.home_cash.sum()),

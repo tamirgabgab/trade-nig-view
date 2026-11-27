@@ -51,7 +51,10 @@ describe('PlannerWithdraw', () => {
       market: { assets: [{ symbol: 'SPY' }] },
     });
     expect(card('The money ends')).toHaveTextContent('2030-04-15');
-    expect(card('The money ends')).toHaveAttribute('title', expect.stringContaining('Month 3'));
+    expect(card('The money ends')).toHaveAttribute(
+      'title',
+      expect.stringContaining('From month 3 no month is paid in full again'),
+    );
     expect(card('Left at the end')).toHaveTextContent('₪0');
     expect(card('Taken, net')).toHaveTextContent('₪27,000');
     expect(card('Tax paid')).toHaveTextContent('₪1,500');
@@ -131,6 +134,29 @@ describe('PlannerWithdraw', () => {
     expect(card('Income, first month')).toBeVisible();
     // The note no longer promises that the account never ends.
     expect(screen.getByText(/a fee larger than what is left can/)).toBeVisible();
+  });
+
+  it('counts a short month that the money came back after, and does not call it the end', async () => {
+    const user = userEvent.setup();
+    const back = {
+      ...WITHDRAW_RESULT,
+      summary: {
+        ...WITHDRAW_RESULT.ceiling,
+        months_paid: 2,
+        short_months: 1,
+        first_short_month: 2,
+        first_short_on: '2030-03-15',
+      },
+    };
+    stub(back);
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    await screen.findByRole('heading', { name: /^Withdrawals:/ });
+    expect(card('Lasts')).toHaveTextContent('All 3 months');
+    expect(card('Lasts')).toHaveAttribute(
+      'title',
+      '1 month not paid in full, the first on 2030-03-15; the others were',
+    );
   });
 
   it('says whose mix it runs when the two options have forms of their own', () => {
