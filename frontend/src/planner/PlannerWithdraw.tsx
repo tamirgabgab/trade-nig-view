@@ -43,7 +43,8 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
   // What was run, with the rule it was run under: a later edit must not relabel it. One study
   // at a time beside the plan: the starts of history, or simulated worlds.
   const [shown, setShown] = useState<{
-    result: WithdrawResult;
+    /** The plan from the start entered, or why it cannot run on its own (a study still can). */
+    result: WithdrawResult | string;
     many: WithdrawManyResult | null;
     fixed: boolean;
     home: boolean;
@@ -57,9 +58,13 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
     if (!ready) return;
     setStatus(next);
     setError(null);
-    // The plan itself is run with every study, so the two always belong together.
-    Promise.all([runWithdraw(toWithdraw(settings, form)), many])
+    // The plan itself is run with every study, so the two always belong together. A study
+    // stands without it: worlds for a plan that ends after the mix's last bar, say.
+    const reason = (cause: unknown) =>
+      cause instanceof Error ? cause.message : 'The request failed';
+    Promise.all([runWithdraw(toWithdraw(settings, form)).catch(reason), many])
       .then(([result, more]) => {
+        if (typeof result === 'string' && more === null) throw new Error(result);
         setShown({ result, many: more, fixed, home: settings.home.include });
       })
       .catch((cause: unknown) => {
@@ -268,9 +273,14 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             data allows, and Simulate many possible worlds.
           </p>
         )}
-        {shown !== null && (
-          <PlannerWithdrawResults result={shown.result} fixed={shown.fixed} home={shown.home} />
-        )}
+        {shown !== null &&
+          (typeof shown.result === 'string' ? (
+            <p className={styles.warning}>
+              The plan from the start entered cannot run on its own: {shown.result}.
+            </p>
+          ) : (
+            <PlannerWithdrawResults result={shown.result} fixed={shown.fixed} home={shown.home} />
+          ))}
         {shown !== null && shown.many !== null && (
           <PlannerWithdrawMany result={shown.many} fixed={shown.fixed} home={shown.home} />
         )}

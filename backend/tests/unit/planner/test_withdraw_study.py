@@ -96,6 +96,9 @@ def test_the_sustainable_amount_by_hand() -> None:
     # With an apartment sold when the account runs out, its 600,000 pays too.
     homes = stack_homes([home(120, worth=600_000.0, role=Sale.WHEN_EMPTY)] * 2)
     assert sustainable(plan, paths, homes, 0.5) == pytest.approx(15_000, abs=1)
+    # 0.55 of twenty is eleven (a float says 11.000000000000002): eleven that last are enough.
+    twenty = stack([flat] * 11 + [halved] * 9)
+    assert sustainable(plan, twenty, None, 0.55) == pytest.approx(10_000, abs=1)
     # A percent rule has no amount to look for.
     with pytest.raises(ValueError, match="fixed"):
         sustainable(Plan(1.0, rule=Rule.PERCENT, percent=0.04), paths, None, 0.9)

@@ -40,7 +40,7 @@ from app.data.bar_service import BarService
 from app.data.universe import Universe
 from app.macro.service import MacroService
 from app.models.bars import FloatArray
-from app.planner.data import Macro, cpi_path
+from app.planner.data import FxSeries, Macro, cpi_path
 from app.planner.deposits import add_months, day_number
 from app.planner.home import HomePlan, RentMode, run_home
 from app.planner.home_data import HomeSpec, home_series
@@ -66,6 +66,10 @@ from app.planner.withdraw_study import reverse
 router = APIRouter(tags=["planner"])
 
 MAX_MONTHS = 1200
+NO_CURRENCY_BASE = (
+    'The assumed return is in shekels: the "currency" tax base has no rate to follow, and the '
+    "nominal one is used"
+)
 #: A CPI published until less than this many days before the last month date covers the plan.
 MONTH_DAYS = 31
 
@@ -343,6 +347,8 @@ class Account:
     fees: Fees
     mix: list[AssetData] | None
     warnings: list[str]
+    #: The shekel rate a dollar asset uses (None: no asset does).
+    fx: FxSeries | None = None
 
 
 def check(body: WithdrawRequest) -> None:
@@ -372,8 +378,8 @@ def account_of(
         return Account(taxes_of(option), fees_of(option), None, [])
     if not account.assets:
         raise PlanError("The mix has no asset: add a ticker, or use an assumed return")
-    assets, _, notes = load_mix(option, service, macro, universe, day_number(body.start))
-    return Account(taxes_of(option), fees_of(option), [a.data for a in assets], notes)
+    assets, fx, notes = load_mix(option, service, macro, universe, day_number(body.start))
+    return Account(taxes_of(option), fees_of(option), [a.data for a in assets], notes, fx)
 
 
 def plan_of(
@@ -428,10 +434,7 @@ def _run(
         warnings.append("After the last published CPI it is held flat")
     if account.mix is None:
         if taxes.base is TaxBase.CURRENCY:
-            warnings.append(
-                'The assumed return is in shekels: the "currency" tax base has no rate to follow, '
-                "and the nominal one is used"
-            )
+            warnings.append(NO_CURRENCY_BASE)
         days = np.array([day_number(d) for d in dates], dtype=np.int64)
         grid = assumed_grid(
             body.months,

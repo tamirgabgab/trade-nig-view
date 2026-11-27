@@ -22,10 +22,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_bar_service, get_macro_service, get_universe
-from app.api.planner import InvalidPlanError, inflation_spec
+from app.api.planner import InvalidPlanError, inflation_spec, official_rate_note
 from app.api.scenario import EARLIEST_START, month_shifts
 from app.api.withdraw import (
     MONTH_DAYS,
+    NO_CURRENCY_BASE,
     Account,
     WithdrawRequest,
     account_of,
@@ -43,7 +44,7 @@ from app.planner.data import Macro, MacroMemo, cpi_path
 from app.planner.deposits import EPOCH, add_months, day_number
 from app.planner.home_data import dwelling_index
 from app.planner.inflation import historical_cpi
-from app.planner.market import PlanError
+from app.planner.market import PlanError, TaxBase
 from app.planner.paths import Panel, WorldSpec, make_world
 from app.planner.scenario_data import asset_key, asset_series, estimate_mix, panel_of
 from app.planner.study import effective_samples
@@ -309,6 +310,9 @@ def _study(
             "The apartment's value is assumed: it is the same in every window, so the windows "
             "differ only by the market"
         )
+    # The earliest window may run before the market's shekel rate, where the entered start did not.
+    earliest = day_number(add_months(body.start, ran[0][0]))
+    warnings.extend(official_rate_note(account.fx, earliest))
     homes = [home for _, _, home in ran if home is not None]
     span = ran[-1][0] - ran[0][0]
     return _report(
@@ -413,6 +417,8 @@ def _simulate(
             warnings.extend(found)
     if body.home is not None and not indexed_home:
         warnings.append("The apartment's value is assumed: it is the same in every world")
+    if model is not None and account.taxes.base is TaxBase.CURRENCY:
+        warnings.append(NO_CURRENCY_BASE.replace("assumed return", "modelled market"))
     history = None if panel is None else len(panel)
     return _report(
         body,

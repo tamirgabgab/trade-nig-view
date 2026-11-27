@@ -142,6 +142,9 @@ def test_an_apartment_in_every_window(client: TestClient) -> None:
     # What there was: the account as if sold (half of it gain, taxed), and the apartment's sale.
     assert body["start_worth"] == pytest.approx(875_000 + 1_960_000)
     assert any(r["home_sold_month"] is not None for r in runs)
+    # A sale on the first day would be taxed as one at the end is: the two are on one basis.
+    taxed = study(client, home={**home, "betterment": "full"})
+    assert taxed["start_worth"] < body["start_worth"]
     # Its purchase day moves with the window: a start before 2005 is not refused for it.
     assert runs[0]["start"] == "2002-01-15"
     # An assumed growth is the same in every window, and the page says so.
@@ -198,6 +201,12 @@ def test_an_apartment_in_every_world(client: TestClient) -> None:
     assert body["start_worth"] == pytest.approx(875_000 + 1_960_000)
     lefts = {round(r["left"]) for r in body["realizations"]}
     assert len(lefts) > 30
+
+
+def test_a_modelled_market_has_no_currency_to_follow(client: TestClient) -> None:
+    market = {**MIX["market"], "taxes": {"base": "currency"}}
+    body = simulate(client, method="monte_carlo", market=market)
+    assert any("modelled market is in shekels" in note for note in body["warnings"])
 
 
 def test_worlds_that_cannot_run(client: TestClient) -> None:

@@ -277,7 +277,8 @@ def run_home(plan: HomePlan, series: HomeSeries) -> HomeResult:
                 bought=bought,
                 sold=dates[k],
             )
-            if k
+            # Bought on the first day there is nothing to tax on it; owned before, there is.
+            if k or plan.cost is not None
             else 0.0
             for k in range(t + 1)
         ]

@@ -42,9 +42,12 @@ export function PlannerWithdrawHistogram({
   const total = values.length + ranOut;
   const sorted = [...values].sort((a, b) => a - b);
   // The outer half percent on each side would flatten everything else: it joins the end bins.
-  const lo = Math.min(quantile(sorted, 0.005), 0);
-  const hi = Math.max(quantile(sorted, 0.995), lo + Math.max(Math.abs(start), 1) * 0.01);
-  const counts = sorted.length > 0 ? bins(sorted, lo, hi, BINS) : [];
+  // With none that lasted the axis still runs from nothing to the start.
+  const none = sorted.length === 0;
+  const lo = none ? 0 : Math.min(quantile(sorted, 0.005), 0);
+  const most = none ? Math.abs(start) : quantile(sorted, 0.995);
+  const hi = Math.max(most, lo + Math.max(Math.abs(start), 1) * 0.01);
+  const counts = none ? [] : bins(sorted, lo, hi, BINS);
   const tallest = Math.max(...counts, ranOut, 1);
   const left = SIDE + (ranOut > 0 ? APART : 0);
   const px = scale([lo, hi], [left, W - SIDE]);
@@ -52,7 +55,7 @@ export function PlannerWithdrawHistogram({
   const width = (hi - lo) / BINS;
   const of = (count: number) =>
     `${String(count)} of ${String(total)} (${wholePercent(count / total)})`;
-  const median = sorted.length > 0 ? quantile(sorted, 0.5) : null;
+  const median = none ? null : quantile(sorted, 0.5);
   const marks: [value: number, text: string, row: number][] = [];
   if (median !== null) marks.push([median, `Median ${format(median)}`, 0]);
   if (start > lo && start < hi) marks.push([start, 'The start', 1]);

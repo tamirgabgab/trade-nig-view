@@ -185,6 +185,9 @@ def test_an_apartment_owned_before_the_plan_is_taxed_on_its_own_cost_and_day() -
     sold = result.dates[-1]
     linear = (sold - date(2014, 1, 1)).days / (sold - date(2010, 3, 1)).days
     assert result.betterment[-1] == pytest.approx(0.25 * (end - 1_200_000) * linear)
+    # Owned before the plan, a sale on the first day is taxed too (a study's starting worth).
+    first = (START - date(2014, 1, 1)).days / (START - date(2010, 3, 1)).days
+    assert result.betterment[0] == pytest.approx(0.25 * (2_000_000 - 1_200_000) * first)
     # Without them the cost is the price and the purchase day the plan's first day, as before.
     plain = run_home(replace(plan, cost=None, bought=None), flat(months, value))
     assert plain.betterment[-1] == pytest.approx(0.25 * (end - 2_000_000))

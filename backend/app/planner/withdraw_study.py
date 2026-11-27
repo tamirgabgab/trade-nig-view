@@ -103,7 +103,8 @@ def sustainable(plan: Plan, grid: Grid, home: Home | None, share: float) -> floa
 
     def lasts(amount: float) -> bool:
         many = run_many(replace(plan, amount=amount), grid, home)
-        return int(np.count_nonzero(many.depleted == 0)) >= share * len(many.depleted)
+        # 0.55 * 100 is 55.00000000000001: the share is met a hair early, never a world late.
+        return int(np.count_nonzero(many.depleted == 0)) >= share * len(many.depleted) - 1e-9
 
     low, high = 0.0, 1_000.0
     while lasts(high) and high < HIGHEST:

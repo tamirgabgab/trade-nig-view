@@ -199,7 +199,9 @@ export function PlannerWithdrawResults({
             they were.{' '}
             {fixed
               ? 'A fixed amount sells more units after a fall, so bad years first cost more than the same years last: the order of the returns matters when money is taken out.'
-              : 'A percent ends with the same balance in either order; what it paid on the way differs.'}
+              : home
+                ? 'A percent of the account alone ends with the same balance in either order; an apartment’s sale or costs change what is sold, so here the two can differ.'
+                : 'A percent ends with the same balance in either order; what it paid on the way differs.'}
           </p>
         </>
       )}

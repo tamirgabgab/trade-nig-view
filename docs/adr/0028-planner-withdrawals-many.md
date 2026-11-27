@@ -41,6 +41,23 @@ simulated worlds. The user's answers:
   and the apartment as they were.
 - **One study at a time** beside the plan, as in the Compare tab: Run history and Simulate each run the plan too.
 
+## What the review settled
+- **A study stands without the single plan.** Run history and Simulate run the plan of the entered start too, but
+  when it cannot run on its own (worlds for a plan that ends after the mix's last bar) the study is shown with the
+  reason, not thrown away with it.
+- **With none that lasted** the histogram keeps an axis from nothing to the start (it printed `NaN%`).
+- **The starting worth is on the liquidation's basis.** An apartment owned before the plan (its cost given) is taxed
+  on a sale on the first day too; `run_home` left month 0 untaxed, so "what there was" was too high by the
+  betterment tax and an unchanged world read below 100 %.
+- **The earliest window's shekel rate.** The note that USD/ILS before the market rate is the official one is checked
+  against the first window, not only the entered start.
+- **Whole numbers** for the worlds, the seed and the block, whatever was typed.
+- **The target share is met without a float's last digit** (0.55 of 100 is not 56 worlds).
+- **A percent rule with an apartment** may end differently in reverse (a sale buys at another month's price): the
+  note under the table says so.
+- **One year of income** is not drawn as a fan (a single point has no line).
+- **A modelled market has no currency to follow**: the "currency" tax base is nominal there, and the page says so.
+
 ## Consequences
 - The report prints its evidence: the independent terms the starts hold, or the months of history a bootstrap was
   cut from; a modelled market says it is a model and where its numbers came from.

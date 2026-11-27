@@ -176,6 +176,11 @@ describe('the requests of many realizations', () => {
       market_mean_pct: 6,
       market_sd_pct: 18,
     });
+    // Whole numbers reach the API whatever was typed.
+    const typedHalf = { ...many, runs: 250.4, block: 12.5 };
+    expect(
+      toWithdrawSimulate({ ...DEFAULT_WITHDRAW, many: typedHalf }, DEFAULT_FORM),
+    ).toMatchObject({ runs: 250, block_months: 13 });
     // On an assumed return the mean is that return: only the volatility is sent.
     const assumed = { ...DEFAULT_WITHDRAW, returns: 'assumed' as const, many: model };
     expect(toWithdrawSimulate(assumed, DEFAULT_FORM)).toMatchObject({

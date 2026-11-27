@@ -88,9 +88,10 @@ export function toWithdrawSimulate(
     ...toWithdraw(settings, form),
     sustain_pct: many.sustain,
     method: many.method,
-    runs: many.runs,
-    seed: many.seed,
-    block_months: many.block,
+    // Whole numbers for the API, whatever was typed.
+    runs: Math.round(many.runs),
+    seed: Math.round(many.seed),
+    block_months: Math.round(many.block),
     market_mean_pct: typed && !assumed ? many.mean : null,
     market_sd_pct: typed ? many.sd : null,
   };

@@ -323,6 +323,32 @@ describe('PlannerWithdraw', () => {
     expect(usePlannerStore.getState().withdraw.many.method).toBe('monte_carlo');
   });
 
+  it('shows a study whose own plan cannot run, and a histogram with none that lasted', async () => {
+    const user = userEvent.setup();
+    const none = {
+      ...WITHDRAW_MANY_RESULT,
+      method: 'bootstrap' as const,
+      realizations: WITHDRAW_MANY_RESULT.realizations.map((r) => ({ ...r, depleted_month: 9 })),
+    };
+    stubApi({
+      '/api/planner/withdraw': () =>
+        jsonResponse({ detail: 'AAPL has no data after 2026-11-20', status: 422 }, 422),
+      '/api/planner/withdraw/simulate': () => jsonResponse(none),
+    });
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(screen.getByRole('button', { name: 'Simulate' }));
+    expect(await screen.findByRole('heading', { name: /^Simulation: 3 worlds/ })).toBeVisible();
+    expect(
+      screen.getByText(/^The plan from the start entered cannot run on its own: AAPL has no data/),
+    ).toBeVisible();
+    expect(screen.queryByRole('alert')).toBeNull();
+    // Nothing lasted: the bar apart, and an axis without a NaN on it.
+    const chart = screen.getByRole('img', { name: /^What is left/ });
+    expect(within(chart).getByText('Ran out: 3 of 3 (100%)')).toBeVisible();
+    expect(chart.textContent).not.toContain('NaN');
+    expect(screen.getByText('None of the 3 worlds lasted.')).toBeVisible();
+  });
+
   it('shows the same months in reverse order beside the plan', async () => {
     const user = userEvent.setup();
     const back = { ...WITHDRAW_RESULT.ceiling, cost_share: 0.5, balance: 9_000 };

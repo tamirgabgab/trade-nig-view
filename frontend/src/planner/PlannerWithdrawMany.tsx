@@ -205,25 +205,28 @@ export function PlannerWithdrawMany({
           />
         </>
       ) : (
-        <>
-          <h2 className={styles.heading}>The income, by year</h2>
-          <PlannerBandChart
-            label={`The monthly income by year, over ${String(count)} ${noun}`}
-            points={result.income.map((y) => ({
-              year: y.year,
-              value: y.p50,
-              bands: [
-                [y.p5, y.p95],
-                [y.p25, y.p75],
-              ],
-            }))}
-            format={shekels}
-            legend={[
-              'The median monthly income of the year, in shekels of the first day',
-              `Nine in ten of the ${noun}, and the middle half`,
-            ]}
-          />
-        </>
+        // A plan of one year has one point: no line to draw.
+        result.income.length > 1 && (
+          <>
+            <h2 className={styles.heading}>The income, by year</h2>
+            <PlannerBandChart
+              label={`The monthly income by year, over ${String(count)} ${noun}`}
+              points={result.income.map((y) => ({
+                year: y.year,
+                value: y.p50,
+                bands: [
+                  [y.p5, y.p95],
+                  [y.p25, y.p75],
+                ],
+              }))}
+              format={shekels}
+              legend={[
+                'The median monthly income of the year, in shekels of the first day',
+                `Nine in ten of the ${noun}, and the middle half`,
+              ]}
+            />
+          </>
+        )
       )}
       <h2 className={styles.heading}>The tax, between its two bounds</h2>
       <PlannerTable
