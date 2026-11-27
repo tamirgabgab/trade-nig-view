@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -20,11 +21,18 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from app.analysis.synthetic import Scenario
+from app.data.bar_service import BarService
+from app.data.cache.bar_cache import BarCache
+from app.data.providers.synthetic import SyntheticProvider
 from app.data.sessions import local_wall_seconds, session_days
 from app.data.synthetic import SESSION_BARS, daily_bars, hourly_bars
+from app.data.universe import Universe
 from app.data.validate import validate_bars
-from app.models.bars import SECONDS_PER_DAY, FloatArray, ts_to_date
+from app.errors import IntervalUnavailableError
+from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, Interval, ts_to_date
+from app.models.symbols import SymbolInfo
 from app.models.synthetic import ScenarioDefinition
+from app.storage.synthetic import SyntheticSymbols
 
 #: Scenarios with no half-way switch: the bars of day t do not depend on the length.
 LENGTH_FREE = (Scenario.RANDOM_WALK, Scenario.UPTREND, Scenario.RANGE, Scenario.ACCUMULATION)
@@ -210,3 +218,49 @@ def test_an_edited_definition_is_another_series_at_once() -> None:
     spec = definition()
     assert hourly_bars(spec) is hourly_bars(definition())
     assert not daily_bars(definition(seed=2)).equals(daily_bars(spec))
+
+
+class _Refuses:
+    """A market provider the bar service must never ask for a synthetic symbol."""
+
+    id = "market"
+
+    def supports(self, symbol: SymbolInfo) -> bool:
+        return True
+
+    def supports_intraday(self, symbol: SymbolInfo, base: Interval) -> bool:
+        return True
+
+    def fetch_daily(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
+        raise AssertionError(f"asked the market for {symbol.symbol}")
+
+    def fetch_intraday(
+        self, symbol: SymbolInfo, base: Interval, start: date, end: date
+    ) -> BarFrame:
+        raise AssertionError(f"asked the market for {symbol.symbol}")
+
+
+def test_online_the_bar_service_never_asks_the_market(tmp_path: Path) -> None:
+    store = SyntheticSymbols(tmp_path / "app.db")
+    spec = definition(bars=120)
+    store.put(spec, 0)
+    universe = Universe([]).with_extra(store)
+    service = BarService(
+        universe,
+        BarCache(tmp_path / "bars.db"),
+        [_Refuses()],
+        provider_limits=True,
+        synthetic=SyntheticProvider(store.definition),
+    )
+    hours = service.get_bars(spec.symbol, Interval.H1)
+    assert (hours.source, hours.provider_window_days, len(hours.frame)) == ("synthetic", None, 840)
+    assert len(service.get_bars(spec.symbol, Interval.D1).frame) == 120
+    assert service.quote(spec.symbol).error is None
+    with pytest.raises(IntervalUnavailableError):
+        service.get_bars(spec.symbol, Interval.MIN5)
+    store.close()
+
+
+def test_the_shared_frames_are_read_only() -> None:
+    with pytest.raises(ValueError, match="read-only"):
+        daily_bars(definition()).close[0] = 1.0

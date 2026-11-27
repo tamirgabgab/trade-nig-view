@@ -463,6 +463,10 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
 - **Defaults:** the scenario's volume is kept (OBV, VWAP); bars are generated on each request, not cached; no
   market status, exchange "Synthetic", the intraday collector skips them; at most 100 definitions.
 - **K2's bar-shape defaults** start from the recipe in `app/analysis/synthetic.py` (asked again at K2).
+- **Refined while building K0 (ADR 0031):** the bars are never stored in `bars.db` but are memoised in memory by
+  the whole definition (an edit still applies at once); the last bar must be *before* today (today's hours are not
+  over); the first date is 1970-01-01 or later; a stored symbol keeps its name (Save as copy gives another); in the
+  watchlist the SYN badge stands for the prefix, under a name cut to the column's width.
 
 ### Phase 5 — Paper trading agent
 - Rule-based agent first (strategies from P4) running on replay windows and delayed data; later ML/LLM-assisted

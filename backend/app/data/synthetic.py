@@ -70,7 +70,7 @@ def daily_bars(definition: ScenarioDefinition) -> BarFrame:
 
 
 # Memoised by the whole definition (its JSON), so an edit is a new key: the ~20 ms of a series of
-# 10,000 sessions is spent once, not on every quote poll. Callers never write into a BarFrame.
+# 10,000 sessions is spent once, not on every quote poll. The arrays are read-only (shared).
 @lru_cache(maxsize=4)
 def _hourly(key: str) -> BarFrame:
     definition = ScenarioDefinition.model_validate_json(key)
@@ -104,13 +104,15 @@ def _hourly(key: str) -> BarFrame:
     )
     volume = day_volume[:, None] * VOLUME_PROFILE / VOLUME_PROFILE.sum()
 
-    return BarFrame.from_columns(
-        time=_hour_starts(definition).ravel(),
-        open=bar_open.ravel(),
-        high=high.ravel(),
-        low=low.ravel(),
-        close=bar_close.ravel(),
-        volume=volume.ravel(),
+    return _read_only(
+        BarFrame.from_columns(
+            time=_hour_starts(definition).ravel(),
+            open=bar_open.ravel(),
+            high=high.ravel(),
+            low=low.ravel(),
+            close=bar_close.ravel(),
+            volume=volume.ravel(),
+        )
     )
 
 
@@ -119,14 +121,24 @@ def _daily(key: str) -> BarFrame:
     definition = ScenarioDefinition.model_validate_json(key)
     hours = _hourly(key)
     shape = (definition.bars, SESSION_BARS)
-    return BarFrame.from_columns(
-        time=_session_days(definition) * SECONDS_PER_DAY,
-        open=hours.open.reshape(shape)[:, 0],
-        high=hours.high.reshape(shape).max(axis=1),
-        low=hours.low.reshape(shape).min(axis=1),
-        close=hours.close.reshape(shape)[:, -1],
-        volume=hours.volume.reshape(shape).sum(axis=1),
+    return _read_only(
+        BarFrame.from_columns(
+            time=_session_days(definition) * SECONDS_PER_DAY,
+            open=hours.open.reshape(shape)[:, 0],
+            high=hours.high.reshape(shape).max(axis=1),
+            low=hours.low.reshape(shape).min(axis=1),
+            close=hours.close.reshape(shape)[:, -1],
+            volume=hours.volume.reshape(shape).sum(axis=1),
+        )
     )
+
+
+def _read_only(frame: BarFrame) -> BarFrame:
+    """The memoised frames are shared: a write into one is an error, not a corrupted series."""
+    for column in (frame.time, frame.open, frame.high, frame.low, frame.close, frame.volume):
+        column.flags.writeable = False
+    frame.adj_close.flags.writeable = False
+    return frame
 
 
 def _session_days(definition: ScenarioDefinition) -> IntArray:

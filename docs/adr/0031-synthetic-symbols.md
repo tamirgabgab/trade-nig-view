@@ -55,7 +55,10 @@ currency field, editing in place with Save as copy, a delete that cleans up, a b
   existing fallback for a symbol it does not list), a compared one is dropped, and the Planner says the
   synthetic symbol was deleted.
 - **The mark.** The `SYN:` prefix, a "SYN" badge in the watchlist, the symbol search, the legend, Compare and the
-  symbol card, and "Synthetic" written on the chart (whatever the symbol watermark setting says). No market
+  symbol card, and "Synthetic" written on the chart (whatever the symbol watermark setting says). The watchlist's
+  table has no width to spare, so there the badge (under the name) stands for the prefix and the name is cut to
+  the column the other symbols set (the full symbol on hover); a long name never pushes a column out of the panel.
+  The memoised frames are read-only, so no caller can change a shared series. No market
   status, and the Market pulse tape leaves synthetic symbols out. The intraday collector loads the curated
   universe alone, so it never sees them.
 

@@ -18,6 +18,7 @@
 .tile {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   align-items: flex-start;
   gap: 2px;
   min-height: 44px;
@@ -44,7 +45,11 @@
 }
 
 .symbol {
+  max-width: 100%;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .change {

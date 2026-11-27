@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSymbols, useUniverseQuotes, type Quote, type SymbolInfo } from '../api/market.ts';
-import { isSynthetic } from '../api/synthetic.ts';
+import { isSynthetic, SYNTHETIC_PREFIX } from '../api/synthetic.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
@@ -277,8 +277,17 @@ export function Watchlist() {
                     }}
                   >
                     <td className={styles.symbol}>
-                      {info.display}
-                      {isSynthetic(info) && <SyntheticBadge />}
+                      {isSynthetic(info) ? (
+                        // The badge stands for the prefix: a long name must not widen the table.
+                        <span className={styles.synthetic}>
+                          <span className={styles.syntheticName} title={info.display}>
+                            {info.display.slice(SYNTHETIC_PREFIX.length)}
+                          </span>
+                          <SyntheticBadge />
+                        </span>
+                      ) : (
+                        info.display
+                      )}
                     </td>
                     <QuoteCells info={info} quote={quotes.get(symbol)} />
                   </tr>,

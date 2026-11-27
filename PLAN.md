@@ -27,10 +27,12 @@ tools.
 - **Docs:** README (status, a current screenshot), ROADMAP (all rounds since the Phase-1 review), ARCHITECTURE (the
   analysis engines, stores, chart modules, the hooks for Phases 4–5) and the ADR index updated.
 
-### 00.2 Next: Phase 4
-The round-by-round plan is in [docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md): B0 strategy model and signals, B1 the
-backtest engine, B2 the Strategy tab and trades on the chart, B3 costs and sizing, B4 honest evaluation, B5 watchlist
-runs and screener, B6 learn pages and the replay link. Six questions for the user come before B0.
+### 00.2 Next: Phase K, then Phase 4
+The user's order (2026-11-27): Phase H, Phase J, then Phase K (synthetic symbols and open completions, in
+[docs/ROADMAP.md](docs/ROADMAP.md); K0 done, ADR 0031), then Phase 4. Phase 4's round-by-round plan is in
+[docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md): B0 strategy model and signals, B1 the backtest engine, B2 the Strategy
+tab and trades on the chart, B3 costs and sizing, B4 honest evaluation, B5 watchlist runs and screener, B6 learn pages
+and the replay link, B7 the final models per trader profile. Seven questions for the user come before B0.
 
 ### 00.3 Open items
 | # | Item | Status |

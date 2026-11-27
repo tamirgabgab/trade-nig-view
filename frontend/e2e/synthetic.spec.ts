@@ -58,8 +58,20 @@ test('create, chart, keep, edit and delete a synthetic symbol', async ({ page })
   const add = page.getByRole('dialog', { name: /^Add to / });
   await page.keyboard.type(NAME);
   await add.getByRole('option', { name: new RegExp(SYMBOL) }).click();
-  const row = page.getByRole('row', { name: new RegExp(`^${SYMBOL}`) });
+  // In the watchlist the badge stands for the prefix, and the row keeps every column in view.
+  const row = page.getByRole('row', { name: new RegExp(`^${NAME} Synthetic`) });
   await expect(row).toBeVisible();
+  const overflow = () =>
+    row
+      .locator('td')
+      .last()
+      .evaluate((cell) => {
+        const panel = cell.closest('table')?.parentElement;
+        const right = panel?.getBoundingClientRect().right ?? 0;
+        return Math.max(0, Math.round(cell.getBoundingClientRect().right - right));
+      });
+  // 1 px: the table was already that much wider than the panel before K0 (rounding).
+  await expect.poll(overflow).toBeLessThanOrEqual(1);
   await page.reload();
   await expect(legend(page)).toContainText('E2E uptrend · 1D · Synthetic');
   await expect(row).toBeVisible();
@@ -88,8 +100,19 @@ test('create, chart, keep, edit and delete a synthetic symbol', async ({ page })
     .click();
   const compared = page.getByRole('list', { name: 'Compared symbols' });
   await expect(compared).toContainText('no minute bars');
-  await page.getByRole('row', { name: new RegExp(`^${SYMBOL}`) }).click();
+  await row.click();
   await expect(legend(page)).toContainText('E2E uptrend · 1h · Synthetic');
+
+  // A saved layout on it, to open after the delete.
+  const layout = {
+    revision: 0,
+    symbol: SYMBOL,
+    interval: '1D',
+    chart_type: 'candles',
+    scale_mode: 'normal',
+    indicators: [],
+  };
+  expect((await page.request.put('/api/layouts/On%20synthetic', { data: layout })).ok()).toBe(true);
 
   // Delete from the watchlist row: the row goes, the chart moves to the default symbol.
   await row.click({ button: 'right' });
@@ -103,4 +126,27 @@ test('create, chart, keep, edit and delete a synthetic symbol', async ({ page })
   expect((await page.request.get(`/api/synthetic/${encodeURIComponent(SYMBOL)}`)).status()).toBe(
     404,
   );
+
+  // The watchlist lost it on the server (a new revision): editing it still saves.
+  await page.getByRole('row', { name: /^MSFT/ }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Remove MSFT from the watchlist' }).click();
+  await expect(page.getByRole('row', { name: /^MSFT/ })).toBeHidden();
+  await expect
+    .poll(async () => {
+      const body = (await (await page.request.get('/api/watchlists')).json()) as {
+        watchlists: { sections: { symbols: string[] }[] }[];
+      };
+      return body.watchlists[0]?.sections.flatMap((x) => x.symbols).includes('MSFT');
+    })
+    .toBe(false);
+
+  // A saved layout on the deleted symbol opens on the default symbol.
+  await page.getByRole('button', { name: 'Symbol search: AAPL' }).click();
+  await page.keyboard.type('NVDA');
+  await page.keyboard.press('Enter');
+  await expect(legend(page)).toContainText('NVIDIA');
+  await page.getByRole('button', { name: /^Layout: / }).click();
+  await page.getByRole('menuitem', { name: 'Open layout…' }).click();
+  await page.getByRole('button', { name: /^On synthetic / }).click();
+  await expect(legend(page)).toContainText('Apple Inc. · 1D');
 });

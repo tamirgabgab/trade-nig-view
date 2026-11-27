@@ -135,6 +135,27 @@
   font-weight: 500;
 }
 
+/* A synthetic symbol: its name (up to 12 characters) cut to the column the other symbols set, the
+   SYN badge under it. Width 0 + min-width 100%: it fills the cell but never widens the table. */
+.synthetic {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 0;
+  min-width: 100%;
+}
+
+.syntheticName {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synthetic > :last-child {
+  margin-left: 0;
+}
+
 .dash {
   color: var(--color-text-muted);
 }
