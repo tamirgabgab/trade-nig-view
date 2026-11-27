@@ -84,7 +84,7 @@ export function parseScenarioState(value: unknown): ScenarioState {
   const market = pair(state['market'], readForm);
   const home = pair(state['home'], readHome);
   // Read field by field; a scenario saved before the tab had settings has none.
-  const withdraw = isRecord(state['withdraw']) ? pair(state['withdraw'], readWithdraw) : null;
+  const withdraw = pair(state['withdraw'], readWithdraw);
   if (version !== VERSION || market === null || home === null) {
     throw new Error('This is not a planner scenario.');
   }
