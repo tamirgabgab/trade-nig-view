@@ -8,8 +8,6 @@ import {
 
 /** An included apartment in the API's units. */
 function toHome(home: WithdrawHome): NonNullable<WithdrawRequest['home']> {
-  // Its cost and purchase day go together, or not at all.
-  const known = home.cost > 0 && home.bought !== '';
   return {
     value: home.value,
     growth: home.growth,
@@ -29,8 +27,9 @@ function toHome(home: WithdrawHome): NonNullable<WithdrawRequest['home']> {
     selling_pct: home.selling,
     early_repayment_pct: home.earlyRepayment,
     betterment: home.betterment,
-    cost: known ? home.cost : null,
-    bought: known ? home.bought : null,
+    // Sent as typed: one without the other is refused with its reason, never dropped unsaid.
+    cost: home.cost > 0 ? home.cost : null,
+    bought: home.bought === '' ? null : home.bought,
   };
 }
 

@@ -65,11 +65,16 @@ describe('toWithdraw', () => {
       cost: null,
       bought: null,
     });
-    // Its cost and purchase day go only when both are given.
     const known = { ...home, cost: 1_200_000, bought: '2012-05-01' };
     expect(toWithdraw({ ...DEFAULT_WITHDRAW, home: known }, DEFAULT_FORM).home).toMatchObject({
       cost: 1_200_000,
       bought: '2012-05-01',
+    });
+    // One of the two is sent as typed, for the API to say the other is missing.
+    const half = { ...home, bought: '2005-06-01' };
+    expect(toWithdraw({ ...DEFAULT_WITHDRAW, home: half }, DEFAULT_FORM).home).toMatchObject({
+      cost: null,
+      bought: '2005-06-01',
     });
   });
 });

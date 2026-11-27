@@ -36,6 +36,18 @@ J1 adds an apartment the user already owns to the Withdraw tab (`docs/WITHDRAWAL
   full); under a percent rule an empty account is the end only when no apartment is left.
 - **What is left** is the account plus the apartment's worth while it is held; the liquidation includes it.
 
+## What the review settled
+- **A sale that leaves a debt keeps it.** When the loan and the selling costs are above the value and the account
+  cannot pay the gap, what is still owed is carried to the next months, paid first, and shown as the apartment's
+  negative worth (and in the net worth) until it is. It used to vanish, so a sale read as a gain.
+- **A cost shortfall is a forced sale whatever the role.** It is tested before "when empty", which under a percent
+  rule is the same test, so the forced-sale warning appears there too.
+- **The net worth is what selling both would leave**, after the account's commission and tax and the apartment's
+  costs and betterment tax: the liquidation. It was the account before its tax plus the apartment after its own.
+- **One of the cost and the purchase day is sent as typed**, so the API says the other is missing, instead of the page
+  dropping it unsaid.
+- **No note on a loan schedule past the plan**: the engine never reads those months.
+
 ## Consequences
 - A golden scalar model in the tests runs the same plan with bisection for every fraction, across the three roles
   and both rules, with random apartment cash and worth, and matches the engine to `rtol=1e-9`.

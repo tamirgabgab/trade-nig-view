@@ -55,7 +55,7 @@ def test_without_an_apartment_nothing_changes(client: TestClient) -> None:
         None,
     )
     assert (summary["home_worth"], summary["home_cash"], summary["invested"]) == (0, 0, 0)
-    assert summary["net_worth"] == pytest.approx(400_000)
+    assert summary["liquidation"] == pytest.approx(400_000)
     assert all(row["home"] == 0 and row["home_cash"] == 0 for row in body["rows"])
 
 
@@ -66,8 +66,8 @@ def test_a_kept_apartment_is_in_what_is_left(client: TestClient) -> None:
     assert summary["balance"] == pytest.approx(400_000)
     assert rows[0]["home"] == pytest.approx(1_960_000)
     assert summary["home_worth"] == pytest.approx(1_960_000)
-    assert summary["net_worth"] == pytest.approx(2_360_000)
     assert summary["liquidation"] == pytest.approx(2_360_000)
+    assert summary["liquidation_real"] == pytest.approx(2_360_000)
     assert summary["home_sold_month"] is None
 
 
@@ -125,6 +125,14 @@ def test_sold_when_the_account_is_empty_and_the_bounds_may_sell_on_other_months(
     # A cost share of 0 pays more tax, so its account is empty sooner.
     assert floor["home_sold_month"] <= summary["home_sold_month"] <= ceiling["home_sold_month"]
     assert floor["home_sold_month"] < ceiling["home_sold_month"]
+
+
+def test_no_note_on_a_loan_schedule_past_the_plan(client: TestClient) -> None:
+    # A linked loan of 15 years beside a plan of 5, on the published CPI: the engine never reads
+    # the months after the plan, so their CPI held flat is not worth a warning.
+    home = {"loan": 300_000, "loan_months": 180, "loan_linked": True}
+    body = run(client, home, start="2020-01-15", inflation={"mode": "historical"})
+    assert not any("schedule" in warning for warning in body["warnings"])
 
 
 def test_a_kept_apartment_whose_costs_cannot_be_paid_is_sold(client: TestClient) -> None:

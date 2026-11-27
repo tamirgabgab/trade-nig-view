@@ -5093,9 +5093,11 @@ export interface components {
             balance_real: number;
             /**
              * Liquidation
-             * @description What selling all of it then would leave
+             * @description What selling all of it then would leave, the apartment included while held
              */
             liquidation: number;
+            /** Liquidation Real */
+            liquidation_real: number;
             /**
              * Depleted Month
              * @description The first month a fixed amount is not paid
@@ -5118,13 +5120,6 @@ export interface components {
              * @description What the apartment's sale would leave at the end
              */
             home_worth: number;
-            /**
-             * Net Worth
-             * @description The account and the apartment at the end
-             */
-            net_worth: number;
-            /** Net Worth Real */
-            net_worth_real: number;
             /**
              * Home Cash
              * @description The apartment's cash, all months

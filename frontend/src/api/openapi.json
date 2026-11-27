@@ -11583,7 +11583,11 @@
           "liquidation": {
             "type": "number",
             "title": "Liquidation",
-            "description": "What selling all of it then would leave"
+            "description": "What selling all of it then would leave, the apartment included while held"
+          },
+          "liquidation_real": {
+            "type": "number",
+            "title": "Liquidation Real"
           },
           "depleted_month": {
             "anyOf": [
@@ -11623,15 +11627,6 @@
             "type": "number",
             "title": "Home Worth",
             "description": "What the apartment's sale would leave at the end"
-          },
-          "net_worth": {
-            "type": "number",
-            "title": "Net Worth",
-            "description": "The account and the apartment at the end"
-          },
-          "net_worth_real": {
-            "type": "number",
-            "title": "Net Worth Real"
           },
           "home_cash": {
             "type": "number",
@@ -11688,13 +11683,12 @@
           "balance",
           "balance_real",
           "liquidation",
+          "liquidation_real",
           "depleted_month",
           "depleted_on",
           "months_paid",
           "lowest_net_real",
           "home_worth",
-          "net_worth",
-          "net_worth_real",
           "home_cash",
           "invested",
           "home_sold_month",

@@ -141,6 +141,30 @@ def test_a_sale_that_owes_more_than_it_brings_is_paid_from_the_account() -> None
     assert result.balance[-1] == pytest.approx(100_000 - 6 * 1_000 - 10_000)
 
 
+def test_a_sale_that_leaves_a_debt_keeps_it_until_it_is_paid() -> None:
+    # The loan is 50,000 above what the sale brings, and after month 1's costs the account holds
+    # 500: the month's 1,000 of costs and the 50,000 leave 50,500 owing, shown as the worth.
+    result = run(
+        Plan(1_500, cost_share=1.0, rule=Rule.PERCENT, percent=0.04),
+        growing(4, 0.0),
+        home(4, cash=-1_000, worth=-50_000),
+    )
+    assert (result.home_sold, result.cause) == (2, Cause.FORCED)
+    assert result.balance[2:] == pytest.approx(0.0)
+    assert result.home[2:] == pytest.approx(-50_500)
+    assert result.liquidation == pytest.approx(-50_500)
+    assert result.net[2:] == pytest.approx(0.0)
+
+
+def test_a_cost_shortfall_is_a_forced_sale_whatever_the_role() -> None:
+    result = run(
+        Plan(2_500, cost_share=1.0, rule=Rule.PERCENT, percent=0.04),
+        growing(6, 0.0),
+        home(6, cash=-1_000, role=Sale.WHEN_EMPTY),
+    )
+    assert result.cause is Cause.FORCED
+
+
 def test_a_capital_of_zero_with_an_apartment() -> None:
     result = run(fixed(0.0, 4_000), growing(12, 0.0), home(12, cash=5_000))
     assert result.balance == pytest.approx(1_000 * np.arange(13))
@@ -212,7 +236,7 @@ def golden(  # noqa: PLR0912, PLR0915 - one plain loop, as the engine's docstrin
     basis = [plan.cost_share * plan.capital * s / path.level[0, a] for a, s in enumerate(shares)]
     carried = 0.0
     rate = 1 - (1 - plan.management) ** (1 / 12)
-    held, sold_on = True, -1.0
+    held, sold_on, debt = True, -1.0, 0.0
     out: dict[str, list[float]] = {
         k: [0.0] for k in ("sold", "tax", "fee", "net", "commission", "invested", "home_cash")
     }
@@ -227,7 +251,7 @@ def golden(  # noqa: PLR0912, PLR0915 - one plain loop, as the engine's docstrin
     for k in range(1, months):
         for a in range(assets):
             basis[a] += units[a] * path.reinvested[k, a]
-        invested, commission, owed = 0.0, 0.0, 0.0
+        invested, commission, owed = 0.0, 0.0, debt
         due = plan.amount * (path.cpi[k] / path.cpi[0] if plan.indexed else 1.0)
         due = due if plan.rule is Rule.FIXED else 0.0
         cash = float(apartment.cash[k]) if held else 0.0
@@ -270,7 +294,7 @@ def golden(  # noqa: PLR0912, PLR0915 - one plain loop, as the engine's docstrin
                     invested += worth
                     commission += worth * plan.buy / (1 + plan.buy)
                 else:
-                    owed = -worth
+                    owed += -worth
                 value, cost, fee_due = state()
         duty = fee_due - cash + owed
         if plan.rule is Rule.FIXED:
@@ -287,6 +311,7 @@ def golden(  # noqa: PLR0912, PLR0915 - one plain loop, as the engine's docstrin
             units[a] *= 1 - fraction
             basis[a] *= 1 - fraction
         available = left + cash - owed
+        debt = -available if available < -0.005 else 0.0
         fee = min(fee_due, max(available, 0.0))
         rest = available - fee
         if plan.rule is Rule.FIXED:
@@ -306,7 +331,7 @@ def golden(  # noqa: PLR0912, PLR0915 - one plain loop, as the engine's docstrin
         out["invested"].append(invested)
         out["home_cash"].append(cash)
         out["balance"].append(sum(units[a] * path.unit[k, a] for a in range(assets)))
-        out["home"].append(float(apartment.worth[k]) if held else 0.0)
+        out["home"].append(float(apartment.worth[k]) if held else -debt)
     out["home_sold"] = [sold_on]
     return out
 
@@ -356,14 +381,14 @@ def test_the_engine_is_the_scalar_model(plan: Plan, role: Sale, sell_on: int, se
     rent=st.floats(0, 20_000),
     amount=st.floats(100, 20_000),
     share=st.floats(0, 1),
-    role=st.sampled_from([Sale.KEPT, Sale.WHEN_EMPTY]),
 )
-def test_a_higher_rent_never_leaves_less(
-    rent: float, amount: float, share: float, role: Sale
-) -> None:
+def test_a_higher_rent_never_leaves_less(rent: float, amount: float, share: float) -> None:
+    # A kept apartment with no costs is never sold, so more rent only means fewer units sold or
+    # more bought. (When a rent moves a sale to another month, its proceeds buy at other prices,
+    # and the end can be lower: no property there.)
     path = world(7, months=60, assets=2)
     plan = Plan(400_000, (1, 1), share, Rule.FIXED, amount, True, sell=0.003)
-    low = run(plan, path, home(60, cash=rent, role=role))
-    high = run(plan, path, home(60, cash=rent + 1_000, role=role))
+    low = run(plan, path, home(60, cash=rent))
+    high = run(plan, path, home(60, cash=rent + 1_000))
     assert high.net.sum() >= low.net.sum() - 1e-6
     assert high.balance[-1] + high.home[-1] >= low.balance[-1] + low.home[-1] - 1e-6

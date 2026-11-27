@@ -66,7 +66,9 @@ export function PlannerWithdrawResults({
   const left: PlannerCard = [
     'Left at the end',
     shekels(s.balance),
-    `In shekels of the first day: ${shekels(s.balance_real)}. Sold then, after the commission and the tax: ${shekels(s.liquidation)}${home ? ', the apartment included while it is held' : ''}`,
+    home
+      ? `The account; in shekels of the first day: ${shekels(s.balance_real)}`
+      : `In shekels of the first day: ${shekels(s.balance_real)}. Sold then, after the commission and the tax: ${shekels(s.liquidation)}`,
   ];
   const apartment: PlannerCard[] = home
     ? [
@@ -79,8 +81,8 @@ export function PlannerWithdrawResults({
         ],
         [
           'Net worth at the end',
-          shekels(s.net_worth),
-          `The account and the apartment; in shekels of the first day: ${shekels(s.net_worth_real)}`,
+          shekels(s.liquidation),
+          `What selling the account and the apartment then would leave, after their costs and taxes; in shekels of the first day: ${shekels(s.liquidation_real)}`,
         ],
       ]
     : [];

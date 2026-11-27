@@ -161,14 +161,15 @@ class WithdrawSummary(BaseModel):
     commissions: float
     balance: float = Field(description="The account after the last month")
     balance_real: float
-    liquidation: float = Field(description="What selling all of it then would leave")
+    liquidation: float = Field(
+        description="What selling all of it then would leave, the apartment included while held"
+    )
+    liquidation_real: float
     depleted_month: int | None = Field(description="The first month a fixed amount is not paid")
     depleted_on: dt.date | None
     months_paid: int = Field(description="Months paid in full")
     lowest_net_real: float = Field(description="The lowest month's income, in first-day shekels")
     home_worth: float = Field(description="What the apartment's sale would leave at the end")
-    net_worth: float = Field(description="The account and the apartment at the end")
-    net_worth_real: float
     home_cash: float = Field(description="The apartment's cash, all months")
     invested: float = Field(description="Put into the account: rent surplus, the sale")
     home_sold_month: int | None
@@ -225,13 +226,12 @@ def _summary(
         balance=float(result.balance[-1]),
         balance_real=float(result.balance[-1] / prices[-1]),
         liquidation=result.liquidation,
+        liquidation_real=float(result.liquidation / prices[-1]),
         depleted_month=depleted,
         depleted_on=None if depleted is None else dates[depleted],
         months_paid=months if depleted is None else depleted - 1,
         lowest_net_real=float(real.min()),
         home_worth=float(result.home[-1]),
-        net_worth=float(result.balance[-1] + result.home[-1]),
-        net_worth_real=float((result.balance[-1] + result.home[-1]) / prices[-1]),
         home_cash=float(result.home_cash.sum()),
         invested=float(result.invested.sum()),
         home_sold_month=result.home_sold,
@@ -298,10 +298,9 @@ def _apartment(
     monthly, warnings = home_series(spec, cpi, macro)
     result = run_home(plan, monthly)
     cash = result.rent - result.payment - result.costs
-    return (
-        Home(cash, result.net_worth, home.role, home.sell_after_months),
-        notes + warnings,
-    )
+    # The engine reads no month after the plan's last: a note on the schedule beyond it is moot.
+    beyond = [w for w in warnings if not w.startswith("The schedule after the sale")]
+    return Home(cash, result.net_worth, home.role, home.sell_after_months), notes + beyond
 
 
 @router.post("/planner/withdraw", response_model=WithdrawResponse)

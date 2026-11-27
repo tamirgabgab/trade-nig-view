@@ -58,10 +58,11 @@ value less the selling costs, the loan with its early-repayment fee, and the bet
   :math:`h_k`. (So under a percent rule the balance ignores :math:`c` only while the
   :math:`p / 12` sale pays :math:`D`.)
 * Under a fixed rule a surplus, :math:`h_k - F - N_k > 0`, is invested.
-* **The sale** is on the month asked for (*on a date*); on the first month the account cannot pay
-  :math:`N_k + D` (*when empty*); or, whatever the role, on the first month it cannot pay
-  :math:`D` (*forced*). Its month still has :math:`h_k`. :math:`W_k > 0` is invested; a negative
-  :math:`W_k` joins :math:`D`.
+* **The sale** is on the month asked for (*on a date*); whatever the role, on the first month the
+  account cannot pay :math:`D` (*forced*); or on the first month it cannot pay :math:`N_k + D`
+  (*when empty*). Its month still has :math:`h_k`. :math:`W_k > 0` is invested; a negative
+  :math:`W_k` joins :math:`D`, and what the account cannot pay of it stays a debt, paid first in
+  the months after and shown as the apartment's (negative) worth until it is.
 * **Money invested** buys the plan's weights at the buy commission :math:`\\beta`: asset
   :math:`a` gains :math:`m w_a / ((1 + \\beta) u_{k,a})` units at a cost of
   :math:`m w_a / \\ell_{k,a}` (as an H1 deposit, the commission is part of the cost).
@@ -297,6 +298,8 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
     depleted: int | None = None
     #: The apartment while it is held.
     owned = home
+    #: What a sale left owing (the loan above what it brought) that the account could not pay yet.
+    debt = 0.0
     home_sold: int | None = None
     cause: Cause | None = None
     if home is not None:
@@ -322,23 +325,23 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
         if plan.rule is Rule.FIXED:
             due[k] = plan.amount * (grid.cpi[k] / grid.cpi[0] if plan.indexed else 1.0)
         cash = float(owned.cash[k]) if owned is not None else 0.0
-        owed = 0.0
+        owed = debt
         if owned is not None:
             duty = fee_due - cash
             everything = _leaves(1.0, proceeds, gain, carried, plan.gains_tax)
             if owned.role is Sale.ON_DATE and k == owned.sell_on:
                 cause = Cause.PLANNED
-            elif owned.role is Sale.WHEN_EMPTY and everything < due[k] + duty - PAID:
-                cause = Cause.EMPTY
             elif duty > 0.0 and everything < duty - PAID:
                 cause = Cause.FORCED
+            elif owned.role is Sale.WHEN_EMPTY and everything < due[k] + duty - PAID:
+                cause = Cause.EMPTY
             if cause is not None:
                 money, owned, home_sold = float(owned.worth[k]), None, k
                 if money > 0.0:
                     invest(money, k)
                     value, proceeds, gain, fee_due = account(k)
                 else:
-                    owed = -money
+                    owed += -money
         duty = fee_due - cash + owed
         if plan.rule is Rule.FIXED:
             fraction = _fraction(due[k] + duty, proceeds, gain, carried, plan.gains_tax)
@@ -351,6 +354,7 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
         tax[k] = plan.gains_tax * max(realised - carried, 0.0)
         carried = max(carried - realised, 0.0)
         available = fraction * proceeds - tax[k] + cash - owed
+        debt = -available if available < -PAID else 0.0
         fee[k] = min(fee_due, max(available, 0.0))
         rest = available - fee[k]
         sold[k] = fraction * value
@@ -365,7 +369,7 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
             net[k] = max(rest, 0.0)
         balance[k] = float(units @ grid.unit[k])
         home_cash[k] = cash
-        worth[k] = float(owned.worth[k]) if owned is not None else 0.0
+        worth[k] = float(owned.worth[k]) if owned is not None else -debt
         # A fixed amount not paid in full, or nothing left to sell and no apartment.
         if depleted is None and (due[k] - net[k] > PAID or (value <= 0.0 and owned is None)):
             depleted = k
