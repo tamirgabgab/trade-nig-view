@@ -24,13 +24,16 @@ from pydantic import BaseModel, Field
 from app.api.deps import get_bar_service, get_macro_service, get_universe
 from app.api.home import MAX_YEAR
 from app.api.planner import (
+    Accumulated,
     AssetIn,
     FeesIn,
     InflationIn,
     InvalidPlanError,
     MarketOptionIn,
+    MarketRequest,
     Percent,
     TaxesIn,
+    accumulate,
     fees_of,
     inflation_spec,
     load_mix,
@@ -41,7 +44,7 @@ from app.data.universe import Universe
 from app.macro.service import MacroService
 from app.models.bars import FloatArray
 from app.planner.data import FxSeries, Macro, cpi_path
-from app.planner.deposits import add_months, day_number
+from app.planner.deposits import EPOCH, add_months, day_number
 from app.planner.home import HomePlan, RentMode, run_home
 from app.planner.home_data import HomeSpec, home_series
 from app.planner.inflation import CpiPath
@@ -58,6 +61,7 @@ from app.planner.withdraw import (
     Rule,
     Sale,
     assumed_grid,
+    handover,
     run,
     sample,
 )
@@ -158,6 +162,24 @@ class WithdrawRequest(BaseModel):
     )
     inflation: InflationIn = InflationIn()
     home: HomeIn | None = None
+    plan: MarketRequest | None = Field(
+        default=None,
+        description=(
+            "The Market tab's plan whose end is the first day: its deposits are the account's "
+            "lots, sold first in, first out (the capital, the cost share and `market` are then "
+            "not read)"
+        ),
+    )
+
+
+class AccumulatedOut(BaseModel):
+    """What a Market plan handed over on the first day."""
+
+    deposited: float
+    value: float
+    cost_share: float = Field(description="Its cost over its value, all lots together")
+    first: dt.date = Field(description="The first deposit")
+    deposits: int
 
 
 class WithdrawSummary(BaseModel):
@@ -216,8 +238,9 @@ class WithdrawResponse(BaseModel):
     end: dt.date
     months: int
     summary: WithdrawSummary
-    floor: WithdrawSummary
-    ceiling: WithdrawSummary
+    floor: WithdrawSummary | None = Field(description="Null from a plan's lots: the tax is known")
+    ceiling: WithdrawSummary | None
+    accumulated: AccumulatedOut | None = Field(description="The Market plan behind the lots")
     reversed: WithdrawSummary | None = Field(
         description="The plan with its market months in reverse order (null on an assumed return)"
     )
@@ -356,6 +379,39 @@ class Account:
     fx: FxSeries | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class HandedOver:
+    """The Market plan behind a withdrawal plan: its account, and its cost over its value."""
+
+    ran: Accumulated
+    account: Account
+    cost_share: float
+
+
+def handed_over(
+    body: WithdrawRequest,
+    plan: MarketRequest,
+    service: BarService,
+    macro: Macro,
+    universe: Universe,
+) -> HandedOver:
+    """Run the Market plan to its end, the withdrawal plan's first day."""
+    if body.returns.mode != "mix":
+        raise PlanError(
+            "A plan's lots are the Market tab's assets: the account cannot grow by an assumed "
+            "return"
+        )
+    if plan.end != body.start:
+        raise PlanError("The withdrawals start on the day the Market tab's plan ends")
+    ran = accumulate(plan, service, macro, universe)
+    fees, result = fees_of(plan), ran.result
+    account = Account(taxes_of(plan), fees, [a.data for a in ran.assets], ran.warnings, ran.fx)
+    # What the Market tab would tax, turned around: the cost of everything it holds.
+    cost = (1.0 - fees.sell) * result.value - sum(lot.gain for lot in result.lots)
+    share = min(max(cost / result.value, 0.0), 1.0) if result.value > 0 else 1.0
+    return HandedOver(ran, account, share)
+
+
 def check(body: WithdrawRequest) -> None:
     """The rule has what it needs, and the plan ends in a year the calendar reaches."""
     rule = body.rule
@@ -432,7 +488,12 @@ def _run(
     loan_months = body.home.loan_months if body.home is not None and body.home.loan > 0 else 0
     horizon = day_number(add_months(body.start, max(body.months, loan_months)))
     cpi = cpi_path(inflation_spec(body.inflation), first, horizon, macro)
-    account = account_of(body, service, macro, universe, mix=body.returns.mode == "mix")
+    held = None if body.plan is None else handed_over(body, body.plan, service, macro, universe)
+    account = (
+        account_of(body, service, macro, universe, mix=body.returns.mode == "mix")
+        if held is None
+        else held.account
+    )
     taxes = account.taxes
     warnings = list(account.warnings)
     if last > int(cpi.days[-1]) + MONTH_DAYS:
@@ -459,11 +520,16 @@ def _run(
         )
         warnings.extend(note for note in [*notes, *more] if note not in warnings)
 
-    def at(share: float, path: Grid = grid) -> Result:
-        return run(plan_of(body, account, weights, share), path, home)
+    # A plan's lots as they stand on the first day; without one, one pooled lot at a cost share.
+    lots = None if held is None else handover(held.ran.result.lots, grid, account.fees.sell)
 
-    share = body.cost_share_pct / 100
-    result, floor, ceiling = at(share), at(0.0), at(1.0)
+    def at(share: float, path: Grid = grid) -> Result:
+        return run(plan_of(body, account, weights, share), path, home, lots)
+
+    share = body.cost_share_pct / 100 if held is None else held.cost_share
+    result = at(share)
+    # From known lots the tax is known: the plan is its own floor and ceiling.
+    floor, ceiling = (at(0.0), at(1.0)) if held is None else (result, result)
     if result.cause is Cause.FORCED and result.home_sold is not None:
         warnings.append(
             f"The apartment is sold on {dates[result.home_sold]}: the account could not pay its "
@@ -475,8 +541,17 @@ def _run(
         end=dates[-1],
         months=body.months,
         summary=summary_of(share, result, prices, dates),
-        floor=summary_of(0.0, floor, prices, dates),
-        ceiling=summary_of(1.0, ceiling, prices, dates),
+        floor=summary_of(0.0, floor, prices, dates) if held is None else None,
+        ceiling=summary_of(1.0, ceiling, prices, dates) if held is None else None,
+        accumulated=None
+        if held is None
+        else AccumulatedOut(
+            deposited=held.ran.result.deposited,
+            value=held.ran.result.value,
+            cost_share=held.cost_share,
+            first=EPOCH + dt.timedelta(days=held.ran.first),
+            deposits=len(held.ran.result.deposits),
+        ),
         # The market's months in reverse; the CPI and the apartment as they were.
         reversed=None
         if account.mix is None

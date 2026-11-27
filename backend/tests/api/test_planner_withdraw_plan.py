@@ -89,7 +89,14 @@ def test_the_oldest_lots_go_first(client: TestClient) -> None:
     got = exact["accumulated"]
     # The same capital as one pooled lot at the plan's overall cost share spreads the gain
     # evenly; first in, first out sells the 2005 lot, which gained the most, first.
-    pooled = run(client, plan=None, capital=got["value"], cost_share_pct=100 * got["cost_share"])
+    account = {"assets": MARKET["assets"], "use_fx": False}
+    pooled = run(
+        client,
+        plan=None,
+        market=account,
+        capital=got["value"],
+        cost_share_pct=100 * got["cost_share"],
+    )
     first_year = slice(1, 13)
     assert sum(r["tax"] for r in exact["rows"][first_year]) > 1.05 * sum(
         r["tax"] for r in pooled["rows"][first_year]

@@ -875,6 +875,29 @@ export interface components {
             /** Net Value */
             net_value: number;
         };
+        /**
+         * AccumulatedOut
+         * @description What a Market plan handed over on the first day.
+         */
+        AccumulatedOut: {
+            /** Deposited */
+            deposited: number;
+            /** Value */
+            value: number;
+            /**
+             * Cost Share
+             * @description Its cost over its value, all lots together
+             */
+            cost_share: number;
+            /**
+             * First
+             * Format: date
+             * @description The first deposit
+             */
+            first: string;
+            /** Deposits */
+            deposits: number;
+        };
         /** AssetDepth */
         AssetDepth: {
             /** Symbol */
@@ -2842,6 +2865,8 @@ export interface components {
              */
             inflation: components["schemas"]["InflationIn"];
             home?: components["schemas"]["HomeIn"] | null;
+            /** @description The Market tab's plan whose end is the first day: its deposits are the account's lots, sold first in, first out (the capital, the cost share and `market` are then not read) */
+            plan?: components["schemas"]["MarketRequest"] | null;
             /**
              * Sustain Pct
              * @description The share of realizations an amount must last in
@@ -5223,6 +5248,8 @@ export interface components {
              */
             inflation: components["schemas"]["InflationIn"];
             home?: components["schemas"]["HomeIn"] | null;
+            /** @description The Market tab's plan whose end is the first day: its deposits are the account's lots, sold first in, first out (the capital, the cost share and `market` are then not read) */
+            plan?: components["schemas"]["MarketRequest"] | null;
         };
         /** WithdrawResponse */
         WithdrawResponse: {
@@ -5239,8 +5266,11 @@ export interface components {
             /** Months */
             months: number;
             summary: components["schemas"]["WithdrawSummary"];
-            floor: components["schemas"]["WithdrawSummary"];
-            ceiling: components["schemas"]["WithdrawSummary"];
+            /** @description Null from a plan's lots: the tax is known */
+            floor: components["schemas"]["WithdrawSummary"] | null;
+            ceiling: components["schemas"]["WithdrawSummary"] | null;
+            /** @description The Market plan behind the lots */
+            accumulated: components["schemas"]["AccumulatedOut"] | null;
             /** @description The plan with its market months in reverse order (null on an assumed return) */
             reversed: components["schemas"]["WithdrawSummary"] | null;
             /**
@@ -5348,6 +5378,8 @@ export interface components {
              */
             inflation: components["schemas"]["InflationIn"];
             home?: components["schemas"]["HomeIn"] | null;
+            /** @description The Market tab's plan whose end is the first day: its deposits are the account's lots, sold first in, first out (the capital, the cost share and `market` are then not read) */
+            plan?: components["schemas"]["MarketRequest"] | null;
             /**
              * Sustain Pct
              * @description The share of realizations an amount must last in

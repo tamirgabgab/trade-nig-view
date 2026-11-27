@@ -2610,6 +2610,43 @@
         ],
         "title": "AccountOut"
       },
+      "AccumulatedOut": {
+        "properties": {
+          "deposited": {
+            "type": "number",
+            "title": "Deposited"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "cost_share": {
+            "type": "number",
+            "title": "Cost Share",
+            "description": "Its cost over its value, all lots together"
+          },
+          "first": {
+            "type": "string",
+            "format": "date",
+            "title": "First",
+            "description": "The first deposit"
+          },
+          "deposits": {
+            "type": "integer",
+            "title": "Deposits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deposited",
+          "value",
+          "cost_share",
+          "first",
+          "deposits"
+        ],
+        "title": "AccumulatedOut",
+        "description": "What a Market plan handed over on the first day."
+      },
       "AssetDepth": {
         "properties": {
           "symbol": {
@@ -6727,6 +6764,17 @@
                 "type": "null"
               }
             ]
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Market tab's plan whose end is the first day: its deposits are the account's lots, sold first in, first out (the capital, the cost share and `market` are then not read)"
           },
           "sustain_pct": {
             "type": "number",
@@ -11919,6 +11967,17 @@
                 "type": "null"
               }
             ]
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Market tab's plan whose end is the first day: its deposits are the account's lots, sold first in, first out (the capital, the cost share and `market` are then not read)"
           }
         },
         "type": "object",
@@ -11950,10 +12009,36 @@
             "$ref": "#/components/schemas/WithdrawSummary"
           },
           "floor": {
-            "$ref": "#/components/schemas/WithdrawSummary"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WithdrawSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null from a plan's lots: the tax is known"
           },
           "ceiling": {
-            "$ref": "#/components/schemas/WithdrawSummary"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WithdrawSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "accumulated": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccumulatedOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Market plan behind the lots"
           },
           "reversed": {
             "anyOf": [
@@ -11990,6 +12075,7 @@
           "summary",
           "floor",
           "ceiling",
+          "accumulated",
           "reversed",
           "rows",
           "warnings"
@@ -12159,6 +12245,17 @@
                 "type": "null"
               }
             ]
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Market tab's plan whose end is the first day: its deposits are the account's lots, sold first in, first out (the capital, the cost share and `market` are then not read)"
           },
           "sustain_pct": {
             "type": "number",

@@ -28,10 +28,12 @@ from app.api.withdraw import (
     MONTH_DAYS,
     NO_CURRENCY_BASE,
     Account,
+    AccountIn,
     WithdrawRequest,
     account_of,
     apartment,
     check,
+    handed_over,
     home_cost,
     plan_of,
 )
@@ -253,10 +255,30 @@ def _report(
     )
 
 
+def _pooled[R: ManyRequest](
+    body: R, service: BarService, macro: Macro, universe: Universe
+) -> tuple[R, list[str]]:
+    """A request from a Market plan as one capital at the plan's overall cost share: the
+    realizations do not carry lots."""
+    if body.plan is None:
+        return body, []
+    held = handed_over(body, body.plan, service, macro, universe)
+    value = held.ran.result.value
+    plan = body.plan
+    market = AccountIn(assets=plan.assets, use_fx=plan.use_fx, fees=plan.fees, taxes=plan.taxes)
+    changed = {"plan": None, "capital": value, "cost_share_pct": 100 * held.cost_share}
+    note = (
+        f"Every start and world uses what the plan accumulated ({value:,.0f}) as one capital at "
+        f"its overall cost share ({100 * held.cost_share:.0f} %), not lot by lot"
+    )
+    return body.model_copy(update={**changed, "market": market}), [note]
+
+
 def _study(
     body: ManyRequest, service: BarService, macro: Macro, universe: Universe
 ) -> WithdrawManyResponse:
     check(body)
+    body, pooled = _pooled(body, service, macro, universe)
     if body.returns.mode != "mix":
         raise PlanError(
             "Windows of history need the Market tab's mix: on an assumed return every window is "
@@ -266,7 +288,7 @@ def _study(
     mix = account.mix or []
     spec = inflation_spec(body.inflation)
     cost, notes = (None, []) if body.home is None else home_cost(body.start, body.home, macro)
-    warnings = [*account.warnings, *notes]
+    warnings = [*pooled, *account.warnings, *notes]
     # A start a month, from the earliest a series could have to today.
     shifts = month_shifts(body.start, EARLIEST_START, dt.datetime.now(dt.UTC).date(), 1)
 
@@ -361,6 +383,7 @@ def _simulate(
     body: WithdrawSimulateRequest, service: BarService, macro: Macro, universe: Universe
 ) -> WithdrawManyResponse:
     check(body)
+    body, pooled = _pooled(body, service, macro, universe)
     assumed = body.returns.mode == "assumed"
     if assumed and body.method == "bootstrap":
         raise PlanError(
@@ -373,7 +396,7 @@ def _simulate(
     spec = inflation_spec(body.inflation)
     indexed_home = body.home is not None and body.home.growth == "index"
     cost, notes = (None, []) if body.home is None else home_cost(body.start, body.home, macro)
-    warnings = [*account.warnings, *notes]
+    warnings = [*pooled, *account.warnings, *notes]
     series: dict[str, tuple[IntArray, FloatArray]] = {}
     if model is None:
         for asset in mix:

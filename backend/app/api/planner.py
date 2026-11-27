@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import zoneinfo
+from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Annotated, Literal
 
@@ -31,7 +32,16 @@ from app.planner.data import (
 )
 from app.planner.deposits import Deposit, Recurring, day_number, expand
 from app.planner.fills import FillMode, Granularity
-from app.planner.market import Fees, FillSpec, PlanError, TaxBase, Taxes, run_market
+from app.planner.inflation import CpiPath
+from app.planner.market import (
+    Fees,
+    FillSpec,
+    MarketResult,
+    PlanError,
+    TaxBase,
+    Taxes,
+    run_market,
+)
 
 router = APIRouter(tags=["planner"])
 
@@ -332,9 +342,23 @@ def run_market_plan(
         raise InvalidPlanError(str(exc)) from exc
 
 
-def _run(
-    body: MarketRequest, service: BarService, macro: MacroService, universe: Universe
-) -> MarketResponse:
+@dataclass(frozen=True, slots=True)
+class Accumulated:
+    """A market plan that was run: its account at the end, and what it was run on."""
+
+    result: MarketResult
+    assets: list[LoadedAsset]
+    fx: FxSeries | None
+    warnings: list[str]
+    cpi: CpiPath
+    first: int
+    last: int
+
+
+def accumulate(
+    body: MarketRequest, service: BarService, macro: Macro, universe: Universe
+) -> Accumulated:
+    """Run the deposits of a request into its mix until its end date."""
     one_off, recurring = schedule(body)
     if not one_off and not recurring:
         raise PlanError("A plan needs at least one deposit")
@@ -360,6 +384,15 @@ def _run(
         session_t=session_t,
         fill_override=override,
     )
+    return Accumulated(result, assets, fx, warnings, cpi, first, last)
+
+
+def _run(
+    body: MarketRequest, service: BarService, macro: MacroService, universe: Universe
+) -> MarketResponse:
+    ran = accumulate(body, service, macro, universe)
+    result, assets, fx, warnings, cpi = ran.result, ran.assets, ran.fx, ran.warnings, ran.cpi
+    first, last = ran.first, ran.last
     lots: dict[int, list[LotOut]] = {}
     for lot in result.lots:
         lots.setdefault(lot.deposit, []).append(
