@@ -89,19 +89,19 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
         if (typeof result === 'string' && more === null && aside === null) throw new Error(result);
         const mine = { label: ruleLabel(settings), result };
         const theirs = aside === null ? null : { label: ruleLabel(otherSettings), result: aside };
-        const [a, b] = slot === 'a' ? [mine, theirs] : [theirs, mine];
         setShown({
           result,
           many: more,
           fixed,
           home: settings.home.include,
+          // Option A first, whichever of the two is on screen.
           beside:
             theirs === null
               ? null
-              : [
-                  { ...(a ?? mine), label: `A: ${(a ?? mine).label}` },
-                  { ...(b ?? mine), label: `B: ${(b ?? mine).label}` },
-                ],
+              : (slot === 'a' ? [mine, theirs] : [theirs, mine]).map((plan, index) => ({
+                  ...plan,
+                  label: `${index === 0 ? 'A' : 'B'}: ${plan.label}`,
+                })),
           option: theirs === null ? undefined : `Option ${slot.toUpperCase()}`,
         });
       })
