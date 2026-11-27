@@ -3,6 +3,7 @@ against an independent scalar model, and against the Market tab's account at the
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 
 import numpy as np
@@ -24,7 +25,9 @@ from app.planner.withdraw import (
     sample,
 )
 from app.planner.withdraw_study import stack, stack_homes
-from tests.unit.planner.test_market import asset
+from tests.unit.planner.test_market import FLAT_CPI, asset
+from tests.unit.planner.test_scenario import START as GROWER_START
+from tests.unit.planner.test_scenario import grower
 from tests.unit.planner.test_withdraw import growing, world
 from tests.unit.planner.test_withdraw_home import PLANS, flows, home
 
@@ -328,6 +331,28 @@ def test_a_handover_on_a_weekend_reads_the_bar_the_account_was_valued_on() -> No
     result = run(
         Plan(0.0, rule=Rule.PERCENT, percent=0.0), path, lots=handover(at_handover.lots, path, 0.0)
     )
+    assert result.balance[0] == pytest.approx(at_handover.value)
+    assert result.balance[-1] == pytest.approx(whole.value)
+    assert result.liquidation == pytest.approx(whole.net_value)
+
+
+def test_a_handover_of_two_assets_keeps_each_lot_on_its_own_asset() -> None:
+    # Two assets that grow apart (8 % and 1 % a year), 70 / 30: handed over after two years and
+    # held three more, the account is what the Market tab's is over the five. Units on the wrong
+    # asset would start at the same value and end somewhere else.
+    fast, slow = (
+        replace(grower(0.08), symbol="FAST", weight=7.0),
+        replace(grower(0.01), symbol="SLOW", weight=3.0),
+    )
+    deposits = [Deposit(GROWER_START, 100_000), Deposit(date(2021, 3, 1), 60_000)]
+    day, months = date(2022, 1, 15), 36
+    at_handover = run_market([fast, slow], deposits, day, cpi=FLAT_CPI)
+    whole = run_market([fast, slow], deposits, date(2025, 1, 15), cpi=FLAT_CPI)
+    path = sample([fast, slow], day, months, Taxes(), FLAT_CPI, handed=True)
+    bought = handover(at_handover.lots, path, 0.0)
+    assert bought.units.shape == (2, 2)
+    nothing = Plan(0.0, (7, 3), rule=Rule.PERCENT, percent=0.0)
+    result = run(nothing, path, lots=bought)
     assert result.balance[0] == pytest.approx(at_handover.value)
     assert result.balance[-1] == pytest.approx(whole.value)
     assert result.liquidation == pytest.approx(whole.net_value)

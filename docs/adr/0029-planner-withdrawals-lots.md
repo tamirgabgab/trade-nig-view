@@ -19,7 +19,8 @@ J4 (`docs/WITHDRAWAL_PLAN.md`), run before J3 at the user's request. The user's 
   is J0 to J2 with their closed form and their numbers; known lots take one more slot a month for new money.
 - **The fraction for a net amount by bisection** with known lots. What a sale leaves rises with the fraction (a unit
   never costs more tax than it brings) but has a kink at every lot; sixty halvings reach the last bit of a double.
-  A plan of 30 years from 120 deposits takes about a second.
+  A plan of 30 years from 120 lots of two assets measured 1.3 s a run, and the single plan runs twice (the months
+  in reverse); 1,000 pooled worlds of 30 years still take 0.12 s.
 - **The handover is exact.** `handover()` reads `run_market`'s lots on the plan's last day: a lot's units are its
   value there, and its cost is what the market account would tax it on (its indexed cost less the account fees its
   units already paid, which that account counts as proceeds). So selling everything on that day pays the Market
