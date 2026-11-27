@@ -2,7 +2,11 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
-import { WITHDRAW_RESULT } from '../test/plannerWithdrawBody.ts';
+import {
+  WITHDRAW_HOME_RESULT,
+  WITHDRAW_RESULT,
+  WITHDRAW_SOLD_RESULT,
+} from '../test/plannerWithdrawBody.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
 import { PlannerWithdraw } from './PlannerWithdraw.tsx';
 
@@ -138,6 +142,68 @@ describe('PlannerWithdraw', () => {
     });
     renderWithQuery(<PlannerWithdraw hidden={false} />);
     expect(screen.getByText(/^Runs option B’s mix \(the one on screen\): QQQ 100%/)).toBeVisible();
+  });
+
+  it('includes an apartment the owner keeps, and shows it in what is left', async () => {
+    const user = userEvent.setup();
+    const sent = stub(WITHDRAW_HOME_RESULT);
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    // Its fields only when it is included.
+    expect(screen.queryByRole('spinbutton', { name: 'Value today ₪' })).toBeNull();
+    await user.click(screen.getByRole('checkbox', { name: 'Include an apartment I own' }));
+    expect(screen.getByRole('spinbutton', { name: 'Value today ₪' })).toBeVisible();
+    // Rent only when it is rented out; the year of a sale only when it is sold on a date.
+    expect(screen.queryByRole('spinbutton', { name: 'Rent ₪ a month' })).toBeNull();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'The apartment is' }), [
+      'rent_out',
+    ]);
+    expect(screen.getByRole('spinbutton', { name: 'Rent ₪ a month' })).toBeVisible();
+    expect(screen.queryByRole('spinbutton', { name: 'Sold after, years' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    await screen.findByRole('heading', { name: /^Withdrawals:/ });
+    expect(sent[0]).toMatchObject({
+      home: { value: 2_000_000, use: 'rent_out', rent: 5_500, role: 'kept' },
+    });
+    expect(card('The apartment')).toHaveTextContent('Kept');
+    expect(card('The apartment')).toHaveAttribute('title', expect.stringContaining('₪1,900,000'));
+    expect(card('Net worth at the end')).toHaveTextContent('₪1,900,000');
+    // At the floor of the tax the account emptied sooner, and the apartment was sold then.
+    const bounds = screen.getByRole('table', { name: 'Tax bounds' });
+    expect(
+      within(bounds)
+        .getAllByRole('columnheader')
+        .map((h) => h.textContent),
+    ).toContain('The apartment');
+    expect(within(bounds).getByText('Forced sale on 2030-03-15')).toBeVisible();
+    const years = screen.getByRole('table', { name: 'Withdrawals by year' });
+    expect(within(years).getByRole('columnheader', { name: 'Apartment, cash' })).toBeVisible();
+    expect(within(years).getByText('₪6,000')).toBeVisible();
+  });
+
+  it('sells the apartment on a date and says when', async () => {
+    const user = userEvent.setup();
+    const sent = stub(WITHDRAW_SOLD_RESULT);
+    usePlannerStore.getState().setWithdraw({
+      home: { ...usePlannerStore.getState().withdraw.home, include: true },
+    });
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Its sale' }), ['on_date']);
+    const after = screen.getByRole('spinbutton', { name: 'Sold after, years' });
+    await user.clear(after);
+    await user.type(after, '3');
+    await user.tab();
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    await screen.findByRole('heading', { name: /^Withdrawals:/ });
+    expect(sent[0]).toMatchObject({ home: { role: 'on_date', sell_after_months: 36 } });
+    expect(card('The apartment')).toHaveTextContent('Sold on 2030-03-15');
+    expect(card('The apartment')).toHaveAttribute(
+      'title',
+      expect.stringContaining('On the date set'),
+    );
+    expect(usePlannerStore.getState().withdraw.home).toMatchObject({
+      role: 'on_date',
+      sellAfter: 3,
+    });
   });
 
   it('shows why a plan cannot run and drops the earlier results', async () => {

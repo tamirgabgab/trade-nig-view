@@ -1,6 +1,6 @@
 import { DEFAULT_FORM, DEFAULT_WITHDRAW } from '../store/plannerStore.ts';
 import { byYear, mixLabel, toWithdraw } from './withdraw.ts';
-import { WITHDRAW_RESULT } from '../test/plannerWithdrawBody.ts';
+import { WITHDRAW_HOME_RESULT, WITHDRAW_RESULT } from '../test/plannerWithdrawBody.ts';
 import type { WithdrawResult } from '../api/planner.ts';
 
 const ASSET = { symbol: 'SPY', weight: 100, currency: 'USD' as const, dividendYield: 0 };
@@ -28,6 +28,49 @@ describe('toWithdraw', () => {
     const empty = { ...DEFAULT_FORM, assets: [{ ...ASSET, symbol: '' }] };
     const assumed = toWithdraw({ ...DEFAULT_WITHDRAW, returns: 'assumed' }, empty);
     expect(assumed.market?.assets).toEqual([]);
+    // No apartment unless it is included.
+    expect(request.home ?? null).toBeNull();
+  });
+
+  it('sends an included apartment in the API’s units', () => {
+    const home = {
+      ...DEFAULT_WITHDRAW.home,
+      include: true,
+      use: 'rent_out' as const,
+      loan: 400_000,
+      loanYears: 12.5,
+      role: 'on_date' as const,
+      sellAfter: 7,
+    };
+    const request = toWithdraw({ ...DEFAULT_WITHDRAW, home }, DEFAULT_FORM);
+    expect(request.home).toEqual({
+      value: 2_000_000,
+      growth: 'assumed',
+      growth_pct: 3,
+      use: 'rent_out',
+      rent: 5_500,
+      vacancy_pct: 4,
+      rent_tax_pct: 10,
+      maintenance_pct: 0.5,
+      insurance: 1_500,
+      loan: 400_000,
+      loan_rate_pct: 4,
+      loan_months: 150,
+      loan_linked: false,
+      role: 'on_date',
+      sell_after_months: 84,
+      selling_pct: 2.4,
+      early_repayment_pct: 0,
+      betterment: 'single_home',
+      cost: null,
+      bought: null,
+    });
+    // Its cost and purchase day go only when both are given.
+    const known = { ...home, cost: 1_200_000, bought: '2012-05-01' };
+    expect(toWithdraw({ ...DEFAULT_WITHDRAW, home: known }, DEFAULT_FORM).home).toMatchObject({
+      cost: 1_200_000,
+      bought: '2012-05-01',
+    });
   });
 });
 
@@ -44,12 +87,27 @@ describe('mixLabel', () => {
 });
 
 describe('byYear', () => {
+  it('adds the apartment’s cash and keeps its worth at the end of each year', () => {
+    const [year] = byYear(WITHDRAW_HOME_RESULT.rows);
+    expect(year).toMatchObject({ homeCash: 6_000, home: 1_900_000 });
+  });
+
   it('adds the months up by year of the plan, the last one as long as it is', () => {
     const { rows }: WithdrawResult = WITHDRAW_RESULT;
     const [, first] = rows;
     if (first === undefined) throw new Error('the fixture has months');
     expect(byYear(rows)).toEqual([
-      { year: 1, months: 3, net: 27_000, netReal: 27_000, tax: 1_500, costs: 0, balance: 0 },
+      {
+        year: 1,
+        months: 3,
+        net: 27_000,
+        netReal: 27_000,
+        tax: 1_500,
+        costs: 0,
+        balance: 0,
+        homeCash: 0,
+        home: 0,
+      },
     ]);
     const long = Array.from({ length: 15 }, (_, month) => ({
       ...first,

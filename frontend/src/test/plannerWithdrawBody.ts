@@ -15,6 +15,9 @@ const row = (month: number, date: string, net: number, balance: number) => ({
   balance_ceiling: balance + 1_500,
   net_floor: net,
   net_ceiling: net,
+  home: 0,
+  home_cash: 0,
+  invested: 0,
 });
 
 const summary = (cost_share: number, balance: number, depleted: number | null) => ({
@@ -31,6 +34,14 @@ const summary = (cost_share: number, balance: number, depleted: number | null) =
   depleted_on: depleted === null ? null : '2030-04-15',
   months_paid: depleted === null ? 3 : depleted - 1,
   lowest_net_real: depleted === null ? 9_800 : 7_000,
+  home_worth: 0,
+  net_worth: balance,
+  net_worth_real: balance,
+  home_cash: 0,
+  invested: 0,
+  home_sold_month: null as number | null,
+  home_sold_on: null as string | null,
+  home_sale: null as 'planned' | 'empty' | 'forced' | null,
 });
 
 export const WITHDRAW_RESULT = {
@@ -47,4 +58,46 @@ export const WITHDRAW_RESULT = {
     row(3, '2030-04-15', 7_000, 0),
   ],
   warnings: ['After the last published CPI it is held flat'],
+};
+
+/**
+ * The same plan with an apartment worth 1,900,000 net that pays 2,000 a month: the floor's account
+ * empties in month 2 and the apartment is sold then; the others keep it.
+ */
+const withHome = (rows: typeof WITHDRAW_RESULT.rows) =>
+  rows.map((r) => ({ ...r, home: 1_900_000, home_cash: r.month === 0 ? 0 : 2_000 }));
+
+export const WITHDRAW_HOME_RESULT = {
+  ...WITHDRAW_RESULT,
+  summary: {
+    ...WITHDRAW_RESULT.summary,
+    home_worth: 1_900_000,
+    net_worth: 1_900_000,
+    net_worth_real: 1_850_000,
+    home_cash: 6_000,
+    liquidation: 1_900_000,
+  },
+  floor: {
+    ...WITHDRAW_RESULT.floor,
+    home_sold_month: 2,
+    home_sold_on: '2030-03-15',
+    home_sale: 'forced' as const,
+    invested: 1_900_000,
+  },
+  ceiling: { ...WITHDRAW_RESULT.ceiling, home_worth: 1_900_000 },
+  rows: withHome(WITHDRAW_RESULT.rows),
+};
+
+/** The apartment sold on a date: month 2, for 1,900,000 put into the account. */
+export const WITHDRAW_SOLD_RESULT = {
+  ...WITHDRAW_HOME_RESULT,
+  summary: {
+    ...WITHDRAW_HOME_RESULT.summary,
+    home_worth: 0,
+    net_worth: 0,
+    home_sold_month: 2,
+    home_sold_on: '2030-03-15',
+    home_sale: 'planned' as const,
+    invested: 1_900_000,
+  },
 };

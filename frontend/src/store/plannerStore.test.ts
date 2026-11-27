@@ -225,4 +225,27 @@ describe('the Withdraw tab’s settings', () => {
       percent: 6,
     });
   });
+
+  it('read the apartment part by part, and give one stored before it its defaults', () => {
+    expect(DEFAULT_WITHDRAW.home).toMatchObject({ include: false, role: 'kept', use: 'live' });
+    // Settings of the tab's first version: no apartment.
+    const before = { ...DEFAULT_WITHDRAW, home: undefined, years: 20 };
+    expect(sanitizePersisted({ withdraw: before }).withdraw).toEqual({
+      ...DEFAULT_WITHDRAW,
+      years: 20,
+    });
+    const odd = {
+      include: true,
+      role: 'rented',
+      use: 'office',
+      value: -5,
+      loanYears: 0,
+      rent: 900,
+    };
+    expect(sanitizePersisted({ withdraw: { home: odd } }).withdraw.home).toEqual({
+      ...DEFAULT_WITHDRAW.home,
+      include: true,
+      rent: 900,
+    });
+  });
 });

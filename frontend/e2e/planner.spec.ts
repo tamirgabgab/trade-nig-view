@@ -462,3 +462,40 @@ test('planner: withdrawals from a capital, on an assumed return and on the mix',
   await planner.getByRole('tab', { name: 'Withdraw' }).click();
   await expect(withdraw.getByLabel('Withdrawal rule')).toHaveValue('percent');
 });
+
+test('planner: withdrawals with an apartment, kept and then sold when the account runs out', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  await planner.getByRole('tab', { name: 'Withdraw' }).click();
+  const withdraw = planner.getByRole('tabpanel', { name: 'Withdraw' });
+  const card = (label: string) =>
+    withdraw.locator('dl').getByText(label, { exact: true }).locator('..');
+
+  // J0's known answer, 1,000,000 that does not grow paying 10,000 a month, beside an apartment
+  // worth 2,000,000 that does not grow and costs nothing: the account ends in month 101.
+  await withdraw.getByLabel('The account grows by').selectOption('assumed');
+  await withdraw.getByLabel('Yearly return %').fill('0');
+  await withdraw.getByLabel('Starts on').fill('2030-01-15');
+  await withdraw.getByLabel('Years', { exact: true }).fill('10');
+  await withdraw.getByLabel('Cost share %').fill('100');
+  await withdraw.getByLabel('Amount ₪ a month, net').fill('10000');
+  await withdraw.getByLabel('Rises with the CPI').uncheck();
+  await withdraw.getByLabel('Include an apartment I own').check();
+  await withdraw.getByLabel('Yearly growth %').fill('0');
+  await withdraw.getByLabel('Maintenance % a year').fill('0');
+  await withdraw.getByLabel('Insurance ₪ a year').fill('0');
+  await withdraw.getByLabel('Selling costs %').fill('0');
+  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await expect(card('The money ends')).toContainText('2038-06-15');
+  await expect(card('The apartment')).toContainText('Kept');
+  await expect(card('Net worth at the end')).toContainText('₪2,000,000');
+
+  // Sold when the account runs out: its 2,000,000 pays the last 20 months, and 1,800,000 is left.
+  await withdraw.getByLabel('Its sale').selectOption('when_empty');
+  await withdraw.getByRole('button', { name: 'Run' }).click();
+  await expect(card('Lasts')).toContainText('All 10 years');
+  await expect(card('The apartment')).toContainText('Sold on 2038-06-15');
+  await expect(card('Net worth at the end')).toContainText('₪1,800,000');
+});
