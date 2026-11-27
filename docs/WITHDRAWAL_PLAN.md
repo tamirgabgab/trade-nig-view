@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **J0 in progress (2026-11-27).** The user's answers are under "Decided" at the end.
+Status: **J0 done (2026-11-27, ADR 0026); J1 is next.** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -198,7 +198,7 @@ the price of an income that moves. Those numbers are for US data and are not car
 ## Rounds
 | Round | Content | Size |
 |---|---|---|
-| **J0** | The engine for an account: one lot per asset with a cost share, the two rules, net in hand, losses carried, depletion; the golden model and the known answers; `POST /planner/withdraw`; the Withdraw tab with the cards, the balance and income chart, the table and CSV; the two tax bounds on the page. | M |
+| **J0** ✅ 2026-11-27 | The engine for an account: one lot per asset with a cost share, the two rules, net in hand, losses carried, depletion; the golden model and the known answers; `POST /planner/withdraw`; the Withdraw tab with the cards, the balance and income chart, the table and CSV; the two tax bounds on the page. | M |
 | **J1** | The apartment in the balance: an owned apartment's cash flows, its three sale options, the cost fields for betterment tax; the percent rule on net worth if chosen. | M |
 | **J2** | Many realizations: windows of history and the simulated worlds; the survival curve, the depletion histogram, the income fan; the sustainable amount by bisection; the sequence-risk view; the evidence-depth notes. | L |
 | **J3** | The learn page with its pinned example; the tab in saved scenarios; a UX pass. | S |
@@ -206,6 +206,17 @@ the price of an income that moves. Those numbers are for US data and are not car
 
 Order: J0 → J1 → J2 → J3. After J0 the tab already answers the user's core question for a market account. Each
 round: the tests before the code, the cleanup pipeline, a demo checklist, and a stop.
+
+## J0 results (2026-11-27, ADR 0026)
+- The engine is a loop over months on a month grid, with the fraction for a net amount in closed form. It is not
+  vectorised over realizations yet: one plan is three runs (the cost share and its two bounds) in well under a
+  second, and J2 decides what its worlds need.
+- With nothing withdrawn the engine ends where the Market tab's account does, dividends and the real base included.
+- Chosen without asking: the first withdrawal is a month after the start; the fee, the sale and its tax are one
+  event on the month date; an assumed return is an effective yearly rate in nominal shekels; less than half an agora
+  is neither a balance nor a shortfall; the chart is in shekels of the first day by default, with a switch.
+- Not in J0, as planned: the apartment (J1), many realizations (J2), the learn page and the tab in saved scenarios
+  (J3).
 
 ## Later, if wanted
 Pension and study funds with their own tax rules; an annuity against a lump sum; age-based and guardrail rules;
