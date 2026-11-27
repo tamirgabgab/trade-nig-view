@@ -64,7 +64,7 @@ def test_the_month_the_money_ends(client: TestClient) -> None:
 
 def test_the_two_bounds_of_the_tax_beside_the_plan(client: TestClient) -> None:
     growing = {"returns": {"mode": "assumed", "yearly_pct": 6}, "cost_share_pct": 50, "months": 240}
-    fixed = run(client, **growing)
+    fixed = run(client, **growing, rule={"kind": "fixed", "amount": 4_000, "indexed": False})
     floor, plan, ceiling = fixed["floor"], fixed["summary"], fixed["ceiling"]
     assert (floor["cost_share"], plan["cost_share"], ceiling["cost_share"]) == (0, 0.5, 1)
     # A fixed net amount: the more of the capital is gain, the more must be sold for it.
@@ -157,14 +157,6 @@ def test_the_market_tabs_mix_over_history(client: TestClient) -> None:
         ),
         ({"rule": {"kind": "fixed", "amount": 0}}, "amount"),
         ({"rule": {"kind": "percent", "percent": 0}}, "percent"),
-        (
-            {
-                "returns": {"mode": "mix"},
-                "market": {"assets": [{"symbol": "NOPE"}]},
-                "start": "2010-01-15",
-            },
-            "NOPE",
-        ),
     ],
 )
 def test_plans_that_cannot_run_are_422(
@@ -178,3 +170,10 @@ def test_plans_that_cannot_run_are_422(
 def test_the_request_is_checked(client: TestClient) -> None:
     for bad in ({"capital": 0}, {"months": 0}, {"months": 1201}, {"cost_share_pct": 101}):
         assert client.post("/api/planner/withdraw", json={**FLAT, **bad}).status_code == 422
+
+
+def test_a_ticker_with_no_data_is_unavailable_as_in_the_market_tab(client: TestClient) -> None:
+    unknown = {"returns": {"mode": "mix"}, "market": {"assets": [{"symbol": "NOPE"}]}}
+    response = client.post("/api/planner/withdraw", json={**FLAT, **unknown, "start": "2010-01-15"})
+    assert response.status_code == 503
+    assert "NOPE" in response.json()["detail"]

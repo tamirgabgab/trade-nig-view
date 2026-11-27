@@ -37,6 +37,8 @@ lot whose cost is a share :math:`c` of its value: :math:`b_a = c\\,V_0 w_a / \\e
   :math:`\\varphi = (N_k + F)/P` while :math:`\\varphi G \\le L` and
   :math:`\\varphi = (N_k + F - \\tau L) / (P - \\tau G)` beyond it. A fraction above 1 sells
   everything and pays what there is: the first such month is the **depletion month**.
+  A sale that would leave less than half an agora sells everything (no dust of rounding stays
+  behind to be "paid" the month after).
 * *A percent* :math:`p` a year: :math:`\\varphi = p / 12` (more only when the fee alone needs
   more). The balance then does not depend on :math:`c`; only the income does.
 
@@ -58,7 +60,7 @@ from app.planner.deposits import add_months, day_number
 from app.planner.inflation import CpiPath
 from app.planner.market import MAX_STALE_DAYS, AssetData, PlanError, TaxBase, Taxes, growth
 
-#: A month is paid in full when it is short by less than this (half an agora).
+#: Half an agora: a month short by less is paid in full, and an account worth less is empty.
 PAID = 0.005
 #: The most a percent rule can sell: everything, every month.
 MAX_PERCENT = 12.0
@@ -184,9 +186,8 @@ def _fraction(need: float, proceeds: float, gain: float, carried: float, tax: fl
     return 1.0 if rest <= 0.0 else min((need - tax * carried) / rest, 1.0)
 
 
-def run(plan: Plan, grid: Grid) -> Result:
-    """Run the plan on one realization (see the module docstring)."""
-    months, assets = grid.unit.shape[0] - 1, grid.unit.shape[1]
+def _weights(plan: Plan, assets: int) -> FloatArray:
+    """The plan's weights as shares of the capital, after checking the plan can run."""
     weights = np.asarray(plan.weights, dtype=np.float64)
     if plan.capital <= 0:
         raise PlanError("The starting capital must be positive")
@@ -198,7 +199,13 @@ def run(plan: Plan, grid: Grid) -> Result:
         raise PlanError("The yearly percent sold must be between 0 and 1,200")
     if len(weights) != assets or np.any(weights < 0) or weights.sum() <= 0:
         raise PlanError("The weights do not match the assets")
-    weights = weights / weights.sum()
+    return weights / weights.sum()
+
+
+def run(plan: Plan, grid: Grid) -> Result:
+    """Run the plan on one realization (see the module docstring)."""
+    months, assets = grid.unit.shape[0] - 1, grid.unit.shape[1]
+    weights = _weights(plan, assets)
     units = plan.capital * weights / grid.unit[0]
     basis = plan.cost_share * plan.capital * weights / grid.level[0]
     carried = 0.0
@@ -219,6 +226,8 @@ def run(plan: Plan, grid: Grid) -> Result:
         else:
             covers_fee = _fraction(fee_due, proceeds, gain, carried, plan.gains_tax)
             fraction = max(min(plan.percent / 12.0, 1.0), covers_fee) if value > 0 else 0.0
+        if (1.0 - fraction) * value < PAID:
+            fraction = 1.0 if value > 0 else 0.0
         realised = fraction * gain
         tax[k] = plan.gains_tax * max(realised - carried, 0.0)
         carried = max(carried - realised, 0.0)

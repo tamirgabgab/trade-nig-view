@@ -34,6 +34,7 @@ from app.api import (
     trade_plan,
     volatility,
     watchlists,
+    withdraw,
 )
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
@@ -143,6 +144,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         scenario.router,
         scenarios.router,
         simulate.router,
+        withdraw.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

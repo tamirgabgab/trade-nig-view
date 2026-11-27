@@ -2413,6 +2413,48 @@
           }
         }
       }
+    },
+    "/api/planner/withdraw": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Withdraw",
+        "description": "A withdrawal plan from one account: a row per month, the totals, and the two tax bounds.",
+        "operationId": "withdraw_api_planner_withdraw_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8197,6 +8239,30 @@
         ],
         "title": "ResponseRequest"
       },
+      "ReturnsIn": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "mix",
+              "assumed"
+            ],
+            "title": "Mode",
+            "description": "The market's mix over history, or an assumed yearly return",
+            "default": "mix"
+          },
+          "yearly_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": -50.0,
+            "title": "Yearly Pct",
+            "description": "Effective, in nominal shekels (assumed mode)",
+            "default": 5.0
+          }
+        },
+        "type": "object",
+        "title": "ReturnsIn"
+      },
       "RiskBacktest": {
         "properties": {
           "method": {
@@ -8449,6 +8515,45 @@
           "exceedances"
         ],
         "title": "RiskTail"
+      },
+      "Rule": {
+        "type": "string",
+        "enum": [
+          "fixed",
+          "percent"
+        ],
+        "title": "Rule"
+      },
+      "RuleIn": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/Rule",
+            "default": "fixed"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Amount",
+            "description": "A fixed rule: net a month, in shekels of the first day",
+            "default": 0.0
+          },
+          "indexed": {
+            "type": "boolean",
+            "title": "Indexed",
+            "description": "A fixed amount rises with the CPI",
+            "default": true
+          },
+          "percent": {
+            "type": "number",
+            "maximum": 1200.0,
+            "minimum": 0.0,
+            "title": "Percent",
+            "description": "A percent rule: the share of the account sold a year, a twelfth each month",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "RuleIn"
       },
       "RunResponse": {
         "properties": {
@@ -10979,6 +11084,299 @@
           "y_xirr"
         ],
         "title": "WindowOut"
+      },
+      "WithdrawRequest": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "months": {
+            "type": "integer",
+            "maximum": 1200.0,
+            "minimum": 1.0,
+            "title": "Months"
+          },
+          "capital": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Capital",
+            "description": "The account's value on the first day, in shekels"
+          },
+          "cost_share_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Cost Share Pct",
+            "description": "The share of the capital that is cost; the rest is gain",
+            "default": 50.0
+          },
+          "rule": {
+            "$ref": "#/components/schemas/RuleIn"
+          },
+          "returns": {
+            "$ref": "#/components/schemas/ReturnsIn",
+            "default": {
+              "mode": "mix",
+              "yearly_pct": 5.0
+            }
+          },
+          "market": {
+            "$ref": "#/components/schemas/MarketOptionIn",
+            "description": "The mix (unused on an assumed return), the fees and the taxes; no deposits"
+          },
+          "inflation": {
+            "$ref": "#/components/schemas/InflationIn",
+            "default": {
+              "mode": "assumed",
+              "mean_pct": 2.5,
+              "sd_pct": 0.0,
+              "persistence": 0.0
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "months",
+          "capital",
+          "rule",
+          "market"
+        ],
+        "title": "WithdrawRequest"
+      },
+      "WithdrawResponse": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "months": {
+            "type": "integer",
+            "title": "Months"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/WithdrawSummary"
+          },
+          "floor": {
+            "$ref": "#/components/schemas/WithdrawSummary"
+          },
+          "ceiling": {
+            "$ref": "#/components/schemas/WithdrawSummary"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/WithdrawRow"
+            },
+            "type": "array",
+            "title": "Rows",
+            "description": "One per month date, the start included"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "months",
+          "summary",
+          "floor",
+          "ceiling",
+          "rows",
+          "warnings"
+        ],
+        "title": "WithdrawResponse"
+      },
+      "WithdrawRow": {
+        "properties": {
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "due": {
+            "type": "number",
+            "title": "Due",
+            "description": "What a fixed rule owes the month"
+          },
+          "sold": {
+            "type": "number",
+            "title": "Sold"
+          },
+          "commission": {
+            "type": "number",
+            "title": "Commission"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          },
+          "net": {
+            "type": "number",
+            "title": "Net"
+          },
+          "net_real": {
+            "type": "number",
+            "title": "Net Real"
+          },
+          "balance": {
+            "type": "number",
+            "title": "Balance"
+          },
+          "balance_floor": {
+            "type": "number",
+            "title": "Balance Floor",
+            "description": "At a cost share of 0"
+          },
+          "balance_ceiling": {
+            "type": "number",
+            "title": "Balance Ceiling",
+            "description": "At a cost share of 1"
+          },
+          "net_floor": {
+            "type": "number",
+            "title": "Net Floor"
+          },
+          "net_ceiling": {
+            "type": "number",
+            "title": "Net Ceiling"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "date",
+          "due",
+          "sold",
+          "commission",
+          "tax",
+          "fee",
+          "net",
+          "net_real",
+          "balance",
+          "balance_floor",
+          "balance_ceiling",
+          "net_floor",
+          "net_ceiling"
+        ],
+        "title": "WithdrawRow"
+      },
+      "WithdrawSummary": {
+        "properties": {
+          "cost_share": {
+            "type": "number",
+            "title": "Cost Share"
+          },
+          "taken": {
+            "type": "number",
+            "title": "Taken",
+            "description": "Net, all months"
+          },
+          "taken_real": {
+            "type": "number",
+            "title": "Taken Real",
+            "description": "In shekels of the first day"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "fees": {
+            "type": "number",
+            "title": "Fees",
+            "description": "Account fees"
+          },
+          "commissions": {
+            "type": "number",
+            "title": "Commissions"
+          },
+          "balance": {
+            "type": "number",
+            "title": "Balance",
+            "description": "The account after the last month"
+          },
+          "balance_real": {
+            "type": "number",
+            "title": "Balance Real"
+          },
+          "liquidation": {
+            "type": "number",
+            "title": "Liquidation",
+            "description": "What selling all of it then would leave"
+          },
+          "depleted_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depleted Month",
+            "description": "The first month a fixed amount is not paid"
+          },
+          "depleted_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depleted On"
+          },
+          "months_paid": {
+            "type": "integer",
+            "title": "Months Paid",
+            "description": "Months paid in full"
+          },
+          "lowest_net_real": {
+            "type": "number",
+            "title": "Lowest Net Real",
+            "description": "The lowest month's income, in first-day shekels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cost_share",
+          "taken",
+          "taken_real",
+          "tax",
+          "fees",
+          "commissions",
+          "balance",
+          "balance_real",
+          "liquidation",
+          "depleted_month",
+          "depleted_on",
+          "months_paid",
+          "lowest_net_real"
+        ],
+        "title": "WithdrawSummary"
       }
     }
   }

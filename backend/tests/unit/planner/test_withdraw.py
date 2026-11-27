@@ -265,6 +265,8 @@ def golden(plan: Plan, world: Grid) -> dict[str, list[float]]:
             fraction = fraction_for(due + fee_due) if value > 0 else 0.0
         else:
             fraction = max(min(plan.percent / 12, 1.0), fraction_for(fee_due)) if value > 0 else 0.0
+        if (1 - fraction) * value < 0.005:
+            fraction = 1.0 if value > 0 else 0.0
         tax, left = outcome(fraction)
         gain = fraction * (value * (1 - plan.sell) - cost)
         carried = max(carried - gain, 0.0) if gain >= 0 else carried - gain

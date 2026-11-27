@@ -767,6 +767,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/planner/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw
+         * @description A withdrawal plan from one account: a row per month, the totals, and the two tax bounds.
+         */
+        post: operations["withdraw_api_planner_withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3411,6 +3431,22 @@ export interface components {
                 [key: string]: boolean | number | string;
             };
         };
+        /** ReturnsIn */
+        ReturnsIn: {
+            /**
+             * Mode
+             * @description The market's mix over history, or an assumed yearly return
+             * @default mix
+             * @enum {string}
+             */
+            mode: "mix" | "assumed";
+            /**
+             * Yearly Pct
+             * @description Effective, in nominal shekels (assumed mode)
+             * @default 5
+             */
+            yearly_pct: number;
+        };
         /** RiskBacktest */
         RiskBacktest: {
             /**
@@ -3536,6 +3572,34 @@ export interface components {
             beta: number;
             /** Exceedances */
             exceedances: number;
+        };
+        /**
+         * Rule
+         * @enum {string}
+         */
+        Rule: "fixed" | "percent";
+        /** RuleIn */
+        RuleIn: {
+            /** @default fixed */
+            kind: components["schemas"]["Rule"];
+            /**
+             * Amount
+             * @description A fixed rule: net a month, in shekels of the first day
+             * @default 0
+             */
+            amount: number;
+            /**
+             * Indexed
+             * @description A fixed amount rises with the CPI
+             * @default true
+             */
+            indexed: boolean;
+            /**
+             * Percent
+             * @description A percent rule: the share of the account sold a year, a twelfth each month
+             * @default 0
+             */
+            percent: number;
         };
         /** RunResponse */
         RunResponse: {
@@ -4713,6 +4777,167 @@ export interface components {
             x_xirr: number | null;
             /** Y Xirr */
             y_xirr: number | null;
+        };
+        /** WithdrawRequest */
+        WithdrawRequest: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Months */
+            months: number;
+            /**
+             * Capital
+             * @description The account's value on the first day, in shekels
+             */
+            capital: number;
+            /**
+             * Cost Share Pct
+             * @description The share of the capital that is cost; the rest is gain
+             * @default 50
+             */
+            cost_share_pct: number;
+            rule: components["schemas"]["RuleIn"];
+            /**
+             * @default {
+             *       "mode": "mix",
+             *       "yearly_pct": 5
+             *     }
+             */
+            returns: components["schemas"]["ReturnsIn"];
+            /** @description The mix (unused on an assumed return), the fees and the taxes; no deposits */
+            market: components["schemas"]["MarketOptionIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+        };
+        /** WithdrawResponse */
+        WithdrawResponse: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Months */
+            months: number;
+            summary: components["schemas"]["WithdrawSummary"];
+            floor: components["schemas"]["WithdrawSummary"];
+            ceiling: components["schemas"]["WithdrawSummary"];
+            /**
+             * Rows
+             * @description One per month date, the start included
+             */
+            rows: components["schemas"]["WithdrawRow"][];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** WithdrawRow */
+        WithdrawRow: {
+            /** Month */
+            month: number;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Due
+             * @description What a fixed rule owes the month
+             */
+            due: number;
+            /** Sold */
+            sold: number;
+            /** Commission */
+            commission: number;
+            /** Tax */
+            tax: number;
+            /** Fee */
+            fee: number;
+            /** Net */
+            net: number;
+            /** Net Real */
+            net_real: number;
+            /** Balance */
+            balance: number;
+            /**
+             * Balance Floor
+             * @description At a cost share of 0
+             */
+            balance_floor: number;
+            /**
+             * Balance Ceiling
+             * @description At a cost share of 1
+             */
+            balance_ceiling: number;
+            /** Net Floor */
+            net_floor: number;
+            /** Net Ceiling */
+            net_ceiling: number;
+        };
+        /** WithdrawSummary */
+        WithdrawSummary: {
+            /** Cost Share */
+            cost_share: number;
+            /**
+             * Taken
+             * @description Net, all months
+             */
+            taken: number;
+            /**
+             * Taken Real
+             * @description In shekels of the first day
+             */
+            taken_real: number;
+            /** Tax */
+            tax: number;
+            /**
+             * Fees
+             * @description Account fees
+             */
+            fees: number;
+            /** Commissions */
+            commissions: number;
+            /**
+             * Balance
+             * @description The account after the last month
+             */
+            balance: number;
+            /** Balance Real */
+            balance_real: number;
+            /**
+             * Liquidation
+             * @description What selling all of it then would leave
+             */
+            liquidation: number;
+            /**
+             * Depleted Month
+             * @description The first month a fixed amount is not paid
+             */
+            depleted_month: number | null;
+            /** Depleted On */
+            depleted_on: string | null;
+            /**
+             * Months Paid
+             * @description Months paid in full
+             */
+            months_paid: number;
+            /**
+             * Lowest Net Real
+             * @description The lowest month's income, in first-day shekels
+             */
+            lowest_net_real: number;
         };
     };
     responses: never;
@@ -6127,6 +6352,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SimulateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_api_planner_withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawResponse"];
                 };
             };
             /** @description Validation Error */
