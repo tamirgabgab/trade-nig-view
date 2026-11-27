@@ -21,12 +21,13 @@ They are listed under "Later, if wanted".
 
 ## What a result is
 A withdrawal plan has two outputs, not one: **money taken** and **money left**. End wealth alone would rank first the
-plan that withdraws least, and a percent rule can never run out. So each rule has its own headline:
+plan that withdraws least, and the withdrawals of a percent rule alone never empty the account (a fee larger than
+what is left can, and the page then says when). So each rule has its own headline:
 
 | Rule | It can | Headline of one plan | Headline of many realizations |
 |---|---|---|---|
 | Fixed amount | run out | the month the money ends, or what is left at the horizon | the chance it lasts, and when it ends if not |
-| Percent of what there is | shrink, never end | the income path and its lowest real month | the spread of the income, and of what is left |
+| Percent of what there is | shrink; end only by its fees | the income path and its lowest real month | the spread of the income, and of what is left |
 
 Both always show: the balance over time, the income actually received each month (nominal and in shekels of the
 first day), the tax paid, and the total taken.
@@ -226,7 +227,7 @@ selling the overweight asset first; a loan against the apartment; several accoun
 - **Thin history** for long horizons (the table above). The page must not let 1,000 worlds read as 1,000 samples.
 - **The cost share is a guess** the user makes. The two bounds are always shown so the guess cannot hide.
 - **Tax rules change**, and two of the facts above are unverified. They are fields with a date, not law.
-- **A percent rule looks safe** because it never ends. Its risk is the income, and the page must lead with it.
+- **A percent rule looks safe** because its withdrawals alone never end it. Its risk is the income, and the page must lead with it.
 - **Monthly sales at the close** ignore intraday prices and the spread; the sell commission field stands for both.
 
 ## Decided by the user (2026-11-27)
