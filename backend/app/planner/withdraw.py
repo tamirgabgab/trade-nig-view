@@ -46,6 +46,27 @@ lot whose cost is a share :math:`c` of its value: :math:`b_a = c\\,V_0 w_a / \\e
 
 The sale, its tax and the fee are one event on the month date. (The market account of
 ``app.planner.market`` charges fees at calendar month ends and taxes everything at the end.)
+
+**An apartment** owned on the first day (J1) adds two series: :math:`h_k`, the cash it gives on
+month :math:`k` while it is held (rent received less the mortgage payment and the owner costs;
+negative when they are more), and :math:`W_k`, what its sale on month :math:`k` would leave (the
+value less the selling costs, the loan with its early-repayment fee, and the betterment tax).
+
+* The account owes the month :math:`D = F - h_k` before any withdrawal: the fee and what the
+  apartment does not pay itself. A fixed rule sells for :math:`N_k + D`; a percent rule sells
+  :math:`\\max(p / 12, \\text{the fraction for } D)`, and its income is that sale's net plus
+  :math:`h_k`. (So under a percent rule the balance ignores :math:`c` only while the
+  :math:`p / 12` sale pays :math:`D`.)
+* Under a fixed rule a surplus, :math:`h_k - F - N_k > 0`, is invested.
+* **The sale** is on the month asked for (*on a date*); on the first month the account cannot pay
+  :math:`N_k + D` (*when empty*); or, whatever the role, on the first month it cannot pay
+  :math:`D` (*forced*). Its month still has :math:`h_k`. :math:`W_k > 0` is invested; a negative
+  :math:`W_k` joins :math:`D`.
+* **Money invested** buys the plan's weights at the buy commission :math:`\\beta`: asset
+  :math:`a` gains :math:`m w_a / ((1 + \\beta) u_{k,a})` units at a cost of
+  :math:`m w_a / \\ell_{k,a}` (as an H1 deposit, the commission is part of the cost).
+* What is left is the account plus :math:`W_k` while the apartment is held; the plan is
+  depleted on a fixed amount not paid in full, or on an empty account with no apartment.
 """
 
 from __future__ import annotations
@@ -71,6 +92,22 @@ MAX_PERCENT = 12.0
 class Rule(StrEnum):
     FIXED = "fixed"
     PERCENT = "percent"
+
+
+class Sale(StrEnum):
+    """When the apartment is sold (a forced sale aside)."""
+
+    KEPT = "kept"
+    ON_DATE = "on_date"
+    WHEN_EMPTY = "when_empty"
+
+
+class Cause(StrEnum):
+    """Why it was sold."""
+
+    PLANNED = "planned"
+    EMPTY = "empty"
+    FORCED = "forced"
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +137,22 @@ class Plan:
     management: float = 0.0
     monthly_fee: float = 0.0
     gains_tax: float = 0.25
+    #: The buy commission of money invested (a rent surplus, the apartment's sale).
+    buy: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class Home:
+    """An apartment owned on the first day, on the month dates 0..T (see the module docstring)."""
+
+    #: What it gives on month k while it is held: rent received less the mortgage payment and the
+    #: owner costs.
+    cash: FloatArray
+    #: What its sale on month k would leave.
+    worth: FloatArray
+    role: Sale = Sale.KEPT
+    #: The month of a sale on a date, 1..T.
+    sell_on: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,8 +173,17 @@ class Result:
     #: already empty (a percent rule gets there only when the fees take what is left, or when it
     #: sells everything). None: every month was.
     depleted: int | None
-    #: What selling everything on the last date would leave, after the commission and the tax.
+    #: What selling everything on the last date would leave, after the commission and the tax,
+    #: the apartment's worth included while it is held.
     liquidation: float
+    #: The apartment's worth while it is held (0 from the month it is sold, and without one).
+    home: FloatArray
+    #: The cash it gave each month while held.
+    home_cash: FloatArray
+    #: Money put into the account: a surplus of rent, the apartment's sale.
+    invested: FloatArray
+    home_sold: int | None = None
+    cause: Cause | None = None
 
 
 def assumed_grid(months: int, rate: float, cpi: FloatArray, *, real: bool = False) -> Grid:
@@ -190,11 +252,23 @@ def _fraction(need: float, proceeds: float, gain: float, carried: float, tax: fl
     return 1.0 if rest <= 0.0 else min((need - tax * carried) / rest, 1.0)
 
 
-def _weights(plan: Plan, assets: int) -> FloatArray:
+def _leaves(fraction: float, proceeds: float, gain: float, carried: float, tax: float) -> float:
+    """What selling ``fraction`` of the account leaves after its tax."""
+    return fraction * proceeds - tax * max(fraction * gain - carried, 0.0)
+
+
+def _weights(plan: Plan, assets: int, home: Home | None, months: int) -> FloatArray:
     """The plan's weights as shares of the capital, after checking the plan can run."""
     weights = np.asarray(plan.weights, dtype=np.float64)
-    if plan.capital <= 0:
-        raise PlanError("The starting capital must be positive")
+    if plan.capital < 0 or (plan.capital == 0 and home is None):
+        raise PlanError("The starting capital must be positive (or zero with an apartment)")
+    if home is not None:
+        if home.cash.shape != (months + 1,) or home.worth.shape != (months + 1,):
+            raise PlanError("The apartment's series do not match the plan's months")
+        if home.role is Sale.ON_DATE and not 1 <= home.sell_on <= months:
+            raise PlanError("The apartment's sale must be on a month of the plan")
+    if plan.buy < 0:
+        raise PlanError("The buy commission cannot be negative")
     if not 0.0 <= plan.cost_share <= 1.0:
         raise PlanError("The cost share must be between 0 and 100 %")
     if plan.amount < 0:
@@ -208,47 +282,109 @@ def _weights(plan: Plan, assets: int) -> FloatArray:
     return weights / weights.sum()
 
 
-def run(plan: Plan, grid: Grid) -> Result:
+def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PLR0912, PLR0915
     """Run the plan on one realization (see the module docstring)."""
     months, assets = grid.unit.shape[0] - 1, grid.unit.shape[1]
-    weights = _weights(plan, assets)
+    weights = _weights(plan, assets, home, months)
     units = plan.capital * weights / grid.unit[0]
     basis = plan.cost_share * plan.capital * weights / grid.level[0]
     carried = 0.0
     keep = 1.0 - plan.sell
     monthly_rate = 1.0 - (1.0 - plan.management) ** (1.0 / 12.0)
     balance, sold, commission, tax, fee, net, due = (np.zeros(months + 1) for _ in range(7))
+    worth, home_cash, invested = (np.zeros(months + 1) for _ in range(3))
     balance[0] = plan.capital
     depleted: int | None = None
+    held = home is not None
+    home_sold: int | None = None
+    cause: Cause | None = None
+    if home is not None:
+        worth[0] = home.worth[0]
+
     for k in range(1, months + 1):
         basis = basis + units * grid.reinvested[k]
+
+        def invest(money: float) -> None:
+            nonlocal units, basis
+            units = units + money * weights / ((1.0 + plan.buy) * grid.unit[k])  # noqa: B023
+            basis = basis + money * weights / grid.level[k]  # noqa: B023
+            invested[k] += money  # noqa: B023
+            commission[k] += money * plan.buy / (1.0 + plan.buy)  # noqa: B023
+
         value = float(units @ grid.unit[k])
         proceeds = value * keep
         gain = proceeds - float(basis @ grid.level[k])
         fee_due = min(value, value * monthly_rate + plan.monthly_fee)
         if plan.rule is Rule.FIXED:
             due[k] = plan.amount * (grid.cpi[k] / grid.cpi[0] if plan.indexed else 1.0)
-            fraction = _fraction(due[k] + fee_due, proceeds, gain, carried, plan.gains_tax)
+        cash = float(home.cash[k]) if home is not None and held else 0.0
+        owed = 0.0
+        if home is not None and held:
+            duty = fee_due - cash
+            everything = _leaves(1.0, proceeds, gain, carried, plan.gains_tax)
+            if home.role is Sale.ON_DATE and k == home.sell_on:
+                cause = Cause.PLANNED
+            elif home.role is Sale.WHEN_EMPTY and everything < due[k] + duty - PAID:
+                cause = Cause.EMPTY
+            elif duty > 0.0 and everything < duty - PAID:
+                cause = Cause.FORCED
+            if cause is not None:
+                held, home_sold = False, k
+                money = float(home.worth[k])
+                if money > 0.0:
+                    invest(money)
+                    value = float(units @ grid.unit[k])
+                    proceeds = value * keep
+                    gain = proceeds - float(basis @ grid.level[k])
+                    fee_due = min(value, value * monthly_rate + plan.monthly_fee)
+                else:
+                    owed = -money
+        duty = fee_due - cash + owed
+        if plan.rule is Rule.FIXED:
+            fraction = _fraction(due[k] + duty, proceeds, gain, carried, plan.gains_tax)
         else:
-            covers_fee = _fraction(fee_due, proceeds, gain, carried, plan.gains_tax)
-            fraction = max(min(plan.percent / 12.0, 1.0), covers_fee) if value > 0 else 0.0
+            least = _fraction(duty, proceeds, gain, carried, plan.gains_tax)
+            fraction = max(min(plan.percent / 12.0, 1.0), least) if value > 0 else 0.0
         if (1.0 - fraction) * value < PAID:
             fraction = 1.0 if value > 0 else 0.0
         realised = fraction * gain
         tax[k] = plan.gains_tax * max(realised - carried, 0.0)
         carried = max(carried - realised, 0.0)
-        left = fraction * proceeds - tax[k]
-        fee[k] = min(fee_due, left)
-        net[k] = left - fee[k]
+        available = fraction * proceeds - tax[k] + cash - owed
+        fee[k] = min(fee_due, max(available, 0.0))
+        rest = available - fee[k]
         sold[k] = fraction * value
-        commission[k] = sold[k] * plan.sell
-        balance[k] = (1.0 - fraction) * value
+        commission[k] += sold[k] * plan.sell
         units = units * (1.0 - fraction)
         basis = basis * (1.0 - fraction)
-        # A fixed amount not paid in full, or (under either rule) nothing left to sell.
-        if depleted is None and (due[k] - net[k] > PAID or value <= 0.0):
+        if plan.rule is Rule.FIXED:
+            net[k] = min(max(rest, 0.0), due[k])
+            if rest - due[k] > PAID:
+                invest(rest - due[k])
+        else:
+            net[k] = max(rest, 0.0)
+        balance[k] = float(units @ grid.unit[k])
+        home_cash[k] = cash
+        worth[k] = float(home.worth[k]) if home is not None and held else 0.0
+        # A fixed amount not paid in full, or nothing left to sell and no apartment.
+        if depleted is None and (due[k] - net[k] > PAID or (value <= 0.0 and not held)):
             depleted = k
     proceeds = balance[-1] * keep
     gain = proceeds - float(basis @ grid.level[-1])
-    liquidation = proceeds - plan.gains_tax * max(gain - carried, 0.0)
-    return Result(balance, sold, commission, tax, fee, net, due, depleted, float(liquidation))
+    liquidation = proceeds - plan.gains_tax * max(gain - carried, 0.0) + worth[-1]
+    return Result(
+        balance,
+        sold,
+        commission,
+        tax,
+        fee,
+        net,
+        due,
+        depleted,
+        float(liquidation),
+        worth,
+        home_cash,
+        invested,
+        home_sold,
+        cause,
+    )

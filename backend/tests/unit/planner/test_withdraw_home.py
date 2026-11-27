@@ -127,7 +127,8 @@ def test_a_kept_apartment_whose_costs_the_account_cannot_pay_is_sold() -> None:
     assert (result.home_sold, result.cause) == (11, Cause.FORCED)
     assert result.depleted is None
     assert result.net[1:] == pytest.approx(9_000)
-    assert result.balance[24] == pytest.approx(500_000 - 14 * 10_000)
+    # The month of the sale still pays the costs; after it there are none.
+    assert result.balance[24] == pytest.approx(500_000 - 10_000 - 13 * 9_000)
 
 
 def test_a_sale_that_owes_more_than_it_brings_is_paid_from_the_account() -> None:
@@ -291,7 +292,7 @@ def golden(  # noqa: PLR0912, PLR0915 - one plain loop, as the engine's docstrin
         if plan.rule is Rule.FIXED:
             net = min(max(rest, 0.0), due)
             surplus = rest - due
-            if surplus > 0:
+            if surplus > 0.005:
                 buy(surplus, k)
                 invested += surplus
                 commission += surplus * plan.buy / (1 + plan.buy)

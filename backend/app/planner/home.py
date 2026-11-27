@@ -29,8 +29,9 @@ repaid, plus an early-repayment fee :math:`e B_k`; and the betterment tax. So
     \\text{net worth}_k = V_k (1 - s) - B_k (1 + e) - \\text{betterment tax}_k
 
 **Betterment tax** is charged on the real gain
-:math:`G = V_k (1 - s) - C \\cdot I_k / I_0`, with :math:`C` the price plus the purchase costs and
-:math:`I` the CPI. By the law's parameters: a rate (25 %) on the taxable part of :math:`G`; a
+:math:`G = V_k (1 - s) - C \\cdot I_k / I_0`, with :math:`C` the price plus the purchase costs (or,
+for an apartment owned before the plan, its own cost in shekels of the first day) and :math:`I`
+the CPI. By the law's parameters: a rate (25 %) on the taxable part of :math:`G`; a
 single home is exempt up to a ceiling, so only the share :math:`\\max(V_k - \\text{ceiling}, 0) /
 V_k` is taxable; and for a home bought before 2014 and sold after it, only the share of the
 holding days after 2014-01-01 is taxable (the linear rule). Or a custom bracket table on
@@ -140,6 +141,10 @@ class HomePlan:
     selling: float = 0.0
     early_repayment: float = 0.0
     betterment: Betterment = field(default_factory=Betterment)
+    #: An apartment owned before the plan: what it cost, in shekels of the first day, and the day it
+    #: was bought (for the linear rule). None: the price and the purchase costs, on the first day.
+    cost: float | None = None
+    bought: date | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -260,7 +265,8 @@ def run_home(plan: HomePlan, series: HomeSeries) -> HomeResult:
             rent *= (1.0 - plan.vacancy) * (1.0 - plan.rent_tax)
 
     net_sale = value * (1.0 - plan.selling)
-    cost = plan.price + purchase_costs
+    cost = plan.price + purchase_costs if plan.cost is None else plan.cost
+    bought = plan.start if plan.bought is None else plan.bought
     betterment = np.array(
         [
             betterment_tax(
@@ -268,7 +274,7 @@ def run_home(plan: HomePlan, series: HomeSeries) -> HomeResult:
                 value=float(value[k]),
                 net_sale=float(net_sale[k]),
                 indexed_cost=cost * float(cpi[k]),
-                bought=plan.start,
+                bought=bought,
                 sold=dates[k],
             )
             if k
