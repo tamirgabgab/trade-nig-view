@@ -44,6 +44,10 @@ lot whose cost is a share :math:`c` of its value: :math:`b_a = c\\,V_0 w_a / \\e
   alone never empty the account; a fee larger than what is left can, and so can a percent of
   1,200. The depletion month is then the first month that starts with nothing.
 
+**Many realizations** (J2) run through the same loop: every array gets a leading axis, one row a
+realization, and each step of the month is taken by all of them together (``run_many``). One
+plan is a batch of one (``run``).
+
 The sale, its tax and the fee are one event on the month date. (The market account of
 ``app.planner.market`` charges fees at calendar month ends and taxes everything at the end.)
 
@@ -81,8 +85,9 @@ from datetime import date, timedelta
 from enum import StrEnum
 
 import numpy as np
+import numpy.typing as npt
 
-from app.models.bars import FloatArray
+from app.models.bars import FloatArray, IntArray
 from app.planner.deposits import add_months, day_number
 from app.planner.inflation import CpiPath
 from app.planner.market import MAX_STALE_DAYS, AssetData, PlanError, TaxBase, Taxes, growth
@@ -194,6 +199,29 @@ class Result:
     first_short: int | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class Many:
+    """``Result`` for N realizations: the series are ``(N, T + 1)``, the rest ``(N,)``. A month
+    that is None in ``Result`` is 0 here, and no cause is the empty string."""
+
+    balance: FloatArray
+    sold: FloatArray
+    commission: FloatArray
+    tax: FloatArray
+    fee: FloatArray
+    net: FloatArray
+    due: FloatArray
+    depleted: IntArray
+    liquidation: FloatArray
+    home: FloatArray
+    home_cash: FloatArray
+    invested: FloatArray
+    home_sold: IntArray
+    cause: npt.NDArray[np.str_]
+    short: IntArray
+    first_short: IntArray
+
+
 def assumed_grid(months: int, rate: float, cpi: FloatArray, *, real: bool = False) -> Grid:
     """One asset that grows by ``rate`` a year (an effective rate, in nominal shekels),
     compounded monthly. ``real``: the cost is linked to the CPI."""
@@ -249,31 +277,37 @@ def sample(
     return Grid(unit, reinvested, level, cpi.at(days))
 
 
-def _fraction(need: float, proceeds: float, gain: float, carried: float, tax: float) -> float:
-    """The fraction of the account whose sale leaves ``need`` after its tax (at most 1)."""
-    if proceeds <= 0.0 or need <= 0.0:
-        return 0.0
-    untaxed = need / proceeds
-    if gain <= 0.0 or untaxed * gain <= carried:
-        return min(untaxed, 1.0)
+def _fraction(
+    need: FloatArray, proceeds: FloatArray, gain: FloatArray, carried: FloatArray, tax: float
+) -> FloatArray:
+    """The fraction of each account whose sale leaves ``need`` after its tax (at most 1)."""
+    nothing = (proceeds <= 0.0) | (need <= 0.0)
+    safe = np.where(proceeds > 0.0, proceeds, 1.0)
+    untaxed = need / safe
     rest = proceeds - tax * gain
-    return 1.0 if rest <= 0.0 else min((need - tax * carried) / rest, 1.0)
+    taxed = np.where(
+        rest <= 0.0, 1.0, np.minimum((need - tax * carried) / np.where(rest > 0, rest, 1.0), 1.0)
+    )
+    below = (gain <= 0.0) | (untaxed * gain <= carried)
+    return np.where(nothing, 0.0, np.where(below, np.minimum(untaxed, 1.0), taxed))
 
 
-def _leaves(fraction: float, proceeds: float, gain: float, carried: float, tax: float) -> float:
-    """What selling ``fraction`` of the account leaves after its tax."""
-    return fraction * proceeds - tax * max(fraction * gain - carried, 0.0)
+def _leaves(
+    fraction: float, proceeds: FloatArray, gain: FloatArray, carried: FloatArray, tax: float
+) -> FloatArray:
+    """What selling ``fraction`` of each account leaves after its tax."""
+    return fraction * proceeds - tax * np.maximum(fraction * gain - carried, 0.0)
 
 
-def _weights(plan: Plan, assets: int, home: Home | None, months: int) -> FloatArray:
+def _weights(plan: Plan, assets: int, home: Home | None, shape: tuple[int, int]) -> FloatArray:
     """The plan's weights as shares of the capital, after checking the plan can run."""
     weights = np.asarray(plan.weights, dtype=np.float64)
     if plan.capital < 0 or (plan.capital == 0 and home is None):
         raise PlanError("The starting capital must be positive (or zero with an apartment)")
     if home is not None:
-        if home.cash.shape != (months + 1,) or home.worth.shape != (months + 1,):
+        if home.cash.shape != shape or home.worth.shape != shape:
             raise PlanError("The apartment's series do not match the plan's months")
-        if home.role is Sale.ON_DATE and not 1 <= home.sell_on <= months:
+        if home.role is Sale.ON_DATE and not 1 <= home.sell_on < shape[1]:
             raise PlanError("The apartment's sale must be on a month of the plan")
     if plan.buy < 0:
         raise PlanError("The buy commission cannot be negative")
@@ -290,102 +324,113 @@ def _weights(plan: Plan, assets: int, home: Home | None, months: int) -> FloatAr
     return weights / weights.sum()
 
 
-def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PLR0912, PLR0915
-    """Run the plan on one realization (see the module docstring)."""
-    months, assets = grid.unit.shape[0] - 1, grid.unit.shape[1]
-    weights = _weights(plan, assets, home, months)
-    units = plan.capital * weights / grid.unit[0]
-    basis = plan.cost_share * plan.capital * weights / grid.level[0]
-    carried = 0.0
+def run_many(plan: Plan, grid: Grid, home: Home | None = None) -> Many:  # noqa: PLR0915
+    """Run the plan on many realizations at once (see the module docstring): the grid's arrays
+    are ``(N, T + 1, assets)`` and ``(N, T + 1)``, the apartment's ``(N, T + 1)``. Every step of
+    the loop over the months is taken by all the realizations together."""
+    n, months, assets = grid.unit.shape[0], grid.unit.shape[1] - 1, grid.unit.shape[2]
+    weights = _weights(plan, assets, home, (n, months + 1))
+    units = plan.capital * weights / grid.unit[:, 0]
+    basis = plan.cost_share * plan.capital * weights / grid.level[:, 0]
+    carried = np.zeros(n)
     keep = 1.0 - plan.sell
     monthly_rate = 1.0 - (1.0 - plan.management) ** (1.0 / 12.0)
-    balance, sold, commission, tax, fee, net, due = (np.zeros(months + 1) for _ in range(7))
-    worth, home_cash, invested = (np.zeros(months + 1) for _ in range(3))
-    balance[0] = plan.capital
-    missed = np.zeros(months + 1, dtype=np.bool_)
-    #: The apartment while it is held.
-    owned = home
+    fixed = plan.rule is Rule.FIXED
+    shape = (n, months + 1)
+    balance, sold, commission, tax, fee, net, due = (np.zeros(shape) for _ in range(7))
+    worth, home_cash, invested = (np.zeros(shape) for _ in range(3))
+    balance[:, 0] = plan.capital
+    missed = np.zeros(shape, dtype=np.bool_)
+    #: The realizations that still hold the apartment.
+    held = np.full(n, home is not None)
     #: What a sale left owing (the loan above what it brought) that the account could not pay yet.
-    debt = 0.0
-    home_sold: int | None = None
-    cause: Cause | None = None
+    debt = np.zeros(n)
+    home_sold = np.zeros(n, dtype=np.int64)
+    cause = np.full(n, "", dtype="<U7")
     if home is not None:
-        worth[0] = home.worth[0]
+        worth[:, 0] = home.worth[:, 0]
 
-    def invest(money: float, k: int) -> None:
+    def invest(money: FloatArray, k: int) -> None:
         nonlocal units, basis
-        units = units + money * weights / ((1.0 + plan.buy) * grid.unit[k])
-        basis = basis + money * weights / grid.level[k]
-        invested[k] += money
-        commission[k] += money * plan.buy / (1.0 + plan.buy)
+        units = units + money[:, None] * weights / ((1.0 + plan.buy) * grid.unit[:, k])
+        basis = basis + money[:, None] * weights / grid.level[:, k]
+        invested[:, k] += money
+        commission[:, k] += money * plan.buy / (1.0 + plan.buy)
 
-    def account(k: int) -> tuple[float, float, float, float]:
+    def account(k: int) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
         """The value, the proceeds of selling all of it, their gain, and the month's fee."""
-        value = float(units @ grid.unit[k])
+        value = np.einsum("na,na->n", units, grid.unit[:, k])
         proceeds = value * keep
-        gain = proceeds - float(basis @ grid.level[k])
-        return value, proceeds, gain, min(value, value * monthly_rate + plan.monthly_fee)
+        gain = proceeds - np.einsum("na,na->n", basis, grid.level[:, k])
+        return value, proceeds, gain, np.minimum(value, value * monthly_rate + plan.monthly_fee)
 
     for k in range(1, months + 1):
-        basis = basis + units * grid.reinvested[k]
+        basis = basis + units * grid.reinvested[:, k]
         value, proceeds, gain, fee_due = account(k)
-        if plan.rule is Rule.FIXED:
-            due[k] = plan.amount * (grid.cpi[k] / grid.cpi[0] if plan.indexed else 1.0)
-        cash = float(owned.cash[k]) if owned is not None else 0.0
+        if fixed:
+            due[:, k] = plan.amount * (grid.cpi[:, k] / grid.cpi[:, 0] if plan.indexed else 1.0)
+        cash = np.where(held, home.cash[:, k], 0.0) if home is not None else np.zeros(n)
         owed = debt
-        if owned is not None:
+        if home is not None and held.any():
             duty = fee_due - cash
             everything = _leaves(1.0, proceeds, gain, carried, plan.gains_tax)
-            if owned.role is Sale.ON_DATE and k == owned.sell_on:
-                cause = Cause.PLANNED
-            elif duty > 0.0 and everything < duty - PAID:
-                cause = Cause.FORCED
-            elif owned.role is Sale.WHEN_EMPTY and everything < due[k] + duty - PAID:
-                cause = Cause.EMPTY
-            if cause is not None:
-                money, owned, home_sold = float(owned.worth[k]), None, k
-                if money > 0.0:
-                    invest(money, k)
-                    value, proceeds, gain, fee_due = account(k)
-                else:
-                    owed += -money
+            planned = held & (home.role is Sale.ON_DATE and k == home.sell_on)
+            forced = held & ~planned & (duty > 0.0) & (everything < duty - PAID)
+            empty = held & ~planned & ~forced & (everything < due[:, k] + duty - PAID)
+            empty &= home.role is Sale.WHEN_EMPTY
+            selling = planned | forced | empty
+            if selling.any():
+                cause[planned], cause[forced], cause[empty] = (
+                    Cause.PLANNED,
+                    Cause.FORCED,
+                    Cause.EMPTY,
+                )
+                held = held & ~selling
+                home_sold[selling] = k
+                money = np.where(selling, home.worth[:, k], 0.0)
+                invest(np.maximum(money, 0.0), k)
+                owed = owed + np.maximum(-money, 0.0)
+                value, proceeds, gain, fee_due = account(k)
         duty = fee_due - cash + owed
-        if plan.rule is Rule.FIXED:
-            fraction = _fraction(due[k] + duty, proceeds, gain, carried, plan.gains_tax)
+        if fixed:
+            fraction = _fraction(due[:, k] + duty, proceeds, gain, carried, plan.gains_tax)
         else:
             least = _fraction(duty, proceeds, gain, carried, plan.gains_tax)
-            fraction = max(min(plan.percent / 12.0, 1.0), least) if value > 0 else 0.0
-        if (1.0 - fraction) * value < PAID:
-            fraction = 1.0 if value > 0 else 0.0
+            fraction = np.where(value > 0, np.maximum(min(plan.percent / 12.0, 1.0), least), 0.0)
+        fraction = np.where(
+            (1.0 - fraction) * value < PAID, np.where(value > 0, 1.0, 0.0), fraction
+        )
         realised = fraction * gain
-        tax[k] = plan.gains_tax * max(realised - carried, 0.0)
-        carried = max(carried - realised, 0.0)
-        available = fraction * proceeds - tax[k] + cash - owed
-        debt = -available if available < -PAID else 0.0
-        fee[k] = min(fee_due, max(available, 0.0))
-        rest = available - fee[k]
-        sold[k] = fraction * value
-        commission[k] += sold[k] * plan.sell
-        units = units * (1.0 - fraction)
-        basis = basis * (1.0 - fraction)
-        if plan.rule is Rule.FIXED:
-            net[k] = min(max(rest, 0.0), due[k])
-            if rest - due[k] > PAID:
-                invest(rest - due[k], k)
+        tax[:, k] = plan.gains_tax * np.maximum(realised - carried, 0.0)
+        carried = np.maximum(carried - realised, 0.0)
+        available = fraction * proceeds - tax[:, k] + cash - owed
+        debt = np.where(available < -PAID, -available, 0.0)
+        fee[:, k] = np.minimum(fee_due, np.maximum(available, 0.0))
+        rest = available - fee[:, k]
+        sold[:, k] = fraction * value
+        commission[:, k] += sold[:, k] * plan.sell
+        units = units * (1.0 - fraction)[:, None]
+        basis = basis * (1.0 - fraction)[:, None]
+        if fixed:
+            net[:, k] = np.minimum(np.maximum(rest, 0.0), due[:, k])
+            surplus = rest - due[:, k]
+            if (surplus > PAID).any():
+                invest(np.where(surplus > PAID, surplus, 0.0), k)
         else:
-            net[k] = max(rest, 0.0)
-        balance[k] = float(units @ grid.unit[k])
-        home_cash[k] = cash
-        worth[k] = float(owned.worth[k]) if owned is not None else -debt
+            net[:, k] = np.maximum(rest, 0.0)
+        balance[:, k] = np.einsum("na,na->n", units, grid.unit[:, k])
+        home_cash[:, k] = cash
+        worth[:, k] = np.where(held, home.worth[:, k], -debt) if home is not None else -debt
         # A fixed amount not paid in full, or nothing left to sell and no apartment.
-        missed[k] = due[k] - net[k] > PAID or (value <= 0.0 and owned is None)
-    proceeds = balance[-1] * keep
-    gain = proceeds - float(basis @ grid.level[-1])
-    liquidation = proceeds - plan.gains_tax * max(gain - carried, 0.0) + worth[-1]
-    kept = np.flatnonzero(~missed[1:])
-    last_kept = int(kept[-1]) + 1 if kept.size else 0
-    shorts = np.flatnonzero(missed)
-    return Result(
+        missed[:, k] = (due[:, k] - net[:, k] > PAID) | ((value <= 0.0) & ~held)
+    proceeds = balance[:, -1] * keep
+    gain = proceeds - np.einsum("na,na->n", basis, grid.level[:, -1])
+    liquidation = proceeds - plan.gains_tax * np.maximum(gain - carried, 0.0) + worth[:, -1]
+    # The last month kept (0: none), and the first short one (0: none).
+    kept = ~missed[:, 1:]
+    last_kept = np.where(kept.any(axis=1), months - np.argmax(kept[:, ::-1], axis=1), 0)
+    short = missed.sum(axis=1)
+    return Many(
         balance,
         sold,
         commission,
@@ -393,13 +438,42 @@ def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:  # noqa: PL
         fee,
         net,
         due,
-        last_kept + 1 if last_kept < months else None,
-        float(liquidation),
+        np.where(last_kept < months, last_kept + 1, 0),
+        liquidation,
         worth,
         home_cash,
         invested,
         home_sold,
         cause,
-        int(shorts.size),
-        int(shorts[0]) if shorts.size else None,
+        short,
+        np.where(short > 0, np.argmax(missed, axis=1), 0),
+    )
+
+
+def run(plan: Plan, grid: Grid, home: Home | None = None) -> Result:
+    """Run the plan on one realization: a batch of one."""
+    if home is not None and (home.cash.ndim != 1 or home.worth.ndim != 1):
+        raise PlanError("The apartment's series do not match the plan's months")
+    many = run_many(
+        plan,
+        Grid(grid.unit[None], grid.reinvested[None], grid.level[None], grid.cpi[None]),
+        None if home is None else replace(home, cash=home.cash[None], worth=home.worth[None]),
+    )
+    return Result(
+        many.balance[0],
+        many.sold[0],
+        many.commission[0],
+        many.tax[0],
+        many.fee[0],
+        many.net[0],
+        many.due[0],
+        int(many.depleted[0]) or None,
+        float(many.liquidation[0]),
+        many.home[0],
+        many.home_cash[0],
+        many.invested[0],
+        int(many.home_sold[0]) or None,
+        Cause(str(many.cause[0])) if many.cause[0] else None,
+        int(many.short[0]),
+        int(many.first_short[0]) or None,
     )
