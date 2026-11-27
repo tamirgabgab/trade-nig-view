@@ -171,6 +171,25 @@ def test_purchase_and_betterment_taxes_reach_the_net_worth() -> None:
     assert result.net_worth[-1] == pytest.approx(end - result.betterment[-1])
 
 
+def test_an_apartment_owned_before_the_plan_is_taxed_on_its_own_cost_and_day() -> None:
+    # Bought in 2010 for what is 1,200,000 in shekels of the plan's first day; sold in 2025. By
+    # the linear rule only the share of the days after 2014-01-01 is taxed.
+    months = 60
+    value = assumed_values(months, 0.04)
+    plan = HomePlan(
+        START, months, 2_000_000, 2_000_000, [],
+        betterment=BETTERMENT[1].spec, cost=1_200_000, bought=date(2010, 3, 1),
+    )  # fmt: skip
+    result = run_home(plan, flat(months, value))
+    end = 2_000_000 * 1.04**5
+    sold = result.dates[-1]
+    linear = (sold - date(2014, 1, 1)).days / (sold - date(2010, 3, 1)).days
+    assert result.betterment[-1] == pytest.approx(0.25 * (end - 1_200_000) * linear)
+    # Without them the cost is the price and the purchase day the plan's first day, as before.
+    plain = run_home(replace(plan, cost=None, bought=None), flat(months, value))
+    assert plain.betterment[-1] == pytest.approx(0.25 * (end - 2_000_000))
+
+
 def test_assumed_values_draws_have_the_asked_mean_and_spread() -> None:
     rng = np.random.default_rng(3)
     ends = np.array([assumed_values(12, 0.04, 0.10, rng)[-1] for _ in range(20_000)])
