@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **J0 approved; J1 done (2026-11-27, ADR 0026, ADR 0027); J2 is next.** The user's answers are under "Decided" at the end.
+Status: **J0 and J1 approved (2026-11-27, ADR 0026, ADR 0027); J2 in progress.** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -286,3 +286,36 @@ Asked before J1 (2026-11-27), all at the recommended answer:
   three cost-share runs, which may differ.
 - **The capital may be zero** when there is an apartment.
 - **What is left** is the account plus the apartment's net worth while it is held.
+
+Asked before J2 (2026-11-27):
+- **One round**, not two: the windows of history, the simulated worlds, the sustainable amount and the sequence
+  view together.
+- **A histogram of what is left** over all the windows sampled, in shekels or as a percent of the start (the
+  user's own request). With an apartment "the portfolio" is the **net worth**: what selling the account and the
+  apartment would leave, against the same on the first day.
+- **The tax bounds:** one histogram, at the cost share entered, with the two bounds beside it as numbers.
+
+## J2: the conventions (chosen without asking, each stated on the page or in ADR 0028)
+- **What is left** of one realization: without an apartment the account's balance at the end, against the starting
+  capital (the "Left at the end" card); with one the liquidation, against the liquidation of the first day (the
+  "Net worth at the end" card). In shekels of the first day by default, with the switches for nominal and for
+  shekels.
+- **Windows** are the plan shifted by whole months, every start the data allows, with the Market tab's mix. On an
+  assumed return every window would be the same, so they are refused with the reason. The CPI inside a window is
+  the Market tab's: the published one when it is "historical" (a window past it is skipped), the assumed one
+  otherwise, and the page says which.
+- **Worlds** are H3b's: a block bootstrap of the mix's history, or a modelled market (its mean and volatility
+  estimated from the mix, or typed; on an assumed return the mean is that return).
+- **The apartment** follows its own "It grows by" in every realization: the dwelling index of the window or of the
+  world, or the assumed rate (then it is the same in all). Its cost stays what it is in shekels of the first day,
+  and its purchase day moves with the window.
+- **A realization lasts** when its last month is paid in full (J1's depletion: none). Windows that ran out are a
+  labelled share of their own beside the histogram, not a spike in its first bin.
+- **The sustainable amount** (fixed rule): the largest amount that lasts in a chosen share of the realizations
+  (95 % by default), by bisection, at the cost share entered.
+- **The sequence view** (one plan on the mix): the same months of the market in reverse order, the CPI and the
+  apartment as they were.
+- **One engine.** The loop over months runs on all realizations at once; one plan is a batch of one, so the golden
+  models of J0 and J1 check the same code the studies run.
+- **The evidence** is printed beside every probability: the independent terms the windows hold, and for a
+  bootstrap the history it was cut from.
