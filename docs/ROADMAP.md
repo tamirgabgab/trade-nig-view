@@ -29,6 +29,7 @@
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)); before P4 | L | planned (plan written 2026-11-27) |
+| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below) | L | planned (noted 2026-11-27) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -366,6 +367,58 @@ Phase-2 plan.
   the backtest engine (B1), the results tab and trades on the chart (B2), costs, sizing and risk exits (B3), honest
   evaluation: walk-forward, parameter sweeps and multiple-testing corrections (B4), portfolio and screener (B5), the
   strategy learn pages and the replay link (B6).
+
+### Phase J — Withdrawals (before Phase 4)
+- The plan is in [WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md) (2026-11-27): a Withdraw tab in the Planner, rounds J0–J4.
+  Six questions for the user are asked before J0.
+
+### Phase K — Synthetic symbols and open completions
+Asked for by the user on 2026-11-27, to be built later. A note of scope, not yet a round-by-round plan: the
+questions below are asked before K0.
+
+**Three kinds of symbol that are not market data.** Each is a symbol like any other, so the chart, the indicators,
+Compare, the Planner's mix and (later) the backtester use it with no change of their own.
+- [ ] **K0: the frame.** A `SyntheticProvider` behind the `DataProvider` interface (no network, deterministic by a
+  seed), a naming scheme, the definitions saved in `app.db`, and a "synthetic" mark wherever the symbol is shown, so
+  an invented series is never read as a market.
+- [ ] **K1: dwelling prices as a symbol.** The **close** is the CBS dwelling price index (national and by district),
+  scaled to 1 on its first date. The index is monthly: on its month dates the close is the index exactly; between
+  them it is interpolated geometrically, as the Planner already does, with optional noise that returns to the index
+  on every month date. Open, high and low are drawn around the close (the recipe of `app/analysis/synthetic.py`);
+  no volume.
+  - To say on the page: only the close carries information. The range inside a day is invented, and the index is
+    smoothed, so its volatility is far below a single apartment's.
+- [ ] **K2: an independent synthetic symbol.** The user sets its statistics: expected yearly return, yearly
+  volatility, and what shapes the bars: the overnight gap's share, the day's range, fat tails, memory (trend or
+  mean reversion), jumps; plus the seed, the first price, the first date and the length.
+  - Open, high, low and close cannot each have a distribution of their own: a bar needs low ≤ open, close ≤ high.
+    So the parameters describe the close-to-close return, the gap and the range, from which the four are built.
+    `app/analysis/synthetic.py` already does this for the lab's fixed scenarios; K2 opens its parameters.
+- [ ] **K3: a shuffled copy of a real symbol.** The bars are cut into k blocks, the blocks are put in a random order
+  (a seed) and joined again.
+  - The join is on **returns**, not on prices, or every joint would be a jump: each bar is kept as its ratios to
+    the previous close, and the path is rebuilt from the first price.
+  - It is a permutation, so the whole period's return and the set of daily returns are the real ones; only their
+    order changes. That makes it a test of sequence risk and of a strategy fitted to one history. (The Planner's
+    block bootstrap, `paths.block_index`, is the same idea with replacement.)
+  - Shuffling open, high, low and close each in its own order is possible only with a repair (high = the largest
+    of the four, low = the smallest), and it breaks what the four have in common inside a bar. Offered as an
+    option, marked as such.
+
+**Open completions gathered here** (K4, each small):
+- [ ] From H4: the second apartment sold on its own day (today both must be bought on the same day of the month);
+  loading a saved scenario reruns the comparison; a chart of the net-worth paths of two market accounts.
+- [ ] A run of Phase H on real data on the user's machine (`make-fixtures.ps1`, `make_macro_fixtures.py`), and a
+  pass over anything it shows.
+- [ ] Tax facts still read from secondary sources, to check against the Tax Authority: the order of sale of
+  identical securities (first in, first out), the surtax threshold, the rent exemption ceiling.
+- [ ] Phase J's optional round J4 (lot-exact tax from a Market-tab plan; two withdrawal plans side by side), if it
+  is not done there.
+
+**Questions before K0:** which dwelling series first (national only, or the districts too); how much noise around
+the dwelling close by default (none, or a small one); whether a synthetic symbol may enter a watchlist and a saved
+layout like a real one; and whether K comes before or after Phase 4 (the shuffled symbol serves the backtester's
+honest evaluation, B4).
 
 ### Phase 5 — Paper trading agent
 - Rule-based agent first (strategies from P4) running on replay windows and delayed data; later ML/LLM-assisted
