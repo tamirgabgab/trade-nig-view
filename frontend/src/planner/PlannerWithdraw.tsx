@@ -6,6 +6,7 @@ import { usePlannerStore } from '../store/plannerStore.ts';
 import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { PlannerSelect } from './PlannerSelect.tsx';
+import { PlannerWithdrawHome } from './PlannerWithdrawHome.tsx';
 import { PlannerWithdrawResults } from './PlannerWithdrawResults.tsx';
 import { mixLabel, toWithdraw } from './withdraw.ts';
 
@@ -31,7 +32,11 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
   const set = usePlannerStore((s) => s.setWithdraw);
   const [running, setRunning] = useState(false);
   // What was run, with the rule it was run under: a later edit must not relabel it.
-  const [shown, setShown] = useState<{ result: WithdrawResult; fixed: boolean } | null>(null);
+  const [shown, setShown] = useState<{
+    result: WithdrawResult;
+    fixed: boolean;
+    home: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const assumed = settings.returns === 'assumed';
@@ -43,7 +48,7 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
     setError(null);
     runWithdraw(toWithdraw(settings, form))
       .then((result) => {
-        setShown({ result, fixed });
+        setShown({ result, fixed, home: settings.home.include });
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'The request failed');
@@ -76,8 +81,8 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             <PlannerField
               label="Starting capital ₪"
               value={settings.capital}
-              // The arrows step from the minimum: a round one keeps the steps round.
-              min={10_000}
+              // Zero is a plan only with an apartment; the arrows step from a round minimum.
+              min={0}
               step={10_000}
               onChange={(capital) => {
                 set({ capital });
@@ -121,6 +126,12 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             taxed when sold. The results show the plan at 0% and at 100% beside it.
           </p>
         </fieldset>
+        <PlannerWithdrawHome
+          home={settings.home}
+          set={(changes) => {
+            set({ home: { ...settings.home, ...changes } });
+          }}
+        />
         <fieldset className={styles.section}>
           <legend>The withdrawals</legend>
           <div className={styles.grid}>
@@ -213,7 +224,9 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
             percent pays, with the tax between its two bounds.
           </p>
         )}
-        {shown !== null && <PlannerWithdrawResults result={shown.result} fixed={shown.fixed} />}
+        {shown !== null && (
+          <PlannerWithdrawResults result={shown.result} fixed={shown.fixed} home={shown.home} />
+        )}
       </div>
     </div>
   );

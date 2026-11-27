@@ -1,5 +1,38 @@
 import type { WithdrawRequest, WithdrawRow } from '../api/planner.ts';
-import { toRequest, type PlannerForm, type WithdrawSettings } from '../store/plannerStore.ts';
+import {
+  toRequest,
+  type PlannerForm,
+  type WithdrawHome,
+  type WithdrawSettings,
+} from '../store/plannerStore.ts';
+
+/** An included apartment in the API's units. */
+function toHome(home: WithdrawHome): NonNullable<WithdrawRequest['home']> {
+  // Its cost and purchase day go together, or not at all.
+  const known = home.cost > 0 && home.bought !== '';
+  return {
+    value: home.value,
+    growth: home.growth,
+    growth_pct: home.growthPct,
+    use: home.use,
+    rent: home.rent,
+    vacancy_pct: home.vacancy,
+    rent_tax_pct: home.rentTax,
+    maintenance_pct: home.maintenance,
+    insurance: home.insurance,
+    loan: home.loan,
+    loan_rate_pct: home.loanRate,
+    loan_months: Math.round(home.loanYears * 12),
+    loan_linked: home.loanLinked,
+    role: home.role,
+    sell_after_months: Math.round(home.sellAfter * 12),
+    selling_pct: home.selling,
+    early_repayment_pct: home.earlyRepayment,
+    betterment: home.betterment,
+    cost: known ? home.cost : null,
+    bought: known ? home.bought : null,
+  };
+}
 
 /** The request of the Withdraw tab: its settings, and the Market form's mix, fees and taxes. */
 export function toWithdraw(settings: WithdrawSettings, form: PlannerForm): WithdrawRequest {
@@ -23,6 +56,7 @@ export function toWithdraw(settings: WithdrawSettings, form: PlannerForm): Withd
       taxes: market.taxes,
     },
     inflation: market.inflation,
+    home: settings.home.include ? toHome(settings.home) : null,
   };
 }
 
@@ -42,9 +76,12 @@ export interface WithdrawYear {
   net: number;
   netReal: number;
   tax: number;
-  /** Account fees and sell commissions. */
+  /** Account fees and commissions. */
   costs: number;
   balance: number;
+  /** The apartment's cash in the year, and its worth at the year's end (0 once sold). */
+  homeCash: number;
+  home: number;
 }
 
 /** The monthly rows by year of the plan (the start row has no month of its own). */
@@ -61,6 +98,8 @@ export function byYear(rows: readonly WithdrawRow[]): WithdrawYear[] {
       tax: 0,
       costs: 0,
       balance: 0,
+      homeCash: 0,
+      home: 0,
     });
     year.months += 1;
     year.net += row.net;
@@ -68,6 +107,8 @@ export function byYear(rows: readonly WithdrawRow[]): WithdrawYear[] {
     year.tax += row.tax;
     year.costs += row.fee + row.commission;
     year.balance = row.balance;
+    year.homeCash += row.home_cash;
+    year.home = row.home;
   }
   return years;
 }

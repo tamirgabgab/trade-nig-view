@@ -23,6 +23,8 @@ interface Panel {
   ceiling: (row: WithdrawRow) => number;
   /** The start row holds nothing for this panel (no income on the first day). */
   fromStart: boolean;
+  /** A second line: the account with the apartment. */
+  total?: (row: WithdrawRow) => number;
 }
 
 interface PlannerWithdrawChartProps {
@@ -31,14 +33,17 @@ interface PlannerWithdrawChartProps {
   real: boolean;
   /** The first month a fixed amount was not paid in full. */
   depleted: number | null;
+  /** The plan has an apartment: the balance panel adds the account with it. */
+  home: boolean;
 }
 
 /**
  * The plan over time: the account's balance above and the month's income below, on one time
  * axis and each on its own scale. The band around a line is the same plan at the two bounds of
- * the tax (a cost share of 0 and of 100 %).
+ * the tax (a cost share of 0 and of 100 %). With an apartment, a second line above is the account
+ * and what the apartment's sale would leave.
  */
-export function PlannerWithdrawChart({ rows, real, depleted }: PlannerWithdrawChartProps) {
+export function PlannerWithdrawChart({ rows, real, depleted, home }: PlannerWithdrawChartProps) {
   const last = rows.at(-1)?.month ?? 1;
   const px = scale([0, last], [SIDE, W - SIDE]);
   const deflate = (row: WithdrawRow) => (real ? row.prices : 1);
@@ -51,6 +56,7 @@ export function PlannerWithdrawChart({ rows, real, depleted }: PlannerWithdrawCh
       floor: (row) => row.balance_floor / deflate(row),
       ceiling: (row) => row.balance_ceiling / deflate(row),
       fromStart: true,
+      ...(home ? { total: (row: WithdrawRow) => (row.balance + row.home) / deflate(row) } : {}),
     },
     {
       title: real ? 'Income a month, in shekels of the first day' : 'Income a month',
@@ -79,7 +85,13 @@ export function PlannerWithdrawChart({ rows, real, depleted }: PlannerWithdrawCh
       >
         {panels.map((panel) => {
           const shown = panel.fromStart ? rows : rows.slice(1);
-          const all = shown.flatMap((r) => [panel.value(r), panel.floor(r), panel.ceiling(r)]);
+          const total = panel.total;
+          const all = shown.flatMap((r) => [
+            panel.value(r),
+            panel.floor(r),
+            panel.ceiling(r),
+            total?.(r) ?? 0,
+          ]);
           const [, high] = extent([...all, 0], 0.06);
           const py = scale([0, high], [panel.top + panel.height, panel.top]);
           const at = (row: WithdrawRow, of: (r: WithdrawRow) => number) =>
@@ -118,6 +130,11 @@ export function PlannerWithdrawChart({ rows, real, depleted }: PlannerWithdrawCh
               />
               {banded && <polygon className={styles.band} points={band} />}
               <polyline points={shown.map((row) => at(row, panel.value)).join(' ')} />
+              {total !== undefined && (
+                <g className={styles.lineY}>
+                  <polyline points={shown.map((row) => at(row, total)).join(' ')} />
+                </g>
+              )}
               {shown.map((row) => (
                 // A column a month to hover: the line itself is too thin a target.
                 <rect
@@ -132,7 +149,8 @@ export function PlannerWithdrawChart({ rows, real, depleted }: PlannerWithdrawCh
                     {`Month ${String(row.month)} (${row.date}): ${shekels(panel.value(row))}` +
                       (banded
                         ? `; between ${shekels(panel.floor(row))} and ${shekels(panel.ceiling(row))} at the tax bounds`
-                        : '')}
+                        : '') +
+                      (total === undefined ? '' : `; with the apartment ${shekels(total(row))}`)}
                   </title>
                 </rect>
               ))}
@@ -168,6 +186,11 @@ export function PlannerWithdrawChart({ rows, real, depleted }: PlannerWithdrawCh
       <figcaption className={styles.legend}>
         <span className={styles.keyLineX}>The plan at its cost share</span>
         <span className={styles.keyBand}>Between the tax bounds (cost share 0% to 100%)</span>
+        {home && (
+          <span className={styles.keyLineY}>
+            The account and the apartment (what its sale leaves)
+          </span>
+        )}
       </figcaption>
     </figure>
   );

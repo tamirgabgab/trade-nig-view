@@ -119,9 +119,11 @@ describe('byYear', () => {
       commission: month === 0 ? 0 : 3,
       balance: 1_000 - month,
     }));
-    expect(byYear(long)).toEqual([
-      { year: 1, months: 12, net: 1_200, netReal: 600, tax: 12, costs: 60, balance: 988 },
-      { year: 2, months: 2, net: 200, netReal: 100, tax: 2, costs: 10, balance: 986 },
-    ]);
+    expect(byYear(long)).toEqual(
+      [
+        { year: 1, months: 12, net: 1_200, netReal: 600, tax: 12, costs: 60, balance: 988 },
+        { year: 2, months: 2, net: 200, netReal: 100, tax: 2, costs: 10, balance: 986 },
+      ].map((year) => ({ ...year, homeCash: 0, home: 0 })),
+    );
   });
 });

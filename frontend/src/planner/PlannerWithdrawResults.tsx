@@ -16,6 +16,18 @@ const span = (months: number) => {
   return `${String(count)} ${unit}${count === 1 ? '' : 's'}`;
 };
 
+const SALE = {
+  planned: 'On the date set',
+  empty: 'When the account could not pay the month',
+  forced: 'Forced: the account could not pay its costs',
+} as const;
+
+/** What became of the apartment in one run. */
+const fate = (b: WithdrawSummary) =>
+  b.home_sale === null
+    ? 'Kept'
+    : `${b.home_sale === 'forced' ? 'Forced sale' : 'Sold'} on ${b.home_sold_on ?? ''}`;
+
 const YEARS: PlannerColumn<WithdrawYear>[] = [
   [
     'Year',
@@ -27,6 +39,10 @@ const YEARS: PlannerColumn<WithdrawYear>[] = [
   ['Fees and commissions', (y) => shekels(y.costs)],
   ['Balance at its end', (y) => shekels(y.balance)],
 ];
+const HOME_YEARS: PlannerColumn<WithdrawYear>[] = [
+  ['Apartment, cash', (y) => shekels(y.homeCash)],
+  ['Apartment at its end', (y) => shekels(y.home)],
+];
 
 /**
  * A withdrawal plan: the headline its rule calls for (a fixed amount: how long it lasts; a
@@ -35,10 +51,13 @@ const YEARS: PlannerColumn<WithdrawYear>[] = [
 export function PlannerWithdrawResults({
   result,
   fixed,
+  home,
 }: {
   result: WithdrawResult;
   /** The rule the plan was run with: a fixed amount (true) or a percent. */
   fixed: boolean;
+  /** It was run with an apartment. */
+  home: boolean;
 }) {
   const [real, setReal] = useState(true);
   const { summary: s, rows } = result;
@@ -47,8 +66,24 @@ export function PlannerWithdrawResults({
   const left: PlannerCard = [
     'Left at the end',
     shekels(s.balance),
-    `In shekels of the first day: ${shekels(s.balance_real)}. Sold then, after the commission and the tax: ${shekels(s.liquidation)}`,
+    `In shekels of the first day: ${shekels(s.balance_real)}. Sold then, after the commission and the tax: ${shekels(s.liquidation)}${home ? ', the apartment included while it is held' : ''}`,
   ];
+  const apartment: PlannerCard[] = home
+    ? [
+        [
+          'The apartment',
+          fate(s),
+          s.home_sale === null
+            ? `Its sale at the end would leave ${shekels(s.home_worth)}`
+            : `${SALE[s.home_sale]}; ${shekels(s.invested)} went into the account in all`,
+        ],
+        [
+          'Net worth at the end',
+          shekels(s.net_worth),
+          `The account and the apartment; in shekels of the first day: ${shekels(s.net_worth_real)}`,
+        ],
+      ]
+    : [];
   const lasts: PlannerCard =
     s.depleted_month === null
       ? ['Lasts', `All ${span(result.months)}`, 'Every month was paid in full']
@@ -63,7 +98,7 @@ export function PlannerWithdrawResults({
     ['Fees and commissions', shekels(s.fees + s.commissions)],
   ];
   const cards: PlannerCard[] = fixed
-    ? [lasts, left, ...totals]
+    ? [lasts, left, ...apartment, ...totals]
     : [
         // A percent ends only when the fees take what is left: then that comes first.
         ...(s.depleted_month === null ? [] : [lasts]),
@@ -75,6 +110,7 @@ export function PlannerWithdrawResults({
         ],
         ['Income, last month', shekels(lastNet)],
         left,
+        ...apartment,
         ...totals,
       ];
   const lasting = (b: WithdrawSummary) =>
@@ -91,6 +127,11 @@ export function PlannerWithdrawResults({
           ['Lowest month, real', ([, b]) => shekels(b.lowest_net_real)],
         ] satisfies PlannerColumn<[string, WithdrawSummary]>[])),
     ['Tax paid', ([, b]) => shekels(b.tax)],
+    ...(home
+      ? ([['The apartment', ([, b]) => fate(b)]] satisfies PlannerColumn<
+          [string, WithdrawSummary]
+        >[])
+      : []),
   ];
   return (
     <>
@@ -120,6 +161,8 @@ export function PlannerWithdrawResults({
         {fixed
           ? 'A fixed net amount needs a larger sale the more of it is taxed, so the bounds differ in how long the money lasts.'
           : 'A percent sells the same whatever the cost share, so the balance is one and the bounds differ only in the income.'}
+        {home &&
+          ' With an apartment, the bounds may also differ in when it is sold; and a percent that must sell more for its costs than its twelfth has a balance that depends on the cost share too.'}
       </p>
       <h2 className={styles.heading}>Over time</h2>
       <label className={panel.check}>
@@ -132,7 +175,7 @@ export function PlannerWithdrawResults({
         />
         In shekels of the first day
       </label>
-      <PlannerWithdrawChart rows={rows} real={real} depleted={s.depleted_month} />
+      <PlannerWithdrawChart rows={rows} real={real} depleted={s.depleted_month} home={home} />
       <PlannerHeading
         csv="withdrawals"
         rows={rows}
@@ -152,12 +195,17 @@ export function PlannerWithdrawResults({
           'balance_ceiling',
           'net_floor',
           'net_ceiling',
+          ...(home ? (['home', 'home_cash', 'invested'] as const) : []),
         ]}
       >
         By year
       </PlannerHeading>
       <div className={styles.scroll}>
-        <PlannerTable label="Withdrawals by year" columns={YEARS} rows={byYear(rows)} />
+        <PlannerTable
+          label="Withdrawals by year"
+          columns={home ? [...YEARS, ...HOME_YEARS] : YEARS}
+          rows={byYear(rows)}
+        />
       </div>
       <p className={styles.note}>
         Every month, on its date: the account fee, the sale and its tax together. A loss is carried

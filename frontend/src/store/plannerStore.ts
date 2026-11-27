@@ -148,6 +148,62 @@ export interface CompareSettings {
   simulation: SimulationSettings;
 }
 
+/** An apartment owned on the first day of a withdrawal plan (percentages in %). */
+export interface WithdrawHome {
+  include: boolean;
+  /** Its value on the first day. */
+  value: number;
+  growth: 'assumed' | 'index';
+  growthPct: number;
+  use: 'live' | 'rent_out';
+  /** A month, in shekels of the first day. */
+  rent: number;
+  vacancy: number;
+  rentTax: number;
+  /** Of the value, a year. */
+  maintenance: number;
+  /** A year; follows the CPI. */
+  insurance: number;
+  /** What is left of its mortgage: one fixed-rate track. */
+  loan: number;
+  loanRate: number;
+  loanYears: number;
+  loanLinked: boolean;
+  role: 'kept' | 'on_date' | 'when_empty';
+  /** A sale on a date: the years from the start. */
+  sellAfter: number;
+  selling: number;
+  earlyRepayment: number;
+  betterment: 'single_home' | 'full';
+  /** What it cost and when it was bought: 0 and '' when not given. */
+  cost: number;
+  bought: string;
+}
+
+export const DEFAULT_WITHDRAW_HOME: WithdrawHome = {
+  include: false,
+  value: 2_000_000,
+  growth: 'assumed',
+  growthPct: 3,
+  use: 'live',
+  rent: 5_500,
+  vacancy: 4,
+  rentTax: 10,
+  maintenance: 0.5,
+  insurance: 1_500,
+  loan: 0,
+  loanRate: 4,
+  loanYears: 15,
+  loanLinked: false,
+  role: 'kept',
+  sellAfter: 5,
+  selling: 2.4,
+  earlyRepayment: 0,
+  betterment: 'single_home',
+  cost: 0,
+  bought: '',
+};
+
 /** The Withdraw tab's inputs (percentages in %, money in shekels). */
 export interface WithdrawSettings {
   /** The account grows as the Market tab's mix did, or by an assumed yearly return. */
@@ -165,6 +221,7 @@ export interface WithdrawSettings {
   indexed: boolean;
   /** A percent rule: the share of the account sold a year. */
   percent: number;
+  home: WithdrawHome;
 }
 
 export const DEFAULT_WITHDRAW: WithdrawSettings = {
@@ -178,6 +235,7 @@ export const DEFAULT_WITHDRAW: WithdrawSettings = {
   amount: 4_000,
   indexed: true,
   percent: 4,
+  home: DEFAULT_WITHDRAW_HOME,
 };
 
 const DEFAULT_CONTENTS: Record<Slot, OptionContents> = {
@@ -281,26 +339,43 @@ export function readContents(contents: unknown): Record<Slot, OptionContents> {
 
 export const readCompare = (compare: unknown) => sameKinds(DEFAULT_COMPARE, compare);
 
+/** ``read`` with each field that ``ok`` marks false put back to its default. */
+function keepValid<T extends object>(defaults: T, read: T, ok: { [K in keyof T]?: boolean }): T {
+  const bad = Object.entries(ok).filter(([, fine]) => fine === false);
+  return { ...read, ...Object.fromEntries(bad.map(([key]) => [key, defaults[key as keyof T]])) };
+}
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 /** Stored Withdraw settings; a field the tab could not show or send falls back to its default. */
 export function readWithdraw(stored: unknown): WithdrawSettings {
   const read = sameKinds(DEFAULT_WITHDRAW, stored);
+  const home = read.home;
   const ok: { [K in keyof WithdrawSettings]?: boolean } = {
     // Stored text, whatever its type says: only the tab's own choices pass.
     returns: ['mix', 'assumed'].includes(read.returns),
     rule: ['fixed', 'percent'].includes(read.rule),
-    start: /^\d{4}-\d{2}-\d{2}$/.test(read.start),
+    start: DATE.test(read.start),
     years: read.years >= 1 && read.years <= 100,
-    capital: read.capital > 0,
+    capital: read.capital >= 0,
     costShare: read.costShare >= 0 && read.costShare <= 100,
     amount: read.amount > 0,
     percent: read.percent > 0 && read.percent <= 1200,
   };
-  const bad = Object.entries(ok).filter(([, fine]) => !fine);
   return {
-    ...read,
-    ...Object.fromEntries(
-      bad.map(([key]) => [key, DEFAULT_WITHDRAW[key as keyof WithdrawSettings]]),
-    ),
+    ...keepValid(DEFAULT_WITHDRAW, read, ok),
+    home: keepValid(DEFAULT_WITHDRAW_HOME, home, {
+      growth: ['assumed', 'index'].includes(home.growth),
+      use: ['live', 'rent_out'].includes(home.use),
+      role: ['kept', 'on_date', 'when_empty'].includes(home.role),
+      betterment: ['single_home', 'full'].includes(home.betterment),
+      value: home.value > 0,
+      loan: home.loan >= 0,
+      loanYears: home.loanYears >= 1 && home.loanYears <= 50,
+      sellAfter: home.sellAfter >= 1 && home.sellAfter <= 100,
+      cost: home.cost >= 0,
+      bought: home.bought === '' || DATE.test(home.bought),
+    }),
   };
 }
 
