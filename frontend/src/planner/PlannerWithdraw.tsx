@@ -86,7 +86,10 @@ export function PlannerWithdraw({ hidden }: { hidden: boolean }) {
     const other = same ? null : runWithdraw(toWithdraw(otherSettings, otherForm)).catch(reason);
     Promise.all([own, many, other])
       .then(([result, more, aside]) => {
-        if (typeof result === 'string' && more === null && aside === null) throw new Error(result);
+        // Nothing ran: the plan failed, there was no study, and the other option has no result.
+        if (typeof result === 'string' && more === null && typeof (aside ?? '') === 'string') {
+          throw new Error(result);
+        }
         const mine = { label: ruleLabel(settings), result };
         const theirs = aside === null ? null : { label: ruleLabel(otherSettings), result: aside };
         setShown({

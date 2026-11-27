@@ -266,12 +266,18 @@ def _pooled[R: ManyRequest](
     value = held.ran.result.value
     plan = body.plan
     market = AccountIn(assets=plan.assets, use_fx=plan.use_fx, fees=plan.fees, taxes=plan.taxes)
-    changed = {"plan": None, "capital": value, "cost_share_pct": 100 * held.cost_share}
-    note = (
+    share = min(max(held.cost_share, 0.0), 1.0)
+    changed = {"plan": None, "capital": value, "cost_share_pct": 100 * share}
+    notes = [
         f"Every start and world uses what the plan accumulated ({value:,.0f}) as one capital at "
-        f"its overall cost share ({100 * held.cost_share:.0f} %), not lot by lot"
-    )
-    return body.model_copy(update={**changed, "market": market}), [note]
+        f"its overall cost share ({100 * share:.0f} %), not lot by lot"
+    ]
+    if share != held.cost_share:
+        notes.append(
+            f"The plan's cost is {100 * held.cost_share:.0f} % of its value: one pooled capital "
+            "cannot carry a loss, so the starts and the worlds tax every gain from the first day"
+        )
+    return body.model_copy(update={**changed, "market": market}), notes
 
 
 def _study(

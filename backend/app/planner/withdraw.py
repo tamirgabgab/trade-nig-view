@@ -114,6 +114,8 @@ PAID = 0.005
 MAX_PERCENT = 12.0
 #: Halvings of the fraction sold from known lots: down to the last bit of a double.
 BISECTIONS = 60
+#: The most deposits a market plan can hand over lot by lot (every month walks all of them).
+MAX_LOTS = 2000
 
 
 class Rule(StrEnum):
@@ -260,9 +262,17 @@ def assumed_grid(months: int, rate: float, cpi: FloatArray, *, real: bool = Fals
 
 
 def sample(
-    assets: Sequence[AssetData], start: date, months: int, taxes: Taxes, cpi: CpiPath
+    assets: Sequence[AssetData],
+    start: date,
+    months: int,
+    taxes: Taxes,
+    cpi: CpiPath,
+    *,
+    handed: bool = False,
 ) -> Grid:
-    """The grid of real assets: each month date reads the asset's first bar on or after it."""
+    """The grid of real assets: each month date reads the asset's first bar on or after it.
+    ``handed``: the first day reads the last bar on or before it, the bar a market account that
+    ends that day is valued on, so a handover on a weekend loses no price move."""
     days = np.array([day_number(add_months(start, k)) for k in range(months + 1)], dtype=np.int64)
     shape = (months + 1, len(assets))
     unit, reinvested, level = np.empty(shape), np.empty(shape), np.empty(shape)
@@ -271,7 +281,10 @@ def sample(
             first = date(1970, 1, 1) + timedelta(days=int(whole.days[0]))
             raise PlanError(f"{whole.symbol} has no data before {first}: start the plan later")
         # Only the bars from the first day on: the dividend factor is relative to that bar.
-        cut = slice(int(np.searchsorted(whole.days, int(days[0]), side="left")), None)
+        first_bar = int(np.searchsorted(whole.days, int(days[0]), side="left"))
+        if handed and (first_bar == len(whole.days) or whole.days[first_bar] != days[0]):
+            first_bar -= 1
+        cut = slice(first_bar, None)
         asset = replace(
             whole,
             days=whole.days[cut],
@@ -285,6 +298,7 @@ def sample(
             raise PlanError(f"{whole.symbol} has no data after {until}: end the plan by then")
         # A last date on a weekend or a holiday past the data sells on the last bar.
         i = np.minimum(np.searchsorted(asset.days, days, side="left"), last)
+        i[0] = 0
         if not np.all(np.isfinite(asset.fx[i])):
             raise PlanError(f"No exchange rate for {asset.symbol} on a month date")
         units, _ = growth(asset, taxes.dividend)
@@ -334,6 +348,11 @@ def handover(bought: Sequence[Lot], grid: Grid, sell: float) -> Lots:
     fees its units already paid, so selling everything on that day pays the same tax."""
     assets = grid.unit.shape[1]
     deposits = len(bought) // assets
+    if deposits > MAX_LOTS:
+        raise PlanError(
+            f"A plan of more than {MAX_LOTS} deposits cannot be handed over lot by lot: "
+            "use a capital and a cost share"
+        )
     value = np.array([lot.value for lot in bought]).reshape(assets, deposits).T
     gain = np.array([lot.gain for lot in bought]).reshape(assets, deposits).T
     # Oldest first: the order of the deposits' own days.
@@ -429,7 +448,9 @@ def run_many(  # noqa: PLR0912, PLR0915
         before = np.cumsum(units, axis=1) - units
         wanted = fraction[:, None, None] * units.sum(axis=1)[:, None]
         sold = np.clip(wanted - before, 0.0, units)
-        return np.divide(sold, units, out=np.zeros_like(units), where=units > 0)
+        share = np.divide(sold, units, out=np.zeros_like(units), where=units > 0)
+        # Selling everything is exact: two sums of the same units differ in their last bit.
+        return np.where(fraction[:, None, None] >= 1.0, 1.0, share)
 
     def realised(fraction: FloatArray, proceeds: FloatArray, k: int) -> FloatArray:
         """The gain of selling ``fraction`` first in, first out."""
@@ -447,13 +468,16 @@ def run_many(  # noqa: PLR0912, PLR0915
             gained = realised(fraction, proceeds, k)
             return fraction * proceeds - plan.gains_tax * np.maximum(gained - carried, 0.0)
 
+        nothing = (proceeds <= 0.0) | (need <= 0.0)
+        everything = leaves(np.ones(n)) <= need
+        if (nothing | everything).all():  # no fraction to look for this month
+            return np.where(nothing, 0.0, 1.0)
         low, high = np.zeros(n), np.ones(n)
         for _ in range(BISECTIONS):
             middle = (low + high) / 2.0
             short = leaves(middle) < need
             low, high = np.where(short, middle, low), np.where(short, high, middle)
-        nothing = (proceeds <= 0.0) | (need <= 0.0)
-        return np.where(nothing, 0.0, np.where(leaves(np.ones(n)) <= need, 1.0, high))
+        return np.where(nothing, 0.0, np.where(everything, 1.0, high))
 
     for k in range(1, months + 1):
         basis += units * grid.reinvested[:, k][:, None]

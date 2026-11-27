@@ -117,6 +117,26 @@ def test_history_and_worlds_use_the_plan_as_one_capital(client: TestClient) -> N
     assert worlds.json()["start_worth"] == pytest.approx(got["value"])
 
 
+def test_a_plan_under_water_keeps_its_loss_in_the_lots(client: TestClient) -> None:
+    # A half year in which AAPL fell: the cost is above the value, and the studies say that one
+    # pooled capital cannot carry the loss the lots do.
+    def half_year(year: int) -> dict[str, Any]:
+        deposit = [{"date": f"{year}-01-15", "amount": 100_000}]
+        return {**MARKET, "deposits": deposit, "end": f"{year}-07-15"}
+
+    fell = next(
+        plan
+        for plan in map(half_year, range(2003, 2025))
+        if market(client, deposits=plan["deposits"], end=plan["end"])["taxable_gain"] < -5_000
+    )
+    changes = {"start": fell["end"], "months": 12, "plan": fell}
+    assert run(client, **changes)["accumulated"]["cost_share"] > 1.04
+    study = client.post("/api/planner/withdraw/study", json={**PLAN, **changes})
+    assert study.status_code == 200, study.text
+    assert any("cannot carry a loss" in note for note in study.json()["warnings"])
+    assert study.json()["bounds"][1]["cost_share"] == 1
+
+
 @pytest.mark.parametrize(
     ("changes", "message"),
     [

@@ -407,9 +407,9 @@ def handed_over(
     fees, result = fees_of(plan), ran.result
     account = Account(taxes_of(plan), fees, [a.data for a in ran.assets], ran.warnings, ran.fx)
     # What the Market tab would tax, turned around: the cost of everything it holds.
+    # Above 1 when the plan is under water: its loss is carried by the lots.
     cost = (1.0 - fees.sell) * result.value - sum(lot.gain for lot in result.lots)
-    share = min(max(cost / result.value, 0.0), 1.0) if result.value > 0 else 1.0
-    return HandedOver(ran, account, share)
+    return HandedOver(ran, account, cost / result.value if result.value > 0 else 1.0)
 
 
 def check(body: WithdrawRequest) -> None:
@@ -510,7 +510,8 @@ def _run(
         )
         weights: list[float] = [1.0]
     else:
-        grid = sample(account.mix, body.start, body.months, taxes, cpi)
+        # From a plan, the first day reads the bar the plan's account was valued on.
+        grid = sample(account.mix, body.start, body.months, taxes, cpi, handed=held is not None)
         weights = [a.weight for a in account.mix]
     home = None
     if body.home is not None:
@@ -524,7 +525,9 @@ def _run(
     lots = None if held is None else handover(held.ran.result.lots, grid, account.fees.sell)
 
     def at(share: float, path: Grid = grid) -> Result:
-        return run(plan_of(body, account, weights, share), path, home, lots)
+        # With known lots the cost share is an outcome, not an input: any valid one will do.
+        pooled = min(max(share, 0.0), 1.0)
+        return run(plan_of(body, account, weights, pooled), path, home, lots)
 
     share = body.cost_share_pct / 100 if held is None else held.cost_share
     result = at(share)

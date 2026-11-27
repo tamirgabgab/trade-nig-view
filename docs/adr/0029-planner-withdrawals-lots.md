@@ -33,6 +33,19 @@ J4 (`docs/WITHDRAWAL_PLAN.md`), run before J3 at the user's request. The user's 
   with the Market forms, behind the same switch. Run runs both and shows a table of the two; the full results, and
   any study, are of the option on screen.
 
+## What the review settled
+- **A handover on a day without a bar.** The market account is valued on the last bar on or before its end; the
+  grid read the first bar on or after it, so a plan that ends on a weekend lost (or won) the move between the two
+  for the whole plan. With lots, the grid's first day now reads the account's own bar.
+- **Selling everything is exact** with lots (two sums of the same units differ in their last bit, which left a dust
+  of units and a depletion month one too late).
+- **A plan under water** shows its cost above 100 % of its value; the studies, whose one pooled capital cannot
+  carry a loss, say so.
+- **No more than 2,000 deposits** are handed over lot by lot, and a month with nothing to solve skips the bisection.
+- **Simulate from a plan** grows by the mix whatever the hidden returns select holds.
+- **Loading a saved scenario** with option B on screen no longer exchanges the two options' Withdraw settings.
+- **The error is raised** when neither of the two options can run.
+
 ## Consequences
 - With lots the cost share on the page is an outcome (the plan's cost over its value), not an input.
 - Not built: typing lots by hand (a portfolio that exists already), lots inside the windows and the worlds, a

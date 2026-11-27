@@ -205,7 +205,7 @@ the price of an income that moves. Those numbers are for US data and are not car
 | **J1** ✅ 2026-11-27 | The apartment in the balance: an owned apartment's cash flows, its three sale options and a forced sale, at most one mortgage track, the cost fields for betterment tax. | M |
 | **J2** ✅ 2026-11-27 | Many realizations: windows of history and the simulated worlds; the survival curve, the depletion histogram, the income fan; the sustainable amount by bisection; the sequence-risk view; the evidence-depth notes. | L |
 | **J3** | The learn page with its pinned example; the tab in saved scenarios; a UX pass. | S |
-| **J4** ✅ 2026-11-27 | Lot-exact tax when the capital comes from a Market-tab plan (accumulate, then withdraw; first in, first out), after the order-of-sale rule is confirmed from a primary source; two withdrawal plans side by side. | M |
+| **J4** ✅ 2026-11-27 | Lot-exact tax when the capital comes from a Market-tab plan (accumulate, then withdraw; first in, first out, a rule read from secondary sources only: the facts table); two withdrawal plans side by side. | M |
 
 Order: J0 → J1 → J2 → J3. After J0 the tab already answers the user's core question for a market account. Each
 round: the tests before the code, the cleanup pipeline, a demo checklist, and a stop.

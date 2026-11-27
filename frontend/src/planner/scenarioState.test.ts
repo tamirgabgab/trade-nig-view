@@ -5,7 +5,12 @@ import {
   savedKey,
   usePlannerHomeStore,
 } from '../store/plannerHomeStore.ts';
-import { DEFAULT_FORM, sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
+import {
+  DEFAULT_FORM,
+  DEFAULT_WITHDRAW,
+  sanitizePersisted,
+  usePlannerStore,
+} from '../store/plannerStore.ts';
 import { TAX_PRESETS } from '../test/plannerHomeBody.ts';
 import { applyScenario, captureScenario, parseScenarioState } from './scenarioState.ts';
 
@@ -60,6 +65,22 @@ describe('a saved scenario', () => {
     expect([market.same, market.slot, home.slot]).toEqual([false, 'a', 'a']);
     expect([market.form.useFx, market.other.useFx]).toEqual([true, false]);
     expect([home.home.price, home.other.price]).toEqual([DEFAULT_HOME.price, 3_000_000]);
+  });
+
+  it('keeps each option’s Withdraw settings its own when it is loaded with option B on screen', () => {
+    const saved = captureScenario(PRESETS);
+    const store = usePlannerStore.getState();
+    store.copyToOther();
+    store.setSame(false);
+    store.swap('b');
+    store.setWithdraw({ amount: 8_000 });
+    applyScenario(saved);
+    const state = usePlannerStore.getState();
+    expect([state.slot, state.withdraw.amount, state.withdrawOther.amount]).toEqual([
+      'a',
+      DEFAULT_WITHDRAW.amount,
+      8_000,
+    ]);
   });
 
   it('holds option A twice while option B is the same as it', () => {

@@ -83,7 +83,8 @@ export function toWithdrawSimulate(
   form: PlannerForm,
 ): WithdrawSimulateRequest {
   const { many } = settings;
-  const assumed = settings.returns === 'assumed';
+  // From the Market tab's plan the account grows by the mix, whatever the hidden select holds.
+  const assumed = settings.source !== 'plan' && settings.returns === 'assumed';
   // A modelled market: on an assumed return the mean is that return and only the volatility is
   // typed; on the mix both are estimated from it, or both typed.
   const typed = many.method === 'monte_carlo' && (assumed || !many.estimate);

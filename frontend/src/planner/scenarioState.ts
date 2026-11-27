@@ -15,6 +15,7 @@ import {
   readContents,
   readForm,
   usePlannerStore,
+  withdrawsOf,
   type CompareSettings,
   type OptionContents,
   type PlannerForm,
@@ -96,6 +97,9 @@ export function applyScenario(state: ScenarioState): void {
     loads: s.loads + 1,
     same: state.same,
     slot: 'a',
+    // A scenario does not hold the Withdraw settings: each option keeps its own.
+    withdraw: withdrawsOf(s).a,
+    withdrawOther: withdrawsOf(s).b,
     form: state.market.a,
     other: state.market.b,
     contents: state.contents,

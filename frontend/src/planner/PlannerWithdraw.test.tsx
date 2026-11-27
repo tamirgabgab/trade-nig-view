@@ -404,6 +404,20 @@ describe('PlannerWithdraw', () => {
     expect(screen.getByRole('heading', { name: /^Option A: withdrawals/ })).toBeVisible();
   });
 
+  it('raises the error when neither of the two options can run', async () => {
+    const user = userEvent.setup();
+    stubApi({
+      '/api/planner/withdraw': () =>
+        jsonResponse({ detail: 'SPY has no data after 2026-11-20', status: 422 }, 422),
+    });
+    usePlannerStore.getState().copyToOther();
+    usePlannerStore.getState().setSame(false);
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(screen.getByRole('button', { name: 'Run' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('SPY has no data after');
+    expect(screen.queryByRole('table', { name: 'Side by side' })).toBeNull();
+  });
+
   it('shows the same months in reverse order beside the plan', async () => {
     const user = userEvent.setup();
     const back = { ...WITHDRAW_RESULT.ceiling, cost_share: 0.5, balance: 9_000 };

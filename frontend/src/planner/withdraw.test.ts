@@ -209,6 +209,12 @@ describe('the requests of many realizations', () => {
       market_mean_pct: null,
       market_sd_pct: 15,
     });
+    // From the Market tab's plan the account grows by the mix: a hidden "assumed" is not read.
+    const fromPlan = { ...assumed, source: 'plan' as const, many: { ...model, estimate: false } };
+    expect(toWithdrawSimulate(fromPlan, DEFAULT_FORM)).toMatchObject({
+      market_mean_pct: 5,
+      market_sd_pct: 15,
+    });
   });
 });
 

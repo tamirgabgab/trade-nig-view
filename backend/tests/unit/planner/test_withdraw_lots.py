@@ -10,7 +10,7 @@ import pytest
 
 from app.planner.deposits import Deposit, day_number
 from app.planner.inflation import CpiPath
-from app.planner.market import Fees, TaxBase, Taxes, run_market
+from app.planner.market import Fees, Lot, PlanError, TaxBase, Taxes, run_market
 from app.planner.withdraw import (
     Grid,
     Home,
@@ -98,6 +98,23 @@ def test_one_lot_is_the_pooled_account() -> None:
             assert getattr(exact, key) == pytest.approx(getattr(pooled, key), rel=1e-9, abs=1e-6)
         assert exact.depleted == pooled.depleted
         assert exact.liquidation == pytest.approx(pooled.liquidation, rel=1e-9, abs=1e-6)
+
+
+def test_selling_everything_leaves_nothing() -> None:
+    # Many lots, and a percent of 1,200 a year: all of it is sold in month 1, to the last unit,
+    # so month 2 is the first that starts with nothing.
+    rng = np.random.default_rng(9)
+    held = Lots(rng.uniform(0.1, 300, (120, 1)), rng.uniform(0, 200, (120, 1)))
+    result = run(Plan(0.0, rule=Rule.PERCENT, percent=12.0), growing(3, 0.07), lots=held)
+    assert result.balance[1:] == pytest.approx(0.0, abs=0.0)
+    assert result.depleted == 2
+
+
+def test_too_many_deposits_are_not_handed_over() -> None:
+    path = growing(2, 0.0)
+    lot = Lot(0, "A", 0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0)
+    with pytest.raises(PlanError, match="more than 2000 deposits"):
+        handover([lot] * 2001, path, 0.0)
 
 
 # ---------------------------------------------------------------- an independent scalar model
@@ -292,3 +309,25 @@ def test_the_handover_is_the_market_tabs_account(base: TaxBase) -> None:
     # Sold on the handover day itself, the tax is the Market tab's own.
     cost = float(bought.basis[:, 0] @ np.ones(3)) * path.level[0, 0]
     assert at_handover.value * (1 - fees.sell) - cost == pytest.approx(at_handover.taxable_gain)
+
+
+def test_a_handover_on_a_weekend_reads_the_bar_the_account_was_valued_on() -> None:
+    # The plan ends on Saturday 2022-01-01: its account is valued on Friday's bar. The grid's
+    # first day reads that bar too, so the move to Monday is not lost (or won) at the handover.
+    held = asset(dividends=True, seed=3)
+    deposits = [Deposit(date(2020, 1, 1), 100_000), Deposit(date(2021, 1, 4), 80_000)]
+    cpi = CpiPath(
+        np.array([day_number(date(2019, 12, 1)), day_number(date(2023, 6, 1))]),
+        np.array([100.0, 100.0]),
+    )
+    day = date(2022, 1, 1)
+    at_handover = run_market([held], deposits, day, cpi=cpi)
+    # Month 12 is Sunday 2023-01-01: both sell on the Monday after it.
+    whole = run_market([held], deposits, date(2023, 1, 2), cpi=cpi)
+    path = sample([held], day, 12, Taxes(), cpi, handed=True)
+    result = run(
+        Plan(0.0, rule=Rule.PERCENT, percent=0.0), path, lots=handover(at_handover.lots, path, 0.0)
+    )
+    assert result.balance[0] == pytest.approx(at_handover.value)
+    assert result.balance[-1] == pytest.approx(whole.value)
+    assert result.liquidation == pytest.approx(whole.net_value)
