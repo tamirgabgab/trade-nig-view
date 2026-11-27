@@ -88,14 +88,20 @@ Windows of history overlap, and worlds are cut from the same history, so neither
 as it has realizations ([overlapping windows](learn:overlapping-windows), [simulated worlds](learn:simulated-worlds)):
 
 $$
-n_{\text{eff}} = \frac{S + T}{T}
+\begin{aligned}
+\text{windows:} &\quad n_{\text{eff}} = \frac{S + T}{T} \\[4pt]
+\text{a bootstrap:} &\quad n_{\text{eff}} = \frac{\text{history}}{T}
+\end{aligned}
 $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $S$ | the span of the starts, or the months of history a bootstrap is cut from | months |
+| $S$ | the span of the starts: from the first to the last | months |
+| $\text{history}$ | the months of history a bootstrap's worlds are cut from | months |
 | $T$ | the plan's term | months |
 | $n_{\text{eff}}$ | about how many separate terms the windows, or the history, hold | 1 to 10 |
+
+A modelled market has no history behind its worlds, and the page prints no such number for it.
 
 ## Worked example
 
@@ -126,8 +132,8 @@ $$
 - **The histogram** counts what is left at the end, as a percent of the start or in shekels. The ones that ran out
   are a bar of their own; with an apartment they still hold its worth and stay among the bars.
 - **Still paying, by year** falls where realizations run out; the band is the two tax bounds.
-- **Independent terms** says how much of that to believe: for example, 179 windows of ten years from 25 years of
-  bars are about 2.5 separate terms, not 179.
+- **Independent terms** says how much of that to believe: for example, 179 windows of ten years, whose starts span
+  178 months, are about **2.5** separate terms, not 179; worlds cut from 298 months of history hold about the same.
 
 ## Where it comes from
 

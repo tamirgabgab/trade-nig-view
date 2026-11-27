@@ -38,7 +38,8 @@ J3 closes Phase J (`docs/WITHDRAWAL_PLAN.md`), after J4 at the user's request. T
 
   Fields and running amounts are words, as in ADR 0025: $\text{sell}$, $\text{buy}$, $\text{mgmt}$,
   $\text{monthly}$, $\text{rate}_{\text{gains}}$, $\text{fee}_k$, $\text{tax}_k$, $\text{net}_k$, $\text{cost}_k$,
-  $\text{carried}_k$, $\text{cash}_k$, $\text{debt}_k$, $\text{growth}_k$, $\text{units}_j$, $\text{paying}(k)$.
+  $\text{carried}_k$, $\text{cash}_k$, $\text{debt}_k$, $\text{growth}_k$, $\text{units}_j$, $\text{sold}_j$,
+  $\text{value}_j$, $\text{gain}_j$, $\text{paying}(k)$, $\text{fan}_t$, $\text{history}$.
   ADR 0025's $\mathrm{NW}_k$ (what an apartment's sale leaves), $\mathrm{CPI}_k$, $T$, $N$, $n_{\text{eff}}$, $Q_p$
   and the counters keep their meaning.
 - **Each worked example is pinned through the engine** (`test_learn_examples.py`), as ADR 0025 asks: a million

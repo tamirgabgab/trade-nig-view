@@ -692,3 +692,17 @@ def test_sustainable_withdrawals_example() -> None:
     assert wrun(percent, path).balance[-1] == pytest.approx(end)
     assert wrun(percent, reverse(path)).balance[-1] == pytest.approx(end)
     shows("sustainable-withdrawals", "60,000", "50,000", money(end))
+
+
+def test_sustainable_withdrawals_evidence() -> None:
+    """Windows count their span and term; a bootstrap the history it is cut from."""
+    windows = effective_samples(178, 120)
+    bootstrap = 298 / 120
+    assert f"{windows:.1f}" == f"{bootstrap:.1f}" == "2.5"
+    shows(
+        "sustainable-withdrawals",
+        "**2.5**",
+        "178 months",
+        "298 months",
+        "\\frac{\\text{history}}{T}",
+    )
