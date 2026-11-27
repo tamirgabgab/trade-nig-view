@@ -1643,6 +1643,60 @@ export interface components {
             /** Drawings */
             drawings: components["schemas"]["Drawing"][];
         };
+        /**
+         * DwellingDefinition
+         * @description A synthetic symbol whose close is a CBS dwelling price index (``app.macro``, K1).
+         *
+         *     The index's first value is ``first_price``; ``noise_pct`` is the daily standard deviation of
+         *     a bridge that returns to the index on every anchor date. Interpolated (the default), the
+         *     anchors are the index's month dates and the close runs geometrically between them, which
+         *     uses the next month's value (not causal). Causal, every value holds from its assumed
+         *     publication, ``lag_months`` after its month date. Prices in shekels, no volume.
+         */
+        DwellingDefinition: {
+            /**
+             * Name
+             * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
+             */
+            name: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * First Price
+             * @default 100
+             */
+            first_price: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "dwelling";
+            /**
+             * Series
+             * @default dwelling
+             * @enum {string}
+             */
+            series: "dwelling" | "dwelling_telaviv" | "dwelling_center" | "dwelling_haifa" | "dwelling_jerusalem" | "dwelling_north" | "dwelling_south";
+            /** Seed */
+            seed: number;
+            /**
+             * Noise Pct
+             * @description Daily standard deviation, %
+             * @default 0.2
+             */
+            noise_pct: number;
+            /**
+             * Causal
+             * @default false
+             */
+            causal: boolean;
+            /**
+             * Lag Months
+             * @description Causal only: publication lag
+             * @default 2
+             */
+            lag_months: number;
+        };
         /** EvidenceOut */
         EvidenceOut: {
             /**
@@ -4155,18 +4209,22 @@ export interface components {
          */
         ScenarioDefinition: {
             /**
-             * Kind
-             * @default scenario
-             * @constant
-             */
-            kind: "scenario";
-            /**
              * Name
              * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
              */
             name: string;
             /** Full Name */
             full_name: string;
+            /**
+             * First Price
+             * @default 100
+             */
+            first_price: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "scenario";
             scenario: components["schemas"]["Scenario"];
             /** Seed */
             seed: number;
@@ -4176,11 +4234,6 @@ export interface components {
              * @description From 1970-01-01
              */
             first_date: string;
-            /**
-             * First Price
-             * @default 100
-             */
-            first_price: number;
             /**
              * Bars
              * @default 2500
@@ -4720,11 +4773,11 @@ export interface components {
             revision: number;
             /**
              * Last Date
-             * Format: date
-             * @description The date of the last daily bar
+             * @description The date of the last daily bar; null for a dwelling symbol (its data sets it)
              */
-            last_date: string;
-            definition: components["schemas"]["ScenarioDefinition"];
+            last_date: string | null;
+            /** Definition */
+            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"];
         };
         /**
          * SyntheticReferences
@@ -4789,7 +4842,8 @@ export interface components {
         SyntheticUpdate: {
             /** Revision */
             revision: number;
-            definition: components["schemas"]["ScenarioDefinition"];
+            /** Definition */
+            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"];
         };
         /**
          * TaxBase

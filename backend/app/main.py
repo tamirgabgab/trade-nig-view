@@ -110,18 +110,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.synthetic = synthetic_symbols = SyntheticSymbols(app_db)
     universe = Universe.load(settings.universe_file).with_extra(synthetic_symbols)
     app.state.universe = universe
+    app.state.macro_service = macro_service = MacroService(
+        MacroCache(settings.chartlab_data_dir / "bars.db"),
+        [MacroFixtureSource(settings.fixtures_dir)] if settings.offline else [BoiSource()],
+        ttl_s=settings.macro_ttl_s,
+    )
     app.state.bar_service = BarService(
         universe,
         BarCache(settings.chartlab_data_dir / "bars.db"),
         build_providers(settings),
         refresh_ttl_s=settings.refresh_ttl_s,
         provider_limits=not settings.offline,
-        synthetic=SyntheticProvider(synthetic_symbols.definition),
-    )
-    app.state.macro_service = MacroService(
-        MacroCache(settings.chartlab_data_dir / "bars.db"),
-        [MacroFixtureSource(settings.fixtures_dir)] if settings.offline else [BoiSource()],
-        ttl_s=settings.macro_ttl_s,
+        synthetic=SyntheticProvider(
+            synthetic_symbols.definition, lambda series: macro_service.get(series).data
+        ),
     )
     app.state.drawings = DrawingsRepository(app_db)
     app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)

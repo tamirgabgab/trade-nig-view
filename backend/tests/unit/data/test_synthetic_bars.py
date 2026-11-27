@@ -29,6 +29,7 @@ from app.data.synthetic import SESSION_BARS, daily_bars, hourly_bars
 from app.data.universe import Universe
 from app.data.validate import validate_bars
 from app.errors import IntervalUnavailableError
+from app.macro.series import MacroSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, Interval, ts_to_date
 from app.models.symbols import SymbolInfo
 from app.models.synthetic import ScenarioDefinition
@@ -240,6 +241,10 @@ class _Refuses:
         raise AssertionError(f"asked the market for {symbol.symbol}")
 
 
+def _no_index(series: str) -> MacroSeries:
+    raise AssertionError(f"a scenario symbol needs no index ({series})")
+
+
 def test_online_the_bar_service_never_asks_the_market(tmp_path: Path) -> None:
     store = SyntheticSymbols(tmp_path / "app.db")
     spec = definition(bars=120)
@@ -250,7 +255,7 @@ def test_online_the_bar_service_never_asks_the_market(tmp_path: Path) -> None:
         BarCache(tmp_path / "bars.db"),
         [_Refuses()],
         provider_limits=True,
-        synthetic=SyntheticProvider(store.definition),
+        synthetic=SyntheticProvider(store.definition, _no_index),
     )
     hours = service.get_bars(spec.symbol, Interval.H1)
     assert (hours.source, hours.provider_window_days, len(hours.frame)) == ("synthetic", None, 840)

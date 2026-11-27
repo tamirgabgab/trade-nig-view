@@ -4372,6 +4372,84 @@
         "title": "DrawingsUpdate",
         "description": "``PUT`` body: the full list, and the revision it was based on (optimistic locking)."
       },
+      "DwellingDefinition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
+            "title": "Name",
+            "description": "The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "first_price": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "First Price",
+            "default": 100.0
+          },
+          "kind": {
+            "type": "string",
+            "const": "dwelling",
+            "title": "Kind",
+            "default": "dwelling"
+          },
+          "series": {
+            "type": "string",
+            "enum": [
+              "dwelling",
+              "dwelling_telaviv",
+              "dwelling_center",
+              "dwelling_haifa",
+              "dwelling_jerusalem",
+              "dwelling_north",
+              "dwelling_south"
+            ],
+            "title": "Series",
+            "default": "dwelling"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "noise_pct": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Noise Pct",
+            "description": "Daily standard deviation, %",
+            "default": 0.2
+          },
+          "causal": {
+            "type": "boolean",
+            "title": "Causal",
+            "default": false
+          },
+          "lag_months": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 0.0,
+            "title": "Lag Months",
+            "description": "Causal only: publication lag",
+            "default": 2
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "full_name",
+          "seed"
+        ],
+        "title": "DwellingDefinition",
+        "description": "A synthetic symbol whose close is a CBS dwelling price index (``app.macro``, K1).\n\nThe index's first value is ``first_price``; ``noise_pct`` is the daily standard deviation of\na bridge that returns to the index on every anchor date. Interpolated (the default), the\nanchors are the index's month dates and the close runs geometrically between them, which\nuses the next month's value (not causal). Causal, every value holds from its assumed\npublication, ``lag_months`` after its month date. Prices in shekels, no volume."
+      },
       "EvidenceOut": {
         "properties": {
           "independent": {
@@ -9692,12 +9770,6 @@
       },
       "ScenarioDefinition": {
         "properties": {
-          "kind": {
-            "type": "string",
-            "const": "scenario",
-            "title": "Kind",
-            "default": "scenario"
-          },
           "name": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
@@ -9709,6 +9781,19 @@
             "maxLength": 60,
             "minLength": 1,
             "title": "Full Name"
+          },
+          "first_price": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "First Price",
+            "default": 100.0
+          },
+          "kind": {
+            "type": "string",
+            "const": "scenario",
+            "title": "Kind",
+            "default": "scenario"
           },
           "scenario": {
             "$ref": "#/components/schemas/Scenario"
@@ -9724,13 +9809,6 @@
             "format": "date",
             "title": "First Date",
             "description": "From 1970-01-01"
-          },
-          "first_price": {
-            "type": "number",
-            "maximum": 1000000.0,
-            "exclusiveMinimum": 0.0,
-            "title": "First Price",
-            "default": 100.0
           },
           "bars": {
             "type": "integer",
@@ -10848,13 +10926,35 @@
             "title": "Revision"
           },
           "last_date": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Last Date",
-            "description": "The date of the last daily bar"
+            "description": "The date of the last daily bar; null for a dwelling symbol (its data sets it)"
           },
           "definition": {
-            "$ref": "#/components/schemas/ScenarioDefinition"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ScenarioDefinition"
+              },
+              {
+                "$ref": "#/components/schemas/DwellingDefinition"
+              }
+            ],
+            "title": "Definition",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "dwelling": "#/components/schemas/DwellingDefinition",
+                "scenario": "#/components/schemas/ScenarioDefinition"
+              }
+            }
           }
         },
         "type": "object",
@@ -10967,7 +11067,22 @@
             "title": "Revision"
           },
           "definition": {
-            "$ref": "#/components/schemas/ScenarioDefinition"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ScenarioDefinition"
+              },
+              {
+                "$ref": "#/components/schemas/DwellingDefinition"
+              }
+            ],
+            "title": "Definition",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "dwelling": "#/components/schemas/DwellingDefinition",
+                "scenario": "#/components/schemas/ScenarioDefinition"
+              }
+            }
           }
         },
         "type": "object",

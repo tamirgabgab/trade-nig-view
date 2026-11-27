@@ -23,6 +23,7 @@ from app.planner.market import PlanError
 
 URL = "/api/synthetic"
 WALK: dict[str, Any] = {
+    "kind": "scenario",
     "name": "walk1",
     "full_name": "Random walk, seed 7",
     "scenario": "random_walk",
@@ -310,3 +311,104 @@ def test_the_test_data_dir_is_released(settings: Settings, tmp_path: Path) -> No
     app = create_app(settings)
     close_stores(app)  # every store of app.db, the synthetic one included
     assert (tmp_path / "data" / "app.db").exists()
+
+
+# --- K1: dwelling prices ------------------------------------------------------------------------
+
+HOME: dict[str, Any] = {
+    "kind": "dwelling",
+    "name": "home",
+    "full_name": "Dwelling prices, Israel",
+    "seed": 4,
+}
+HOME_SYMBOL = "SYN:HOME"
+
+
+def put_home(client: TestClient, revision: int = 0, **changes: Any) -> Any:
+    body = {"revision": revision, "definition": {**HOME, **changes}}
+    return client.put(f"{URL}/{HOME_SYMBOL}", json=body)
+
+
+def home_bars(client: TestClient, interval: str = "1D") -> list[dict[str, Any]]:
+    query = {"symbol": HOME_SYMBOL, "interval": interval, "limit": 50_000}
+    response = client.get("/api/bars", params=query)
+    assert response.status_code == 200, response.text
+    return response.json()["bars"]
+
+
+def test_a_dwelling_symbol_follows_its_index(client: TestClient) -> None:
+    created = put_home(client, noise_pct=0)
+    assert created.status_code == 200, created.text
+    doc = created.json()
+    assert doc["last_date"] is None  # its index sets it
+    assert doc["definition"] | {"noise_pct": 0} == {
+        **HOME,
+        "name": "HOME",
+        "series": "dwelling",
+        "first_price": 100.0,
+        "noise_pct": 0,
+        "causal": False,
+        "lag_months": 2,
+    }
+    info = client.get("/api/symbols", params={"query": "home"}).json()[0]
+    assert (info["currency"], info["has_volume"], info["type"]) == ("ILS", False, "synthetic")
+    days = home_bars(client)
+    # The test index: 2026-06-01 580.1, 2026-07-01, 2026-08-01 588.2 (a Saturday: no bar).
+    weekdays = int(np.busday_count(np.datetime64("2026-06-01"), np.datetime64("2026-08-01")))
+    assert len(days) == weekdays
+    assert days[0]["time"] == "2026-06-01"
+    assert days[0]["close"] == pytest.approx(100.0)
+    assert all(b["volume"] == 0 for b in days)
+    assert len(home_bars(client, "1h")) == 7 * weekdays
+    assert len(home_bars(client, "4h")) == 2 * weekdays
+
+
+def test_a_causal_dwelling_symbol_ends_yesterday(client: TestClient) -> None:
+    put_home(client, causal=True, lag_months=1)
+    days = home_bars(client)
+    today = np.datetime64(dt.datetime.now(dt.UTC).date(), "D")
+    assert days[-1]["time"] == str(
+        np.busday_offset(today - np.timedelta64(1, "D"), 0, roll="backward")
+    )
+    assert days[0]["time"] == "2026-07-01"  # June's value, published a month later
+
+
+def test_a_district_and_an_edit_of_the_kind(client: TestClient) -> None:
+    put_home(client, series="dwelling_telaviv", first_price=1000)
+    assert home_bars(client)[0]["close"] == pytest.approx(1000.0, rel=0.05)
+    # The same name edited in place into a lab scenario, and back.
+    walk = {**WALK, "name": "home"}
+    edited = client.put(f"{URL}/{HOME_SYMBOL}", json={"revision": 1, "definition": walk})
+    assert edited.json()["definition"]["kind"] == "scenario"
+    assert put_home(client, revision=2).json()["definition"]["kind"] == "dwelling"
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"series": "dwelling_mars"},
+        {"noise_pct": 5.1},
+        {"noise_pct": -0.1},
+        {"lag_months": 13},
+        {"first_price": 0},
+        {"kind": "moon"},
+        {"seed": -1},
+    ],
+)
+def test_invalid_dwelling_definitions_are_a_422(
+    client: TestClient, changes: dict[str, Any]
+) -> None:
+    assert put_home(client, **changes).status_code == 422
+
+
+def test_a_dwelling_symbol_in_a_planner_mix(client: TestClient) -> None:
+    put_home(client)
+    body = {
+        "assets": [{"symbol": HOME_SYMBOL, "currency": "ILS"}],
+        "use_fx": False,
+        "deposits": [{"date": "2026-06-10", "amount": 1000, "time": "17:00"}],
+        "end": "2026-07-20",
+        "taxes": {"gains_pct": 0, "dividend_pct": 0},
+    }
+    response = client.post("/api/planner/market", json=body)
+    assert response.status_code == 200, response.text

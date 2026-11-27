@@ -1,9 +1,11 @@
-r"""Bars of a synthetic symbol: hourly bars that aggregate to the scenario's daily bars (ADR 0031).
+r"""Bars of a synthetic symbol: hourly bars that aggregate to its daily bars (ADR 0031, 0032).
 
-**Daily closes.** Day :math:`t = 0 \ldots n-1` draws its own row of standard normals from
-``numpy.random.default_rng(seed)`` (an ``(n, 24)`` block, so a day's draws do not depend on
-:math:`n`). The first column :math:`\varepsilon_t` feeds the lab scenario's daily recursion
-(``app.analysis.synthetic.log_path``), which gives :math:`d_t = x_t - \ln 100`, the daily
+Two kinds share the hours and the days below; they differ in the daily close.
+
+**A lab scenario's daily closes (K0).** Day :math:`t = 0 \ldots n-1` draws its own row of standard
+normals from ``numpy.random.default_rng(seed)`` (an ``(n, 24)`` block, so a day's draws do not
+depend on :math:`n`). The first column :math:`\varepsilon_t` feeds the lab scenario's daily
+recursion (``app.analysis.synthetic.log_path``), which gives :math:`d_t = x_t - \ln 100`, the daily
 :math:`\sigma_t` and the jump :math:`\ln J_t`. With :math:`P_0` the first price,
 
 .. math::
@@ -37,18 +39,48 @@ C_{t-1}))}`, spread over the hours by the lab's U-shaped profile.
 
 **Days.** The daily bar is the aggregate of its hours: the first open (:math:`O_t`), the highest
 high, the lowest low, the last close (:math:`C_t`) and the summed volume. ``adj_close = close``.
+
+**A dwelling price index's daily closes (K1).** The index has values :math:`I_j` on month dates
+:math:`M_j` (day numbers), :math:`j = 0 \ldots J-1`, and
+:math:`\lambda_j = \ln P_0 + \ln(I_j / I_0)` puts its first value at the first price. The close
+runs between **anchors** :math:`A_j < E_j` from :math:`a_j` to :math:`b_j`:
+
+* interpolated (default): :math:`A_j = M_j`, :math:`E_j = M_{j+1}`, :math:`a_j = \lambda_j`,
+  :math:`b_j = \lambda_{j+1}`, for :math:`j \le J-2`, then the last month date alone at
+  :math:`\lambda_{J-1}` (geometric between month dates, so a day uses the **next** month's value);
+* causal: :math:`A_j = M_j + L` months (the assumed publication), :math:`E_j = A_{j+1}`,
+  :math:`a_j = b_j = \lambda_j`, and no bar on or after today: a day uses only values published by
+  then. Past the last value, one more assumed publication a month holds it until yesterday.
+
+On the weekdays :math:`d` of :math:`[A_j, E_j)`, with :math:`k` the weekdays from :math:`A_j` to
+:math:`d` and :math:`\tau_j` those of the whole segment, the noise :math:`\sigma` (a day) adds a
+Brownian bridge that is zero on the anchors:
+
+.. math::
+    \ln C_d = a_j + \frac{d - A_j}{E_j - A_j}(b_j - a_j) + \beta_k, \qquad
+    \beta_k = W_k - \frac{k}{\tau_j} W_{\tau_j}, \qquad W_k = \sigma \sum_{i=1}^{k} z_i
+
+Segment :math:`j` draws from ``default_rng([seed, j])`` (rows of 24 as above, row :math:`k` for
+day :math:`k`, row :math:`\tau_j` for :math:`z_{\tau_j}`), so a new month leaves every earlier bar
+as it was. The day's open is :math:`O_d = C_{d-1} e^{\eta_d \sigma / 4}` (:math:`O = C` on the
+first day), the hours and wicks are the ones below with :math:`\sigma_t = \sigma`, and there is no
+volume.
 """
 
 from __future__ import annotations
 
+from datetime import date
 from functools import lru_cache
 
 import numpy as np
 import pandas as pd
 
 from app.analysis.synthetic import VOLUME_BASE, VOLUME_PROFILE, log_path, volume_skew
-from app.models.bars import SECONDS_PER_DAY, BarFrame, IntArray
-from app.models.synthetic import MAX_DEFINITIONS, ScenarioDefinition
+from app.data.sessions import session_days
+from app.macro.series import MacroSeries
+from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, IntArray, date_to_ts
+from app.models.synthetic import MAX_DEFINITIONS, DwellingDefinition, ScenarioDefinition
+from app.planner.deposits import add_months
 
 TIMEZONE = "America/New_York"
 SESSION_BARS = 7
@@ -60,30 +92,145 @@ _DRAWS = 3 + 3 * SESSION_BARS
 
 
 def hourly_bars(definition: ScenarioDefinition) -> BarFrame:
-    """The 1h bars of ``definition`` (seven per session), oldest first."""
+    """The 1h bars of a scenario symbol (seven per session), oldest first."""
     return _hourly(definition.model_dump_json())
 
 
 def daily_bars(definition: ScenarioDefinition) -> BarFrame:
-    """The daily bars of ``definition``: each the aggregate of its session's 1h bars."""
+    """The daily bars of a scenario symbol: each the aggregate of its session's 1h bars."""
     return _daily(definition.model_dump_json())
 
 
-# Memoised by the whole definition (its JSON), so an edit is a new key: the ~20 ms of a series of
-# 10,000 sessions is spent once, not on every quote poll. The arrays are read-only (shared).
+def dwelling_hourly(definition: DwellingDefinition, index: MacroSeries, today: date) -> BarFrame:
+    """The 1h bars of a dwelling symbol from its index's monthly values."""
+    return _dwelling_hourly(*_dwelling_key(definition, index, today))
+
+
+def dwelling_daily(definition: DwellingDefinition, index: MacroSeries, today: date) -> BarFrame:
+    """The daily bars of a dwelling symbol: each the aggregate of its session's 1h bars."""
+    return _dwelling_daily(*_dwelling_key(definition, index, today))
+
+
+# Memoised by the whole definition (its JSON) and, for a dwelling symbol, its index's values: an
+# edit or a new month is a new key. The ~20 ms of a series of 10,000 sessions is spent once, not
+# on every quote poll. The arrays are read-only (shared).
 @lru_cache(maxsize=4)
 def _hourly(key: str) -> BarFrame:
     definition = ScenarioDefinition.model_validate_json(key)
     n = definition.bars
     draws = np.random.default_rng(definition.seed).standard_normal((n, _DRAWS))
     eps, eta, xi = draws[:, 0], draws[:, 1], draws[:, 2]
-    z, nu, lam = (draws[:, 3 + SESSION_BARS * i : 3 + SESSION_BARS * (i + 1)] for i in range(3))
-
     d, sigma, jump = log_path(definition.scenario, eps, n)
     close = definition.first_price * np.exp(d)
     prev_close = np.concatenate(([definition.first_price], close[:-1]))
     day_open = prev_close * np.exp(jump + eta * sigma / 4)
+    log_move = np.log(close / prev_close)
+    day_volume = VOLUME_BASE * np.exp(
+        0.3 * xi
+        + 20 * np.abs(log_move)
+        + 0.8 * volume_skew(definition.scenario, n) * np.sign(log_move)
+    )
+    return _sessions(_session_days(definition), day_open, close, sigma, draws, day_volume)
 
+
+@lru_cache(maxsize=MAX_DEFINITIONS)
+def _daily(key: str) -> BarFrame:
+    return _aggregate(_hourly(key))
+
+
+_DwellingKey = tuple[str, tuple[int, ...], tuple[float, ...], int]
+
+
+def _dwelling_key(definition: DwellingDefinition, index: MacroSeries, today: date) -> _DwellingKey:
+    # Today matters only to a causal series (it ends before today): elsewhere 0 keeps one key.
+    until = date_to_ts(today) // SECONDS_PER_DAY if definition.causal else 0
+    days = tuple(int(d) for d in index.days)
+    return definition.model_dump_json(), days, tuple(float(v) for v in index.values), until
+
+
+@lru_cache(maxsize=4)
+def _dwelling_hourly(
+    key: str, months: tuple[int, ...], values: tuple[float, ...], until: int
+) -> BarFrame:
+    definition = DwellingDefinition.model_validate_json(key)
+    days, close, draws = dwelling_closes(
+        definition, np.array(months, dtype=np.int64), np.array(values), until
+    )
+    sigma = np.full(len(days), definition.noise_pct / 100)
+    prev_close = np.concatenate((close[:1], close[:-1]))
+    day_open = prev_close * np.exp(draws[:, 1] * sigma / 4)
+    return _sessions(days, day_open, close, sigma, draws, np.zeros(len(days)))
+
+
+@lru_cache(maxsize=MAX_DEFINITIONS)
+def _dwelling_daily(
+    key: str, months: tuple[int, ...], values: tuple[float, ...], until: int
+) -> BarFrame:
+    return _aggregate(_dwelling_hourly(key, months, values, until))
+
+
+def dwelling_closes(
+    definition: DwellingDefinition, months: IntArray, values: FloatArray, until: int
+) -> tuple[IntArray, FloatArray, FloatArray]:
+    """``(days, closes, draws)`` of a dwelling symbol: the weekdays it has a bar on, the close of
+    each, and each day's row of 24 normals (for its open and hours). ``until`` (a day number) is
+    the first day a causal series has no bar on."""
+    level = np.log(definition.first_price) + np.log(values / values[0])
+    sigma = definition.noise_pct / 100
+    if definition.causal:
+        published = np.array(
+            [_day_number(add_months(_date(m), definition.lag_months)) for m in months]
+        )
+        # Past the last value, one assumed publication a month holds it until the day before
+        # ``until`` (the data may lag); a value that arrives later replaces the hold from then.
+        while published[-1] < until:
+            published = np.append(published, _day_number(add_months(_date(published[-1]), 1)))
+            level = np.append(level, level[-1])
+        anchors, ends = published[:-1], published[1:]
+        start_level, end_level = level[:-1], level[:-1]
+    else:
+        anchors, ends = months[:-1], months[1:]
+        start_level, end_level = level[:-1], level[1:]
+    out_days: list[IntArray] = []
+    out_close: list[FloatArray] = []
+    out_draws: list[FloatArray] = []
+    for j, (a, e) in enumerate(zip(anchors, ends, strict=True)):
+        tau = int(np.busday_count(_d64(a), _d64(e)))
+        if tau == 0:
+            continue
+        draws = np.random.default_rng([definition.seed, j]).standard_normal((tau + 1, _DRAWS))
+        walk = sigma * np.concatenate(([0.0], np.cumsum(draws[1:, 0])))  # W_0 .. W_tau
+        days = np.busday_offset(_d64(a), np.arange(tau), roll="forward").astype(np.int64)
+        k = np.arange(tau)
+        bridge = walk[:tau] - k / tau * walk[tau]
+        share = (days - a) / (e - a)
+        log_close = start_level[j] + share * (end_level[j] - start_level[j]) + bridge
+        keep = days < until if definition.causal else np.ones(tau, dtype=bool)
+        out_days.append(days[keep])
+        out_close.append(np.exp(log_close[keep]))
+        out_draws.append(draws[:tau][keep])
+    if not definition.causal and np.is_busday(_d64(months[-1])):
+        # The last month date alone, at its value; its draws are the row of the segment it opens.
+        last = len(months) - 1
+        row = np.random.default_rng([definition.seed, last]).standard_normal((1, _DRAWS))
+        out_days.append(months[-1:].astype(np.int64))
+        out_close.append(np.exp(level[-1:]))
+        out_draws.append(row)
+    if not out_days:
+        return np.empty(0, dtype=np.int64), np.empty(0), np.empty((0, _DRAWS))
+    return np.concatenate(out_days), np.concatenate(out_close), np.concatenate(out_draws)
+
+
+def _sessions(
+    days: IntArray,
+    day_open: FloatArray,
+    close: FloatArray,
+    sigma: FloatArray,
+    draws: FloatArray,
+    day_volume: FloatArray,
+) -> BarFrame:
+    """The seven 1h bars of each day, from its open to its close (draws: columns 3 to 23)."""
+    z, nu, lam = (draws[:, 3 + SESSION_BARS * i : 3 + SESSION_BARS * (i + 1)] for i in range(3))
     ends = np.cumsum(WEIGHTS)
     walk = np.cumsum(np.sqrt(WEIGHTS) * z, axis=1)
     bridge = walk - ends * walk[:, -1:]
@@ -95,18 +242,10 @@ def _hourly(key: str) -> BarFrame:
     wick = sigma[:, None] * np.sqrt(WEIGHTS) / 2
     high = np.maximum(bar_open, bar_close) * np.exp(np.abs(nu) * wick)
     low = np.minimum(bar_open, bar_close) * np.exp(-np.abs(lam) * wick)
-
-    log_move = np.log(close / prev_close)
-    day_volume = VOLUME_BASE * np.exp(
-        0.3 * xi
-        + 20 * np.abs(log_move)
-        + 0.8 * volume_skew(definition.scenario, n) * np.sign(log_move)
-    )
     volume = day_volume[:, None] * VOLUME_PROFILE / VOLUME_PROFILE.sum()
-
     return _read_only(
         BarFrame.from_columns(
-            time=_hour_starts(definition).ravel(),
+            time=_hour_starts(days).ravel(),
             open=bar_open.ravel(),
             high=high.ravel(),
             low=low.ravel(),
@@ -116,14 +255,13 @@ def _hourly(key: str) -> BarFrame:
     )
 
 
-@lru_cache(maxsize=MAX_DEFINITIONS)
-def _daily(key: str) -> BarFrame:
-    definition = ScenarioDefinition.model_validate_json(key)
-    hours = _hourly(key)
-    shape = (definition.bars, SESSION_BARS)
+def _aggregate(hours: BarFrame) -> BarFrame:
+    """The daily bars of whole sessions of seven 1h bars."""
+    shape = (len(hours) // SESSION_BARS, SESSION_BARS)
+    days = session_days(hours.time, TIMEZONE)[::SESSION_BARS]
     return _read_only(
         BarFrame.from_columns(
-            time=_session_days(definition) * SECONDS_PER_DAY,
+            time=days * SECONDS_PER_DAY,
             open=hours.open.reshape(shape)[:, 0],
             high=hours.high.reshape(shape).max(axis=1),
             low=hours.low.reshape(shape).min(axis=1),
@@ -147,9 +285,8 @@ def _session_days(definition: ScenarioDefinition) -> IntArray:
     return np.busday_offset(first, np.arange(definition.bars), roll="forward").astype(np.int64)
 
 
-def _hour_starts(definition: ScenarioDefinition) -> IntArray:
-    """UTC start of each 1h bar, ``(bars, 7)``: 09:30 + k hours New York time (DST-aware)."""
-    days = _session_days(definition)
+def _hour_starts(days: IntArray) -> IntArray:
+    """UTC start of each 1h bar, ``(days, 7)``: 09:30 + k hours New York time (DST-aware)."""
     local = (
         days[:, None] * SECONDS_PER_DAY
         + OPEN_MINUTES * 60
@@ -158,3 +295,15 @@ def _hour_starts(definition: ScenarioDefinition) -> IntArray:
     wall = pd.DatetimeIndex(pd.to_datetime(local.ravel(), unit="s"))
     utc = wall.tz_localize(TIMEZONE).tz_convert("UTC").as_unit("s").asi8
     return utc.astype(np.int64).reshape(local.shape)
+
+
+def _d64(day: int | np.integer) -> np.datetime64:
+    return np.datetime64(int(day), "D")
+
+
+def _date(day: int | np.integer) -> date:
+    return date.fromisoformat(str(_d64(day)))
+
+
+def _day_number(day: date) -> int:
+    return date_to_ts(day) // SECONDS_PER_DAY

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from app.errors import ChartLabError, RevisionConflictError
 from app.models.symbols import SymbolInfo
-from app.models.synthetic import MAX_DEFINITIONS, ScenarioDefinition
+from app.models.synthetic import DEFINITION, MAX_DEFINITIONS, SyntheticDefinition
 from app.storage.documents import Document, DocumentStore
 
 SCHEMA_VERSION = 1
@@ -35,16 +35,16 @@ class SyntheticSymbols:
     def __init__(self, path: Path) -> None:
         self._store = DocumentStore(path, "synthetic", SyntheticNotFoundError)
         self._lock = threading.Lock()
-        self._saved: dict[str, tuple[int, ScenarioDefinition]] = {
-            name: (revision, ScenarioDefinition.model_validate(_body(document)))
+        self._saved: dict[str, tuple[int, SyntheticDefinition]] = {
+            name: (revision, DEFINITION.validate_python(_body(document)))
             for name, revision, _, document in self._store.list()
         }
 
-    def get(self, symbol: str) -> tuple[int, ScenarioDefinition] | None:
+    def get(self, symbol: str) -> tuple[int, SyntheticDefinition] | None:
         """``(revision, definition)`` of ``symbol`` (any case), or None."""
         return self._saved.get(symbol.strip().upper())
 
-    def definition(self, symbol: str) -> ScenarioDefinition | None:
+    def definition(self, symbol: str) -> SyntheticDefinition | None:
         found = self.get(symbol)
         return None if found is None else found[1]
 
@@ -52,14 +52,14 @@ class SyntheticSymbols:
         found = self.definition(symbol)
         return None if found is None else found.info()
 
-    def all(self) -> list[tuple[int, ScenarioDefinition]]:
+    def all(self) -> list[tuple[int, SyntheticDefinition]]:
         """Every definition, by symbol."""
         return [self._saved[s] for s in sorted(self._saved)]
 
     def infos(self) -> list[SymbolInfo]:
         return [definition.info() for _, definition in self.all()]
 
-    def put(self, definition: ScenarioDefinition, revision: int) -> int:
+    def put(self, definition: SyntheticDefinition, revision: int) -> int:
         """Create (``revision`` 0) or replace; returns the new revision (409 when stale)."""
         symbol = definition.symbol
         with self._lock:

@@ -1,8 +1,9 @@
 """Synthetic symbols: invented series served like market data (Phase K, ADR 0031).
 
-A definition is stored in ``app.db`` and turned into bars on every request by
-``app.data.synthetic``. Its symbol is ``SYN:`` plus a ticker-like name the user chooses, so it can
-never shadow a real ticker (the Planner accepts any Yahoo ticker, not only the universe's).
+A definition (a lab scenario, K0, or a dwelling price index, K1) is stored in ``app.db`` and turned
+into bars by ``app.data.synthetic``. Its symbol is ``SYN:`` plus a ticker-like name the user
+chooses, so it can never shadow a real ticker (the Planner accepts any Yahoo ticker, not only the
+universe's).
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from datetime import date
 from typing import Annotated, Literal
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
 
 from app.analysis.synthetic import Scenario
 from app.models.symbols import SymbolInfo
@@ -34,25 +35,14 @@ TickerName = Annotated[
 ]
 
 
-class ScenarioDefinition(BaseModel):
-    """A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).
-
-    The series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward
-    to a weekday), and starts from ``first_price``; each session has seven 1h bars (09:30-16:00
-    New York) whose aggregate is the daily bar.
-    """
+class _Definition(BaseModel):
+    """What every kind of synthetic symbol has: a name, a full name, a first price."""
 
     model_config = ConfigDict(frozen=True)
 
-    kind: Literal["scenario"] = "scenario"
     name: TickerName
     full_name: Annotated[str, Field(min_length=1, max_length=60)]
-    scenario: Scenario
-    seed: Annotated[int, Field(ge=0, le=1_000_000)]
-    first_date: Annotated[date, Field(ge=FIRST_DAY, description="From 1970-01-01")]
     first_price: Annotated[float, Field(gt=0, le=1_000_000)] = 100.0
-    bars: Annotated[int, Field(ge=100, le=10_000)] = 2500
-    currency: Literal["USD", "ILS"] = "ILS"
 
     @field_validator("name", mode="before")
     @classmethod
@@ -71,14 +61,7 @@ class ScenarioDefinition(BaseModel):
     def symbol(self) -> str:
         return PREFIX + self.name
 
-    @property
-    def last_date(self) -> date:
-        """The date of the last daily bar."""
-        first = np.datetime64(self.first_date, "D")
-        last = np.busday_offset(first, self.bars - 1, roll="forward")
-        return date.fromisoformat(str(last))
-
-    def info(self) -> SymbolInfo:
+    def _info(self, currency: str, has_volume: bool) -> SymbolInfo:
         """How the symbol shows in the API: its own group and exchange, US stock hours."""
         return SymbolInfo(
             symbol=self.symbol,
@@ -87,8 +70,74 @@ class ScenarioDefinition(BaseModel):
             type="synthetic",
             group=GROUP,
             exchange="Synthetic",
-            currency=self.currency,
+            currency=currency,
+            has_volume=has_volume,
         )
+
+
+class ScenarioDefinition(_Definition):
+    """A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).
+
+    The series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward
+    to a weekday), and starts from ``first_price``; each session has seven 1h bars (09:30-16:00
+    New York) whose aggregate is the daily bar.
+    """
+
+    kind: Literal["scenario"] = "scenario"
+    scenario: Scenario
+    seed: Annotated[int, Field(ge=0, le=1_000_000)]
+    first_date: Annotated[date, Field(ge=FIRST_DAY, description="From 1970-01-01")]
+    bars: Annotated[int, Field(ge=100, le=10_000)] = 2500
+    currency: Literal["USD", "ILS"] = "ILS"
+
+    @property
+    def last_date(self) -> date:
+        """The date of the last daily bar."""
+        first = np.datetime64(self.first_date, "D")
+        last = np.busday_offset(first, self.bars - 1, roll="forward")
+        return date.fromisoformat(str(last))
+
+    def info(self) -> SymbolInfo:
+        return self._info(self.currency, has_volume=True)
+
+
+DwellingSeries = Literal[
+    "dwelling",
+    "dwelling_telaviv",
+    "dwelling_center",
+    "dwelling_haifa",
+    "dwelling_jerusalem",
+    "dwelling_north",
+    "dwelling_south",
+]
+
+
+class DwellingDefinition(_Definition):
+    """A synthetic symbol whose close is a CBS dwelling price index (``app.macro``, K1).
+
+    The index's first value is ``first_price``; ``noise_pct`` is the daily standard deviation of
+    a bridge that returns to the index on every anchor date. Interpolated (the default), the
+    anchors are the index's month dates and the close runs geometrically between them, which
+    uses the next month's value (not causal). Causal, every value holds from its assumed
+    publication, ``lag_months`` after its month date. Prices in shekels, no volume.
+    """
+
+    kind: Literal["dwelling"] = "dwelling"
+    series: DwellingSeries = "dwelling"
+    seed: Annotated[int, Field(ge=0, le=1_000_000)]
+    noise_pct: Annotated[float, Field(ge=0, le=5, description="Daily standard deviation, %")] = 0.2
+    causal: bool = False
+    lag_months: Annotated[int, Field(ge=0, le=12, description="Causal only: publication lag")] = 2
+
+    def info(self) -> SymbolInfo:
+        return self._info("ILS", has_volume=False)
+
+
+SyntheticDefinition = Annotated[
+    ScenarioDefinition | DwellingDefinition, Field(discriminator="kind")
+]
+#: Parses a stored or sent definition of any kind.
+DEFINITION: TypeAdapter[ScenarioDefinition | DwellingDefinition] = TypeAdapter(SyntheticDefinition)
 
 
 def is_synthetic(info: SymbolInfo) -> bool:

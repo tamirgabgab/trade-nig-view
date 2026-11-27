@@ -23,7 +23,7 @@ from app.api.deps import (
     get_watchlists,
 )
 from app.errors import ChartLabError
-from app.models.synthetic import ScenarioDefinition
+from app.models.synthetic import ScenarioDefinition, SyntheticDefinition
 from app.storage.documents import Document, DocumentStore
 from app.storage.drawings import DrawingsRepository
 from app.storage.synthetic import SyntheticNotFoundError, SyntheticSymbols
@@ -49,15 +49,17 @@ class InvalidSyntheticError(ChartLabError):
 class SyntheticOut(BaseModel):
     symbol: str
     revision: int
-    last_date: dt.date = Field(description="The date of the last daily bar")
-    definition: ScenarioDefinition
+    last_date: dt.date | None = Field(
+        description="The date of the last daily bar; null for a dwelling symbol (its data sets it)"
+    )
+    definition: SyntheticDefinition
 
 
 class SyntheticUpdate(BaseModel):
     """``PUT`` body: the definition and the revision it was based on (0 creates)."""
 
     revision: int = Field(ge=0)
-    definition: ScenarioDefinition
+    definition: SyntheticDefinition
 
 
 class SyntheticReferences(BaseModel):
@@ -70,16 +72,14 @@ class SyntheticReferences(BaseModel):
     scenarios: list[str] = Field(description="Saved Planner scenarios that mention it")
 
 
-def _out(revision: int, definition: ScenarioDefinition) -> SyntheticOut:
+def _out(revision: int, definition: SyntheticDefinition) -> SyntheticOut:
+    last = definition.last_date if isinstance(definition, ScenarioDefinition) else None
     return SyntheticOut(
-        symbol=definition.symbol,
-        revision=revision,
-        last_date=definition.last_date,
-        definition=definition,
+        symbol=definition.symbol, revision=revision, last_date=last, definition=definition
     )
 
 
-def _found(store: SyntheticSymbols, symbol: str) -> tuple[int, ScenarioDefinition]:
+def _found(store: SyntheticSymbols, symbol: str) -> tuple[int, SyntheticDefinition]:
     found = store.get(symbol)
     if found is None:
         raise SyntheticNotFoundError(f"No synthetic symbol {symbol!r}")
@@ -173,8 +173,9 @@ def put_synthetic(
     if symbol.strip().upper() != definition.symbol:
         raise InvalidSyntheticError(f"The path says {symbol!r}, the body {definition.symbol!r}")
     today = dt.datetime.now(dt.UTC).date()
-    # Before today: today's hours would still be in the future somewhere in the day.
-    if definition.last_date >= today:
+    # Before today: today's hours would still be in the future somewhere in the day. (A dwelling
+    # symbol's dates come from its index; a causal one stops before today by itself.)
+    if isinstance(definition, ScenarioDefinition) and definition.last_date >= today:
         raise InvalidSyntheticError(
             f"{definition.bars} bars from {definition.first_date} end on {definition.last_date},"
             f" not before today ({today}): start earlier or use fewer bars"
