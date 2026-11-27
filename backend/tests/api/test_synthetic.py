@@ -353,12 +353,15 @@ def test_a_dwelling_symbol_follows_its_index(client: TestClient) -> None:
     info = client.get("/api/symbols", params={"query": "home"}).json()[0]
     assert (info["currency"], info["has_volume"], info["type"]) == ("ILS", False, "synthetic")
     days = home_bars(client)
-    # The test index: 2026-06-01 580.1, 2026-07-01, 2026-08-01 588.2 (a Saturday: no bar).
-    weekdays = int(np.busday_count(np.datetime64("2026-06-01"), np.datetime64("2026-08-01")))
+    # The test index: 2026-06-01 580.1, 2026-07-01, 2026-08-01 588.2 (a Saturday: it is the close
+    # of Monday 2026-08-03).
+    weekdays = int(np.busday_count(np.datetime64("2026-06-01"), np.datetime64("2026-08-01"))) + 1
     assert len(days) == weekdays
     assert days[0]["time"] == "2026-06-01"
     assert days[0]["close"] == pytest.approx(100.0)
     assert all(b["volume"] == 0 for b in days)
+    assert days[-1]["time"] == "2026-08-03"
+    assert days[-1]["close"] == pytest.approx(100.0 * 588.2 / 580.1)
     assert len(home_bars(client, "1h")) == 7 * weekdays
     assert len(home_bars(client, "4h")) == 2 * weekdays
 
@@ -412,3 +415,11 @@ def test_a_dwelling_symbol_in_a_planner_mix(client: TestClient) -> None:
     }
     response = client.post("/api/planner/market", json=body)
     assert response.status_code == 200, response.text
+
+
+def test_a_body_without_kind_is_a_lab_scenario(client: TestClient) -> None:
+    # K0's API had no "kind": such a body still creates a lab scenario.
+    body = {k: v for k, v in WALK.items() if k != "kind"}
+    response = client.put(f"{URL}/{SYMBOL}", json={"revision": 0, "definition": body})
+    assert response.status_code == 200, response.text
+    assert response.json()["definition"]["kind"] == "scenario"

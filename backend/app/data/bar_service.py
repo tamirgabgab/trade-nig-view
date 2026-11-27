@@ -35,6 +35,7 @@ from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
+from typing import Protocol
 
 import numpy as np
 
@@ -186,6 +187,12 @@ def rescaled_before(cached: BarFrame, fresh: BarFrame) -> BarFrame:
     )
 
 
+class SyntheticSource(DataProvider, Protocol):
+    """The synthetic symbols' provider: bars, and whether the data behind them is stale."""
+
+    def freshness(self, symbol: SymbolInfo) -> tuple[bool, tuple[str, ...]]: ...
+
+
 class BarService:
     """Thread-safe facade used by the API (and later by indicators, backtests and replay)."""
 
@@ -204,7 +211,7 @@ class BarService:
         minute_tail_days: int = 2,
         provider_limits: bool = True,
         retry_sleep: Callable[[float], None] = time.sleep,
-        synthetic: DataProvider | None = None,
+        synthetic: SyntheticSource | None = None,
     ) -> None:
         self._universe = universe
         self._cache = cache
@@ -266,9 +273,12 @@ class BarService:
                 if base.is_intraday
                 else provider.fetch_daily(info, HISTORY_START, today)
             )
+            stale, warnings = provider.freshness(info)
         except ProviderError as exc:
             raise DataUnavailableError(str(exc)) from exc
-        return CachedBars(frame, provider.id, stale=False, fetched_at=self._clock())
+        return CachedBars(
+            frame, provider.id, stale=stale, fetched_at=self._clock(), warnings=warnings
+        )
 
     def _lock_for(self, key: str) -> threading.Lock:
         with self._locks_guard:

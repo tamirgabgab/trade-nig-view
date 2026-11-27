@@ -1667,8 +1667,9 @@ export interface components {
              */
             first_price: number;
             /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
+             * Kind
+             * @default dwelling
+             * @constant
              */
             kind: "dwelling";
             /**
@@ -4221,8 +4222,9 @@ export interface components {
              */
             first_price: number;
             /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
+             * Kind
+             * @default scenario
+             * @constant
              */
             kind: "scenario";
             scenario: components["schemas"]["Scenario"];

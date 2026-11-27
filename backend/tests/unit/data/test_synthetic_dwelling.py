@@ -56,24 +56,30 @@ def number(d: date) -> int:
 
 
 def golden_interpolated(index: MacroSeries, first_price: float) -> tuple[list[int], list[float]]:
-    """Every weekday from the first month date to the last, and its close, by a scalar loop."""
+    """Every weekday from the first month date to the last (or the weekday after it), and its
+    close, by a scalar loop: between two month dates the log close moves by the share of the
+    month's weekdays gone by."""
     months = [int(m) for m in index.days]
     values = [float(v) for v in index.values]
+
+    def weekdays(start: int, end: int) -> list[int]:
+        return [d for d in range(start, end) if day(d).weekday() < 5]
+
     days: list[int] = []
     closes: list[float] = []
-    for d in range(months[0], months[-1] + 1):
-        if day(d).weekday() >= 5:
-            continue
-        j = max(i for i, m in enumerate(months) if m <= d)
-        if j == len(months) - 1:
-            log_value = math.log(values[j] / values[0])
-        else:
-            share = (d - months[j]) / (months[j + 1] - months[j])
-            log_value = math.log(values[j] / values[0]) + share * math.log(
+    for j in range(len(months) - 1):
+        segment = weekdays(months[j], months[j + 1])
+        for k, d in enumerate(segment):
+            log_value = math.log(values[j] / values[0]) + k / len(segment) * math.log(
                 values[j + 1] / values[j]
             )
-        days.append(d)
-        closes.append(first_price * math.exp(log_value))
+            days.append(d)
+            closes.append(first_price * math.exp(log_value))
+    last = months[-1]
+    while day(last).weekday() >= 5:
+        last += 1
+    days.append(last)
+    closes.append(first_price * values[-1] / values[0])
     return days, closes
 
 
@@ -95,8 +101,11 @@ def test_every_anchor_lands_exactly_on_the_index(causal: bool, seed: int) -> Non
     days, closes, _ = dwelling_closes(definition, INDEX.days, INDEX.values, UNTIL)
     for m, value in zip(INDEX.days, INDEX.values, strict=True):
         anchor = number(add_months(day(m), 2)) if causal else int(m)
-        hit = np.flatnonzero(days == anchor)
-        if len(hit):  # a weekday
+        # On the anchor, or on the weekday after it when it falls on a weekend.
+        landing = int(np.busday_offset(np.datetime64(anchor, "D"), 0, roll="forward").astype(int))
+        hit = np.flatnonzero(days == landing)
+        if landing < UNTIL or not causal:
+            assert len(hit) == 1
             assert closes[hit[0]] == pytest.approx(100.0 * value / INDEX.values[0], rel=1e-12)
 
 
@@ -209,7 +218,8 @@ def test_the_learn_pages_worked_example() -> None:
     definition = spec(noise_pct=0)
     days, closes, _ = dwelling_closes(definition, INDEX.days, INDEX.values, UNTIL)
     close = dict(zip((day(d) for d in days), closes, strict=True))
-    assert round(close[date(1994, 1, 17)], 2) == 101.05
+    assert round(close[date(1994, 1, 17)], 2) == 100.97
+    assert close[date(1994, 1, 3)] == pytest.approx(100.0)  # 1994-01-01 was a Saturday
     assert round(close[date(1994, 2, 1)], 2) == 102.05
     days, closes, _ = dwelling_closes(
         spec(noise_pct=0, causal=True), INDEX.days, INDEX.values, UNTIL
@@ -218,3 +228,25 @@ def test_the_learn_pages_worked_example() -> None:
     assert round(close[date(1994, 3, 1)], 2) == round(close[date(1994, 3, 31)], 2) == 100.0
     assert round(close[date(1994, 4, 1)], 2) == 102.05
     assert round(0.2 * math.sqrt(11 * 11 / 22), 2) == 0.47
+
+
+def test_a_weekend_month_date_lands_on_the_next_weekday() -> None:
+    # The fixture's last value, 2026-08-01, is a Saturday: it is the close of Monday 2026-08-03.
+    days, closes, _ = dwelling_closes(spec(noise_pct=1.0), INDEX.days, INDEX.values, UNTIL)
+    assert day(days[-1]) == date(2026, 8, 3)
+    assert closes[-1] == pytest.approx(100.0 * INDEX.values[-1] / INDEX.values[0], rel=1e-12)
+
+
+def test_the_provider_reads_today_from_its_clock_not_from_the_window() -> None:
+    from app.data.providers.synthetic import SyntheticProvider  # noqa: PLC0415
+    from app.macro.series import SERIES  # noqa: PLC0415
+    from app.macro.service import CachedSeries  # noqa: PLC0415
+
+    definition = spec(causal=True)
+    cached = CachedSeries(SERIES["dwelling"], INDEX, "fixtures", True, 0.0, ("refresh failed",))
+    provider = SyntheticProvider(lambda _: definition, lambda _: cached, lambda: TODAY)
+    info = definition.info()
+    # An earlier inclusive end keeps its own bar (2026-09-15 is a Tuesday).
+    window = provider.fetch_daily(info, date(2026, 9, 1), date(2026, 9, 15))
+    assert day(window.time[-1] // SECONDS_PER_DAY) == date(2026, 9, 15)
+    assert provider.freshness(info) == (True, ("refresh failed",))

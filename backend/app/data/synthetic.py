@@ -46,25 +46,28 @@ high, the lowest low, the last close (:math:`C_t`) and the summed volume. ``adj_
 runs between **anchors** :math:`A_j < E_j` from :math:`a_j` to :math:`b_j`:
 
 * interpolated (default): :math:`A_j = M_j`, :math:`E_j = M_{j+1}`, :math:`a_j = \lambda_j`,
-  :math:`b_j = \lambda_{j+1}`, for :math:`j \le J-2`, then the last month date alone at
+  :math:`b_j = \lambda_{j+1}`, for :math:`j \le J-2`, then the last month alone at
   :math:`\lambda_{J-1}` (geometric between month dates, so a day uses the **next** month's value);
 * causal: :math:`A_j = M_j + L` months (the assumed publication), :math:`E_j = A_{j+1}`,
   :math:`a_j = b_j = \lambda_j`, and no bar on or after today: a day uses only values published by
   then. Past the last value, one more assumed publication a month holds it until yesterday.
 
-On the weekdays :math:`d` of :math:`[A_j, E_j)`, with :math:`k` the weekdays from :math:`A_j` to
-:math:`d` and :math:`\tau_j` those of the whole segment, the noise :math:`\sigma` (a day) adds a
-Brownian bridge that is zero on the anchors:
+Time runs in weekdays (the bars'): on the weekdays :math:`d` of :math:`[A_j, E_j)`, with :math:`k`
+the weekdays from :math:`A_j` to :math:`d` and :math:`\tau_j` those of the whole segment, the close
+moves by :math:`k / \tau_j` of the way, and the noise :math:`\sigma` (a day) adds a Brownian bridge
+that is zero on the anchors. An anchor on a weekend lands on the next weekday, so every value of
+the index, the last one included, is a close:
 
 .. math::
-    \ln C_d = a_j + \frac{d - A_j}{E_j - A_j}(b_j - a_j) + \beta_k, \qquad
+    \ln C_d = a_j + \frac{k}{\tau_j}(b_j - a_j) + \beta_k, \qquad
     \beta_k = W_k - \frac{k}{\tau_j} W_{\tau_j}, \qquad W_k = \sigma \sum_{i=1}^{k} z_i
 
 Segment :math:`j` draws from ``default_rng([seed, j])`` (rows of 24 as above, row :math:`k` for
 day :math:`k`, row :math:`\tau_j` for :math:`z_{\tau_j}`), so a new month leaves every earlier bar
-as it was. The day's open is :math:`O_d = C_{d-1} e^{\eta_d \sigma / 4}` (:math:`O = C` on the
-first day), the hours and wicks are the ones below with :math:`\sigma_t = \sigma`, and there is no
-volume.
+as it was (in causal mode, unless the value arrives after its assumed publication: the bars from
+that publication, which held the previous value, then take it). The day's open is
+:math:`O_d = C_{d-1} e^{\eta_d \sigma / 4}` (:math:`O = C` on the first day), the hours and wicks
+are the ones below with :math:`\sigma_t = \sigma`, and there is no volume.
 """
 
 from __future__ import annotations
@@ -157,8 +160,7 @@ def _dwelling_hourly(
         definition, np.array(months, dtype=np.int64), np.array(values), until
     )
     sigma = np.full(len(days), definition.noise_pct / 100)
-    prev_close = np.concatenate((close[:1], close[:-1]))
-    day_open = prev_close * np.exp(draws[:, 1] * sigma / 4)
+    day_open = np.concatenate((close[:1], close[:-1] * np.exp(draws[1:, 1] * sigma[1:] / 4)))
     return _sessions(days, day_open, close, sigma, draws, np.zeros(len(days)))
 
 
@@ -203,17 +205,18 @@ def dwelling_closes(
         days = np.busday_offset(_d64(a), np.arange(tau), roll="forward").astype(np.int64)
         k = np.arange(tau)
         bridge = walk[:tau] - k / tau * walk[tau]
-        share = (days - a) / (e - a)
+        share = k / tau
         log_close = start_level[j] + share * (end_level[j] - start_level[j]) + bridge
         keep = days < until if definition.causal else np.ones(tau, dtype=bool)
         out_days.append(days[keep])
         out_close.append(np.exp(log_close[keep]))
         out_draws.append(draws[:tau][keep])
-    if not definition.causal and np.is_busday(_d64(months[-1])):
-        # The last month date alone, at its value; its draws are the row of the segment it opens.
+    if not definition.causal:
+        # The last month alone, at its value, on its date or the next weekday; its draws are the
+        # row of the segment it will open when the next month arrives.
         last = len(months) - 1
         row = np.random.default_rng([definition.seed, last]).standard_normal((1, _DRAWS))
-        out_days.append(months[-1:].astype(np.int64))
+        out_days.append(np.busday_offset(_d64(months[-1]), [0], roll="forward").astype(np.int64))
         out_close.append(np.exp(level[-1:]))
         out_draws.append(row)
     if not out_days:

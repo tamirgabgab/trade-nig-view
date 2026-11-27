@@ -23,6 +23,7 @@ import { useUiStore } from '../store/uiStore.ts';
 import confirm from './ConfirmDialog.module.css';
 import panel from './IndicatorSettingsPanel.module.css';
 import { LearnPage } from './LearnPage.tsx';
+import { LearnNavigation } from './learnNavigation.ts';
 import {
   barsInRange,
   definitionProblem,
@@ -99,7 +100,8 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
   );
   const def: SyntheticDefinition = kind === 'dwelling' ? dwellingDraft : scenarioDraft;
   // The learn page, read inside the dialog (a modal covers the learn drawer); the form stays.
-  const [learning, setLearning] = useState(false);
+  // The page shown ('slug' or 'slug#heading'), or null for the form.
+  const [learning, setLearning] = useState<string | null>(null);
   // A new one (or a copy) is named by the user; an edit keeps its name.
   const [copying, setCopying] = useState(false);
   const editing = stored !== null && !copying;
@@ -243,23 +245,29 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
   const scenario = SCENARIOS.find((s) => s.id === scenarioDraft.scenario);
   return (
     <>
-      {learning && (
+      {learning !== null && (
         <div className={styles.learn}>
           <button
             type="button"
             className={confirm.cancel}
             onClick={() => {
-              setLearning(false);
+              setLearning(null);
             }}
           >
             Back to the form
           </button>
-          <LearnPage slug="synthetic-symbols" />
+          {/* A link to another page shows it here too (the drawer is under the dialog). */}
+          <LearnNavigation value={setLearning}>
+            <LearnPage
+              slug={learning.split('#')[0] ?? learning}
+              anchor={learning.split('#')[1] ?? null}
+            />
+          </LearnNavigation>
         </div>
       )}
       <form
         className={styles.form}
-        hidden={learning}
+        hidden={learning !== null}
         onSubmit={(event) => {
           event.preventDefault();
           void save();
@@ -491,7 +499,8 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
         <p className={styles.hint}>
           {kind === 'dwelling'
             ? dwellingDraft.causal
-              ? 'Each value holds from its assumed publication, so no bar knows a later one. '
+              ? 'Each value holds from its assumed publication, so no bar knows a later one; a ' +
+                'value that comes later than the lag rewrites the bars since. '
               : 'The close runs between month dates, so a day already knows the next month. '
             : last && `Ends on ${last}. `}
           {kind === 'dwelling' && 'In shekels, no volume; the index sets the dates. '}
@@ -500,7 +509,7 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             type="button"
             className={styles.link}
             onClick={() => {
-              setLearning(true);
+              setLearning('synthetic-symbols');
             }}
           >
             How it is built

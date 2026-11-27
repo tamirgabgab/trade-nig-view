@@ -121,9 +121,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         build_providers(settings),
         refresh_ttl_s=settings.refresh_ttl_s,
         provider_limits=not settings.offline,
-        synthetic=SyntheticProvider(
-            synthetic_symbols.definition, lambda series: macro_service.get(series).data
-        ),
+        synthetic=SyntheticProvider(synthetic_symbols.definition, macro_service.get),
     )
     app.state.drawings = DrawingsRepository(app_db)
     app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)

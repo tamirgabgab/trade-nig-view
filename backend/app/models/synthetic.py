@@ -9,10 +9,18 @@ universe's).
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Discriminator,
+    Field,
+    Tag,
+    TypeAdapter,
+    field_validator,
+)
 
 from app.analysis.synthetic import Scenario
 from app.models.symbols import SymbolInfo
@@ -133,8 +141,16 @@ class DwellingDefinition(_Definition):
         return self._info("ILS", has_volume=False)
 
 
+def _kind(value: object) -> str:
+    """The definition's kind; a body without one is a lab scenario (K0's API had no ``kind``)."""
+    if isinstance(value, dict):
+        return str(cast("dict[str, object]", value).get("kind", "scenario"))
+    return str(getattr(value, "kind", "scenario"))
+
+
 SyntheticDefinition = Annotated[
-    ScenarioDefinition | DwellingDefinition, Field(discriminator="kind")
+    Annotated[ScenarioDefinition, Tag("scenario")] | Annotated[DwellingDefinition, Tag("dwelling")],
+    Discriminator(_kind),
 ]
 #: Parses a stored or sent definition of any kind.
 DEFINITION: TypeAdapter[ScenarioDefinition | DwellingDefinition] = TypeAdapter(SyntheticDefinition)

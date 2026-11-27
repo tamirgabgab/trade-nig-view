@@ -264,7 +264,14 @@ describe('SyntheticSymbolDialog', () => {
   it('reads the learn page inside the dialog and comes back to the form as it was', async () => {
     stubApi({
       '/api/learn/synthetic-symbols': {
-        body: { slug: 'synthetic-symbols', markdown: '# Synthetic symbols\n\nHow they are built.' },
+        body: {
+          slug: 'synthetic-symbols',
+          markdown:
+            '# Synthetic symbols\n\nHow they are built. See [the ledger](learn:rent-or-buy).',
+        },
+      },
+      '/api/learn/rent-or-buy': {
+        body: { slug: 'rent-or-buy', markdown: '# Rent or buy\n\nThe ledger itself.' },
       },
     });
     const user = userEvent.setup();
@@ -273,7 +280,11 @@ describe('SyntheticSymbolDialog', () => {
     const dialog = await screen.findByRole('dialog', { name: 'New synthetic symbol' });
     await user.type(within(dialog).getByLabelText('Full name'), 'Kept');
     await user.click(within(dialog).getByRole('button', { name: 'How it is built' }));
-    expect(await within(dialog).findByText('How they are built.')).toBeInTheDocument();
+    expect(await within(dialog).findByText(/How they are built/)).toBeInTheDocument();
+    // A link to another learn page shows it here, not in the drawer under the dialog.
+    await user.click(within(dialog).getByRole('link', { name: 'the ledger' }));
+    expect(await within(dialog).findByText('The ledger itself.')).toBeInTheDocument();
+    expect(useUiStore.getState().learnFor).toBeNull();
     await user.click(within(dialog).getByRole('button', { name: 'Back to the form' }));
     expect(within(dialog).getByLabelText('Full name')).toHaveValue('Kept');
   });

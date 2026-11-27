@@ -29,7 +29,7 @@ from app.data.synthetic import SESSION_BARS, daily_bars, hourly_bars
 from app.data.universe import Universe
 from app.data.validate import validate_bars
 from app.errors import IntervalUnavailableError
-from app.macro.series import MacroSeries
+from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, Interval, ts_to_date
 from app.models.symbols import SymbolInfo
 from app.models.synthetic import ScenarioDefinition
@@ -241,7 +241,7 @@ class _Refuses:
         raise AssertionError(f"asked the market for {symbol.symbol}")
 
 
-def _no_index(series: str) -> MacroSeries:
+def _no_index(series: str) -> CachedSeries:
     raise AssertionError(f"a scenario symbol needs no index ({series})")
 
 

@@ -42,16 +42,18 @@ $$
 
 The index has a value $I_j$ on each month date $M_j$ (the first of the month). Its first value is put at the first
 price, so every close is $P_0$ times the index over its first value. Between two **anchors** $A_j$ and $E_j$ the log
-close runs from $a_j$ to $b_j$, plus a noise $\beta$ that is zero on every anchor:
+close runs from $a_j$ to $b_j$ in steps of weekdays (the bars' time), plus a noise $\beta$ that is zero on every
+anchor. An anchor on a weekend lands on the next weekday, so every value of the index is a close:
 
 $$
-\ln C_d = a_j + \frac{d - A_j}{E_j - A_j}\,(b_j - a_j) + \beta_{j,k},
+\ln C_d = a_j + \frac{k}{\tau_j}\,(b_j - a_j) + \beta_{j,k},
 \qquad \lambda_j = \ln P_0 + \ln\frac{I_j}{I_0}
 $$
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
-| $d$ | a weekday with a bar | a date |
+| $d$, $k$ | a weekday with a bar, and the weekdays from $A_j$ to it | a date; 0 to $\tau_j - 1$ |
+| $\tau_j$ | the weekdays from $A_j$ to $E_j$ | about 21 to 23 |
 | $C_d$ | that day's close | ₪ |
 | $I_j$, $M_j$ | the index's value for month $j$ and its date (the first of the month) | index points; a date |
 | $I_0$ | the index's first value | index points |
@@ -61,12 +63,14 @@ $$
 | $\beta_{j,k}$ | the noise on the segment's $k$-th weekday (next section) | log points, about ±1 % |
 
 **Interpolated** (the default): $A_j = M_j$, $E_j = M_{j+1}$, $a_j = \lambda_j$, $b_j = \lambda_{j+1}$. The close runs
-geometrically from one month's value to the next, the way the Planner reads the index between month dates. A day in
-January already uses February's value: the series **looks ahead**.
+geometrically from one month's value to the next, as the Planner reads the index between month dates (counted in
+weekdays here, in days there). A day in January already uses February's value: the series **looks ahead**.
 
 **Causal**: $A_j$ is the date month $j$'s value is assumed to be published, $L$ months after $M_j$, $E_j = A_{j+1}$,
 and $a_j = b_j = \lambda_j$. Each value holds from its publication to the next one, and no bar falls on or after today.
-No day uses a value published after it. Past the last value in the data, it holds until yesterday.
+No day uses a value published after it. Past the last value in the data, it holds until yesterday; a value that
+arrives after its assumed publication then rewrites the bars from that publication (they held the previous one), so
+set the lag at least as long as the real one.
 
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
@@ -114,9 +118,9 @@ $$
 The national index was 117.2 for January 1994 (dated 1994-01-01) and 119.6 for February (1994-02-01). With a first
 price of 100 and no noise:
 
-- **Interpolated**, on Monday 1994-01-17, 16 of January's 31 days in:
-  $C = 100 \cdot (119.6 / 117.2)^{16/31} = 101.05$. On 1994-02-01 the close is February's value exactly,
-  $100 \cdot 119.6 / 117.2 = 102.05$.
+- **Interpolated**: 1994-01-01 was a Saturday, so January's value is the close of Monday 1994-01-03, 100.00. On
+  Monday 1994-01-17, 10 of January's 21 weekdays in, $C = 100 \cdot (119.6 / 117.2)^{10/21} = 100.97$. On
+  1994-02-01 the close is February's value exactly, $100 \cdot 119.6 / 117.2 = 102.05$.
 - **Causal** with a lag of two months: January's value, 100.00, holds from 1994-03-01 to 1994-03-31; February's,
   102.05, from 1994-04-01.
 - **The noise** at 0.2 % a day, in a month of $\tau = 22$ weekdays, is widest in the middle: at $k = 11$ its

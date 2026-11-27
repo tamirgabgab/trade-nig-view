@@ -10947,14 +10947,7 @@
                 "$ref": "#/components/schemas/DwellingDefinition"
               }
             ],
-            "title": "Definition",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "dwelling": "#/components/schemas/DwellingDefinition",
-                "scenario": "#/components/schemas/ScenarioDefinition"
-              }
-            }
+            "title": "Definition"
           }
         },
         "type": "object",
@@ -11075,14 +11068,7 @@
                 "$ref": "#/components/schemas/DwellingDefinition"
               }
             ],
-            "title": "Definition",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "dwelling": "#/components/schemas/DwellingDefinition",
-                "scenario": "#/components/schemas/ScenarioDefinition"
-              }
-            }
+            "title": "Definition"
           }
         },
         "type": "object",
