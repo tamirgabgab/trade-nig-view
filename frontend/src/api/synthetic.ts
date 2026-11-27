@@ -2,7 +2,7 @@ import { apiDelete, apiGet, apiPut, fieldsOf, isRecord, type Schemas } from './c
 import { SCENARIOS, type Scenario } from './lab.ts';
 import type { SymbolInfo } from './market.ts';
 
-/** Synthetic symbols (Phase K, ADR 0031): invented series served like market data. */
+/** Synthetic symbols (Phase K, ADR 0031, 0032): invented series served like market data. */
 
 export const SYNTHETIC_PREFIX = 'SYN:';
 /** The part after `SYN:`: a letter, then letters, digits, `.`, `-` or `_` (12 at most). */
@@ -12,17 +12,47 @@ export const MAX_BARS = 10_000;
 
 export type Currency = 'USD' | 'ILS';
 
-export interface SyntheticDefinition {
+interface Common {
   name: string;
   fullName: string;
-  scenario: Scenario;
   seed: number;
+  firstPrice: number;
+}
+
+/** A lab scenario (K0). */
+export interface ScenarioDefinition extends Common {
+  kind: 'scenario';
+  scenario: Scenario;
   /** 'YYYY-MM-DD' */
   firstDate: string;
-  firstPrice: number;
   bars: number;
   currency: Currency;
 }
+
+/** The CBS dwelling price indexes (K1): the national one and the districts (from 2017-10). */
+export const DWELLING_SERIES = [
+  { id: 'dwelling', label: 'Israel (from 1994)' },
+  { id: 'dwelling_telaviv', label: 'Tel Aviv district' },
+  { id: 'dwelling_center', label: 'Center district' },
+  { id: 'dwelling_haifa', label: 'Haifa district' },
+  { id: 'dwelling_jerusalem', label: 'Jerusalem district' },
+  { id: 'dwelling_north', label: 'North district' },
+  { id: 'dwelling_south', label: 'South district' },
+] as const;
+export type DwellingSeries = (typeof DWELLING_SERIES)[number]['id'];
+
+/** A dwelling price index as the close (K1); prices in shekels, no volume. */
+export interface DwellingDefinition extends Common {
+  kind: 'dwelling';
+  series: DwellingSeries;
+  /** The noise's daily standard deviation, % (0 to 5). */
+  noisePct: number;
+  /** Held from each value's assumed publication instead of interpolated between month dates. */
+  causal: boolean;
+  lagMonths: number;
+}
+
+export type SyntheticDefinition = ScenarioDefinition | DwellingDefinition;
 
 export interface SyntheticSymbol {
   symbol: string;
@@ -63,27 +93,52 @@ function isScenario(value: unknown): value is Scenario {
   return SCENARIOS.some((s) => s.id === value);
 }
 
+function isDwellingSeries(value: unknown): value is DwellingSeries {
+  return DWELLING_SERIES.some((s) => s.id === value);
+}
+
+function parseDefinition(body: Record<string, unknown>): SyntheticDefinition {
+  const common = {
+    name: str(body['name'], 'name'),
+    fullName: str(body['full_name'], 'full_name'),
+    seed: num(body['seed'], 'seed'),
+    firstPrice: num(body['first_price'], 'first_price'),
+  };
+  if (body['kind'] === 'dwelling') {
+    const def = fieldsOf<Schemas['DwellingDefinition']>(body);
+    const series = def('series');
+    if (!isDwellingSeries(series)) throw new Error(`Unknown dwelling series ${String(series)}`);
+    return {
+      ...common,
+      kind: 'dwelling',
+      series,
+      noisePct: num(def('noise_pct'), 'noise_pct'),
+      causal: def('causal') === true,
+      lagMonths: num(def('lag_months'), 'lag_months'),
+    };
+  }
+  const def = fieldsOf<Schemas['ScenarioDefinition']>(body);
+  const scenario = def('scenario');
+  if (!isScenario(scenario)) throw new Error(`Unknown scenario ${String(scenario)}`);
+  return {
+    ...common,
+    kind: 'scenario',
+    scenario,
+    firstDate: str(def('first_date'), 'first_date'),
+    bars: num(def('bars'), 'bars'),
+    currency: def('currency') === 'USD' ? 'USD' : 'ILS',
+  };
+}
+
 export function parseSynthetic(body: unknown): SyntheticSymbol {
   if (!isRecord(body) || !isRecord(body['definition'])) {
     throw new Error('Unexpected synthetic symbol response');
   }
   const field = fieldsOf<Schemas['SyntheticOut']>(body);
-  const def = fieldsOf<Schemas['ScenarioDefinition']>(body['definition']);
-  const scenario = def('scenario');
-  if (!isScenario(scenario)) throw new Error(`Unknown scenario ${String(scenario)}`);
   return {
     symbol: str(field('symbol'), 'symbol'),
     revision: num(field('revision'), 'revision'),
-    definition: {
-      name: str(def('name'), 'name'),
-      fullName: str(def('full_name'), 'full_name'),
-      scenario,
-      seed: num(def('seed'), 'seed'),
-      firstDate: str(def('first_date'), 'first_date'),
-      firstPrice: num(def('first_price'), 'first_price'),
-      bars: num(def('bars'), 'bars'),
-      currency: def('currency') === 'USD' ? 'USD' : 'ILS',
-    },
+    definition: parseDefinition(body['definition']),
   };
 }
 
@@ -107,25 +162,40 @@ export function getReferences(symbol: string): Promise<SyntheticReferences> {
   return apiGet(`${path(symbol)}/references`, parseReferences);
 }
 
+function toWire(
+  def: SyntheticDefinition,
+): Schemas['ScenarioDefinition'] | Schemas['DwellingDefinition'] {
+  const common = {
+    name: def.name,
+    full_name: def.fullName,
+    seed: def.seed,
+    first_price: def.firstPrice,
+  };
+  return def.kind === 'dwelling'
+    ? {
+        ...common,
+        kind: 'dwelling',
+        series: def.series,
+        noise_pct: def.noisePct,
+        causal: def.causal,
+        lag_months: def.lagMonths,
+      }
+    : {
+        ...common,
+        kind: 'scenario',
+        scenario: def.scenario,
+        first_date: def.firstDate,
+        bars: def.bars,
+        currency: def.currency,
+      };
+}
+
 /** Create (revision 0) or edit in place. */
 export function saveSynthetic(
   definition: SyntheticDefinition,
   revision: number,
 ): Promise<SyntheticSymbol> {
-  const body = {
-    revision,
-    definition: {
-      kind: 'scenario',
-      name: definition.name,
-      full_name: definition.fullName,
-      scenario: definition.scenario,
-      seed: definition.seed,
-      first_date: definition.firstDate,
-      first_price: definition.firstPrice,
-      bars: definition.bars,
-      currency: definition.currency,
-    } satisfies Schemas['ScenarioDefinition'],
-  };
+  const body = { revision, definition: toWire(definition) };
   return apiPut(path(SYNTHETIC_PREFIX + definition.name), body, parseSynthetic);
 }
 

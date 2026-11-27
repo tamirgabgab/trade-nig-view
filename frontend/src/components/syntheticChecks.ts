@@ -10,6 +10,9 @@ const DAY_MS = 86_400_000;
 /** Bars are day numbers since 1970-01-01 (the backend's floor too). */
 export const FIRST_DAY = '1970-01-01';
 
+export const MAX_NOISE_PCT = 5;
+export const MAX_LAG = 12;
+
 export function barsInRange(bars: number): boolean {
   return Number.isInteger(bars) && bars >= MIN_BARS && bars <= MAX_BARS;
 }
@@ -61,12 +64,21 @@ export function definitionProblem(def: SyntheticDefinition, now: string): string
     return 'Name: 1 to 12 of A–Z, 0–9, ".", "-", "_", starting with a letter.';
   }
   if (def.fullName.trim() === '') return 'Give it a full name.';
-  if (!barsInRange(def.bars)) {
-    return `Bars: ${String(MIN_BARS)} to ${String(MAX_BARS)}.`;
-  }
   if (!(def.firstPrice > 0)) return 'The first price must be above 0.';
   if (!Number.isInteger(def.seed) || def.seed < 0 || def.seed > 1_000_000) {
     return 'Seed: a whole number from 0 to 1,000,000.';
+  }
+  if (def.kind === 'dwelling') {
+    if (!(def.noisePct >= 0 && def.noisePct <= MAX_NOISE_PCT)) {
+      return `Noise: 0 to ${String(MAX_NOISE_PCT)} % a day.`;
+    }
+    if (!Number.isInteger(def.lagMonths) || def.lagMonths < 0 || def.lagMonths > MAX_LAG) {
+      return `Publication lag: 0 to ${String(MAX_LAG)} months.`;
+    }
+    return null;
+  }
+  if (!barsInRange(def.bars)) {
+    return `Bars: ${String(MIN_BARS)} to ${String(MAX_BARS)}.`;
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(def.firstDate)) return 'Pick a first date.';
   if (def.firstDate < FIRST_DAY) return 'The first date is 1970-01-01 or later.';

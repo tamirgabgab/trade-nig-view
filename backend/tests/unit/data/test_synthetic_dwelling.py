@@ -202,3 +202,19 @@ def test_another_index_is_another_series_at_once() -> None:
     assert not np.allclose(
         dwelling_daily(spec(), other, TODAY).close, dwelling_daily(spec(), INDEX, TODAY).close
     )
+
+
+def test_the_learn_pages_worked_example() -> None:
+    # docs/indicators/synthetic-symbols.md: January 1994 117.2, February 119.6, first price 100.
+    definition = spec(noise_pct=0)
+    days, closes, _ = dwelling_closes(definition, INDEX.days, INDEX.values, UNTIL)
+    close = dict(zip((day(d) for d in days), closes, strict=True))
+    assert round(close[date(1994, 1, 17)], 2) == 101.05
+    assert round(close[date(1994, 2, 1)], 2) == 102.05
+    days, closes, _ = dwelling_closes(
+        spec(noise_pct=0, causal=True), INDEX.days, INDEX.values, UNTIL
+    )
+    close = dict(zip((day(d) for d in days), closes, strict=True))
+    assert round(close[date(1994, 3, 1)], 2) == round(close[date(1994, 3, 31)], 2) == 100.0
+    assert round(close[date(1994, 4, 1)], 2) == 102.05
+    assert round(0.2 * math.sqrt(11 * 11 / 22), 2) == 0.47

@@ -30,6 +30,7 @@ describe('synthetic symbol dates', () => {
 
 describe('definition checks', () => {
   const ok: SyntheticDefinition = {
+    kind: 'scenario',
     name: 'WALK1',
     fullName: 'Random walk',
     scenario: 'random_walk',
@@ -63,5 +64,37 @@ describe('definition checks', () => {
     [{ firstDate: '1969-12-31' }, /1970/],
   ])('rejects %o', (change, message) => {
     expect(definitionProblem({ ...ok, ...change }, '2026-11-27')).toMatch(message);
+  });
+});
+
+describe('dwelling definition checks', () => {
+  const home: SyntheticDefinition = {
+    kind: 'dwelling',
+    name: 'HOME',
+    fullName: 'Dwelling prices',
+    seed: 1,
+    firstPrice: 100,
+    series: 'dwelling',
+    noisePct: 0.2,
+    causal: false,
+    lagMonths: 2,
+  };
+
+  it('needs no dates or length (its index sets them)', () => {
+    expect(definitionProblem(home, '2026-11-27')).toBeNull();
+    expect(
+      definitionProblem({ ...home, noisePct: 0, causal: true, lagMonths: 0 }, '2026-11-27'),
+    ).toBeNull();
+  });
+
+  it.each([
+    [{ noisePct: 5.1 }, /Noise/],
+    [{ noisePct: -0.1 }, /Noise/],
+    [{ noisePct: Number.NaN }, /Noise/],
+    [{ lagMonths: 13 }, /lag/],
+    [{ lagMonths: 1.5 }, /lag/],
+    [{ firstPrice: 0 }, /price/],
+  ])('rejects %o', (change, message) => {
+    expect(definitionProblem({ ...home, ...change }, '2026-11-27')).toMatch(message);
   });
 });

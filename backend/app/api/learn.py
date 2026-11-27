@@ -59,6 +59,8 @@ CONCEPT_PAGES: dict[str, str] = {
     "withdrawals": "Withdrawals: what is left, and for how long",
     "cost-basis": "The cost of what is sold",
     "sustainable-withdrawals": "How much can be taken",
+    # The synthetic symbols (Phase K, ADR 0032).
+    "synthetic-symbols": "Synthetic symbols",
 }
 _HEADING_ID = re.compile(r"\s*\(`[^`]*`\)\s*$")
 _CATEGORY_ORDER: dict[str | None, int] = {c: i for i, c in enumerate(get_args(Category))}

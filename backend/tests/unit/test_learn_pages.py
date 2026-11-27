@@ -78,6 +78,8 @@ PLANNER_PAGES: set[str] = {
     "withdrawals",
     "cost-basis",
     "sustainable-withdrawals",
+    # Phase K (ADR 0032): the same sections and symbol tables.
+    "synthetic-symbols",
 }
 PLANNER_SECTIONS = (
     "What it answers",

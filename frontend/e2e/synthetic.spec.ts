@@ -15,13 +15,17 @@ test.beforeEach(async ({ page }) => {
   await expect(legend(page).locator('[data-field="C"]')).toBeVisible();
 });
 
+const HOME = `${SYMBOL}H`;
+
 test.afterEach(async ({ page }) => {
-  const found = await page.request.get(`/api/synthetic/${encodeURIComponent(SYMBOL)}`);
-  if (found.ok()) {
-    const { revision } = (await found.json()) as { revision: number };
-    await page.request.delete(
-      `/api/synthetic/${encodeURIComponent(SYMBOL)}?revision=${String(revision)}`,
-    );
+  for (const symbol of [SYMBOL, HOME]) {
+    const found = await page.request.get(`/api/synthetic/${encodeURIComponent(symbol)}`);
+    if (found.ok()) {
+      const { revision } = (await found.json()) as { revision: number };
+      await page.request.delete(
+        `/api/synthetic/${encodeURIComponent(symbol)}?revision=${String(revision)}`,
+      );
+    }
   }
 });
 
@@ -149,4 +153,52 @@ test('create, chart, keep, edit and delete a synthetic symbol', async ({ page })
   await page.getByRole('menuitem', { name: 'Open layout…' }).click();
   await page.getByRole('button', { name: /^On synthetic / }).click();
   await expect(legend(page)).toContainText('Apple Inc. · 1D');
+});
+
+test('a dwelling-price symbol: created, charted without volume, causal, explained', async ({
+  page,
+}) => {
+  await page.keyboard.press('s');
+  await page
+    .getByRole('dialog', { name: 'Symbol search' })
+    .getByRole('button', { name: 'New synthetic symbol…' })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'New synthetic symbol' });
+  await dialog.getByLabel('Kind').selectOption('dwelling');
+  await dialog.getByLabel('Name', { exact: true }).fill(HOME.slice(4).toLowerCase());
+  await dialog.getByLabel('Full name').fill('Dwelling prices, Israel');
+  // The learn page opens inside the dialog and the form comes back as it was.
+  await dialog.getByRole('button', { name: 'How it is built' }).click();
+  await expect(dialog.getByRole('heading', { name: 'What it answers' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Back to the form' }).click();
+  await expect(dialog.getByLabel('Full name')).toHaveValue('Dwelling prices, Israel');
+  await dialog.getByRole('button', { name: 'Create symbol' }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(legend(page)).toContainText('Dwelling prices, Israel · 1D · Synthetic');
+  await expect(legend(page).locator('[data-field="C"]')).toBeVisible();
+  await expect(legend(page).locator('[data-field="Vol"]')).toHaveCount(0);
+  await page
+    .getByRole('group', { name: 'Interval' })
+    .getByRole('button', { name: '1 hour' })
+    .click();
+  await expect(legend(page)).toContainText('Dwelling prices, Israel · 1h · Synthetic');
+
+  // Made causal from the legend: the last bar is now the weekday before today.
+  await legend(page)
+    .getByRole('button', { name: `Edit ${HOME}` })
+    .click();
+  const edit = page.getByRole('dialog', { name: `Edit ${HOME}` });
+  await expect(edit.getByLabel('Kind')).toBeDisabled();
+  await edit.getByLabel('Between months').selectOption('causal');
+  await edit.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(edit).toBeHidden();
+  const bars = (await (
+    await page.request.get(`/api/bars?symbol=${encodeURIComponent(HOME)}&interval=1D&limit=1`)
+  ).json()) as { bars: { time: string }[] };
+  const yesterday = new Date(Date.now() - 86_400_000);
+  while (yesterday.getUTCDay() === 0 || yesterday.getUTCDay() === 6) {
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  }
+  expect(bars.bars[0]?.time).toBe(yesterday.toISOString().slice(0, 10));
 });

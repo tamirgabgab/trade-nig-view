@@ -222,4 +222,59 @@ describe('SyntheticSymbolDialog', () => {
     dialog = await screen.findByRole('dialog', { name: 'Edit SYN:WALK' });
     expect(await within(dialog).findByLabelText('Seed')).toHaveValue(8);
   });
+
+  it('creates a dwelling-price symbol: its own fields, a causal one with its lag', async () => {
+    api();
+    const user = userEvent.setup();
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', '');
+    const dialog = await screen.findByRole('dialog', { name: 'New synthetic symbol' });
+    await user.type(within(dialog).getByLabelText('Name', { exact: true }), 'new1');
+    await user.type(within(dialog).getByLabelText('Full name'), 'Tel Aviv homes');
+    await user.selectOptions(within(dialog).getByLabelText('Kind'), 'dwelling');
+    expect(within(dialog).queryByLabelText('Bars (days)')).toBeNull();
+    expect(within(dialog).queryByLabelText('Publication lag (months)')).toBeNull();
+    await user.selectOptions(within(dialog).getByLabelText('Index'), 'dwelling_telaviv');
+    await user.selectOptions(within(dialog).getByLabelText('Between months'), 'causal');
+    await user.clear(within(dialog).getByLabelText('Publication lag (months)'));
+    await user.type(within(dialog).getByLabelText('Publication lag (months)'), '3');
+    // The name and the full name typed under the other kind are kept.
+    expect(within(dialog).getByLabelText('Name', { exact: true })).toHaveValue('NEW1');
+    await user.click(within(dialog).getByRole('button', { name: 'Create symbol' }));
+
+    await vi.waitFor(() => {
+      expect(useChartStore.getState().symbol).toBe('SYN:NEW1');
+    });
+    const put = calls.find((c) => c.method === 'PUT');
+    expect(JSON.parse(String(put?.body))).toMatchObject({
+      revision: 0,
+      definition: {
+        kind: 'dwelling',
+        name: 'NEW1',
+        full_name: 'Tel Aviv homes',
+        series: 'dwelling_telaviv',
+        noise_pct: 0.2,
+        causal: true,
+        lag_months: 3,
+        first_price: 100,
+      },
+    });
+  });
+
+  it('reads the learn page inside the dialog and comes back to the form as it was', async () => {
+    stubApi({
+      '/api/learn/synthetic-symbols': {
+        body: { slug: 'synthetic-symbols', markdown: '# Synthetic symbols\n\nHow they are built.' },
+      },
+    });
+    const user = userEvent.setup();
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', '');
+    const dialog = await screen.findByRole('dialog', { name: 'New synthetic symbol' });
+    await user.type(within(dialog).getByLabelText('Full name'), 'Kept');
+    await user.click(within(dialog).getByRole('button', { name: 'How it is built' }));
+    expect(await within(dialog).findByText('How they are built.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Back to the form' }));
+    expect(within(dialog).getByLabelText('Full name')).toHaveValue('Kept');
+  });
 });
