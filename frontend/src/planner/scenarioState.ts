@@ -14,12 +14,14 @@ import {
   readCompare,
   readContents,
   readForm,
+  readWithdraw,
   usePlannerStore,
   withdrawsOf,
   type CompareSettings,
   type OptionContents,
   type PlannerForm,
   type Slot,
+  type WithdrawSettings,
 } from '../store/plannerStore.ts';
 
 const VERSION = 1;
@@ -33,6 +35,8 @@ export interface ScenarioState {
   home: Record<Slot, HomeForm>;
   contents: Record<Slot, OptionContents>;
   compare: CompareSettings;
+  /** The Withdraw tab's settings of each option (absent from a scenario saved before them). */
+  withdraw?: Record<Slot, WithdrawSettings>;
 }
 
 /**
@@ -62,6 +66,7 @@ export function captureScenario(presets: TaxPresets | undefined): ScenarioState 
     home: { a: withTables(a), b: withTables(b) },
     contents: market.contents,
     compare: market.compare,
+    withdraw: linked(market.same, withdrawsOf(market)),
   };
 }
 
@@ -78,6 +83,8 @@ export function parseScenarioState(value: unknown): ScenarioState {
   };
   const market = pair(state['market'], readForm);
   const home = pair(state['home'], readHome);
+  // Read field by field; a scenario saved before the tab had settings has none.
+  const withdraw = isRecord(state['withdraw']) ? pair(state['withdraw'], readWithdraw) : null;
   if (version !== VERSION || market === null || home === null) {
     throw new Error('This is not a planner scenario.');
   }
@@ -88,6 +95,7 @@ export function parseScenarioState(value: unknown): ScenarioState {
     home,
     contents: readContents(state['contents']),
     compare: readCompare(state['compare']),
+    ...(withdraw === null ? {} : { withdraw }),
   };
 }
 
@@ -97,9 +105,9 @@ export function applyScenario(state: ScenarioState): void {
     loads: s.loads + 1,
     same: state.same,
     slot: 'a',
-    // A scenario does not hold the Withdraw settings: each option keeps its own.
-    withdraw: withdrawsOf(s).a,
-    withdrawOther: withdrawsOf(s).b,
+    // A scenario saved before the Withdraw tab had settings: each option keeps its own.
+    withdraw: (state.withdraw ?? withdrawsOf(s)).a,
+    withdrawOther: (state.withdraw ?? withdrawsOf(s)).b,
     form: state.market.a,
     other: state.market.b,
     contents: state.contents,
