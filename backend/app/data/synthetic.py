@@ -80,9 +80,15 @@ import pandas as pd
 
 from app.analysis.synthetic import VOLUME_BASE, VOLUME_PROFILE, log_path, volume_skew
 from app.data.sessions import session_days
+from app.data.synthetic_returns import parametric_returns
 from app.macro.series import MacroSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, IntArray, date_to_ts
-from app.models.synthetic import MAX_DEFINITIONS, DwellingDefinition, ScenarioDefinition
+from app.models.synthetic import (
+    MAX_DEFINITIONS,
+    DwellingDefinition,
+    ParametricDefinition,
+    ScenarioDefinition,
+)
 from app.planner.deposits import add_months
 
 TIMEZONE = "America/New_York"
@@ -114,6 +120,16 @@ def dwelling_daily(definition: DwellingDefinition, index: MacroSeries, today: da
     return _dwelling_daily(*_dwelling_key(definition, index, today))
 
 
+def parametric_hourly(definition: ParametricDefinition) -> BarFrame:
+    """The 1h bars of a parametric symbol (its returns: ``app.data.synthetic_returns``)."""
+    return _parametric_hourly(definition.model_dump_json())
+
+
+def parametric_daily(definition: ParametricDefinition) -> BarFrame:
+    """The daily bars of a parametric symbol: each the aggregate of its session's 1h bars."""
+    return _aggregate(_parametric_hourly(definition.model_dump_json()))
+
+
 # Memoised by the whole definition (its JSON) and, for a dwelling symbol, its index's values: an
 # edit or a new month is a new key. The ~20 ms of a series of 10,000 sessions is spent once, not
 # on every quote poll. The arrays are read-only (shared).
@@ -139,6 +155,22 @@ def _hourly(key: str) -> BarFrame:
 @lru_cache(maxsize=MAX_DEFINITIONS)
 def _daily(key: str) -> BarFrame:
     return _aggregate(_hourly(key))
+
+
+@lru_cache(maxsize=4)
+def _parametric_hourly(key: str) -> BarFrame:
+    definition = ParametricDefinition.model_validate_json(key)
+    n = definition.bars
+    path = parametric_returns(definition, n - 1, definition.seed)
+    close = definition.first_price * np.cumprod(np.concatenate(([1.0], 1 + path.returns)))
+    draws = np.random.default_rng([definition.seed, 0]).standard_normal((n, _DRAWS))
+    sigma = np.concatenate((path.sigma[:1], path.sigma))
+    # A day's jump shows in its open (news overnight), its gap scaled to the day's volatility.
+    gap = np.exp(draws[1:, 1] * sigma[1:] / 4) * np.maximum(1 + path.jumps, 0.05)
+    day_open = np.concatenate((close[:1], close[:-1] * gap))
+    log_move = np.abs(np.log(close / np.concatenate((close[:1], close[:-1]))))
+    day_volume = VOLUME_BASE * np.exp(0.3 * draws[:, 2] + 20 * log_move)
+    return _sessions(_session_days(definition), day_open, close, sigma, draws, day_volume)
 
 
 _DwellingKey = tuple[str, tuple[int, ...], tuple[float, ...], int]
@@ -282,7 +314,7 @@ def _read_only(frame: BarFrame) -> BarFrame:
     return frame
 
 
-def _session_days(definition: ScenarioDefinition) -> IntArray:
+def _session_days(definition: ScenarioDefinition | ParametricDefinition) -> IntArray:
     """Day numbers of the sessions: ``bars`` weekdays from ``first_date`` (rolled forward)."""
     first = np.datetime64(definition.first_date, "D")
     return np.busday_offset(first, np.arange(definition.bars), roll="forward").astype(np.int64)

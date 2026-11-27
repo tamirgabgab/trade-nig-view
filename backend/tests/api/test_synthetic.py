@@ -423,3 +423,84 @@ def test_a_body_without_kind_is_a_lab_scenario(client: TestClient) -> None:
     response = client.put(f"{URL}/{SYMBOL}", json={"revision": 0, "definition": body})
     assert response.status_code == 200, response.text
     assert response.json()["definition"]["kind"] == "scenario"
+
+
+# --- K2: a parametric symbol --------------------------------------------------------------------
+
+PAR: dict[str, Any] = {
+    "kind": "parametric",
+    "name": "par",
+    "full_name": "Fat tails",
+    "seed": 3,
+    "first_date": "2015-01-02",
+    "bars": 800,
+    "distribution": "student_t",
+    "df": 4,
+    "garch_alpha": 0.08,
+    "garch_beta": 0.9,
+    "jumps_per_year": 2,
+}
+PAR_SYMBOL = "SYN:PAR"
+
+
+def put_par(client: TestClient, revision: int = 0, **changes: Any) -> Any:
+    return client.put(
+        f"{URL}/{PAR_SYMBOL}", json={"revision": revision, "definition": {**PAR, **changes}}
+    )
+
+
+def par_bars(client: TestClient, interval: str, **params: Any) -> list[dict[str, Any]]:
+    query = {"symbol": PAR_SYMBOL, "interval": interval, "limit": 50_000, **params}
+    response = client.get("/api/bars", params=query)
+    assert response.status_code == 200, response.text
+    return response.json()["bars"]
+
+
+def test_a_parametric_symbol(client: TestClient) -> None:
+    created = put_par(client)
+    assert created.status_code == 200, created.text
+    doc = created.json()
+    assert doc["last_date"] == "2018-01-25"  # the 800th weekday from 2015-01-02
+    assert doc["definition"]["mean_pct"] == 7.0
+    assert doc["definition"]["vol_pct"] == 18.0
+    days = par_bars(client, "1D")
+    assert len(days) == 800
+    assert days[0]["close"] == pytest.approx(100.0)
+    assert len(par_bars(client, "1h")) == 7 * 800
+    info = client.get("/api/symbols", params={"query": "fat"}).json()[0]
+    assert (info["has_volume"], info["currency"]) == (True, "ILS")
+
+
+@pytest.mark.parametrize("exact", [False, True])
+def test_replay_sees_only_bars_up_to_the_cursor_of_a_parametric_symbol(
+    client: TestClient, exact: bool
+) -> None:
+    put_par(client, exact=exact)
+    for interval in ("1h", "4h", "1D"):
+        full = par_bars(client, interval)
+        cut = par_bars(client, interval, until="2016-06-15")
+        assert 0 < len(cut) < len(full)
+        assert cut == full[: len(cut)]
+
+
+def test_inconsistent_parametric_statistics_are_a_422(client: TestClient) -> None:
+    response = put_par(client, jumps_per_year=30, jump_sd_pct=10)
+    assert response.status_code == 422
+    assert put_par(client, garch_alpha=0.3, garch_beta=0.7).status_code == 422
+    assert put_par(client, df=2).status_code == 422
+    assert put_par(client, first_date="2100-01-01").status_code == 422
+
+
+def test_the_preview_draws_what_the_symbol_would(client: TestClient) -> None:
+    body = {"seed": 3, "bars": 3000, "distribution": "skew_normal", "skew": -4}
+    response = client.post(f"{URL}/preview", json=body)
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert sum(preview["counts"]) == 2999  # the first day is the first price
+    assert len(preview["edges"]) == len(preview["counts"]) + 1
+    assert preview["family_skewness"] == pytest.approx(-0.78, abs=0.01)
+    assert preview["skewness"] == pytest.approx(preview["family_skewness"], abs=0.15)
+    assert preview["vol_pct"] == pytest.approx(18, rel=0.05)
+    assert preview["floored"] == 0
+    bad = client.post(f"{URL}/preview", json={**body, "jumps_per_year": 40, "jump_sd_pct": 10})
+    assert bad.status_code == 422

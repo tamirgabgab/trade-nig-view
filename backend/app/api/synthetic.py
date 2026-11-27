@@ -9,6 +9,7 @@ keep their text (a layout then opens on the default symbol, a scenario reports t
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import asdict
 from http import HTTPStatus
 from typing import Annotated, Any, cast
 
@@ -22,8 +23,9 @@ from app.api.deps import (
     get_synthetic,
     get_watchlists,
 )
+from app.data.synthetic_returns import preview
 from app.errors import ChartLabError
-from app.models.synthetic import ScenarioDefinition, SyntheticDefinition
+from app.models.synthetic import DwellingDefinition, ReturnShape, SyntheticDefinition
 from app.storage.documents import Document, DocumentStore
 from app.storage.drawings import DrawingsRepository
 from app.storage.synthetic import SyntheticNotFoundError, SyntheticSymbols
@@ -73,7 +75,7 @@ class SyntheticReferences(BaseModel):
 
 
 def _out(revision: int, definition: SyntheticDefinition) -> SyntheticOut:
-    last = definition.last_date if isinstance(definition, ScenarioDefinition) else None
+    last = None if isinstance(definition, DwellingDefinition) else definition.last_date
     return SyntheticOut(
         symbol=definition.symbol, revision=revision, last_date=last, definition=definition
     )
@@ -109,6 +111,38 @@ def _without(document: Document, symbol: str) -> Document | None:
             for section in sections
         ],
     }
+
+
+class PreviewRequest(ReturnShape):
+    """A parametric symbol's statistics, its seed and its length (no name needed)."""
+
+    seed: Annotated[int, Field(ge=0, le=1_000_000)]
+    bars: Annotated[int, Field(ge=100, le=10_000)] = 2500
+
+
+class PreviewOut(BaseModel):
+    """What a parametric symbol draws: its daily returns as a histogram (``edges``, ``counts``),
+    the family's density as expected counts per bin at ``curve_x``, the realized yearly mean and
+    volatility (%), skewness and excess kurtosis, the family's own (null: infinite), and the days
+    the floor of -99 % caught."""
+
+    edges: list[float]
+    counts: list[int]
+    curve_x: list[float]
+    curve_counts: list[float]
+    mean_pct: float
+    vol_pct: float
+    skewness: float
+    excess_kurtosis: float
+    family_skewness: float
+    family_excess_kurtosis: float | None
+    floored: int
+
+
+@router.post("/synthetic/preview", response_model=PreviewOut)
+def preview_synthetic(body: PreviewRequest) -> PreviewOut:
+    """The returns a parametric symbol with these statistics draws (the dialog's preview)."""
+    return PreviewOut.model_validate(asdict(preview(body, body.bars - 1, body.seed)))
 
 
 @router.get("/synthetic", response_model=list[SyntheticOut])
@@ -175,7 +209,7 @@ def put_synthetic(
     today = dt.datetime.now(dt.UTC).date()
     # Before today: today's hours would still be in the future somewhere in the day. (A dwelling
     # symbol's dates come from its index; a causal one stops before today by itself.)
-    if isinstance(definition, ScenarioDefinition) and definition.last_date >= today:
+    if not isinstance(definition, DwellingDefinition) and definition.last_date >= today:
         raise InvalidSyntheticError(
             f"{definition.bars} bars from {definition.first_date} end on {definition.last_date},"
             f" not before today ({today}): start earlier or use fewer bars"

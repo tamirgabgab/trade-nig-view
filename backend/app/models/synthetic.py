@@ -1,15 +1,15 @@
 """Synthetic symbols: invented series served like market data (Phase K, ADR 0031).
 
-A definition (a lab scenario, K0, or a dwelling price index, K1) is stored in ``app.db`` and turned
-into bars by ``app.data.synthetic``. Its symbol is ``SYN:`` plus a ticker-like name the user
-chooses, so it can never shadow a real ticker (the Planner accepts any Yahoo ticker, not only the
-universe's).
+A definition (a lab scenario, K0, a dwelling price index, K1, or the user's statistics, K2) is
+stored in ``app.db`` and turned into bars by ``app.data.synthetic``. Its symbol is ``SYN:`` plus
+a ticker-like name the user chooses, so it can never shadow a real ticker (the Planner accepts any
+Yahoo ticker, not only the universe's).
 """
 
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated, Literal, cast
+from typing import Annotated, Literal, Self, cast
 
 import numpy as np
 from pydantic import (
@@ -20,6 +20,7 @@ from pydantic import (
     Tag,
     TypeAdapter,
     field_validator,
+    model_validator,
 )
 
 from app.analysis.synthetic import Scenario
@@ -83,17 +84,11 @@ class _Definition(BaseModel):
         )
 
 
-class ScenarioDefinition(_Definition):
-    """A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).
+class _Dated(BaseModel):
+    """``bars`` weekdays from ``first_date`` (rolled forward), priced in ``currency``."""
 
-    The series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward
-    to a weekday), and starts from ``first_price``; each session has seven 1h bars (09:30-16:00
-    New York) whose aggregate is the daily bar.
-    """
+    model_config = ConfigDict(frozen=True)
 
-    kind: Literal["scenario"] = "scenario"
-    scenario: Scenario
-    seed: Annotated[int, Field(ge=0, le=1_000_000)]
     first_date: Annotated[date, Field(ge=FIRST_DAY, description="From 1970-01-01")]
     bars: Annotated[int, Field(ge=100, le=10_000)] = 2500
     currency: Literal["USD", "ILS"] = "ILS"
@@ -104,6 +99,19 @@ class ScenarioDefinition(_Definition):
         first = np.datetime64(self.first_date, "D")
         last = np.busday_offset(first, self.bars - 1, roll="forward")
         return date.fromisoformat(str(last))
+
+
+class ScenarioDefinition(_Definition, _Dated):
+    """A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).
+
+    The series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward
+    to a weekday), and starts from ``first_price``; each session has seven 1h bars (09:30-16:00
+    New York) whose aggregate is the daily bar.
+    """
+
+    kind: Literal["scenario"] = "scenario"
+    scenario: Scenario
+    seed: Annotated[int, Field(ge=0, le=1_000_000)]
 
     def info(self) -> SymbolInfo:
         return self._info(self.currency, has_volume=True)
@@ -141,6 +149,73 @@ class DwellingDefinition(_Definition):
         return self._info("ILS", has_volume=False)
 
 
+#: A synthetic calendar's year: the weekdays in an average calendar year (365.25 x 5 / 7), so the
+#: app's own yearly figures (volatility, XIRR) give back the mean and volatility that were set.
+YEAR_BARS = 365.25 * 5 / 7
+
+Distribution = Literal["normal", "student_t", "uniform", "laplace", "skew_normal"]
+
+
+class ReturnShape(BaseModel):
+    """The daily return of a parametric symbol (K2): a family of shocks scaled to the yearly mean
+    and volatility, and three layers on top (memory, jumps, volatility clustering).
+
+    ``mean_pct`` is the expected simple yearly return mu (E[P_1/P_0] = 1 + mu); ``vol_pct`` the
+    daily standard deviation annualised, sigma (with memory, the standard deviation of a year's
+    summed returns). ``exact`` shifts and scales the drawn returns
+    so the path's own mean and standard deviation are the targets.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    mean_pct: Annotated[
+        float, Field(ge=-50, le=100, description="Expected simple yearly return, %")
+    ] = 7.0
+    vol_pct: Annotated[float, Field(ge=1, le=100, description="Yearly volatility, %")] = 18.0
+    distribution: Distribution = "normal"
+    df: Annotated[float, Field(gt=2, le=100, description="Student-t degrees of freedom")] = 5.0
+    skew: Annotated[float, Field(ge=-20, le=20, description="Skew-normal shape alpha")] = -4.0
+    exact: bool = False
+    memory: Annotated[float, Field(ge=-0.9, le=0.9, description="AR(1) coefficient phi")] = 0.0
+    jumps_per_year: Annotated[float, Field(ge=0, le=50)] = 0.0
+    jump_mean_pct: Annotated[float, Field(ge=-50, le=50, description="Mean jump, %")] = -5.0
+    jump_sd_pct: Annotated[float, Field(ge=0, le=50, description="Jump standard deviation, %")] = (
+        5.0
+    )
+    garch_alpha: Annotated[float, Field(ge=0, le=0.5, description="GARCH(1,1) alpha")] = 0.0
+    garch_beta: Annotated[float, Field(ge=0, le=0.99, description="GARCH(1,1) beta")] = 0.0
+
+    @property
+    def jump_variance(self) -> float:
+        """The variance the jumps add over a year: lambda (mu_J^2 + sigma_J^2)."""
+        return self.jumps_per_year * (
+            (self.jump_mean_pct / 100) ** 2 + (self.jump_sd_pct / 100) ** 2
+        )
+
+    @model_validator(mode="after")
+    def _consistent(self) -> Self:
+        if self.garch_alpha + self.garch_beta >= 1:
+            raise ValueError(
+                "garch_alpha + garch_beta must be below 1 (a finite long-run variance)"
+            )
+        if self.jump_variance >= (self.vol_pct / 100) ** 2:
+            raise ValueError(
+                "The jumps carry all of sigma's variance or more: fewer or smaller jumps, or a"
+                " larger sigma"
+            )
+        return self
+
+
+class ParametricDefinition(_Definition, _Dated, ReturnShape):
+    """A synthetic symbol whose daily returns are drawn from the user's statistics (K2)."""
+
+    kind: Literal["parametric"] = "parametric"
+    seed: Annotated[int, Field(ge=0, le=1_000_000)]
+
+    def info(self) -> SymbolInfo:
+        return self._info(self.currency, has_volume=True)
+
+
 def _kind(value: object) -> str:
     """The definition's kind; a body without one is a lab scenario (K0's API had no ``kind``)."""
     if isinstance(value, dict):
@@ -149,11 +224,15 @@ def _kind(value: object) -> str:
 
 
 SyntheticDefinition = Annotated[
-    Annotated[ScenarioDefinition, Tag("scenario")] | Annotated[DwellingDefinition, Tag("dwelling")],
+    Annotated[ScenarioDefinition, Tag("scenario")]
+    | Annotated[DwellingDefinition, Tag("dwelling")]
+    | Annotated[ParametricDefinition, Tag("parametric")],
     Discriminator(_kind),
 ]
 #: Parses a stored or sent definition of any kind.
-DEFINITION: TypeAdapter[ScenarioDefinition | DwellingDefinition] = TypeAdapter(SyntheticDefinition)
+DEFINITION: TypeAdapter[ScenarioDefinition | DwellingDefinition | ParametricDefinition] = (
+    TypeAdapter(SyntheticDefinition)
+)
 
 
 def is_synthetic(info: SymbolInfo) -> bool:

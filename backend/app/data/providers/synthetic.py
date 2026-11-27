@@ -11,11 +11,24 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime
 
 from app.data.providers.base import ProviderError
-from app.data.synthetic import daily_bars, dwelling_daily, dwelling_hourly, hourly_bars
+from app.data.synthetic import (
+    daily_bars,
+    dwelling_daily,
+    dwelling_hourly,
+    hourly_bars,
+    parametric_daily,
+    parametric_hourly,
+)
 from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, Interval, date_to_ts
 from app.models.symbols import SymbolInfo
-from app.models.synthetic import ScenarioDefinition, SyntheticDefinition, is_synthetic
+from app.models.synthetic import (
+    DwellingDefinition,
+    ParametricDefinition,
+    ScenarioDefinition,
+    SyntheticDefinition,
+    is_synthetic,
+)
 
 
 class SyntheticProvider:
@@ -54,18 +67,22 @@ class SyntheticProvider:
         """Whether the data behind ``symbol`` is a stale copy, and why (a dwelling symbol's index
         when its refresh failed)."""
         definition = self._lookup(symbol)
-        if isinstance(definition, ScenarioDefinition):
-            return False, ()
+        if not isinstance(definition, DwellingDefinition):
+            return False, ()  # generated from the definition alone
         cached = self._index(definition.series)
         return cached.stale, cached.warnings
 
     def _bars(self, symbol: SymbolInfo, *, hourly: bool) -> BarFrame:
         definition = self._lookup(symbol)
-        if isinstance(definition, ScenarioDefinition):
-            return hourly_bars(definition) if hourly else daily_bars(definition)
-        index = self._index(definition.series).data
-        bars = dwelling_hourly if hourly else dwelling_daily
-        return bars(definition, index, self._today())
+        match definition:
+            case ScenarioDefinition():
+                return hourly_bars(definition) if hourly else daily_bars(definition)
+            case DwellingDefinition():
+                index = self._index(definition.series).data
+                bars = dwelling_hourly if hourly else dwelling_daily
+                return bars(definition, index, self._today())
+            case ParametricDefinition():
+                return parametric_hourly(definition) if hourly else parametric_daily(definition)
 
     def _lookup(self, symbol: SymbolInfo) -> SyntheticDefinition:
         definition = self._definition(symbol.symbol)

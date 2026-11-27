@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/synthetic/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Synthetic
+         * @description The returns a parametric symbol with these statistics draws (the dialog's preview).
+         */
+        post: operations["preview_synthetic_api_synthetic_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic": {
         parameters: {
             query?: never;
@@ -3465,6 +3485,119 @@ export interface components {
              */
             requires?: string | null;
         };
+        /**
+         * ParametricDefinition
+         * @description A synthetic symbol whose daily returns are drawn from the user's statistics (K2).
+         */
+        ParametricDefinition: {
+            /**
+             * Mean Pct
+             * @description Expected simple yearly return, %
+             * @default 7
+             */
+            mean_pct: number;
+            /**
+             * Vol Pct
+             * @description Yearly volatility, %
+             * @default 18
+             */
+            vol_pct: number;
+            /**
+             * Distribution
+             * @default normal
+             * @enum {string}
+             */
+            distribution: "normal" | "student_t" | "uniform" | "laplace" | "skew_normal";
+            /**
+             * Df
+             * @description Student-t degrees of freedom
+             * @default 5
+             */
+            df: number;
+            /**
+             * Skew
+             * @description Skew-normal shape alpha
+             * @default -4
+             */
+            skew: number;
+            /**
+             * Exact
+             * @default false
+             */
+            exact: boolean;
+            /**
+             * Memory
+             * @description AR(1) coefficient phi
+             * @default 0
+             */
+            memory: number;
+            /**
+             * Jumps Per Year
+             * @default 0
+             */
+            jumps_per_year: number;
+            /**
+             * Jump Mean Pct
+             * @description Mean jump, %
+             * @default -5
+             */
+            jump_mean_pct: number;
+            /**
+             * Jump Sd Pct
+             * @description Jump standard deviation, %
+             * @default 5
+             */
+            jump_sd_pct: number;
+            /**
+             * Garch Alpha
+             * @description GARCH(1,1) alpha
+             * @default 0
+             */
+            garch_alpha: number;
+            /**
+             * Garch Beta
+             * @description GARCH(1,1) beta
+             * @default 0
+             */
+            garch_beta: number;
+            /**
+             * First Date
+             * Format: date
+             * @description From 1970-01-01
+             */
+            first_date: string;
+            /**
+             * Bars
+             * @default 2500
+             */
+            bars: number;
+            /**
+             * Currency
+             * @default ILS
+             * @enum {string}
+             */
+            currency: "USD" | "ILS";
+            /**
+             * Name
+             * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
+             */
+            name: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * First Price
+             * @default 100
+             */
+            first_price: number;
+            /**
+             * Kind
+             * @default parametric
+             * @constant
+             */
+            kind: "parametric";
+            /** Seed */
+            seed: number;
+        };
         /** PathPoint */
         PathPoint: {
             /**
@@ -3534,6 +3667,120 @@ export interface components {
              * @description E[R] / E[R^2]: Kelly's fraction of capital at risk
              */
             kelly: number | null;
+        };
+        /**
+         * PreviewOut
+         * @description What a parametric symbol draws: its daily returns as a histogram (``edges``, ``counts``),
+         *     the family's density as expected counts per bin at ``curve_x``, the realized yearly mean and
+         *     volatility (%), skewness and excess kurtosis, the family's own (null: infinite), and the days
+         *     the floor of -99 % caught.
+         */
+        PreviewOut: {
+            /** Edges */
+            edges: number[];
+            /** Counts */
+            counts: number[];
+            /** Curve X */
+            curve_x: number[];
+            /** Curve Counts */
+            curve_counts: number[];
+            /** Mean Pct */
+            mean_pct: number;
+            /** Vol Pct */
+            vol_pct: number;
+            /** Skewness */
+            skewness: number;
+            /** Excess Kurtosis */
+            excess_kurtosis: number;
+            /** Family Skewness */
+            family_skewness: number;
+            /** Family Excess Kurtosis */
+            family_excess_kurtosis: number | null;
+            /** Floored */
+            floored: number;
+        };
+        /**
+         * PreviewRequest
+         * @description A parametric symbol's statistics, its seed and its length (no name needed).
+         */
+        PreviewRequest: {
+            /**
+             * Mean Pct
+             * @description Expected simple yearly return, %
+             * @default 7
+             */
+            mean_pct: number;
+            /**
+             * Vol Pct
+             * @description Yearly volatility, %
+             * @default 18
+             */
+            vol_pct: number;
+            /**
+             * Distribution
+             * @default normal
+             * @enum {string}
+             */
+            distribution: "normal" | "student_t" | "uniform" | "laplace" | "skew_normal";
+            /**
+             * Df
+             * @description Student-t degrees of freedom
+             * @default 5
+             */
+            df: number;
+            /**
+             * Skew
+             * @description Skew-normal shape alpha
+             * @default -4
+             */
+            skew: number;
+            /**
+             * Exact
+             * @default false
+             */
+            exact: boolean;
+            /**
+             * Memory
+             * @description AR(1) coefficient phi
+             * @default 0
+             */
+            memory: number;
+            /**
+             * Jumps Per Year
+             * @default 0
+             */
+            jumps_per_year: number;
+            /**
+             * Jump Mean Pct
+             * @description Mean jump, %
+             * @default -5
+             */
+            jump_mean_pct: number;
+            /**
+             * Jump Sd Pct
+             * @description Jump standard deviation, %
+             * @default 5
+             */
+            jump_sd_pct: number;
+            /**
+             * Garch Alpha
+             * @description GARCH(1,1) alpha
+             * @default 0
+             */
+            garch_alpha: number;
+            /**
+             * Garch Beta
+             * @description GARCH(1,1) beta
+             * @default 0
+             */
+            garch_beta: number;
+            /** Seed */
+            seed: number;
+            /**
+             * Bars
+             * @default 2500
+             */
+            bars: number;
         };
         /**
          * ProviderStatus
@@ -4210,6 +4457,23 @@ export interface components {
          */
         ScenarioDefinition: {
             /**
+             * First Date
+             * Format: date
+             * @description From 1970-01-01
+             */
+            first_date: string;
+            /**
+             * Bars
+             * @default 2500
+             */
+            bars: number;
+            /**
+             * Currency
+             * @default ILS
+             * @enum {string}
+             */
+            currency: "USD" | "ILS";
+            /**
              * Name
              * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
              */
@@ -4230,23 +4494,6 @@ export interface components {
             scenario: components["schemas"]["Scenario"];
             /** Seed */
             seed: number;
-            /**
-             * First Date
-             * Format: date
-             * @description From 1970-01-01
-             */
-            first_date: string;
-            /**
-             * Bars
-             * @default 2500
-             */
-            bars: number;
-            /**
-             * Currency
-             * @default ILS
-             * @enum {string}
-             */
-            currency: "USD" | "ILS";
         };
         /** ScenarioDocument */
         ScenarioDocument: {
@@ -4779,7 +5026,7 @@ export interface components {
              */
             last_date: string | null;
             /** Definition */
-            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"];
+            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"] | components["schemas"]["ParametricDefinition"];
         };
         /**
          * SyntheticReferences
@@ -4845,7 +5092,7 @@ export interface components {
             /** Revision */
             revision: number;
             /** Definition */
-            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"];
+            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"] | components["schemas"]["ParametricDefinition"];
         };
         /**
          * TaxBase
@@ -5780,6 +6027,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SymbolInfo"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_synthetic_api_synthetic_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewOut"];
                 };
             };
             /** @description Validation Error */

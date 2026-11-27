@@ -96,6 +96,48 @@
         }
       }
     },
+    "/api/synthetic/preview": {
+      "post": {
+        "tags": [
+          "synthetic"
+        ],
+        "summary": "Preview Synthetic",
+        "description": "The returns a parametric symbol with these statistics draws (the dialog's preview).",
+        "operationId": "preview_synthetic_api_synthetic_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/synthetic": {
       "get": {
         "tags": [
@@ -8174,6 +8216,168 @@
         ],
         "title": "ParamInfo"
       },
+      "ParametricDefinition": {
+        "properties": {
+          "mean_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": -50.0,
+            "title": "Mean Pct",
+            "description": "Expected simple yearly return, %",
+            "default": 7.0
+          },
+          "vol_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Vol Pct",
+            "description": "Yearly volatility, %",
+            "default": 18.0
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "student_t",
+              "uniform",
+              "laplace",
+              "skew_normal"
+            ],
+            "title": "Distribution",
+            "default": "normal"
+          },
+          "df": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 2.0,
+            "title": "Df",
+            "description": "Student-t degrees of freedom",
+            "default": 5.0
+          },
+          "skew": {
+            "type": "number",
+            "maximum": 20.0,
+            "minimum": -20.0,
+            "title": "Skew",
+            "description": "Skew-normal shape alpha",
+            "default": -4.0
+          },
+          "exact": {
+            "type": "boolean",
+            "title": "Exact",
+            "default": false
+          },
+          "memory": {
+            "type": "number",
+            "maximum": 0.9,
+            "minimum": -0.9,
+            "title": "Memory",
+            "description": "AR(1) coefficient phi",
+            "default": 0.0
+          },
+          "jumps_per_year": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Jumps Per Year",
+            "default": 0.0
+          },
+          "jump_mean_pct": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": -50.0,
+            "title": "Jump Mean Pct",
+            "description": "Mean jump, %",
+            "default": -5.0
+          },
+          "jump_sd_pct": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Jump Sd Pct",
+            "description": "Jump standard deviation, %",
+            "default": 5.0
+          },
+          "garch_alpha": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.0,
+            "title": "Garch Alpha",
+            "description": "GARCH(1,1) alpha",
+            "default": 0.0
+          },
+          "garch_beta": {
+            "type": "number",
+            "maximum": 0.99,
+            "minimum": 0.0,
+            "title": "Garch Beta",
+            "description": "GARCH(1,1) beta",
+            "default": 0.0
+          },
+          "first_date": {
+            "type": "string",
+            "format": "date",
+            "title": "First Date",
+            "description": "From 1970-01-01"
+          },
+          "bars": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 100.0,
+            "title": "Bars",
+            "default": 2500
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "ILS"
+            ],
+            "title": "Currency",
+            "default": "ILS"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
+            "title": "Name",
+            "description": "The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "first_price": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "First Price",
+            "default": 100.0
+          },
+          "kind": {
+            "type": "string",
+            "const": "parametric",
+            "title": "Kind",
+            "default": "parametric"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Seed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_date",
+          "name",
+          "full_name",
+          "seed"
+        ],
+        "title": "ParametricDefinition",
+        "description": "A synthetic symbol whose daily returns are drawn from the user's statistics (K2)."
+      },
       "PathPoint": {
         "properties": {
           "date": {
@@ -8288,6 +8492,208 @@
           "kelly"
         ],
         "title": "PlanSummary"
+      },
+      "PreviewOut": {
+        "properties": {
+          "edges": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Counts"
+          },
+          "curve_x": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Curve X"
+          },
+          "curve_counts": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Curve Counts"
+          },
+          "mean_pct": {
+            "type": "number",
+            "title": "Mean Pct"
+          },
+          "vol_pct": {
+            "type": "number",
+            "title": "Vol Pct"
+          },
+          "skewness": {
+            "type": "number",
+            "title": "Skewness"
+          },
+          "excess_kurtosis": {
+            "type": "number",
+            "title": "Excess Kurtosis"
+          },
+          "family_skewness": {
+            "type": "number",
+            "title": "Family Skewness"
+          },
+          "family_excess_kurtosis": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Excess Kurtosis"
+          },
+          "floored": {
+            "type": "integer",
+            "title": "Floored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "edges",
+          "counts",
+          "curve_x",
+          "curve_counts",
+          "mean_pct",
+          "vol_pct",
+          "skewness",
+          "excess_kurtosis",
+          "family_skewness",
+          "family_excess_kurtosis",
+          "floored"
+        ],
+        "title": "PreviewOut",
+        "description": "What a parametric symbol draws: its daily returns as a histogram (``edges``, ``counts``),\nthe family's density as expected counts per bin at ``curve_x``, the realized yearly mean and\nvolatility (%), skewness and excess kurtosis, the family's own (null: infinite), and the days\nthe floor of -99 % caught."
+      },
+      "PreviewRequest": {
+        "properties": {
+          "mean_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": -50.0,
+            "title": "Mean Pct",
+            "description": "Expected simple yearly return, %",
+            "default": 7.0
+          },
+          "vol_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Vol Pct",
+            "description": "Yearly volatility, %",
+            "default": 18.0
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "student_t",
+              "uniform",
+              "laplace",
+              "skew_normal"
+            ],
+            "title": "Distribution",
+            "default": "normal"
+          },
+          "df": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 2.0,
+            "title": "Df",
+            "description": "Student-t degrees of freedom",
+            "default": 5.0
+          },
+          "skew": {
+            "type": "number",
+            "maximum": 20.0,
+            "minimum": -20.0,
+            "title": "Skew",
+            "description": "Skew-normal shape alpha",
+            "default": -4.0
+          },
+          "exact": {
+            "type": "boolean",
+            "title": "Exact",
+            "default": false
+          },
+          "memory": {
+            "type": "number",
+            "maximum": 0.9,
+            "minimum": -0.9,
+            "title": "Memory",
+            "description": "AR(1) coefficient phi",
+            "default": 0.0
+          },
+          "jumps_per_year": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Jumps Per Year",
+            "default": 0.0
+          },
+          "jump_mean_pct": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": -50.0,
+            "title": "Jump Mean Pct",
+            "description": "Mean jump, %",
+            "default": -5.0
+          },
+          "jump_sd_pct": {
+            "type": "number",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Jump Sd Pct",
+            "description": "Jump standard deviation, %",
+            "default": 5.0
+          },
+          "garch_alpha": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.0,
+            "title": "Garch Alpha",
+            "description": "GARCH(1,1) alpha",
+            "default": 0.0
+          },
+          "garch_beta": {
+            "type": "number",
+            "maximum": 0.99,
+            "minimum": 0.0,
+            "title": "Garch Beta",
+            "description": "GARCH(1,1) beta",
+            "default": 0.0
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "bars": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 100.0,
+            "title": "Bars",
+            "default": 2500
+          }
+        },
+        "type": "object",
+        "required": [
+          "seed"
+        ],
+        "title": "PreviewRequest",
+        "description": "A parametric symbol's statistics, its seed and its length (no name needed)."
       },
       "ProviderStatus": {
         "properties": {
@@ -9770,6 +10176,28 @@
       },
       "ScenarioDefinition": {
         "properties": {
+          "first_date": {
+            "type": "string",
+            "format": "date",
+            "title": "First Date",
+            "description": "From 1970-01-01"
+          },
+          "bars": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 100.0,
+            "title": "Bars",
+            "default": 2500
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "ILS"
+            ],
+            "title": "Currency",
+            "default": "ILS"
+          },
           "name": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
@@ -9803,37 +10231,15 @@
             "maximum": 1000000.0,
             "minimum": 0.0,
             "title": "Seed"
-          },
-          "first_date": {
-            "type": "string",
-            "format": "date",
-            "title": "First Date",
-            "description": "From 1970-01-01"
-          },
-          "bars": {
-            "type": "integer",
-            "maximum": 10000.0,
-            "minimum": 100.0,
-            "title": "Bars",
-            "default": 2500
-          },
-          "currency": {
-            "type": "string",
-            "enum": [
-              "USD",
-              "ILS"
-            ],
-            "title": "Currency",
-            "default": "ILS"
           }
         },
         "type": "object",
         "required": [
+          "first_date",
           "name",
           "full_name",
           "scenario",
-          "seed",
-          "first_date"
+          "seed"
         ],
         "title": "ScenarioDefinition",
         "description": "A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).\n\nThe series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward\nto a weekday), and starts from ``first_price``; each session has seven 1h bars (09:30-16:00\nNew York) whose aggregate is the daily bar."
@@ -10945,6 +11351,9 @@
               },
               {
                 "$ref": "#/components/schemas/DwellingDefinition"
+              },
+              {
+                "$ref": "#/components/schemas/ParametricDefinition"
               }
             ],
             "title": "Definition"
@@ -11066,6 +11475,9 @@
               },
               {
                 "$ref": "#/components/schemas/DwellingDefinition"
+              },
+              {
+                "$ref": "#/components/schemas/ParametricDefinition"
               }
             ],
             "title": "Definition"
