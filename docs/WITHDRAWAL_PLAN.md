@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **J0 to J2 approved; J4 done (2026-11-27, ADR 0026 to 0029); J3 is next and last (the user's order).** The user's answers are under "Decided" at the end.
+Status: **J0 to J2 and J4 approved (2026-11-27, ADR 0026 to 0029); J3 in progress, the last round of Phase J.** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -353,3 +353,14 @@ Asked before J4 (2026-11-27), all at the recommended answer. J2 was approved by 
   value), and say so.
 - **Side by side** is the two single plans: a table of the two, and the full results of the option on screen. A
   study (history, worlds) runs for the option on screen.
+
+Asked before J3 (2026-11-27). J4 was approved by going on to J3.
+- **Three learn pages**, each with ADR 0025's sections, a symbol table after every formula and a worked example
+  pinned to the engine: `withdrawals` (the rules, net in hand, the month as one event, depletion, the apartment),
+  `cost-basis` (the cost share and its two bounds, the carried loss, lots first in first out, the handover) and
+  `sustainable-withdrawals` (the share still paying, the sustainable amount, the order of the months, the income
+  fan; the windows and the worlds link to their own pages).
+- **Saved scenarios** keep both options' Withdraw settings. A scenario saved before them loads without touching
+  the Withdraw settings on screen.
+- **The UX pass:** a learn link under each section of the tab, the apartment and the studies as sections that fold,
+  a full `ux-audit` with every finding fixed, and the order of the results.
