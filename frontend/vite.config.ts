@@ -25,5 +25,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: { modules: { classNameStrategy: 'non-scoped' } },
     restoreMocks: true,
+    // Room for the waits above (src/test/setup.ts): the default of 5 s is one long wait.
+    testTimeout: 15_000,
   },
 });

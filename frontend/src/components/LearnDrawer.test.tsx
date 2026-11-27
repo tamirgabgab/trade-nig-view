@@ -89,8 +89,7 @@ async function openLearn(user: ReturnType<typeof userEvent.setup>, id: string, n
   await screen.findByText('Apple Inc. · 1D · NASDAQ');
   useIndicatorStore.getState().add(id, { length: 9, source: 'close', offset: 0 });
   await user.click(await screen.findByRole('button', { name: `Learn: ${name}` }));
-  // The drawer, Markdown and KaTeX are loaded on the first open: slow on a cold CI runner.
-  return screen.findByRole('complementary', { name: name }, { timeout: 5000 });
+  return screen.findByRole('complementary', { name: name });
 }
 
 describe('learn drawer', () => {
