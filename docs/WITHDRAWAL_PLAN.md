@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **a plan, nothing built.** The questions at the end are asked before J0.
+Status: **J0 in progress (2026-11-27).** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -34,15 +34,24 @@ first day), the tax paid, and the total taken.
 ## The model
 
 ### Time
-Monthly, like the apartment: withdrawal k is on the start day moved by k months, for a horizon of T months. A sale
-is at that day's close (the bar on or after it), as a deposit buys in H1.
+Monthly, like the apartment: month date k is the start day moved by k months, for a horizon of T months. The
+withdrawals are on month dates 1 to T (the first one a month after the start, as a mortgage's first payment), and
+the month's fee, sale and tax are all on that date. A sale is at that day's close (the bar on or after it), as a
+deposit buys in H1.
+
+### The return of the account
+- **The Market tab's mix:** its symbols over history, so the start is in the past.
+- **An assumed yearly return** (the user, 2026-11-27): one number, an effective yearly rate in nominal shekels,
+  compounded monthly as the apartment's assumed growth is. A plan can then start today. Volatility comes with the
+  simulation (J2).
 
 ### The account
 The mix, the USD/ILS switch, the fees and the tax settings are those of the Market tab (one mix for both, unless
 the user decides otherwise: question 6). New inputs: the **starting capital** in shekels and its **cost share**.
 
 - Dividends are reinvested net of their tax and join the cost basis, as in H1 (`market.growth`).
-- Account fees are charged at month ends, as in H1.
+- Account fees are charged on the month dates, with the withdrawal (H1 charges them at calendar month ends and
+  taxes everything at the end; here the sale, its tax and the fee are one event).
 - A withdrawal sells the **same fraction of every asset**, so the mix drifts with the market and is never traded
   back (no rebalancing trades, hence no tax from them). Selling the overweight asset first is "later".
 
@@ -68,20 +77,22 @@ Other conventions (the existing ones, extended):
 - **Losses** are carried forward and offset later gains; a loss is never refunded.
 - **The sell commission** comes off the proceeds before the tax, as at the end of an H1 plan.
 
-### The amount: net in hand
+### The amount: net in hand (the fixed rule)
 The user plans by what reaches the hand. For a net amount N the Planner solves for the fraction to sell. With one
-lot per asset the net of selling φ of everything is linear in φ while the tax does not change sign, so it is one
-division per month (a short bisection when a loss carried forward is used up mid-sale):
+lot per asset the net of selling φ of everything is piecewise linear in φ, with one kink where a loss carried
+forward is used up, so it is a closed form:
 
     N = φ × Σ_a value_a (1 − sell) − τ × max( φ × Σ_a [value_a (1 − sell) − basis_a] − carried loss, 0 )
 
-"Gross sold" as the meaning of the amount is question 1.
+The month's fee is paid out of the same sale.
 
 ### The two rules
-- **Fixed amount:** N_k = N_1 × CPI_k / CPI_1 with indexation on (the default: the amount keeps its buying power),
-  N_k = N_1 with it off (question 2).
-- **Percent:** N_k = (p / 12) × V_k, for a yearly percent p of what there is at that moment (question 3: of the
-  account, or of the net worth with the apartment).
+- **Fixed amount:** a net amount N in shekels of the first day. With indexation on (the default) month k pays
+  N × CPI_k / CPI_0, so its buying power is constant; with it off, N every month.
+- **Percent:** the fraction **sold** each month is p / 12, for a yearly percent p of the account (the user,
+  2026-11-27). The income is what is left of that sale after the commission, the tax and the fee.
+  - So under this rule the balance does not depend on the cost share at all; only the income does. The two tax
+    bounds are a band on the **income** here, and on the **balance and the depletion month** under the fixed rule.
 
 ### When the money ends
 A month the account cannot pay in full pays what is left and is marked as the **depletion month**; later months pay
@@ -207,11 +218,16 @@ selling the overweight asset first; a loan against the apartment; several accoun
 - **A percent rule looks safe** because it never ends. Its risk is the income, and the page must lead with it.
 - **Monthly sales at the close** ignore intraday prices and the spread; the sell commission field stands for both.
 
-## Questions for the user (asked before J0)
-1. **The amount** is what reaches the hand after tax (the plan's default), or what is sold?
-2. **A fixed amount** rises with the CPI (default: yes, with a switch)?
-3. **The percent** is of the account's value (default), or of the net worth with the apartment's equity?
-4. **The apartment's role:** kept with its rent only (default), sold on a date, or sold when the account is empty.
-   All three as a choice in J1, or fewer?
-5. **Two withdrawal plans side by side** (as options A and B): not in J0 to J3 by default. Wanted?
-6. **The mix** is the Market tab's (default), or the Withdraw tab gets a mix of its own?
+## Decided by the user (2026-11-27)
+The six questions of the plan, all at their defaults:
+1. **The fixed amount** is what reaches the hand after tax.
+2. **A fixed amount** rises with the CPI, with a switch.
+3. **The percent** is of the account's value (not of the net worth with the apartment).
+4. **The apartment's role** (J1): kept with its rent only, sold on a date, or sold when the account is empty.
+5. **Two withdrawal plans side by side:** in J4 only.
+6. **The mix** is the Market tab's.
+
+Asked before J0:
+- **The percent is what is sold**; the income is what is left after tax and costs.
+- **An assumed yearly return** is added already in J0, beside the Market tab's mix.
+- **The default cost share is 50 %**, with both bounds always beside it.
