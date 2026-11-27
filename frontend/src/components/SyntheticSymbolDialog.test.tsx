@@ -180,4 +180,46 @@ describe('SyntheticSymbolDialog', () => {
     });
     expect(calls.find((c) => c.method === 'DELETE')?.path).toBe('/api/synthetic/SYN%3AWALK');
   });
+
+  it('keeps Delete off until it knows what points at it, and says when it cannot know', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    stubApi({
+      '/api/synthetic/SYN%3AWALK': { body: STORED },
+      '/api/synthetic/SYN%3AWALK/references': () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('syntheticDelete', 'SYN:WALK');
+    const dialog = await screen.findByRole('dialog', { name: 'Edit SYN:WALK' });
+    expect(await within(dialog).findByText(/Checking what points at it/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Delete SYN:WALK' })).toBeDisabled();
+
+    answer(new Response('{"detail":"boom"}', { status: 500 }));
+    expect(await within(dialog).findByText(/What points at it is not known/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Delete SYN:WALK' })).toBeEnabled();
+  });
+
+  it('starts an edit from what is stored now, not from an earlier visit', async () => {
+    let seed = 7;
+    stubApi({
+      '/api/synthetic/SYN%3AWALK': () =>
+        jsonResponse({ ...STORED, definition: { ...STORED.definition, seed } }),
+      '/api/synthetic/SYN%3AWALK/references': { body: REFERENCES },
+    });
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', 'SYN:WALK');
+    let dialog = await screen.findByRole('dialog', { name: 'Edit SYN:WALK' });
+    expect(await within(dialog).findByLabelText('Seed')).toHaveValue(7);
+    useUiStore.getState().closeModal('synthetic');
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    seed = 8; // saved meanwhile
+    useUiStore.getState().openModal('synthetic', 'SYN:WALK');
+    dialog = await screen.findByRole('dialog', { name: 'Edit SYN:WALK' });
+    expect(await within(dialog).findByLabelText('Seed')).toHaveValue(8);
+  });
 });

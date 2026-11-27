@@ -6,7 +6,7 @@ import {
   definitionProblem,
   firstDateEndingBefore,
   lastDate,
-} from './syntheticForm.ts';
+} from './syntheticChecks.ts';
 
 describe('synthetic symbol dates', () => {
   it('counts weekdays only, rolling a weekend start forward', () => {
@@ -57,7 +57,10 @@ describe('definition checks', () => {
     [{ firstPrice: 0 }, /price/],
     [{ seed: -1 }, /Seed/],
     [{ firstDate: '' }, /first date/],
-    [{ firstDate: '2026-01-01' }, /after today/],
+    [{ firstDate: '2026-01-01' }, /not before today/],
+    // Ending today itself: today's hours are not over.
+    [{ firstDate: addWeekdays('2026-11-27', -99), bars: 100 }, /not before today/],
+    [{ firstDate: '1969-12-31' }, /1970/],
   ])('rejects %o', (change, message) => {
     expect(definitionProblem({ ...ok, ...change }, '2026-11-27')).toMatch(message);
   });

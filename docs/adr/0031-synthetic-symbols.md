@@ -14,8 +14,9 @@ currency field, editing in place with Save as copy, a delete that cleans up, a b
   (the part after `SYN:`: 1 to 12 of A–Z, 0–9, `.`, `-`, `_`, starting with a letter, upper-cased), a free
   `full_name`, the scenario, the seed, the first date, the first price, the number of daily bars (100 to
   10,000) and the currency (USD or ILS, default ILS). The symbol is `SYN:` + name, so it can never shadow a real
-  ticker: the Planner accepts any Yahoo ticker, not only the universe's. Its last bar may not be after today
-  (checked when saved), so the series never moves with the calendar.
+  ticker: the Planner accepts any Yahoo ticker, not only the universe's. The first date is 1970-01-01 or later
+  (bars are day numbers since then), and the last bar must be **before** today, checked when saved (today's
+  hours would still lie ahead), so the series never moves with the calendar.
 - **Storage.** `app.db` table `synthetic` (a `DocumentStore`, revisions for optimistic locking), behind
   `SyntheticSymbols`, which keeps every definition in memory: symbol lookups never touch SQLite. At most 100.
 - **A symbol like any other.** `Universe.with_extra(...)` makes `resolve` and `search` see the synthetic
@@ -26,11 +27,14 @@ currency field, editing in place with Save as copy, a delete that cleans up, a b
   are "Synthetic"; the hours are a US stock's (09:30–16:00 New York).
 - **Generation, no cache.** `BarService.history` sends a synthetic symbol to the `SyntheticProvider` (a
   `DataProvider`, so later kinds plug in the same way), whatever the provider chain and with `OFFLINE=1` too;
-  the bars are generated on every request (10,000 sessions take milliseconds) and never written to `bars.db`,
-  so an edited definition is served at once. 1h is the base, 4h is resampled from it as for a stock, 1D is
+  the bars are never written to `bars.db`. They are generated from the definition and memoised in memory by
+  the whole definition (its JSON), so an edit is a new key and is served at once, and the watchlist's quote
+  polls do not regenerate a series (about 20 ms for 10,000 sessions). 1h is the base, 4h is resampled from it as for a stock, 1D is
   generated as the aggregate of the hours, 1W and 1M are resampled from 1D. Minute intervals are a 422
-  (`interval_unavailable`); the minutes menu is off on a synthetic symbol, and a chart on a minute interval
-  moves to 1h. No provider window is reported, the source is `synthetic`.
+  (`interval_unavailable`); the minutes menu is off on a synthetic symbol, a chart on a minute interval
+  moves to 1h, a synthetic symbol compared on a minute chart is listed with "no minute bars" and not
+  requested, and a Planner deposit with a time of day reads it from the 1h bars. No provider window is
+  reported, the source is `synthetic`.
 - **The hourly generator** (`app/data/synthetic.py`). Each day draws its own row of normals, so a day's draws do
   not depend on the length. The daily close and open follow the lab scenario's own daily recursion
   (`log_path`) with the first price in place of 100, so each scenario keeps its documented drift, volatility,
@@ -41,9 +45,12 @@ currency field, editing in place with Save as copy, a delete that cleans up, a b
 - **Editing in place** (`PUT /api/synthetic/{symbol}` with the stored revision) changes the bars everywhere at
   once; the dialog first lists what points at the symbol (`GET …/references`: layouts charting or comparing it,
   watchlists, its drawings, Planner scenarios that mention it) and offers Save as copy (a new name). The name of
-  a stored symbol does not change.
-- **Deleting** (`DELETE …?revision=`) removes the symbol from every saved watchlist and deletes its drawings
-  first, then the definition, so a failure never leaves a watchlist holding an unknown symbol. Layouts and
+  a stored symbol does not change. The dialog's definition is always fetched afresh (never from a cache), so
+  a save cannot undo an earlier edit with the revision check passing.
+- **Deleting** (`DELETE …?revision=`) checks the revision, then, under the store's lock (no edit can come in
+  between), removes the symbol from every saved watchlist and deletes its drawings, then the definition, so a
+  failure never leaves a watchlist holding an unknown symbol, and a stale revision changes nothing. The
+  confirmation keeps Delete off until it knows what points at the symbol, and says so when it cannot know. Layouts and
   Planner scenarios keep their text: a layout on a deleted symbol opens on the default symbol (the chart's
   existing fallback for a symbol it does not list), a compared one is dropped, and the Planner says the
   synthetic symbol was deleted.

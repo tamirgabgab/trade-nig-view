@@ -7,10 +7,11 @@ curated universe), so reading a definition never touches SQLite; writes go to SQ
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from http import HTTPStatus
 from pathlib import Path
 
-from app.errors import ChartLabError
+from app.errors import ChartLabError, RevisionConflictError
 from app.models.symbols import SymbolInfo
 from app.models.synthetic import MAX_DEFINITIONS, ScenarioDefinition
 from app.storage.documents import Document, DocumentStore
@@ -74,12 +75,22 @@ class SyntheticSymbols:
             self._saved[symbol] = (new_revision, definition)
         return new_revision
 
-    def delete(self, symbol: str, revision: int) -> None:
-        """Remove ``symbol`` (404 when missing, 409 when stale)."""
+    def delete(self, symbol: str, revision: int, before: Callable[[], None]) -> None:
+        """Remove ``symbol`` (404 when missing, 409 when stale), running ``before`` first once the
+        revision is checked, under the lock (so no edit comes in between)."""
         key = symbol.strip().upper()
         with self._lock:
+            stored = self._saved.get(key)
+            if stored is None:
+                raise SyntheticNotFoundError(f"No synthetic symbol {key!r}")
+            if stored[0] != revision:
+                raise RevisionConflictError(
+                    f"{key} changed elsewhere (revision {stored[0]}, this window had {revision})."
+                    " Reload it, then delete again."
+                )
+            before()
             self._store.delete(key, revision)
-            self._saved.pop(key, None)
+            del self._saved[key]
 
     def close(self) -> None:
         self._store.close()

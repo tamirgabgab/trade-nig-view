@@ -1,12 +1,18 @@
 import { MAX_BARS, MIN_BARS, NAME_PATTERN, type SyntheticDefinition } from '../api/synthetic.ts';
 
 /**
- * The synthetic symbol dialog's checks before a definition is sent, and the weekday arithmetic of
+ * The synthetic symbol form's checks before a definition is sent, and the weekday arithmetic of
  * a synthetic symbol's calendar (Monday to Friday, no holidays), the same as
  * the backend's `numpy.busday_offset(first, n, roll="forward")`. Dates are 'YYYY-MM-DD' in UTC.
  */
 
 const DAY_MS = 86_400_000;
+/** Bars are day numbers since 1970-01-01 (the backend's floor too). */
+export const FIRST_DAY = '1970-01-01';
+
+export function barsInRange(bars: number): boolean {
+  return Number.isInteger(bars) && bars >= MIN_BARS && bars <= MAX_BARS;
+}
 
 function toDate(iso: string): Date {
   return new Date(`${iso}T00:00:00Z`);
@@ -55,7 +61,7 @@ export function definitionProblem(def: SyntheticDefinition, now: string): string
     return 'Name: 1 to 12 of A–Z, 0–9, ".", "-", "_", starting with a letter.';
   }
   if (def.fullName.trim() === '') return 'Give it a full name.';
-  if (!Number.isInteger(def.bars) || def.bars < MIN_BARS || def.bars > MAX_BARS) {
+  if (!barsInRange(def.bars)) {
     return `Bars: ${String(MIN_BARS)} to ${String(MAX_BARS)}.`;
   }
   if (!(def.firstPrice > 0)) return 'The first price must be above 0.';
@@ -63,7 +69,8 @@ export function definitionProblem(def: SyntheticDefinition, now: string): string
     return 'Seed: a whole number from 0 to 1,000,000.';
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(def.firstDate)) return 'Pick a first date.';
+  if (def.firstDate < FIRST_DAY) return 'The first date is 1970-01-01 or later.';
   const last = lastDate(def.firstDate, def.bars);
-  if (last > now) return `The last bar would be on ${last}, after today: start earlier.`;
+  if (last >= now) return `The last bar would be on ${last}, not before today: start earlier.`;
   return null;
 }

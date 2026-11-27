@@ -28,7 +28,7 @@ import numpy as np
 
 from app.data.bar_service import BarService
 from app.data.universe import Universe
-from app.errors import DataUnavailableError
+from app.errors import DataUnavailableError, IntervalUnavailableError
 from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, IntArray, Interval
 from app.models.symbols import SymbolInfo, parse_session_start
@@ -246,7 +246,7 @@ def timed_fills(
         for base in INTRADAY_BASES:
             try:
                 frames.append((base, service.history(asset.info, base).frame))
-            except DataUnavailableError:
+            except (DataUnavailableError, IntervalUnavailableError):  # a synthetic has no minutes
                 continue
         for j, deposit in timed:
             assert deposit.at is not None  # noqa: S101 - filtered above

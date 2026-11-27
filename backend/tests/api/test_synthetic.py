@@ -3,6 +3,7 @@ cascade (Phase K, K0)."""
 
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 from typing import Any, cast
 
@@ -162,6 +163,7 @@ def test_a_taken_name_is_a_conflict(client: TestClient) -> None:
         ("SYN:שלום", {"name": "שלום"}),
         ("SYN:OTHER", {}),  # the path does not match the name
         (SYMBOL, {"first_date": "2100-01-01"}),  # ends after today
+        (SYMBOL, {"first_date": "1969-12-31"}),  # bars start in 1970
         (SYMBOL, {"bars": 99}),
         (SYMBOL, {"bars": 10_001}),
         (SYMBOL, {"first_price": 0}),
@@ -175,6 +177,29 @@ def test_invalid_definitions_are_a_422(
 ) -> None:
     response = put(client, symbol=symbol, **changes)
     assert response.status_code == 422, response.json()
+
+
+def test_the_last_bar_must_be_before_today(client: TestClient) -> None:
+    # 100 bars ending today (or, on a weekend, on the next Monday): today's hours are not over.
+    today = np.datetime64(dt.datetime.now(dt.UTC).date(), "D")
+    first = str(np.busday_offset(today, -99, roll="forward"))
+    response = put(client, first_date=first, bars=100)
+    assert response.status_code == 422
+    assert "not before today" in response.json()["detail"]
+
+
+def test_a_timed_planner_deposit_falls_back_to_the_hours(client: TestClient) -> None:
+    # A synthetic symbol has no minute bars: the deposit's time is read from the 1h bars.
+    put(client, first_date="2025-01-02", bars=300)
+    body = {
+        "assets": [{"symbol": SYMBOL, "currency": "ILS"}],
+        "use_fx": False,
+        "deposits": [{"date": "2025-06-10", "amount": 1000, "time": "17:00"}],
+        "end": "2025-09-01",
+        "taxes": {"gains_pct": 0, "dividend_pct": 0},
+    }
+    response = client.post("/api/planner/market", json=body)
+    assert response.status_code == 200, response.text
 
 
 def test_names_with_dots_dashes_and_underscores(client: TestClient) -> None:
@@ -250,7 +275,10 @@ def test_references_list_what_points_at_it(client: TestClient) -> None:
 def test_delete_cleans_watchlists_and_drawings_first(client: TestClient) -> None:
     put(client)
     seed_references(client)
+    # A stale revision changes nothing: the drawings and the watchlist entry stay.
     assert client.delete(f"{URL}/{SYMBOL}", params={"revision": 0}).status_code == 409
+    refs = client.get(f"{URL}/{SYMBOL}/references").json()
+    assert (refs["drawings"], refs["watchlists"]) == (2, ["W"])
     assert client.delete(f"{URL}/{SYMBOL}", params={"revision": 1}).status_code == 204
 
     assert client.get(f"{URL}/{SYMBOL}").status_code == 404

@@ -21,6 +21,8 @@ export function CompareLegend({
     bars: readonly Bar[];
     decimals: number;
     synthetic: boolean;
+    /** Why there is no line (a synthetic symbol on a minute chart), or null. */
+    note: string | null;
   }[];
   /** The hovered (or last) bar's time on the chart. */
   time: Bar['time'] | undefined;
@@ -31,7 +33,7 @@ export function CompareLegend({
   const colors = [theme.compare1, theme.compare2, theme.compare3];
   return (
     <ul className={styles.legend} aria-label="Compared symbols">
-      {compare.map(({ symbol, display, bars, decimals, synthetic }, i) => {
+      {compare.map(({ symbol, display, bars, decimals, synthetic, note }, i) => {
         // The same bar as the chart's (in replay never a later one).
         const bar = time === undefined ? undefined : bars.find((b) => b.time === time);
         return (
@@ -42,7 +44,7 @@ export function CompareLegend({
               {synthetic && <SyntheticBadge />}
             </span>
             <span className={styles.value}>
-              {bar === undefined ? '—' : formatPrice(bar.close, decimals)}
+              {note ?? (bar === undefined ? '—' : formatPrice(bar.close, decimals))}
             </span>
             <button
               type="button"

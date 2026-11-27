@@ -167,16 +167,17 @@ def put_synthetic(
     """Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.
 
     The symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already
-    taken is a 409 too (the stored revision is not 0). The last bar may not be after today.
+    taken is a 409 too (the stored revision is not 0). The last bar must be before today.
     """
     definition = body.definition
     if symbol.strip().upper() != definition.symbol:
         raise InvalidSyntheticError(f"The path says {symbol!r}, the body {definition.symbol!r}")
     today = dt.datetime.now(dt.UTC).date()
-    if definition.last_date > today:
+    # Before today: today's hours would still be in the future somewhere in the day.
+    if definition.last_date >= today:
         raise InvalidSyntheticError(
             f"{definition.bars} bars from {definition.first_date} end on {definition.last_date},"
-            f" after today ({today}): start earlier or use fewer bars"
+            f" not before today ({today}): start earlier or use fewer bars"
         )
     return _out(store.put(definition, body.revision), definition)
 
@@ -194,14 +195,18 @@ def delete_synthetic(
     watchlists: Annotated[DocumentStore, Depends(get_watchlists)],
     drawings: Annotated[DrawingsRepository, Depends(get_drawings)],
 ) -> None:
-    """Delete a synthetic symbol: out of every watchlist, its drawings, then the definition."""
-    stored, definition = _found(store, symbol)
-    if revision != stored:
-        store.delete(definition.symbol, revision)  # raises the 409 with its message
-    key = definition.symbol
-    for name, watchlist_revision, _, document in watchlists.list():
-        cleaned = _without(document, key)
-        if cleaned is not None:
-            watchlists.put(name, watchlist_revision, cleaned)
-    drawings.delete(key)
-    store.delete(key, revision)
+    """Delete a synthetic symbol: out of every watchlist, its drawings, then the definition.
+
+    The clean-up runs under the store's lock after the revision check, so no edit can slip in
+    between; a watchlist saved meanwhile elsewhere is a 409 that leaves the symbol in place.
+    """
+    key = _found(store, symbol)[1].symbol
+
+    def clean_up() -> None:
+        for name, watchlist_revision, _, document in watchlists.list():
+            cleaned = _without(document, key)
+            if cleaned is not None:
+                watchlists.put(name, watchlist_revision, cleaned)
+        drawings.delete(key)
+
+    store.delete(key, revision, before=clean_up)

@@ -1,7 +1,8 @@
 """Provider of the synthetic symbols' bars (no network, deterministic by the definition's seed).
 
-``BarService`` asks it directly for symbols whose type is ``synthetic``, never caching the bars:
-generating 10,000 sessions takes milliseconds, and an edited definition is served at once.
+``BarService`` asks it directly for symbols whose type is ``synthetic`` and never stores the bars in
+``bars.db``: they are generated from the definition (memoised in memory by the whole definition),
+so an edited definition is served at once.
 """
 
 from __future__ import annotations

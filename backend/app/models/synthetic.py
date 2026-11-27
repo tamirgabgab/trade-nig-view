@@ -19,6 +19,8 @@ from app.models.symbols import SymbolInfo
 PREFIX = "SYN:"
 GROUP = "Synthetic"
 MAX_DEFINITIONS = 100
+#: Bars are day numbers since 1970-01-01, as the bar service keeps them.
+FIRST_DAY = date(1970, 1, 1)
 #: The ticker-like part after the prefix: a letter, then letters, digits, ``.``, ``-`` or ``_``.
 NAME_PATTERN = r"^[A-Z][A-Z0-9._\-]{0,11}$"
 
@@ -47,7 +49,7 @@ class ScenarioDefinition(BaseModel):
     full_name: Annotated[str, Field(min_length=1, max_length=60)]
     scenario: Scenario
     seed: Annotated[int, Field(ge=0, le=1_000_000)]
-    first_date: date
+    first_date: Annotated[date, Field(ge=FIRST_DAY, description="From 1970-01-01")]
     first_price: Annotated[float, Field(gt=0, le=1_000_000)] = 100.0
     bars: Annotated[int, Field(ge=100, le=10_000)] = 2500
     currency: Literal["USD", "ILS"] = "ILS"

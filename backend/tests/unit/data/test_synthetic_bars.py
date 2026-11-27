@@ -203,3 +203,10 @@ def test_a_longer_series_starts_with_the_shorter_one(
 def test_another_seed_gives_another_path() -> None:
     a, b = daily_bars(definition(seed=1)), daily_bars(definition(seed=2))
     assert not np.allclose(a.close, b.close)
+
+
+def test_an_edited_definition_is_another_series_at_once() -> None:
+    # Memoised by the whole definition: the same one is served from memory, an edit is new.
+    spec = definition()
+    assert hourly_bars(spec) is hourly_bars(definition())
+    assert not daily_bars(definition(seed=2)).equals(daily_bars(spec))

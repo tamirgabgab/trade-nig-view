@@ -421,23 +421,33 @@ export function ChartArea({ className }: ChartAreaProps) {
 
   // Compare: the other symbols' bars, drawn as lines on the chart's own bar times.
   const compareSymbols = useChartStore((s) => s.compare);
-  const compareData = useCompareBars(compareSymbols, shownInterval, adjusted);
+  // A synthetic symbol has no minute bars: on a minute chart it is listed, not requested.
+  const fetched = useMemo(
+    () =>
+      MINUTE_INTERVALS.some((m) => m.interval === shownInterval)
+        ? compareSymbols.filter((c) => !isSynthetic(symbols?.find((x) => x.symbol === c)))
+        : compareSymbols,
+    [compareSymbols, symbols, shownInterval],
+  );
+  const compareData = useCompareBars(fetched, shownInterval, adjusted);
   const compared = useMemo(
     () =>
-      compareSymbols.flatMap((symbol, i) => {
+      compareSymbols.flatMap((symbol) => {
         const other = symbols?.find((x) => x.symbol === symbol);
+        const index = fetched.indexOf(symbol);
         // Listed (and removable) while loading or when its bars never come: no line then.
         return [
           {
             symbol,
             display: other?.display ?? symbol,
-            bars: compareData[i]?.bars ?? [],
+            bars: compareData[index]?.bars ?? [],
             decimals: other?.decimals ?? DEFAULT_DECIMALS,
             synthetic: isSynthetic(other),
+            note: index < 0 ? 'no minute bars' : null,
           },
         ];
       }),
-    [compareSymbols, symbols, compareData],
+    [compareSymbols, symbols, compareData, fetched],
   );
   useEffect(() => {
     const drawn = compared.filter((c) => c.bars.length > 0);

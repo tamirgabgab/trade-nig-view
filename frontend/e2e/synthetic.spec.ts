@@ -76,6 +76,21 @@ test('create, chart, keep, edit and delete a synthetic symbol', async ({ page })
   await expect(edit).toBeHidden();
   await expect(legend(page).locator('[data-field="C"]')).not.toHaveText(before ?? '');
 
+  // Compared on a minute chart: listed, with why there is no line.
+  await page.getByRole('row', { name: /^AAPL/ }).click();
+  await page.getByRole('button', { name: 'Minute intervals' }).click();
+  await page.getByRole('menuitemradio', { name: /15 minutes/ }).click();
+  await page.getByRole('button', { name: 'Compare with another symbol' }).click();
+  await page.keyboard.type(NAME);
+  await page
+    .getByRole('dialog', { name: 'Compare with' })
+    .getByRole('option', { name: new RegExp(SYMBOL) })
+    .click();
+  const compared = page.getByRole('list', { name: 'Compared symbols' });
+  await expect(compared).toContainText('no minute bars');
+  await page.getByRole('row', { name: new RegExp(`^${SYMBOL}`) }).click();
+  await expect(legend(page)).toContainText('E2E uptrend · 1h · Synthetic');
+
   // Delete from the watchlist row: the row goes, the chart moves to the default symbol.
   await row.click({ button: 'right' });
   await page.getByRole('menuitem', { name: `Delete ${SYMBOL}…` }).click();
@@ -84,6 +99,7 @@ test('create, chart, keep, edit and delete a synthetic symbol', async ({ page })
   await expect(confirm).toBeHidden();
   await expect(row).toBeHidden();
   await expect(legend(page)).toContainText('Apple');
+  await expect(compared).toBeHidden();
   expect((await page.request.get(`/api/synthetic/${encodeURIComponent(SYMBOL)}`)).status()).toBe(
     404,
   );

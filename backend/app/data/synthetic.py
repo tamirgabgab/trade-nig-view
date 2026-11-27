@@ -41,12 +41,14 @@ high, the lowest low, the last close (:math:`C_t`) and the summed volume. ``adj_
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 
 from app.analysis.synthetic import VOLUME_BASE, VOLUME_PROFILE, log_path, volume_skew
 from app.models.bars import SECONDS_PER_DAY, BarFrame, IntArray
-from app.models.synthetic import ScenarioDefinition
+from app.models.synthetic import MAX_DEFINITIONS, ScenarioDefinition
 
 TIMEZONE = "America/New_York"
 SESSION_BARS = 7
@@ -59,6 +61,19 @@ _DRAWS = 3 + 3 * SESSION_BARS
 
 def hourly_bars(definition: ScenarioDefinition) -> BarFrame:
     """The 1h bars of ``definition`` (seven per session), oldest first."""
+    return _hourly(definition.model_dump_json())
+
+
+def daily_bars(definition: ScenarioDefinition) -> BarFrame:
+    """The daily bars of ``definition``: each the aggregate of its session's 1h bars."""
+    return _daily(definition.model_dump_json())
+
+
+# Memoised by the whole definition (its JSON), so an edit is a new key: the ~20 ms of a series of
+# 10,000 sessions is spent once, not on every quote poll. Callers never write into a BarFrame.
+@lru_cache(maxsize=4)
+def _hourly(key: str) -> BarFrame:
+    definition = ScenarioDefinition.model_validate_json(key)
     n = definition.bars
     draws = np.random.default_rng(definition.seed).standard_normal((n, _DRAWS))
     eps, eta, xi = draws[:, 0], draws[:, 1], draws[:, 2]
@@ -99,9 +114,10 @@ def hourly_bars(definition: ScenarioDefinition) -> BarFrame:
     )
 
 
-def daily_bars(definition: ScenarioDefinition) -> BarFrame:
-    """The daily bars of ``definition``: each the aggregate of its session's 1h bars."""
-    hours = hourly_bars(definition)
+@lru_cache(maxsize=MAX_DEFINITIONS)
+def _daily(key: str) -> BarFrame:
+    definition = ScenarioDefinition.model_validate_json(key)
+    hours = _hourly(key)
     shape = (definition.bars, SESSION_BARS)
     return BarFrame.from_columns(
         time=_session_days(definition) * SECONDS_PER_DAY,
