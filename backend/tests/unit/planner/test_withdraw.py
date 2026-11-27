@@ -6,7 +6,6 @@ from datetime import date
 
 import numpy as np
 import pytest
-from app.planner.withdraw import Grid, Plan, Rule, assumed_grid, run, sample
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -15,6 +14,7 @@ from app.planner.deposits import Deposit, add_months, day_number
 from app.planner.inflation import CpiPath
 from app.planner.market import PlanError, TaxBase, Taxes, run_market
 from app.planner.mortgage import annuity
+from app.planner.withdraw import Grid, Plan, Result, Rule, assumed_grid, run, sample
 from tests.unit.planner.test_market import FLAT_CPI, START, asset
 from tests.unit.planner.test_scenario import grower
 
@@ -73,7 +73,7 @@ def test_a_percent_rule_never_ends_and_its_balance_ignores_the_cost_share() -> N
     world = growing(months, 0.04)
     k = np.arange(months + 1)
     closed = 500_000 * 1.04 ** (k / 12) * (1 - percent / 12) ** k
-    balances = []
+    balances: list[Result] = []
     for share in (0.0, 0.5, 1.0):
         result = run(Plan(500_000, cost_share=share, rule=Rule.PERCENT, percent=percent), world)
         assert result.balance == pytest.approx(closed)
