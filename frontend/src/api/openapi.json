@@ -2468,7 +2468,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WithdrawStudyRequest"
+                "$ref": "#/components/schemas/ManyRequest"
               }
             }
           },
@@ -6667,6 +6667,84 @@
           "points"
         ],
         "title": "MacroSeriesResponse"
+      },
+      "ManyRequest": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "months": {
+            "type": "integer",
+            "maximum": 1200.0,
+            "minimum": 1.0,
+            "title": "Months"
+          },
+          "capital": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Capital",
+            "description": "The account's value on the first day (zero only with an apartment)"
+          },
+          "cost_share_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Cost Share Pct",
+            "description": "The share of the capital that is cost; the rest is gain",
+            "default": 50.0
+          },
+          "rule": {
+            "$ref": "#/components/schemas/RuleIn"
+          },
+          "returns": {
+            "$ref": "#/components/schemas/ReturnsIn",
+            "default": {
+              "mode": "mix",
+              "yearly_pct": 5.0
+            }
+          },
+          "market": {
+            "$ref": "#/components/schemas/AccountIn",
+            "description": "The mix (unused on an assumed return), the fees and the taxes"
+          },
+          "inflation": {
+            "$ref": "#/components/schemas/InflationIn",
+            "default": {
+              "mode": "assumed",
+              "mean_pct": 2.5,
+              "sd_pct": 0.0,
+              "persistence": 0.0
+            }
+          },
+          "home": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sustain_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 50.0,
+            "title": "Sustain Pct",
+            "description": "The share of realizations an amount must last in",
+            "default": 95.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "months",
+          "capital",
+          "rule"
+        ],
+        "title": "ManyRequest"
       },
       "MapCell": {
         "properties": {
@@ -12157,116 +12235,6 @@
           "rule"
         ],
         "title": "WithdrawSimulateRequest"
-      },
-      "WithdrawStudyRequest": {
-        "properties": {
-          "start": {
-            "type": "string",
-            "format": "date",
-            "title": "Start"
-          },
-          "months": {
-            "type": "integer",
-            "maximum": 1200.0,
-            "minimum": 1.0,
-            "title": "Months"
-          },
-          "capital": {
-            "type": "number",
-            "minimum": 0.0,
-            "title": "Capital",
-            "description": "The account's value on the first day (zero only with an apartment)"
-          },
-          "cost_share_pct": {
-            "type": "number",
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Cost Share Pct",
-            "description": "The share of the capital that is cost; the rest is gain",
-            "default": 50.0
-          },
-          "rule": {
-            "$ref": "#/components/schemas/RuleIn"
-          },
-          "returns": {
-            "$ref": "#/components/schemas/ReturnsIn",
-            "default": {
-              "mode": "mix",
-              "yearly_pct": 5.0
-            }
-          },
-          "market": {
-            "$ref": "#/components/schemas/AccountIn",
-            "description": "The mix (unused on an assumed return), the fees and the taxes"
-          },
-          "inflation": {
-            "$ref": "#/components/schemas/InflationIn",
-            "default": {
-              "mode": "assumed",
-              "mean_pct": 2.5,
-              "sd_pct": 0.0,
-              "persistence": 0.0
-            }
-          },
-          "home": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/HomeIn"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "sustain_pct": {
-            "type": "number",
-            "maximum": 100.0,
-            "minimum": 50.0,
-            "title": "Sustain Pct",
-            "description": "The share of realizations an amount must last in",
-            "default": 95.0
-          },
-          "first_start": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "First Start",
-            "description": "The first start to try"
-          },
-          "last_start": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Start"
-          },
-          "step_months": {
-            "type": "integer",
-            "maximum": 12.0,
-            "minimum": 1.0,
-            "title": "Step Months",
-            "default": 1
-          }
-        },
-        "type": "object",
-        "required": [
-          "start",
-          "months",
-          "capital",
-          "rule"
-        ],
-        "title": "WithdrawStudyRequest"
       },
       "WithdrawSummary": {
         "properties": {

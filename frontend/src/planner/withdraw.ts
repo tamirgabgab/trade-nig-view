@@ -2,8 +2,8 @@ import type {
   WithdrawRealization,
   WithdrawRequest,
   WithdrawRow,
+  WithdrawManyRequest,
   WithdrawSimulateRequest,
-  WithdrawStudyRequest,
 } from '../api/planner.ts';
 import {
   toRequest,
@@ -69,10 +69,9 @@ export function toWithdraw(settings: WithdrawSettings, form: PlannerForm): Withd
 export const toWithdrawStudy = (
   settings: WithdrawSettings,
   form: PlannerForm,
-): WithdrawStudyRequest => ({
+): WithdrawManyRequest => ({
   ...toWithdraw(settings, form),
   sustain_pct: settings.many.sustain,
-  step_months: 1,
 });
 
 /** The plan over simulated worlds. */

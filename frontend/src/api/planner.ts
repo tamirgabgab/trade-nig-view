@@ -200,7 +200,7 @@ export function parseWithdraw(body: unknown): WithdrawResult {
 export const runWithdraw = (request: WithdrawRequest) =>
   apiPost('/planner/withdraw', request, parseWithdraw);
 
-export type WithdrawStudyRequest = Schemas['WithdrawStudyRequest'];
+export type WithdrawManyRequest = Schemas['ManyRequest'];
 export type WithdrawSimulateRequest = Schemas['WithdrawSimulateRequest'];
 export type WithdrawManyResult = Schemas['WithdrawManyResponse'];
 export type WithdrawRealization = Schemas['RealizationOut'];
@@ -218,7 +218,7 @@ export function parseWithdrawMany(body: unknown): WithdrawManyResult {
   return body as unknown as WithdrawManyResult;
 }
 
-export const runWithdrawStudy = (request: WithdrawStudyRequest) =>
+export const runWithdrawStudy = (request: WithdrawManyRequest) =>
   apiPost('/planner/withdraw/study', request, parseWithdrawMany);
 
 export const runWithdrawSimulate = (request: WithdrawSimulateRequest) =>

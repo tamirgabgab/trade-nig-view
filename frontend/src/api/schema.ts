@@ -2802,6 +2802,53 @@ export interface components {
             /** Points */
             points: components["schemas"]["MacroPoint"][];
         };
+        /** ManyRequest */
+        ManyRequest: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Months */
+            months: number;
+            /**
+             * Capital
+             * @description The account's value on the first day (zero only with an apartment)
+             */
+            capital: number;
+            /**
+             * Cost Share Pct
+             * @description The share of the capital that is cost; the rest is gain
+             * @default 50
+             */
+            cost_share_pct: number;
+            rule: components["schemas"]["RuleIn"];
+            /**
+             * @default {
+             *       "mode": "mix",
+             *       "yearly_pct": 5
+             *     }
+             */
+            returns: components["schemas"]["ReturnsIn"];
+            /** @description The mix (unused on an assumed return), the fees and the taxes */
+            market?: components["schemas"]["AccountIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+            home?: components["schemas"]["HomeIn"] | null;
+            /**
+             * Sustain Pct
+             * @description The share of realizations an amount must last in
+             * @default 95
+             */
+            sustain_pct: number;
+        };
         /** MapCell */
         MapCell: {
             /** X Xirr */
@@ -5338,65 +5385,6 @@ export interface components {
             /** Market Sd Pct */
             market_sd_pct?: number | null;
         };
-        /** WithdrawStudyRequest */
-        WithdrawStudyRequest: {
-            /**
-             * Start
-             * Format: date
-             */
-            start: string;
-            /** Months */
-            months: number;
-            /**
-             * Capital
-             * @description The account's value on the first day (zero only with an apartment)
-             */
-            capital: number;
-            /**
-             * Cost Share Pct
-             * @description The share of the capital that is cost; the rest is gain
-             * @default 50
-             */
-            cost_share_pct: number;
-            rule: components["schemas"]["RuleIn"];
-            /**
-             * @default {
-             *       "mode": "mix",
-             *       "yearly_pct": 5
-             *     }
-             */
-            returns: components["schemas"]["ReturnsIn"];
-            /** @description The mix (unused on an assumed return), the fees and the taxes */
-            market?: components["schemas"]["AccountIn"];
-            /**
-             * @default {
-             *       "mode": "assumed",
-             *       "mean_pct": 2.5,
-             *       "sd_pct": 0,
-             *       "persistence": 0
-             *     }
-             */
-            inflation: components["schemas"]["InflationIn"];
-            home?: components["schemas"]["HomeIn"] | null;
-            /**
-             * Sustain Pct
-             * @description The share of realizations an amount must last in
-             * @default 95
-             */
-            sustain_pct: number;
-            /**
-             * First Start
-             * @description The first start to try
-             */
-            first_start?: string | null;
-            /** Last Start */
-            last_start?: string | null;
-            /**
-             * Step Months
-             * @default 1
-             */
-            step_months: number;
-        };
         /** WithdrawSummary */
         WithdrawSummary: {
             /** Cost Share */
@@ -6949,7 +6937,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WithdrawStudyRequest"];
+                "application/json": components["schemas"]["ManyRequest"];
             };
         };
         responses: {

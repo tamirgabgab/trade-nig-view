@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 
 from app.api.deps import get_bar_service, get_macro_service, get_universe
 from app.api.planner import InvalidPlanError, inflation_spec
-from app.api.scenario import EARLIEST_START, MAX_WINDOWS, month_shifts
+from app.api.scenario import EARLIEST_START, month_shifts
 from app.api.withdraw import (
     MONTH_DAYS,
     Account,
@@ -69,12 +69,6 @@ class ManyRequest(WithdrawRequest):
     sustain_pct: float = Field(
         default=95.0, ge=50, le=100, description="The share of realizations an amount must last in"
     )
-
-
-class WithdrawStudyRequest(ManyRequest):
-    first_start: dt.date | None = Field(default=None, description="The first start to try")
-    last_start: dt.date | None = None
-    step_months: int = Field(default=1, ge=1, le=12)
 
 
 class WithdrawSimulateRequest(ManyRequest):
@@ -259,7 +253,7 @@ def _report(
 
 
 def _study(
-    body: WithdrawStudyRequest, service: BarService, macro: Macro, universe: Universe
+    body: ManyRequest, service: BarService, macro: Macro, universe: Universe
 ) -> WithdrawManyResponse:
     check(body)
     if body.returns.mode != "mix":
@@ -267,18 +261,13 @@ def _study(
             "Windows of history need the Market tab's mix: on an assumed return every window is "
             "the same"
         )
-    if body.first_start and body.last_start and body.last_start < body.first_start:
-        raise PlanError("The last start must not be before the first start")
     account = account_of(body, service, macro, universe, mix=True)
     mix = account.mix or []
     spec = inflation_spec(body.inflation)
     cost, notes = (None, []) if body.home is None else home_cost(body.start, body.home, macro)
     warnings = [*account.warnings, *notes]
-    today = dt.datetime.now(dt.UTC).date()
-    first = max(body.first_start or EARLIEST_START, EARLIEST_START)
-    shifts = month_shifts(body.start, first, min(body.last_start or today, today), body.step_months)
-    if len(shifts) > MAX_WINDOWS:
-        raise PlanError(f"At most {MAX_WINDOWS} starts in a study: narrow the range")
+    # A start a month, from the earliest a series could have to today.
+    shifts = month_shifts(body.start, EARLIEST_START, dt.datetime.now(dt.UTC).date(), 1)
 
     def window(shift: int) -> tuple[Grid, Home | None]:
         start = add_months(body.start, shift)
@@ -333,8 +322,8 @@ def _study(
         evidence=EvidenceOut(independent=effective_samples(span, body.months), history_months=None),
         market=None,
         warnings=warnings,
-        before=reasons.get(ran[0][0] - body.step_months),
-        after=reasons.get(ran[-1][0] + body.step_months),
+        before=reasons.get(ran[0][0] - 1),
+        after=reasons.get(ran[-1][0] + 1),
     )
 
 
@@ -444,7 +433,7 @@ def _simulate(
 
 @router.post("/planner/withdraw/study", response_model=WithdrawManyResponse)
 def withdraw_study(
-    body: WithdrawStudyRequest,
+    body: ManyRequest,
     service: Annotated[BarService, Depends(get_bar_service)],
     macro: Annotated[MacroService, Depends(get_macro_service)],
     universe: Annotated[Universe, Depends(get_universe)],

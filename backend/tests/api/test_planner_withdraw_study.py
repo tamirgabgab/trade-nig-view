@@ -152,9 +152,6 @@ def test_an_apartment_in_every_window(client: TestClient) -> None:
 def test_windows_that_cannot_run(client: TestClient) -> None:
     assert "assumed return" in refused(client, "/study", returns={"mode": "assumed"})
     assert "No start" in refused(client, "/study", months=400)
-    assert "last start" in refused(
-        client, "/study", first_start="2012-01-01", last_start="2011-01-01"
-    )
 
 
 # ---------------------------------------------------------------- simulated worlds
