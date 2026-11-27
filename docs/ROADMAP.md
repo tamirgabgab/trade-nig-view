@@ -28,8 +28,8 @@
 | Review 2 | Docs refresh after Phases 2–3, versions and limits, the Phase-4 plan | S | ✅ (2026-11-26) |
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
-| PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)); before P4 | L | planned (plan written 2026-11-27) |
-| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below) | L | planned (noted 2026-11-27) |
+| PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)); **next** | L | planned (plan written 2026-11-27) |
+| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | planned (noted 2026-11-27) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -368,13 +368,13 @@ Phase-2 plan.
   evaluation: walk-forward, parameter sweeps and multiple-testing corrections (B4), portfolio and screener (B5), the
   strategy learn pages and the replay link (B6).
 
-### Phase J — Withdrawals (before Phase 4)
+### Phase J — Withdrawals (next)
 - The plan is in [WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md) (2026-11-27): a Withdraw tab in the Planner, rounds J0–J4.
   Six questions for the user are asked before J0.
 
-### Phase K — Synthetic symbols and open completions
-Asked for by the user on 2026-11-27, to be built later. A note of scope, not yet a round-by-round plan: the
-questions below are asked before K0.
+### Phase K — Synthetic symbols and open completions (after Phase J, before Phase 4)
+Asked for by the user on 2026-11-27. **The order he set: Phase J, then Phase K, then Phase 4.** A note of scope,
+not yet a round-by-round plan; his answers to the first questions are under "Decided" below.
 
 **Three kinds of symbol that are not market data.** Each is a symbol like any other, so the chart, the indicators,
 Compare, the Planner's mix and (later) the backtester use it with no change of their own.
@@ -415,10 +415,18 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
 - [ ] Phase J's optional round J4 (lot-exact tax from a Market-tab plan; two withdrawal plans side by side), if it
   is not done there.
 
-**Questions before K0:** which dwelling series first (national only, or the districts too); how much noise around
-the dwelling close by default (none, or a small one); whether a synthetic symbol may enter a watchlist and a saved
-layout like a real one; and whether K comes before or after Phase 4 (the shuffled symbol serves the backtester's
-honest evaluation, B4).
+**Decided by the user (2026-11-27):**
+- **The dwelling symbol** is the national index first; the districts later, where a series exists.
+- **Noise around the dwelling close:** a small one by default (a field; 0 gives the plain interpolation).
+- **A synthetic symbol is a symbol like any other:** it enters a watchlist and a saved layout. It also carries
+  **its own parameters**, which a market symbol does not have (the seed and, by kind: the noise; the return,
+  volatility and bar-shape parameters; the source symbol and the number of blocks). So a definition is stored with
+  the symbol and can be opened and edited from wherever the symbol is shown.
+- **Before Phase 4.** The shuffled symbol (K3) is then there for the backtester's honest evaluation (B4).
+
+**Still to ask before K0:** how a definition is edited (a dialog from the symbol search, or a page of its own),
+whether editing a definition changes the symbol in place or makes a new one (a saved layout or a Planner scenario
+may point at it), and the default bar-shape parameters of K2.
 
 ### Phase 5 — Paper trading agent
 - Rule-based agent first (strategies from P4) running on replay windows and delayed data; later ML/LLM-assisted

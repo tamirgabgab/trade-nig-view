@@ -2,7 +2,8 @@
 
 The user's goal: the mirror image of Phase H. There, money goes in and the Planner shows how the capital grows. Here
 there is a **starting capital**, money comes **out** by a rule, and the Planner shows **how much is left over time**.
-This phase runs before Phase 4 (the user's choice) and extends the Planner; Phases 4 and 5 keep their numbers.
+This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
+2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
 Status: **a plan, nothing built.** The questions at the end are asked before J0.
 

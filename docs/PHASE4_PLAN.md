@@ -5,6 +5,10 @@
 > reports is treated like an indicator: a golden model, directed cases, properties and a stated tolerance.
 > **Paper only (CLAUDE.md §10):** nothing here places an order anywhere.
 
+> **Order (the user, 2026-11-27):** Phase J (withdrawals, `WITHDRAWAL_PLAN.md`) and Phase K (synthetic symbols and
+> completions, `ROADMAP.md`) run before this phase. Phase K's shuffled copy of a real symbol is an input to B4's
+> honest evaluation: a strategy can be run on reordered histories of the same symbol.
+
 ## Goal
 Write a trading idea as rules, run it on a symbol's history with realistic fills and costs, and see honestly whether
 it worked: trades on the chart, an equity curve against buy-and-hold, the standard metrics, and the tests that tell
