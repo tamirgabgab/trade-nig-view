@@ -27,7 +27,6 @@ export interface SyntheticDefinition {
 export interface SyntheticSymbol {
   symbol: string;
   revision: number;
-  lastDate: string;
   definition: SyntheticDefinition;
 }
 
@@ -75,7 +74,6 @@ export function parseSynthetic(body: unknown): SyntheticSymbol {
   return {
     symbol: str(field('symbol'), 'symbol'),
     revision: num(field('revision'), 'revision'),
-    lastDate: str(field('last_date'), 'last_date'),
     definition: {
       name: str(def('name'), 'name'),
       fullName: str(def('full_name'), 'full_name'),
