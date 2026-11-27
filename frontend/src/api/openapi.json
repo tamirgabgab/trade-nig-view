@@ -96,6 +96,239 @@
         }
       }
     },
+    "/api/synthetic": {
+      "get": {
+        "tags": [
+          "synthetic"
+        ],
+        "summary": "List Synthetic",
+        "description": "Every synthetic symbol, by symbol.",
+        "operationId": "list_synthetic_api_synthetic_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SyntheticOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Synthetic Api Synthetic Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/synthetic/{symbol}": {
+      "get": {
+        "tags": [
+          "synthetic"
+        ],
+        "summary": "Get Synthetic Symbol",
+        "description": "One synthetic symbol's definition.",
+        "operationId": "get_synthetic_symbol_api_synthetic__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 16,
+              "description": "The symbol, e.g. 'SYN:WALK1'",
+              "title": "Symbol"
+            },
+            "description": "The symbol, e.g. 'SYN:WALK1'"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyntheticOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No synthetic symbol with this name (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "synthetic"
+        ],
+        "summary": "Put Synthetic",
+        "description": "Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.\n\nThe symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already\ntaken is a 409 too (the stored revision is not 0). The last bar may not be after today.",
+        "operationId": "put_synthetic_api_synthetic__symbol__put",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 16,
+              "description": "The symbol, e.g. 'SYN:WALK1'",
+              "title": "Symbol"
+            },
+            "description": "The symbol, e.g. 'SYN:WALK1'"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyntheticUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyntheticOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Invalid definition (problem+json)"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "synthetic"
+        ],
+        "summary": "Delete Synthetic",
+        "description": "Delete a synthetic symbol: out of every watchlist, its drawings, then the definition.",
+        "operationId": "delete_synthetic_api_synthetic__symbol__delete",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 16,
+              "description": "The symbol, e.g. 'SYN:WALK1'",
+              "title": "Symbol"
+            },
+            "description": "The symbol, e.g. 'SYN:WALK1'"
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Revision the client last read",
+              "title": "Revision"
+            },
+            "description": "Revision the client last read"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No synthetic symbol with this name (problem+json)"
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/synthetic/{symbol}/references": {
+      "get": {
+        "tags": [
+          "synthetic"
+        ],
+        "summary": "Synthetic References",
+        "description": "The saved layouts, watchlists, drawings and Planner scenarios that point at ``symbol``.",
+        "operationId": "synthetic_references_api_synthetic__symbol__references_get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 16,
+              "description": "The symbol, e.g. 'SYN:WALK1'",
+              "title": "Symbol"
+            },
+            "description": "The symbol, e.g. 'SYN:WALK1'"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyntheticReferences"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No synthetic symbol with this name (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/bars": {
       "get": {
         "tags": [
@@ -9457,6 +9690,75 @@
         ],
         "title": "Scenario"
       },
+      "ScenarioDefinition": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "scenario",
+            "title": "Kind",
+            "default": "scenario"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
+            "title": "Name",
+            "description": "The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/Scenario"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "first_date": {
+            "type": "string",
+            "format": "date",
+            "title": "First Date"
+          },
+          "first_price": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "First Price",
+            "default": 100.0
+          },
+          "bars": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 100.0,
+            "title": "Bars",
+            "default": 2500
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "ILS"
+            ],
+            "title": "Currency",
+            "default": "ILS"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "full_name",
+          "scenario",
+          "seed",
+          "first_date"
+        ],
+        "title": "ScenarioDefinition",
+        "description": "A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).\n\nThe series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward\nto a weekday), and starts from ``first_price``; each session has seven 1h bars (09:30-16:00\nNew York) whose aggregate is the daily bar."
+      },
       "ScenarioDocument": {
         "properties": {
           "name": {
@@ -10410,7 +10712,8 @@
               "etf",
               "stock",
               "future",
-              "forex"
+              "forex",
+              "synthetic"
             ],
             "title": "Type"
           },
@@ -10533,6 +10836,85 @@
         ],
         "title": "SymbolSource"
       },
+      "SyntheticOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "last_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Date",
+            "description": "The date of the last daily bar"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ScenarioDefinition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "revision",
+          "last_date",
+          "definition"
+        ],
+        "title": "SyntheticOut"
+      },
+      "SyntheticReferences": {
+        "properties": {
+          "layouts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Layouts",
+            "description": "Saved layouts charting it"
+          },
+          "compared_in": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Compared In",
+            "description": "Saved layouts comparing it"
+          },
+          "watchlists": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Watchlists"
+          },
+          "drawings": {
+            "type": "integer",
+            "title": "Drawings",
+            "description": "Its number of drawings"
+          },
+          "scenarios": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scenarios",
+            "description": "Saved Planner scenarios that mention it"
+          }
+        },
+        "type": "object",
+        "required": [
+          "layouts",
+          "compared_in",
+          "watchlists",
+          "drawings",
+          "scenarios"
+        ],
+        "title": "SyntheticReferences",
+        "description": "What points at a symbol (shown before it is edited or deleted)."
+      },
       "SyntheticSource": {
         "properties": {
           "kind": {
@@ -10575,6 +10957,25 @@
           "kind"
         ],
         "title": "SyntheticSource"
+      },
+      "SyntheticUpdate": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ScenarioDefinition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "definition"
+        ],
+        "title": "SyntheticUpdate",
+        "description": "``PUT`` body: the definition and the revision it was based on (0 creates)."
       },
       "TaxBase": {
         "type": "string",

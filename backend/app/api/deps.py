@@ -11,6 +11,7 @@ from app.data.universe import Universe
 from app.macro.service import MacroService
 from app.storage.documents import DocumentStore
 from app.storage.drawings import DrawingsRepository
+from app.storage.synthetic import SyntheticSymbols
 
 
 def get_universe(request: Request) -> Universe:
@@ -39,3 +40,7 @@ def get_scenarios(request: Request) -> DocumentStore:
 
 def get_macro_service(request: Request) -> MacroService:
     return cast("MacroService", request.app.state.macro_service)
+
+
+def get_synthetic(request: Request) -> SyntheticSymbols:
+    return cast("SyntheticSymbols", request.app.state.synthetic)

@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-SymbolType = Literal["index", "etf", "stock", "future", "forex"]
+SymbolType = Literal["index", "etf", "stock", "future", "forex", "synthetic"]
 
 MINUTES_PER_DAY = 1440
 

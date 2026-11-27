@@ -50,6 +50,13 @@ class RevisionConflictError(ChartLabError):
     code = "revision_conflict"
 
 
+class IntervalUnavailableError(ChartLabError):
+    """The symbol never has bars of this interval (a synthetic symbol's minute bars)."""
+
+    status = HTTPStatus.UNPROCESSABLE_ENTITY
+    code = "interval_unavailable"
+
+
 class DataUnavailableError(ChartLabError):
     """No provider could deliver data and nothing is cached."""
 

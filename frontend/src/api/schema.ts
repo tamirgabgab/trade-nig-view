@@ -44,6 +44,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/synthetic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Synthetic
+         * @description Every synthetic symbol, by symbol.
+         */
+        get: operations["list_synthetic_api_synthetic_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/synthetic/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Synthetic Symbol
+         * @description One synthetic symbol's definition.
+         */
+        get: operations["get_synthetic_symbol_api_synthetic__symbol__get"];
+        /**
+         * Put Synthetic
+         * @description Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.
+         *
+         *     The symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already
+         *     taken is a 409 too (the stored revision is not 0). The last bar may not be after today.
+         */
+        put: operations["put_synthetic_api_synthetic__symbol__put"];
+        post?: never;
+        /**
+         * Delete Synthetic
+         * @description Delete a synthetic symbol: out of every watchlist, its drawings, then the definition.
+         */
+        delete: operations["delete_synthetic_api_synthetic__symbol__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/synthetic/{symbol}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Synthetic References
+         * @description The saved layouts, watchlists, drawings and Planner scenarios that point at ``symbol``.
+         */
+        get: operations["synthetic_references_api_synthetic__symbol__references_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/bars": {
         parameters: {
             query?: never;
@@ -4071,6 +4142,53 @@ export interface components {
          * @enum {string}
          */
         Scenario: "random_walk" | "uptrend" | "range" | "reversal" | "shock" | "volatility_regime" | "accumulation" | "regimes";
+        /**
+         * ScenarioDefinition
+         * @description A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).
+         *
+         *     The series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward
+         *     to a weekday), and starts from ``first_price``; each session has seven 1h bars (09:30-16:00
+         *     New York) whose aggregate is the daily bar.
+         */
+        ScenarioDefinition: {
+            /**
+             * Kind
+             * @default scenario
+             * @constant
+             */
+            kind: "scenario";
+            /**
+             * Name
+             * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
+             */
+            name: string;
+            /** Full Name */
+            full_name: string;
+            scenario: components["schemas"]["Scenario"];
+            /** Seed */
+            seed: number;
+            /**
+             * First Date
+             * Format: date
+             */
+            first_date: string;
+            /**
+             * First Price
+             * @default 100
+             */
+            first_price: number;
+            /**
+             * Bars
+             * @default 2500
+             */
+            bars: number;
+            /**
+             * Currency
+             * @default ILS
+             * @enum {string}
+             */
+            currency: "USD" | "ILS";
+        };
         /** ScenarioDocument */
         ScenarioDocument: {
             /** Name */
@@ -4523,7 +4641,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "index" | "etf" | "stock" | "future" | "forex";
+            type: "index" | "etf" | "stock" | "future" | "forex" | "synthetic";
             /**
              * Group
              * @description Watchlist section, e.g. 'Indices'
@@ -4590,6 +4708,48 @@ export interface components {
              */
             interval: "1D" | "1h";
         };
+        /** SyntheticOut */
+        SyntheticOut: {
+            /** Symbol */
+            symbol: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Last Date
+             * Format: date
+             * @description The date of the last daily bar
+             */
+            last_date: string;
+            definition: components["schemas"]["ScenarioDefinition"];
+        };
+        /**
+         * SyntheticReferences
+         * @description What points at a symbol (shown before it is edited or deleted).
+         */
+        SyntheticReferences: {
+            /**
+             * Layouts
+             * @description Saved layouts charting it
+             */
+            layouts: string[];
+            /**
+             * Compared In
+             * @description Saved layouts comparing it
+             */
+            compared_in: string[];
+            /** Watchlists */
+            watchlists: string[];
+            /**
+             * Drawings
+             * @description Its number of drawings
+             */
+            drawings: number;
+            /**
+             * Scenarios
+             * @description Saved Planner scenarios that mention it
+             */
+            scenarios: string[];
+        };
         /** SyntheticSource */
         SyntheticSource: {
             /**
@@ -4617,6 +4777,15 @@ export interface components {
              * @enum {string}
              */
             interval: "1D" | "1h";
+        };
+        /**
+         * SyntheticUpdate
+         * @description ``PUT`` body: the definition and the revision it was based on (0 creates).
+         */
+        SyntheticUpdate: {
+            /** Revision */
+            revision: number;
+            definition: components["schemas"]["ScenarioDefinition"];
         };
         /**
          * TaxBase
@@ -5552,6 +5721,192 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SymbolInfo"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_synthetic_api_synthetic_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyntheticOut"][];
+                };
+            };
+        };
+    };
+    get_synthetic_symbol_api_synthetic__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The symbol, e.g. 'SYN:WALK1' */
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyntheticOut"];
+                };
+            };
+            /** @description No synthetic symbol with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_synthetic_api_synthetic__symbol__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The symbol, e.g. 'SYN:WALK1' */
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyntheticUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyntheticOut"];
+                };
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid definition (problem+json) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_synthetic_api_synthetic__symbol__delete: {
+        parameters: {
+            query: {
+                /** @description Revision the client last read */
+                revision: number;
+            };
+            header?: never;
+            path: {
+                /** @description The symbol, e.g. 'SYN:WALK1' */
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No synthetic symbol with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    synthetic_references_api_synthetic__symbol__references_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The symbol, e.g. 'SYN:WALK1' */
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyntheticReferences"];
+                };
+            };
+            /** @description No synthetic symbol with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

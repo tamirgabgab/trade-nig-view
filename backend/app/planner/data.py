@@ -32,6 +32,7 @@ from app.errors import DataUnavailableError
 from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, IntArray, Interval
 from app.models.symbols import SymbolInfo, parse_session_start
+from app.models.synthetic import PREFIX as SYNTHETIC_PREFIX
 from app.planner.deposits import Deposit, day_number
 from app.planner.fills import fill_prices
 from app.planner.inflation import HISTORICAL_FROM, CpiPath, assumed_cpi, historical_cpi
@@ -124,6 +125,8 @@ def asset_info(universe: Universe, request: AssetRequest) -> SymbolInfo:
     if known is not None:
         return known
     symbol = request.symbol.strip().upper()
+    if symbol.startswith(SYNTHETIC_PREFIX):
+        raise PlanError(f"{symbol} was a synthetic symbol and has been deleted")
     if not TICKER.fullmatch(symbol):
         raise PlanError(f"'{request.symbol}' is not a ticker")
     info = SymbolInfo(

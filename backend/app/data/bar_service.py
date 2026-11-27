@@ -48,7 +48,7 @@ from app.data.resample import resample, resample_intraday
 from app.data.sessions import daily_factor_per_session, session_days, session_offsets
 from app.data.universe import Universe
 from app.data.validate import validate_bars
-from app.errors import DataUnavailableError, SymbolNotFoundError
+from app.errors import DataUnavailableError, IntervalUnavailableError, SymbolNotFoundError
 from app.models.bars import (
     BASE_INTERVALS,
     SECONDS_PER_DAY,
@@ -59,6 +59,7 @@ from app.models.bars import (
     ts_to_date,
 )
 from app.models.symbols import SymbolInfo
+from app.models.synthetic import is_synthetic
 
 HISTORY_START = date(1970, 1, 1)
 OVERLAP_RTOL = 1e-5
@@ -203,10 +204,13 @@ class BarService:
         minute_tail_days: int = 2,
         provider_limits: bool = True,
         retry_sleep: Callable[[float], None] = time.sleep,
+        synthetic: DataProvider | None = None,
     ) -> None:
         self._universe = universe
         self._cache = cache
         self._providers = tuple(providers)
+        # Serves the synthetic symbols, uncached, whatever the provider chain (OFFLINE=1 too).
+        self._synthetic = synthetic
         self._clock = clock
         self._today = today
         self._ttl_s = {Interval.MIN1: minute_ttl_s, Interval.MIN5: minute_ttl_s}
@@ -243,8 +247,28 @@ class BarService:
     def history(self, info: SymbolInfo, base: Interval) -> CachedBars:
         if base not in BASE_INTERVALS:
             raise ValueError(f"{base} is not a base interval")
+        if is_synthetic(info):
+            return self._synthetic_history(info, base)
         with self._lock_for(f"{info.symbol}|{base}"):
             return self._ensure(info, base)
+
+    def _synthetic_history(self, info: SymbolInfo, base: Interval) -> CachedBars:
+        """Generated on every call: no cache, no refresh, nothing stale."""
+        provider = self._synthetic
+        if provider is None or (base.is_intraday and not provider.supports_intraday(info, base)):
+            raise IntervalUnavailableError(
+                f"{info.symbol} is synthetic: it has 1h, 4h, 1D, 1W and 1M bars, no minute bars"
+            )
+        today = self._today()
+        try:
+            frame = (
+                provider.fetch_intraday(info, base, HISTORY_START, today)
+                if base.is_intraday
+                else provider.fetch_daily(info, HISTORY_START, today)
+            )
+        except ProviderError as exc:
+            raise DataUnavailableError(str(exc)) from exc
+        return CachedBars(frame, provider.id, stale=False, fetched_at=self._clock())
 
     def _lock_for(self, key: str) -> threading.Lock:
         with self._locks_guard:
@@ -456,7 +480,7 @@ class BarService:
             warnings=tuple(warnings),
             history_start=history_start,
             provider_window_days=INTRADAY_MAX_DAYS[interval.base] + 1
-            if self._provider_limits
+            if self._provider_limits and not is_synthetic(info)
             else None,
         )
 

@@ -31,6 +31,7 @@ from app.api import (
     scenarios,
     simulate,
     symbols,
+    synthetic,
     trade_plan,
     volatility,
     watchlists,
@@ -42,6 +43,7 @@ from app.data.bar_service import BarService
 from app.data.cache.bar_cache import BarCache
 from app.data.providers.base import DataProvider
 from app.data.providers.fixtures import FixtureProvider
+from app.data.providers.synthetic import SyntheticProvider
 from app.data.providers.tiingo import TiingoProvider
 from app.data.providers.yahoo import YahooProvider
 from app.data.universe import Universe
@@ -51,6 +53,7 @@ from app.macro.fixtures import MacroFixtureSource
 from app.macro.service import MacroCache, MacroService
 from app.storage.documents import DocumentStore
 from app.storage.drawings import DrawingsRepository
+from app.storage.synthetic import SyntheticSymbols
 
 API_PREFIX = "/api"
 
@@ -78,7 +81,7 @@ def build_providers(settings: Settings) -> list[DataProvider]:
 def close_stores(app: FastAPI) -> None:
     """Close the connections to ``app.db`` an app opened (a throw-away app, before its data
     directory is deleted)."""
-    for name in ("drawings", "layouts", "watchlists", "scenarios"):
+    for name in ("drawings", "layouts", "watchlists", "scenarios", "synthetic"):
         getattr(app.state, name).close()
 
 
@@ -103,7 +106,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     register_error_handlers(app)
 
-    universe = Universe.load(settings.universe_file)
+    app_db = settings.chartlab_data_dir / "app.db"
+    app.state.synthetic = synthetic_symbols = SyntheticSymbols(app_db)
+    universe = Universe.load(settings.universe_file).with_extra(synthetic_symbols)
     app.state.universe = universe
     app.state.bar_service = BarService(
         universe,
@@ -111,13 +116,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         build_providers(settings),
         refresh_ttl_s=settings.refresh_ttl_s,
         provider_limits=not settings.offline,
+        synthetic=SyntheticProvider(synthetic_symbols.definition),
     )
     app.state.macro_service = MacroService(
         MacroCache(settings.chartlab_data_dir / "bars.db"),
         [MacroFixtureSource(settings.fixtures_dir)] if settings.offline else [BoiSource()],
         ttl_s=settings.macro_ttl_s,
     )
-    app_db = settings.chartlab_data_dir / "app.db"
     app.state.drawings = DrawingsRepository(app_db)
     app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)
     app.state.watchlists = DocumentStore(app_db, "watchlists", watchlists.WatchlistNotFoundError)
@@ -126,6 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for router in (
         health.router,
         symbols.router,
+        synthetic.router,
         bars.router,
         quotes.router,
         indicators.router,

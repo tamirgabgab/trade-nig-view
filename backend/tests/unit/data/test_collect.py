@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from app.api.watchlists import WatchlistNotFoundError
 from app.config import Settings
 from app.data import collect
 from app.data.providers.base import DataProvider
@@ -17,6 +18,7 @@ from app.data.providers.fixtures import (
     write_intraday_fixture,
 )
 from app.models.bars import BarFrame
+from app.storage.documents import DocumentStore
 
 TESTS = Path(__file__).parents[2]
 
@@ -63,3 +65,23 @@ def test_collects_each_base_of_every_watchlist_symbol(
 def test_offline_has_nothing_to_collect(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(collect, "get_settings", lambda: settings(tmp_path, offline=True))
     assert collect.main() == 1
+
+
+def test_synthetic_symbols_in_a_watchlist_are_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The collector loads the curated universe alone: a synthetic symbol never resolves there.
+    store = DocumentStore(tmp_path / "data" / "app.db", "watchlists", WatchlistNotFoundError)
+    sections = [{"title": "Mine", "symbols": ["^IDX", "SYN:WALK"]}]
+    store.put("W", 0, {"schema_version": 1, "sections": sections})
+    store.close()
+
+    def providers(_settings: Settings) -> list[DataProvider]:
+        return [FixtureProvider(TESTS / "fixtures")]
+
+    monkeypatch.setattr(collect, "get_settings", lambda: settings(tmp_path))
+    monkeypatch.setattr(collect, "build_providers", providers)
+    collect.main()
+    out = capsys.readouterr().out
+    assert "SYN:WALK" not in out
+    assert "IDX" in out

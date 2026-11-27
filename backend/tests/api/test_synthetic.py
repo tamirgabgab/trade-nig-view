@@ -1,0 +1,284 @@
+"""``/api/synthetic``: definitions, their bars through every API, references and the delete
+cascade (Phase K, K0)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, cast
+
+import numpy as np
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app.config import Settings
+from app.data.synthetic import daily_bars
+from app.data.universe import Universe
+from app.main import close_stores, create_app
+from app.models.bars import date_to_ts
+from app.models.synthetic import MAX_DEFINITIONS, ScenarioDefinition
+from app.planner.data import AssetRequest, asset_info
+from app.planner.market import PlanError
+
+URL = "/api/synthetic"
+WALK: dict[str, Any] = {
+    "name": "walk1",
+    "full_name": "Random walk, seed 7",
+    "scenario": "random_walk",
+    "seed": 7,
+    "first_date": "2015-01-02",
+    "first_price": 50.0,
+    "bars": 1000,
+}
+SYMBOL = "SYN:WALK1"
+
+
+def put(client: TestClient, revision: int = 0, symbol: str = SYMBOL, **changes: Any) -> Any:
+    body = {"revision": revision, "definition": {**WALK, **changes}}
+    return client.put(f"{URL}/{symbol}", json=body)
+
+
+def bars(client: TestClient, interval: str = "1D", **params: Any) -> Any:
+    query = {"symbol": SYMBOL, "interval": interval, "limit": 50_000, **params}
+    return client.get("/api/bars", params=query)
+
+
+def test_create_read_list_and_search(client: TestClient) -> None:
+    created = put(client)
+    assert created.status_code == 200
+    doc = created.json()
+    assert (doc["symbol"], doc["revision"]) == (SYMBOL, 1)
+    assert doc["definition"]["name"] == "WALK1"  # upper-cased
+    assert doc["definition"]["currency"] == "ILS"
+    assert doc["last_date"] == "2018-11-01"  # the 1000th weekday
+    assert client.get(f"{URL}/syn:walk1").json() == doc
+    assert client.get(URL).json() == [doc]
+
+    found = client.get("/api/symbols", params={"query": "walk"}).json()
+    assert [s["symbol"] for s in found] == [SYMBOL]
+    info = found[0]
+    assert (info["type"], info["group"], info["exchange"], info["name"]) == (
+        "synthetic",
+        "Synthetic",
+        "Synthetic",
+        "Random walk, seed 7",
+    )
+    assert [s["symbol"] for s in client.get("/api/symbols").json()][-1] == SYMBOL
+
+
+def test_the_default_watchlist_does_not_list_it(client: TestClient) -> None:
+    put(client)
+    default = client.get("/api/watchlists").json()["watchlists"][0]
+    assert all(SYMBOL not in section["symbols"] for section in default["sections"])
+
+
+def test_daily_bars_are_the_definitions(client: TestClient) -> None:
+    put(client)
+    body = bars(client).json()
+    assert (body["source"], body["stale"], body["provider_window_days"]) == (
+        "synthetic",
+        False,
+        None,
+    )
+    assert body["timezone"] == "America/New_York"
+    expected = daily_bars(ScenarioDefinition.model_validate(WALK))
+    assert len(body["bars"]) == len(expected) == 1000
+    np.testing.assert_allclose([b["close"] for b in body["bars"]], expected.close, rtol=1e-12)
+    assert body["bars"][0]["time"] == "2015-01-02"
+
+
+def test_four_hour_and_weekly_bars_aggregate_the_hours_and_days(client: TestClient) -> None:
+    put(client, bars=300)
+    hours = bars(client, "1h").json()["bars"]
+    four = bars(client, "4h").json()["bars"]
+    days = bars(client, "1D").json()["bars"]
+    assert (len(hours), len(four), len(days)) == (2100, 600, 300)
+    # 4h: 09:30-13:30 (four bars) and 13:30-16:00 (three), as for a US stock.
+    for k, bar in enumerate(four):
+        group = hours[7 * (k // 2) + 4 * (k % 2) : 7 * (k // 2) + (4 if k % 2 == 0 else 7)]
+        assert bar["time"] == group[0]["time"]
+        assert bar["open"] == group[0]["open"]
+        assert bar["close"] == group[-1]["close"]
+        assert bar["high"] == max(b["high"] for b in group)
+        assert bar["low"] == min(b["low"] for b in group)
+    weekly = bars(client, "1W").json()["bars"]
+    assert weekly[0]["open"] == days[0]["open"]
+    assert bars(client, "1M").status_code == 200
+
+
+def test_replay_sees_only_bars_up_to_the_cursor(client: TestClient) -> None:
+    put(client, scenario="regimes", bars=400)
+    for interval in ("1h", "4h", "1D", "1W", "1M"):
+        full = bars(client, interval).json()["bars"]
+        cut = bars(client, interval, until="2016-02-10").json()["bars"]
+        assert 0 < len(cut) < len(full)
+        if interval in ("1W", "1M"):  # the cursor's week or month is still forming
+            assert cut[:-1] == full[: len(cut) - 1]
+        else:
+            assert cut == full[: len(cut)]
+
+
+def test_minute_bars_are_a_422(client: TestClient) -> None:
+    put(client)
+    response = bars(client, "5m")
+    assert response.status_code == 422
+    assert response.json()["code"] == "interval_unavailable"
+
+
+def test_quotes_and_indicators_work_on_it(client: TestClient) -> None:
+    put(client)
+    quote = client.get("/api/quotes", params={"symbols": SYMBOL}).json()[0]
+    assert quote["error"] is None
+    assert quote["last"] > 0
+    computed = client.post(
+        "/api/indicators/compute", json={"symbol": SYMBOL, "id": "rsi", "interval": "1h"}
+    )
+    assert computed.status_code == 200
+
+
+def test_edit_in_place_changes_the_bars_at_once(client: TestClient) -> None:
+    put(client)
+    before = bars(client).json()["bars"]
+    edited = put(client, revision=1, seed=8)
+    assert edited.json()["revision"] == 2
+    assert bars(client).json()["bars"] != before
+    stale = put(client, revision=1, seed=9)
+    assert stale.status_code == 409
+
+
+def test_a_taken_name_is_a_conflict(client: TestClient) -> None:
+    put(client)
+    again = put(client, revision=0, full_name="Another")
+    assert again.status_code == 409
+    assert again.json()["code"] == "revision_conflict"
+
+
+@pytest.mark.parametrize(
+    ("symbol", "changes"),
+    [
+        ("SYN:1ABC", {"name": "1abc"}),  # starts with a digit
+        ("SYN:A B", {"name": "a b"}),
+        ("SYN:ABCDEFGHIJKLM", {"name": "abcdefghijklm"}),  # 13 characters
+        ("SYN:שלום", {"name": "שלום"}),
+        ("SYN:OTHER", {}),  # the path does not match the name
+        (SYMBOL, {"first_date": "2100-01-01"}),  # ends after today
+        (SYMBOL, {"bars": 99}),
+        (SYMBOL, {"bars": 10_001}),
+        (SYMBOL, {"first_price": 0}),
+        (SYMBOL, {"currency": "EUR"}),
+        (SYMBOL, {"full_name": "  "}),
+        (SYMBOL, {"scenario": "moon"}),
+    ],
+)
+def test_invalid_definitions_are_a_422(
+    client: TestClient, symbol: str, changes: dict[str, Any]
+) -> None:
+    response = put(client, symbol=symbol, **changes)
+    assert response.status_code == 422, response.json()
+
+
+def test_names_with_dots_dashes_and_underscores(client: TestClient) -> None:
+    assert put(client, symbol="SYN:A.B-C_D", name="a.b-c_d").status_code == 200
+
+
+def test_at_most_max_definitions(client: TestClient) -> None:
+    for k in range(MAX_DEFINITIONS):
+        assert put(client, symbol=f"SYN:S{k}", name=f"S{k}", bars=100).status_code == 200
+    response = put(client, symbol="SYN:ONEMORE", name="onemore", bars=100)
+    assert response.status_code == 422
+    assert response.json()["code"] == "too_many_synthetic"
+    assert put(client, revision=1, symbol="SYN:S0", name="S0", bars=200).status_code == 200
+
+
+def test_definitions_survive_a_restart(settings: Settings) -> None:
+    first = create_app(settings)
+    with TestClient(first) as client:
+        put(client)
+    close_stores(first)
+    with TestClient(create_app(settings)) as client:
+        assert client.get(f"{URL}/{SYMBOL}").json()["revision"] == 1
+        assert bars(client).status_code == 200
+
+
+def seed_references(client: TestClient) -> None:
+    """A layout charting the symbol, one comparing it, a watchlist, two drawings, a scenario."""
+    layout: dict[str, Any] = {
+        "symbol": SYMBOL,
+        "interval": "1D",
+        "chart_type": "candles",
+        "scale_mode": "normal",
+        "indicators": [],
+    }
+    assert client.put("/api/layouts/Chart", json={**layout, "revision": 0}).status_code == 200
+    compare = {**layout, "symbol": "AAA", "compare": [SYMBOL, "^IDX"]}
+    assert client.put("/api/layouts/Both", json={**compare, "revision": 0}).status_code == 200
+    sections = [
+        {"title": "Mine", "symbols": ["AAA", SYMBOL]},
+        {"title": "Other", "symbols": ["^IDX"]},
+    ]
+    assert (
+        client.put("/api/watchlists/W", json={"revision": 0, "sections": sections}).status_code
+        == 200
+    )
+    point = {"time": date_to_ts(ScenarioDefinition.model_validate(WALK).first_date), "price": 50.0}
+    drawing: dict[str, Any] = {"type": "horizontal_line", "points": [point], "style": {}}
+    two = [{**drawing, "id": "d1"}, {**drawing, "id": "d2"}]
+    assert (
+        client.put(f"/api/drawings/{SYMBOL}", json={"revision": 0, "drawings": two}).status_code
+        == 200
+    )
+    state = {"version": 3, "market": {"mix": [{"symbol": SYMBOL.lower(), "weight": 1}]}}
+    assert (
+        client.put("/api/planner/scenarios/Plan", json={"revision": 0, "state": state}).status_code
+        == 200
+    )
+
+
+def test_references_list_what_points_at_it(client: TestClient) -> None:
+    put(client)
+    seed_references(client)
+    assert client.get(f"{URL}/{SYMBOL}/references").json() == {
+        "layouts": ["Chart"],
+        "compared_in": ["Both"],
+        "watchlists": ["W"],
+        "drawings": 2,
+        "scenarios": ["Plan"],
+    }
+    assert client.get(f"{URL}/SYN:NONE/references").status_code == 404
+
+
+def test_delete_cleans_watchlists_and_drawings_first(client: TestClient) -> None:
+    put(client)
+    seed_references(client)
+    assert client.delete(f"{URL}/{SYMBOL}", params={"revision": 0}).status_code == 409
+    assert client.delete(f"{URL}/{SYMBOL}", params={"revision": 1}).status_code == 204
+
+    assert client.get(f"{URL}/{SYMBOL}").status_code == 404
+    assert bars(client).status_code == 404
+    watchlist = client.get("/api/watchlists").json()["watchlists"][0]
+    assert watchlist["revision"] == 2
+    assert watchlist["sections"] == [
+        {"title": "Mine", "symbols": ["AAA"]},
+        {"title": "Other", "symbols": ["^IDX"]},
+    ]
+    # Re-created under the same name, it starts without the old drawings.
+    put(client)
+    assert client.get(f"/api/drawings/{SYMBOL}").json()["drawings"] == []
+    # Layouts keep their text (the page opens a missing symbol on the default one).
+    assert client.get("/api/layouts/Chart").json()["symbol"] == SYMBOL
+    assert client.delete(f"{URL}/SYN:NONE", params={"revision": 1}).status_code == 404
+
+
+def test_the_planner_names_a_deleted_synthetic_symbol(client: TestClient) -> None:
+    universe = cast("Universe", cast("FastAPI", client.app).state.universe)
+    put(client)
+    assert asset_info(universe, AssetRequest(SYMBOL)).type == "synthetic"
+    client.delete(f"{URL}/{SYMBOL}", params={"revision": 1})
+    with pytest.raises(PlanError, match="was a synthetic symbol and has been deleted"):
+        asset_info(universe, AssetRequest(SYMBOL))
+
+
+def test_the_test_data_dir_is_released(settings: Settings, tmp_path: Path) -> None:
+    app = create_app(settings)
+    close_stores(app)  # every store of app.db, the synthetic one included
+    assert (tmp_path / "data" / "app.db").exists()

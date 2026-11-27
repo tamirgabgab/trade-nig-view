@@ -98,7 +98,7 @@ def _phase(n: int) -> IntArray:
     return (np.arange(n, dtype=np.int64) // PHASE) % 4
 
 
-def _volume_skew(scenario: Scenario, n: int) -> FloatArray:
+def volume_skew(scenario: Scenario, n: int) -> FloatArray:
     """k_t: +1 in accumulation phases, -1 in distribution, 0 elsewhere."""
     if scenario is not Scenario.ACCUMULATION:
         return np.zeros(n)
@@ -106,7 +106,7 @@ def _volume_skew(scenario: Scenario, n: int) -> FloatArray:
     return np.select([phase == ACCUMULATE, phase == DISTRIBUTE], [1.0, -1.0], 0.0)
 
 
-def _log_path(
+def log_path(
     scenario: Scenario, eps: FloatArray, n: int
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """(x_t - ln 100, sigma_t, ln J_t) of a scenario."""
@@ -151,13 +151,13 @@ def synthetic_bars(
     """``n`` daily (or hourly) bars of ``scenario``; the same arguments give the same bars."""
     rng = np.random.default_rng(seed)
     eps, eta, nu, lam, xi = rng.standard_normal((5, n))
-    d, sigma, jump = _log_path(scenario, eps, n)
+    d, sigma, jump = log_path(scenario, eps, n)
     close = START_PRICE * np.exp(d)
     prev_close = np.concatenate(([START_PRICE], close[:-1]))
     log_move = np.log(close / prev_close)
     gap: FloatArray = eta * sigma / 4
     volume = VOLUME_BASE * np.exp(
-        0.3 * xi + 20 * np.abs(log_move) + 0.8 * _volume_skew(scenario, n) * np.sign(log_move)
+        0.3 * xi + 20 * np.abs(log_move) + 0.8 * volume_skew(scenario, n) * np.sign(log_move)
     )
     session: IntArray | None = None
     if intraday:

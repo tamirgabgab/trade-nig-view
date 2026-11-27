@@ -78,5 +78,10 @@ class DrawingsRepository:
             )
         return document
 
+    def delete(self, symbol: str) -> None:
+        """Remove the symbol's drawings (nothing to do when it has none)."""
+        with self._lock, self._conn:
+            self._conn.execute("DELETE FROM drawings WHERE symbol = ?", (symbol,))
+
     def close(self) -> None:
         self._conn.close()
