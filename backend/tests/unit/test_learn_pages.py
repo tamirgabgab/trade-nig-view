@@ -74,6 +74,10 @@ PLANNER_PAGES: set[str] = {
     "simulated-worlds",
     "risk-metrics",
     "what-the-answer-depends-on",
+    # Phase J (ADR 0030).
+    "withdrawals",
+    "cost-basis",
+    "sustainable-withdrawals",
 }
 PLANNER_SECTIONS = (
     "What it answers",

@@ -37,9 +37,16 @@ from app.planner.scenario import Account, Side, run_pair
 from app.planner.scenario_data import Change, build
 from app.planner.study import effective_samples, win_probability
 from app.planner.tax_presets import PURCHASE
+from app.planner.withdraw import Home as WHome
+from app.planner.withdraw import Lots, Rule, Sale
+from app.planner.withdraw import Plan as WPlan
+from app.planner.withdraw import run as wrun
+from app.planner.withdraw_study import reverse, stack, sustainable
 from app.planner.xirr import xirr
 from tests.unit.planner.test_scenario import FLAT_CPI, NO_TAX, account, grower, home
 from tests.unit.planner.test_scenario_data import MACRO, scenario
+from tests.unit.planner.test_withdraw import grid as wgrid
+from tests.unit.planner.test_withdraw import growing
 
 START = date(2026, 1, 15)
 
@@ -601,3 +608,87 @@ def test_what_the_answer_depends_on_page() -> None:
         f"$\\tanh({z - half:.4f})$ to $\\tanh({z + half:.4f})$",
         f"**{low:.2f} to {high:.2f}**".replace("-", MINUS),
     )
+
+
+# ---------------------------------------------------------------- Phase J (ADR 0030)
+
+
+def test_withdrawals_example() -> None:
+    """A million that does not grow, half of it cost, 10,000 a month net: each month sells
+    10,000 / (1 - 25 % x 50 %), and the money is short from month 88."""
+    gross = 10_000 / (1 - 0.25 * 0.5)
+    paid = math.floor(1_000_000 / gross)
+    rest = 1_000_000 - paid * gross
+    plan = WPlan(1_000_000, cost_share=0.5, amount=10_000, indexed=False)
+    result = wrun(plan, growing(120, 0.0))
+    assert result.sold[1] == pytest.approx(gross)
+    assert result.tax[1] == pytest.approx(gross - 10_000)
+    assert paid == 87
+    assert result.depleted == paid + 1
+    assert result.net[paid + 1] == pytest.approx(rest * (1 - 0.25 * 0.5))
+    assert result.net.sum() == pytest.approx(875_000)
+    assert result.tax.sum() == pytest.approx(125_000)
+    start = date(2030, 1, 15)
+    shows(
+        "withdrawals",
+        money(gross),
+        money(gross - 10_000),
+        money(rest),
+        money(rest * (1 - 0.25 * 0.5)),
+        "875,000",
+        "125,000",
+        str(add_months(start, paid + 1)),
+    )
+    # The apartment: all of it cost, the money ends in month 101; an apartment worth 2,000,000
+    # sold then pays the last twenty months, and 1,800,000 is left.
+    alone = wrun(WPlan(1_000_000, cost_share=1.0, amount=10_000, indexed=False), growing(120, 0.0))
+    assert alone.depleted == 101
+    apartment = WHome(np.zeros(121), np.full(121, 2_000_000.0), Sale.WHEN_EMPTY)
+    both = wrun(
+        WPlan(1_000_000, cost_share=1.0, amount=10_000, indexed=False), growing(120, 0.0), apartment
+    )
+    assert (both.home_sold, both.depleted) == (101, None)
+    assert both.balance[-1] == pytest.approx(1_800_000)
+    shows("withdrawals", str(add_months(start, 101)), "1,800,000")
+
+
+def test_cost_basis_example() -> None:
+    """A flat asset at 1: a thousand units that cost 400, a thousand that cost 1,000, and 425 to
+    take net. First in, first out, and the same capital as one lot at its overall cost share."""
+    held = Lots(np.array([[1_000.0], [1_000.0]]), np.array([[400.0], [1_000.0]]))
+    fifo = wrun(WPlan(0.0, amount=425, indexed=False), growing(1, 0.0), lots=held)
+    assert (fifo.sold[1], fifo.tax[1], fifo.net[1]) == pytest.approx((500, 75, 425))
+    shares = {"floor": 0.0, "pooled": 0.7, "ceiling": 1.0}
+    sold = {name: 425 / (1 - 0.25 * (1 - eta)) for name, eta in shares.items()}
+    for name, eta in shares.items():
+        pooled = wrun(WPlan(2_000, cost_share=eta, amount=425, indexed=False), growing(1, 0.0))
+        assert pooled.sold[1] == pytest.approx(sold[name])
+        assert pooled.tax[1] == pytest.approx(sold[name] - 425)
+    shows(
+        "cost-basis",
+        "70 %",
+        money(sold["pooled"]),
+        money(sold["pooled"] - 425),
+        money(sold["floor"]),
+        money(sold["floor"] - 425),
+    )
+
+
+def test_sustainable_withdrawals_example() -> None:
+    """Two worlds of ten years from 1,200,000, all of it cost: one never moves, one halves in its
+    first month. 5,000 a month lasts in both, 10,000 in one."""
+    plan = WPlan(1_200_000, cost_share=1.0, amount=1.0, indexed=False)
+    worlds = stack([growing(120, 0.0), wgrid([1.0, *([0.5] * 120)])])
+    assert sustainable(plan, worlds, None, 1.0) == pytest.approx(5_000, abs=1)
+    assert sustainable(plan, worlds, None, 0.5) == pytest.approx(10_000, abs=1)
+    shows("sustainable-withdrawals", "5,000", "10,000", "1,200,000")
+    # The order of the months: +50 % then -50 %, taxes aside.
+    path = wgrid([1.0, 1.5, 0.75])
+    fixed = WPlan(100_000, cost_share=1.0, amount=10_000, indexed=False, gains_tax=0.0)
+    as_was, back = wrun(fixed, path), wrun(fixed, reverse(path))
+    assert (as_was.balance[-1], back.balance[-1]) == pytest.approx((60_000, 50_000))
+    percent = WPlan(100_000, cost_share=1.0, rule=Rule.PERCENT, percent=1.2, gains_tax=0.0)
+    end = 100_000 * 1.5 * 0.9 * 0.5 * 0.9
+    assert wrun(percent, path).balance[-1] == pytest.approx(end)
+    assert wrun(percent, reverse(path)).balance[-1] == pytest.approx(end)
+    shows("sustainable-withdrawals", "60,000", "50,000", money(end))
