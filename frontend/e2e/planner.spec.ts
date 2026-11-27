@@ -482,6 +482,7 @@ test('planner: withdrawals with an apartment, kept and then sold when the accoun
   await withdraw.getByLabel('Cost share %').fill('100');
   await withdraw.getByLabel('Amount ₪ a month, net').fill('10000');
   await withdraw.getByLabel('Rises with the CPI').uncheck();
+  await withdraw.locator('summary', { hasText: 'The apartment' }).click();
   await withdraw.getByLabel('Include an apartment I own').check();
   await withdraw.getByLabel('Yearly growth %').fill('0');
   await withdraw.getByLabel('Maintenance % a year').fill('0');
@@ -530,7 +531,13 @@ test('planner: a withdrawal plan over every start of history, and over simulated
   ).toBeVisible();
   await expect(withdraw.getByText(/hold only about 2\.5 separate terms of 10 years/)).toBeVisible();
 
+  // The page that explains it opens in the learn drawer, over the Planner.
+  await withdraw.getByRole('link', { name: 'How much can be taken' }).click();
+  await expect(page.getByRole('heading', { name: 'How much can be taken', level: 1 })).toBeVisible();
+  await page.keyboard.press('Escape');
+
   // Fifty worlds cut from the same history.
+  await withdraw.locator('summary', { hasText: 'History and simulated worlds' }).click();
   await withdraw.getByLabel('Worlds', { exact: true }).fill('50');
   await withdraw.getByRole('button', { name: 'Simulate' }).click();
   await expect(

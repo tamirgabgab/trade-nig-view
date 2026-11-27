@@ -10,6 +10,8 @@ import {
   WITHDRAW_SOLD_RESULT,
 } from '../test/plannerWithdrawBody.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
+import { PAGE_PREFIX, useUiStore } from '../store/uiStore.ts';
+import { PlannerPage } from './PlannerPage.tsx';
 import { PlannerWithdraw } from './PlannerWithdraw.tsx';
 
 beforeEach(() => {
@@ -19,6 +21,8 @@ beforeEach(() => {
 const body = (init: RequestInit | undefined): unknown =>
   JSON.parse(typeof init?.body === 'string' ? init.body : '{}');
 const card = (label: string) => screen.getByText(label, { selector: 'dt' }).parentElement;
+/** A folded section of the form: its summary's title. */
+const fold = (title: string) => screen.getByText(title, { selector: 'summary > :first-child' });
 
 function stub(result: unknown = WITHDRAW_RESULT) {
   const sent: unknown[] = [];
@@ -178,6 +182,7 @@ describe('PlannerWithdraw', () => {
     renderWithQuery(<PlannerWithdraw hidden={false} />);
     // Its fields only when it is included.
     expect(screen.queryByRole('spinbutton', { name: 'Value today ₪' })).toBeNull();
+    await user.click(fold('The apartment'));
     await user.click(screen.getByRole('checkbox', { name: 'Include an apartment I own' }));
     expect(screen.getByRole('spinbutton', { name: 'Value today ₪' })).toBeVisible();
     // Rent only when it is rented out; the year of a sale only when it is sold on a date.
@@ -304,6 +309,7 @@ describe('PlannerWithdraw', () => {
     });
     usePlannerStore.getState().setWithdraw({ rule: 'percent' });
     renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(fold('History and simulated worlds'));
     await user.selectOptions(screen.getByRole('combobox', { name: 'The worlds’ market' }), [
       'monte_carlo',
     ]);
@@ -436,6 +442,83 @@ describe('PlannerWithdraw', () => {
       ['As it happened', 'Until 2030-04-15', '₪0', '₪27,000'],
       ['In reverse', 'All of it', '₪9,000', '₪27,000'],
     ]);
+  });
+
+  it('links each section to the learn page that explains it', async () => {
+    const user = userEvent.setup();
+    stub();
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    const links = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(links).toEqual(
+      expect.arrayContaining(['#cost-basis', '#withdrawals', '#sustainable-withdrawals']),
+    );
+    await user.click(screen.getByRole('link', { name: 'How much can be taken' }));
+    expect(useUiStore.getState().learnFor).toBe(`${PAGE_PREFIX}sustainable-withdrawals`);
+  });
+
+  it('folds the apartment and the studies, and says in their summary what will run', async () => {
+    const user = userEvent.setup();
+    stub();
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    const apartment = fold('The apartment').closest('details');
+    const studies = fold('History and simulated worlds').closest('details');
+    expect([apartment?.open, studies?.open]).toEqual([false, false]);
+    expect(apartment).toHaveTextContent('Not included');
+    expect(studies).toHaveTextContent('1,000 worlds cut from the mix’s history; lasts in 95%');
+    await user.click(fold('The apartment'));
+    await user.click(screen.getByRole('checkbox', { name: 'Include an apartment I own' }));
+    await user.click(fold('The apartment'));
+    expect(apartment?.open).toBe(false);
+    expect(apartment).toHaveTextContent('₪2,000,000, lived in, kept');
+    // An apartment that was included opens with the tab.
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    const again = screen.getAllByText('The apartment', { selector: 'summary > :first-child' });
+    expect(again.at(-1)?.closest('details')?.open).toBe(true);
+  });
+
+  it('puts the study a button ran before the plan, and the plan’s tables before its chart', async () => {
+    const user = userEvent.setup();
+    stubApi({
+      '/api/planner/withdraw': () => jsonResponse(WITHDRAW_RESULT),
+      '/api/planner/withdraw/study': () => jsonResponse(WITHDRAW_MANY_RESULT),
+    });
+    renderWithQuery(<PlannerWithdraw hidden={false} />);
+    await user.click(screen.getByRole('button', { name: 'Run history' }));
+    const history = await screen.findByRole('heading', { name: /^History:/ });
+    const plan = screen.getByRole('heading', { name: /^Withdrawals:/ });
+    const before = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(history, plan)).toBe(true);
+    // The plan: its answer, then its tables, then the chart, and the file last.
+    const bounds = screen.getByRole('table', { name: 'Tax bounds' });
+    const years = screen.getByRole('table', { name: 'Withdrawals by year' });
+    const chart = screen.getByRole('img', { name: /^Balance and monthly income/ });
+    const file = screen.getByRole('button', { name: 'Download CSV: withdrawals' });
+    expect([before(bounds, years), before(years, chart), before(chart, file)]).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    // The study's file comes after its charts too.
+    const histogram = screen.getByRole('img', { name: /^What is left/ });
+    const starts = screen.getByRole('button', { name: 'Download CSV: withdrawal starts' });
+    expect(before(histogram, starts)).toBe(true);
+  });
+
+  it('keeps the results and the focus when the other option is put on screen', async () => {
+    const user = userEvent.setup();
+    stub();
+    const store = usePlannerStore.getState();
+    store.copyToOther();
+    store.setSame(false);
+    renderWithQuery(<PlannerPage className={undefined} />);
+    await user.click(screen.getByRole('tab', { name: 'Withdraw' }));
+    const panel = screen.getByRole('tabpanel', { name: 'Withdraw' });
+    await user.click(within(panel).getByRole('button', { name: 'Run' }));
+    await within(panel).findByRole('table', { name: 'Side by side' });
+    await user.click(within(panel).getByRole('radio', { name: 'Option B' }));
+    expect(within(panel).getByRole('radio', { name: 'Option B' })).toHaveFocus();
+    expect(within(panel).getByRole('table', { name: 'Side by side' })).toBeVisible();
   });
 
   it('shows why a plan cannot run and drops the earlier results', async () => {
