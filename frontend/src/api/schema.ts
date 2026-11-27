@@ -787,6 +787,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/planner/withdraw/study": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw Study
+         * @description A withdrawal plan started on every month history allows.
+         */
+        post: operations["withdraw_study_api_planner_withdraw_study_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/planner/withdraw/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw Simulate
+         * @description A withdrawal plan on simulated worlds.
+         */
+        post: operations["withdraw_simulate_api_planner_withdraw_simulate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1036,6 +1076,22 @@ export interface components {
             note: string;
             spec: components["schemas"]["BettermentIn"];
         };
+        /**
+         * BoundOut
+         * @description The realizations at one cost share: the share that lasts, and medians.
+         */
+        BoundOut: {
+            /** Cost Share */
+            cost_share: number;
+            /** Lasts */
+            lasts: number;
+            /** Left Real */
+            left_real: number;
+            /** Taken Real */
+            taken_real: number;
+            /** Lowest Net Real */
+            lowest_net_real: number;
+        };
         /** BracketIn */
         BracketIn: {
             /**
@@ -1217,6 +1273,20 @@ export interface components {
             low: number;
             /** High */
             high: number;
+        };
+        /** CurvePoint */
+        CurvePoint: {
+            /** Month */
+            month: number;
+            /**
+             * Share
+             * @description Still paying, at the cost share entered
+             */
+            share: number;
+            /** Floor */
+            floor: number;
+            /** Ceiling */
+            ceiling: number;
         };
         /**
          * DecompositionOut
@@ -1475,6 +1545,34 @@ export interface components {
             revision: number;
             /** Drawings */
             drawings: components["schemas"]["Drawing"][];
+        };
+        /** EvidenceOut */
+        EvidenceOut: {
+            /**
+             * Independent
+             * @description About how many separate terms the windows, or the resampled history, hold
+             */
+            independent: number | null;
+            /**
+             * History Months
+             * @description The history a bootstrap was cut from
+             */
+            history_months: number | null;
+        };
+        /** FanYear */
+        FanYear: {
+            /** Year */
+            year: number;
+            /** P5 */
+            p5: number;
+            /** P25 */
+            p25: number;
+            /** P50 */
+            p50: number;
+            /** P75 */
+            p75: number;
+            /** P95 */
+            p95: number;
         };
         /** FeesIn */
         FeesIn: {
@@ -2781,6 +2879,18 @@ export interface components {
              */
             fill: components["schemas"]["FillIn"];
         };
+        /** MarketOut */
+        MarketOut: {
+            /** Mean Pct */
+            mean_pct: number;
+            /** Sd Pct */
+            sd_pct: number;
+            /**
+             * Estimated
+             * @description From the mix's history, not typed
+             */
+            estimated: boolean;
+        };
         /** MarketRequest */
         MarketRequest: {
             /** Assets */
@@ -3331,6 +3441,39 @@ export interface components {
              * @default 0
              */
             shock_after_months: number;
+        };
+        /** RealizationOut */
+        RealizationOut: {
+            /**
+             * Start
+             * @description A window's first day (null for a world)
+             */
+            start: string | null;
+            /**
+             * Left
+             * @description The balance at the end; with an apartment, the liquidation
+             */
+            left: number;
+            /**
+             * Left Real
+             * @description In shekels of the first day
+             */
+            left_real: number;
+            /** Taken Real */
+            taken_real: number;
+            /** Tax */
+            tax: number;
+            /** Depleted Month */
+            depleted_month: number | null;
+            /** Lowest Net Real */
+            lowest_net_real: number;
+            /**
+             * Drawdown
+             * @description The deepest fall of the real net worth from its peak
+             */
+            drawdown: number;
+            /** Home Sold Month */
+            home_sold_month: number | null;
         };
         /** RecurringIn */
         RecurringIn: {
@@ -4277,6 +4420,16 @@ export interface components {
             /** Y Xirr Real */
             y_xirr_real: number | null;
         };
+        /** SustainableOut */
+        SustainableOut: {
+            /**
+             * Amount
+             * @description The largest monthly amount that lasts in the target share
+             */
+            amount: number;
+            /** Target Pct */
+            target_pct: number;
+        };
         /**
          * SymbolInfo
          * @description One tradable or reference instrument.
@@ -4938,6 +5091,51 @@ export interface components {
             /** Y Xirr */
             y_xirr: number | null;
         };
+        /** WithdrawManyResponse */
+        WithdrawManyResponse: {
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "windows" | "bootstrap" | "monte_carlo";
+            /** Months */
+            months: number;
+            /** Count */
+            count: number;
+            /**
+             * Start Worth
+             * @description What there was on the first day, as `left` counts it
+             */
+            start_worth: number;
+            /** Realizations */
+            realizations: components["schemas"]["RealizationOut"][];
+            /**
+             * Bounds
+             * @description At a cost share of 0, as entered, and of 1
+             */
+            bounds: components["schemas"]["BoundOut"][];
+            /** Survival */
+            survival: components["schemas"]["CurvePoint"][];
+            /**
+             * Income
+             * @description Each year's mean monthly income, first-day shekels
+             */
+            income: components["schemas"]["FanYear"][];
+            /** @description A fixed rule only */
+            sustainable: components["schemas"]["SustainableOut"] | null;
+            evidence: components["schemas"]["EvidenceOut"];
+            /** @description The modelled market (null when resampled) */
+            market: components["schemas"]["MarketOut"] | null;
+            /**
+             * Before
+             * @description Why no window starts earlier
+             */
+            before?: string | null;
+            /** After */
+            after?: string | null;
+            /** Warnings */
+            warnings: string[];
+        };
         /** WithdrawRequest */
         WithdrawRequest: {
             /**
@@ -4996,6 +5194,8 @@ export interface components {
             summary: components["schemas"]["WithdrawSummary"];
             floor: components["schemas"]["WithdrawSummary"];
             ceiling: components["schemas"]["WithdrawSummary"];
+            /** @description The plan with its market months in reverse order (null on an assumed return) */
+            reversed: components["schemas"]["WithdrawSummary"] | null;
             /**
              * Rows
              * @description One per month date, the start included
@@ -5060,6 +5260,142 @@ export interface components {
             home_cash: number;
             /** Invested */
             invested: number;
+        };
+        /** WithdrawSimulateRequest */
+        WithdrawSimulateRequest: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Months */
+            months: number;
+            /**
+             * Capital
+             * @description The account's value on the first day (zero only with an apartment)
+             */
+            capital: number;
+            /**
+             * Cost Share Pct
+             * @description The share of the capital that is cost; the rest is gain
+             * @default 50
+             */
+            cost_share_pct: number;
+            rule: components["schemas"]["RuleIn"];
+            /**
+             * @default {
+             *       "mode": "mix",
+             *       "yearly_pct": 5
+             *     }
+             */
+            returns: components["schemas"]["ReturnsIn"];
+            /** @description The mix (unused on an assumed return), the fees and the taxes */
+            market?: components["schemas"]["AccountIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+            home?: components["schemas"]["HomeIn"] | null;
+            /**
+             * Sustain Pct
+             * @description The share of realizations an amount must last in
+             * @default 95
+             */
+            sustain_pct: number;
+            /**
+             * Method
+             * @description The market: resampled from the mix's history in blocks, or drawn from a model
+             * @default bootstrap
+             * @enum {string}
+             */
+            method: "bootstrap" | "monte_carlo";
+            /**
+             * Runs
+             * @description Simulated worlds
+             * @default 1000
+             */
+            runs: number;
+            /**
+             * Seed
+             * @default 1
+             */
+            seed: number;
+            /**
+             * Block Months
+             * @default 12
+             */
+            block_months: number;
+            /**
+             * Market Mean Pct
+             * @description A modelled market; null: estimated from the mix
+             */
+            market_mean_pct?: number | null;
+            /** Market Sd Pct */
+            market_sd_pct?: number | null;
+        };
+        /** WithdrawStudyRequest */
+        WithdrawStudyRequest: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Months */
+            months: number;
+            /**
+             * Capital
+             * @description The account's value on the first day (zero only with an apartment)
+             */
+            capital: number;
+            /**
+             * Cost Share Pct
+             * @description The share of the capital that is cost; the rest is gain
+             * @default 50
+             */
+            cost_share_pct: number;
+            rule: components["schemas"]["RuleIn"];
+            /**
+             * @default {
+             *       "mode": "mix",
+             *       "yearly_pct": 5
+             *     }
+             */
+            returns: components["schemas"]["ReturnsIn"];
+            /** @description The mix (unused on an assumed return), the fees and the taxes */
+            market?: components["schemas"]["AccountIn"];
+            /**
+             * @default {
+             *       "mode": "assumed",
+             *       "mean_pct": 2.5,
+             *       "sd_pct": 0,
+             *       "persistence": 0
+             *     }
+             */
+            inflation: components["schemas"]["InflationIn"];
+            home?: components["schemas"]["HomeIn"] | null;
+            /**
+             * Sustain Pct
+             * @description The share of realizations an amount must last in
+             * @default 95
+             */
+            sustain_pct: number;
+            /**
+             * First Start
+             * @description The first start to try
+             */
+            first_start?: string | null;
+            /** Last Start */
+            last_start?: string | null;
+            /**
+             * Step Months
+             * @default 1
+             */
+            step_months: number;
         };
         /** WithdrawSummary */
         WithdrawSummary: {
@@ -6591,6 +6927,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WithdrawResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_study_api_planner_withdraw_study_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawStudyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawManyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_simulate_api_planner_withdraw_simulate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawSimulateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawManyResponse"];
                 };
             };
             /** @description Validation Error */

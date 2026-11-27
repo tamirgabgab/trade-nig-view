@@ -13,6 +13,8 @@ left of its mortgage as one track).
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Annotated, Literal
 
 import numpy as np
@@ -43,12 +45,13 @@ from app.planner.deposits import add_months, day_number
 from app.planner.home import HomePlan, RentMode, run_home
 from app.planner.home_data import HomeSpec, home_series
 from app.planner.inflation import CpiPath
-from app.planner.market import PlanError, TaxBase
+from app.planner.market import AssetData, Fees, PlanError, TaxBase, Taxes
 from app.planner.mortgage import RateKind, Track
 from app.planner.tax_presets import BETTERMENT
 from app.planner.withdraw import (
     MAX_PERCENT,
     Cause,
+    Grid,
     Home,
     Plan,
     Result,
@@ -58,6 +61,7 @@ from app.planner.withdraw import (
     run,
     sample,
 )
+from app.planner.withdraw_study import reverse
 
 router = APIRouter(tags=["planner"])
 
@@ -210,11 +214,14 @@ class WithdrawResponse(BaseModel):
     summary: WithdrawSummary
     floor: WithdrawSummary
     ceiling: WithdrawSummary
+    reversed: WithdrawSummary | None = Field(
+        description="The plan with its market months in reverse order (null on an assumed return)"
+    )
     rows: list[WithdrawRow] = Field(description="One per month date, the start included")
     warnings: list[str]
 
 
-def _summary(
+def summary_of(
     share: float, result: Result, prices: FloatArray, dates: list[dt.date]
 ) -> WithdrawSummary:
     """The totals of one run; ``prices`` is the CPI's rise since the first day."""
@@ -248,31 +255,47 @@ def _summary(
     )
 
 
-def _apartment(
-    body: WithdrawRequest, home: HomeIn, cpi: CpiPath, macro: Macro
-) -> tuple[Home, list[str]]:
-    """The apartment's cash and worth on the month dates, read as "today"."""
+def home_cost(start: dt.date, home: HomeIn, macro: Macro) -> tuple[float | None, list[str]]:
+    """What the apartment cost in shekels of the first day (None: not given), after checking
+    the apartment can be read."""
     if home.loan > home.value:
         raise PlanError("The mortgage left cannot be more than the apartment's value")
-    if (home.cost is None) != (home.bought is None):
-        raise PlanError("What the apartment cost and the day it was bought go together")
+    if home.cost is None or home.bought is None:
+        if (home.cost is None) != (home.bought is None):
+            raise PlanError("What the apartment cost and the day it was bought go together")
+        return None, []
+    if home.bought > start:
+        raise PlanError("The apartment must be bought on or before the first day")
+    series = macro.get("cpi").data
+    published = CpiPath(series.days, series.values)
+    if day_number(home.bought) < int(series.days[0]):
+        first = dt.date(1970, 1, 1) + dt.timedelta(days=int(series.days[0]))
+        raise PlanError(f"The CPI starts on {first}: the purchase must be after it")
+    bought, first_day = published.at(np.array([day_number(home.bought), day_number(start)]))
     notes: list[str] = []
-    cost = None
-    if home.cost is not None and home.bought is not None:
-        if home.bought > body.start:
-            raise PlanError("The apartment must be bought on or before the first day")
-        series = macro.get("cpi").data
-        published = CpiPath(series.days, series.values)
-        if day_number(home.bought) < int(series.days[0]):
-            first = dt.date(1970, 1, 1) + dt.timedelta(days=int(series.days[0]))
-            raise PlanError(f"The CPI starts on {first}: the purchase must be after it")
-        bought, start = published.at(np.array([day_number(home.bought), day_number(body.start)]))
-        cost = home.cost * float(start / bought)
-        if day_number(body.start) > int(series.days[-1]) + MONTH_DAYS:
-            notes.append("The apartment's cost is indexed by the CPI to its last published value")
+    if day_number(start) > int(series.days[-1]) + MONTH_DAYS:
+        notes.append("The apartment's cost is indexed by the CPI to its last published value")
+    return home.cost * float(first_day / bought), notes
+
+
+def apartment(
+    home: HomeIn,
+    start: dt.date,
+    months: int,
+    cpi: CpiPath,
+    macro: Macro,
+    cost: float | None,
+    bought: dt.date | None,
+    *,
+    strict: bool = False,
+    value: FloatArray | None = None,
+) -> tuple[Home, list[str]]:
+    """The apartment's cash and worth on the month dates from ``start``, read as "today".
+    ``strict`` refuses a series held flat past its data (a window of history); ``value`` is a
+    simulated world's dwelling index."""
     plan = HomePlan(
-        start=body.start,
-        months=body.months,
+        start=start,
+        months=months,
         price=home.value,
         equity=home.value - home.loan,
         tracks=[
@@ -296,19 +319,82 @@ def _apartment(
         early_repayment=home.early_repayment_pct / 100,
         betterment=BETTERMENT[0 if home.betterment == "single_home" else 1].spec,
         cost=cost,
-        bought=home.bought,
+        bought=bought,
     )
     spec = HomeSpec(
         plan,
         value_mode="historical" if home.growth == "index" else "assumed",
         value_mean=home.growth_pct / 100,
     )
-    monthly, warnings = home_series(spec, cpi, macro)
+    monthly, warnings = home_series(spec, cpi, macro, strict=strict, value=value)
     result = run_home(plan, monthly)
     cash = result.rent - result.payment - result.costs
     # The engine reads no month after the plan's last: a note on the schedule beyond it is moot.
     beyond = [w for w in warnings if not w.startswith("The schedule after the sale")]
-    return Home(cash, result.net_worth, home.role, home.sell_after_months), notes + beyond
+    return Home(cash, result.net_worth, home.role, home.sell_after_months), beyond
+
+
+@dataclass(frozen=True, slots=True)
+class Account:
+    """What every run of a request shares: the Market tab's taxes and fees, and its mix (None on
+    an assumed return)."""
+
+    taxes: Taxes
+    fees: Fees
+    mix: list[AssetData] | None
+    warnings: list[str]
+
+
+def check(body: WithdrawRequest) -> None:
+    """The rule has what it needs, and the plan ends in a year the calendar reaches."""
+    rule = body.rule
+    if rule.kind is Rule.FIXED and rule.amount <= 0:
+        raise PlanError("A fixed rule needs an amount above zero")
+    if rule.kind is Rule.PERCENT and rule.percent <= 0:
+        raise PlanError("A percent rule needs a percent above zero")
+    if body.start.year + (body.start.month - 1 + body.months) // 12 > MAX_YEAR:
+        raise PlanError(f"Dates after {MAX_YEAR} are not supported")
+
+
+def account_of(
+    body: WithdrawRequest, service: BarService, macro: Macro, universe: Universe, *, mix: bool
+) -> Account:
+    """The request's account; ``mix`` loads the Market tab's assets with all their history."""
+    account = body.market
+    # The fee and tax helpers read a market option; a ticker stands in when the mix is empty.
+    option = MarketOptionIn(
+        assets=account.assets or [AssetIn(symbol="RETURN")],
+        use_fx=account.use_fx,
+        fees=account.fees,
+        taxes=account.taxes,
+    )
+    if not mix:
+        return Account(taxes_of(option), fees_of(option), None, [])
+    if not account.assets:
+        raise PlanError("The mix has no asset: add a ticker, or use an assumed return")
+    assets, _, notes = load_mix(option, service, macro, universe, day_number(body.start))
+    return Account(taxes_of(option), fees_of(option), [a.data for a in assets], notes)
+
+
+def plan_of(
+    body: WithdrawRequest, account: Account, weights: Sequence[float], share: float
+) -> Plan:
+    """The engine's plan at one cost share."""
+    rule, fees = body.rule, account.fees
+    return Plan(
+        capital=body.capital,
+        weights=weights,
+        cost_share=share,
+        rule=rule.kind,
+        amount=rule.amount,
+        indexed=rule.indexed,
+        percent=rule.percent / 100,
+        sell=fees.sell,
+        management=fees.management,
+        monthly_fee=fees.monthly,
+        gains_tax=account.taxes.gains,
+        buy=fees.buy,
+    )
 
 
 @router.post("/planner/withdraw", response_model=WithdrawResponse)
@@ -328,32 +414,19 @@ def withdraw(
 def _run(
     body: WithdrawRequest, service: BarService, macro: MacroService, universe: Universe
 ) -> WithdrawResponse:
-    rule = body.rule
-    if rule.kind is Rule.FIXED and rule.amount <= 0:
-        raise PlanError("A fixed rule needs an amount above zero")
-    if rule.kind is Rule.PERCENT and rule.percent <= 0:
-        raise PlanError("A percent rule needs a percent above zero")
-    if body.start.year + (body.start.month - 1 + body.months) // 12 > MAX_YEAR:
-        raise PlanError(f"Dates after {MAX_YEAR} are not supported")
+    check(body)
     dates = [add_months(body.start, k) for k in range(body.months + 1)]
     first, last = day_number(dates[0]), day_number(dates[-1])
     # A mortgage that ends after the plan still needs its index (its balance at a sale).
     loan_months = body.home.loan_months if body.home is not None and body.home.loan > 0 else 0
     horizon = day_number(add_months(body.start, max(body.months, loan_months)))
     cpi = cpi_path(inflation_spec(body.inflation), first, horizon, macro)
-    account = body.market
-    # The fee and tax helpers read a market option; a ticker stands in when the mix is empty.
-    option = MarketOptionIn(
-        assets=account.assets or [AssetIn(symbol="RETURN")],
-        use_fx=account.use_fx,
-        fees=account.fees,
-        taxes=account.taxes,
-    )
-    taxes, fees = taxes_of(option), fees_of(option)
-    warnings: list[str] = []
+    account = account_of(body, service, macro, universe, mix=body.returns.mode == "mix")
+    taxes = account.taxes
+    warnings = list(account.warnings)
     if last > int(cpi.days[-1]) + MONTH_DAYS:
         warnings.append("After the last published CPI it is held flat")
-    if body.returns.mode == "assumed":
+    if account.mix is None:
         if taxes.base is TaxBase.CURRENCY:
             warnings.append(
                 'The assumed return is in shekels: the "currency" tax base has no rate to follow, '
@@ -368,36 +441,18 @@ def _run(
         )
         weights: list[float] = [1.0]
     else:
-        if not account.assets:
-            raise PlanError("The mix has no asset: add a ticker, or use an assumed return")
-        assets, _, notes = load_mix(option, service, macro, universe, first)
-        warnings.extend(notes)
-        grid = sample([a.data for a in assets], body.start, body.months, taxes, cpi)
-        weights = [a.data.weight for a in assets]
+        grid = sample(account.mix, body.start, body.months, taxes, cpi)
+        weights = [a.weight for a in account.mix]
     home = None
     if body.home is not None:
-        home, notes = _apartment(body, body.home, cpi, macro)
-        warnings.extend(note for note in notes if note not in warnings)
-
-    def at(share: float) -> Result:
-        return run(
-            Plan(
-                capital=body.capital,
-                weights=weights,
-                cost_share=share,
-                rule=rule.kind,
-                amount=rule.amount,
-                indexed=rule.indexed,
-                percent=rule.percent / 100,
-                sell=fees.sell,
-                management=fees.management,
-                monthly_fee=fees.monthly,
-                gains_tax=taxes.gains,
-                buy=fees.buy,
-            ),
-            grid,
-            home,
+        cost, notes = home_cost(body.start, body.home, macro)
+        home, more = apartment(
+            body.home, body.start, body.months, cpi, macro, cost, body.home.bought
         )
+        warnings.extend(note for note in [*notes, *more] if note not in warnings)
+
+    def at(share: float, path: Grid = grid) -> Result:
+        return run(plan_of(body, account, weights, share), path, home)
 
     share = body.cost_share_pct / 100
     result, floor, ceiling = at(share), at(0.0), at(1.0)
@@ -411,9 +466,13 @@ def _run(
         start=dates[0],
         end=dates[-1],
         months=body.months,
-        summary=_summary(share, result, prices, dates),
-        floor=_summary(0.0, floor, prices, dates),
-        ceiling=_summary(1.0, ceiling, prices, dates),
+        summary=summary_of(share, result, prices, dates),
+        floor=summary_of(0.0, floor, prices, dates),
+        ceiling=summary_of(1.0, ceiling, prices, dates),
+        # The market's months in reverse; the CPI and the apartment as they were.
+        reversed=None
+        if account.mix is None
+        else summary_of(share, at(share, reverse(grid)), prices, dates),
         rows=[
             WithdrawRow(
                 month=k,

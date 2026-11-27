@@ -391,7 +391,7 @@ def _accounts(spec: ScenarioSpec) -> list[Account]:
     return [o.account for o in (spec.x, spec.y) if o.account is not None]
 
 
-def _panel(
+def panel_of(
     series: dict[str, tuple[IntArray, FloatArray]],
 ) -> tuple[IntArray, dict[str, FloatArray]]:
     """The month starts every series covers, and each series' growth over those months."""
@@ -408,7 +408,7 @@ def _panel(
     return months, {name: v[1:] / v[:-1] for name, v in levels.items()}
 
 
-def _asset_series(asset: AssetData) -> dict[str, tuple[IntArray, FloatArray]]:
+def asset_series(asset: AssetData) -> dict[str, tuple[IntArray, FloatArray]]:
     """The three series an asset is resampled as, from its first bar with a shekel rate."""
     key = asset_key(asset)
     known = np.isfinite(asset.fx)
@@ -427,7 +427,7 @@ def history_panel(spec: ScenarioSpec, macro: Macro, *, assets: bool) -> Panel | 
     if assets:
         for account in _accounts(spec):
             for asset in account.assets:
-                series.update(_asset_series(asset))
+                series.update(asset_series(asset))
     if spec.inflation.mode == "historical":
         cpi = historical_cpi(macro.get("cpi").data)
         series["cpi"] = (cpi.days, cpi.values)
@@ -442,7 +442,7 @@ def history_panel(spec: ScenarioSpec, macro: Macro, *, assets: bool) -> Panel | 
         series["rate"] = (boi.days, boi.values / 100.0)
     if not series:
         return None
-    months, ratios = _panel(series)
+    months, ratios = panel_of(series)
     rate = monthly(*series["rate"], months)[:-1] if rates else None
     ratios.pop("rate", None)
     return Panel(months, ratios, rate)
@@ -470,11 +470,15 @@ def estimate_market(spec: ScenarioSpec) -> tuple[float, float]:
     accounts = _accounts(spec)
     if not accounts:
         raise PlanError("A modelled market needs an asset mix to stand for")
-    mix = accounts[0].assets
+    return estimate_mix(accounts[0].assets)
+
+
+def estimate_mix(mix: Sequence[AssetData]) -> tuple[float, float]:
+    """The yearly mean growth and volatility of a mix over its assets' shared history."""
     series: dict[str, tuple[IntArray, FloatArray]] = {}
     for asset in mix:
-        series.update(_asset_series(asset))
-    _, ratios = _panel(series)
+        series.update(asset_series(asset))
+    _, ratios = panel_of(series)
     return estimate(_mix_growth(mix, ratios))
 
 
@@ -524,9 +528,9 @@ def dwelling_correlation(spec: ScenarioSpec, macro: Macro) -> Correlation | None
     mix = accounts[0].assets
     series: dict[str, tuple[IntArray, FloatArray]] = {name: (index.days, index.values)}
     for asset in mix:
-        series.update(_asset_series(asset))
+        series.update(asset_series(asset))
     try:
-        _, ratios = _panel(series)
+        _, ratios = panel_of(series)
     except PlanError:
         return None
     return yearly_correlation(ratios[name], _mix_growth(mix, ratios))

@@ -2455,6 +2455,90 @@
           }
         }
       }
+    },
+    "/api/planner/withdraw/study": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Withdraw Study",
+        "description": "A withdrawal plan started on every month history allows.",
+        "operationId": "withdraw_study_api_planner_withdraw_study_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawStudyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawManyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/withdraw/simulate": {
+      "post": {
+        "tags": [
+          "planner"
+        ],
+        "summary": "Withdraw Simulate",
+        "description": "A withdrawal plan on simulated worlds.",
+        "operationId": "withdraw_simulate_api_planner_withdraw_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawSimulateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawManyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2976,6 +3060,40 @@
         ],
         "title": "BettermentPresetOut"
       },
+      "BoundOut": {
+        "properties": {
+          "cost_share": {
+            "type": "number",
+            "title": "Cost Share"
+          },
+          "lasts": {
+            "type": "number",
+            "title": "Lasts"
+          },
+          "left_real": {
+            "type": "number",
+            "title": "Left Real"
+          },
+          "taken_real": {
+            "type": "number",
+            "title": "Taken Real"
+          },
+          "lowest_net_real": {
+            "type": "number",
+            "title": "Lowest Net Real"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cost_share",
+          "lasts",
+          "left_real",
+          "taken_real",
+          "lowest_net_real"
+        ],
+        "title": "BoundOut",
+        "description": "The realizations at one cost share: the share that lasts, and medians."
+      },
       "BracketIn": {
         "properties": {
           "up_to": {
@@ -3403,6 +3521,35 @@
         ],
         "title": "CorrelationOut",
         "description": "Between the yearly returns of the dwelling index and of the mix, in shekels."
+      },
+      "CurvePoint": {
+        "properties": {
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share",
+            "description": "Still paying, at the cost share entered"
+          },
+          "floor": {
+            "type": "number",
+            "title": "Floor"
+          },
+          "ceiling": {
+            "type": "number",
+            "title": "Ceiling"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "share",
+          "floor",
+          "ceiling"
+        ],
+        "title": "CurvePoint"
       },
       "DecompositionOut": {
         "properties": {
@@ -3954,6 +4101,78 @@
         ],
         "title": "DrawingsUpdate",
         "description": "``PUT`` body: the full list, and the revision it was based on (optimistic locking)."
+      },
+      "EvidenceOut": {
+        "properties": {
+          "independent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Independent",
+            "description": "About how many separate terms the windows, or the resampled history, hold"
+          },
+          "history_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Months",
+            "description": "The history a bootstrap was cut from"
+          }
+        },
+        "type": "object",
+        "required": [
+          "independent",
+          "history_months"
+        ],
+        "title": "EvidenceOut"
+      },
+      "FanYear": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "p5": {
+            "type": "number",
+            "title": "P5"
+          },
+          "p25": {
+            "type": "number",
+            "title": "P25"
+          },
+          "p50": {
+            "type": "number",
+            "title": "P50"
+          },
+          "p75": {
+            "type": "number",
+            "title": "P75"
+          },
+          "p95": {
+            "type": "number",
+            "title": "P95"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "p5",
+          "p25",
+          "p50",
+          "p75",
+          "p95"
+        ],
+        "title": "FanYear"
       },
       "FeesIn": {
         "properties": {
@@ -6606,6 +6825,30 @@
         "title": "MarketOptionIn",
         "description": "A market account: its mix, its deposits and its costs."
       },
+      "MarketOut": {
+        "properties": {
+          "mean_pct": {
+            "type": "number",
+            "title": "Mean Pct"
+          },
+          "sd_pct": {
+            "type": "number",
+            "title": "Sd Pct"
+          },
+          "estimated": {
+            "type": "boolean",
+            "title": "Estimated",
+            "description": "From the mix's history, not typed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mean_pct",
+          "sd_pct",
+          "estimated"
+        ],
+        "title": "MarketOut"
+      },
       "MarketRequest": {
         "properties": {
           "assets": {
@@ -7876,6 +8119,85 @@
         },
         "type": "object",
         "title": "RatesIn"
+      },
+      "RealizationOut": {
+        "properties": {
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "A window's first day (null for a world)"
+          },
+          "left": {
+            "type": "number",
+            "title": "Left",
+            "description": "The balance at the end; with an apartment, the liquidation"
+          },
+          "left_real": {
+            "type": "number",
+            "title": "Left Real",
+            "description": "In shekels of the first day"
+          },
+          "taken_real": {
+            "type": "number",
+            "title": "Taken Real"
+          },
+          "tax": {
+            "type": "number",
+            "title": "Tax"
+          },
+          "depleted_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depleted Month"
+          },
+          "lowest_net_real": {
+            "type": "number",
+            "title": "Lowest Net Real"
+          },
+          "drawdown": {
+            "type": "number",
+            "title": "Drawdown",
+            "description": "The deepest fall of the real net worth from its peak"
+          },
+          "home_sold_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Sold Month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "left",
+          "left_real",
+          "taken_real",
+          "tax",
+          "depleted_month",
+          "lowest_net_real",
+          "drawdown",
+          "home_sold_month"
+        ],
+        "title": "RealizationOut"
       },
       "RecurringIn": {
         "properties": {
@@ -9920,6 +10242,25 @@
         ],
         "title": "SummaryOut"
       },
+      "SustainableOut": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "The largest monthly amount that lasts in the target share"
+          },
+          "target_pct": {
+            "type": "number",
+            "title": "Target Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "target_pct"
+        ],
+        "title": "SustainableOut"
+      },
       "SymbolInfo": {
         "properties": {
           "symbol": {
@@ -11314,6 +11655,133 @@
         ],
         "title": "WindowOut"
       },
+      "WithdrawManyResponse": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "windows",
+              "bootstrap",
+              "monte_carlo"
+            ],
+            "title": "Method"
+          },
+          "months": {
+            "type": "integer",
+            "title": "Months"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "start_worth": {
+            "type": "number",
+            "title": "Start Worth",
+            "description": "What there was on the first day, as `left` counts it"
+          },
+          "realizations": {
+            "items": {
+              "$ref": "#/components/schemas/RealizationOut"
+            },
+            "type": "array",
+            "title": "Realizations"
+          },
+          "bounds": {
+            "items": {
+              "$ref": "#/components/schemas/BoundOut"
+            },
+            "type": "array",
+            "title": "Bounds",
+            "description": "At a cost share of 0, as entered, and of 1"
+          },
+          "survival": {
+            "items": {
+              "$ref": "#/components/schemas/CurvePoint"
+            },
+            "type": "array",
+            "title": "Survival"
+          },
+          "income": {
+            "items": {
+              "$ref": "#/components/schemas/FanYear"
+            },
+            "type": "array",
+            "title": "Income",
+            "description": "Each year's mean monthly income, first-day shekels"
+          },
+          "sustainable": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SustainableOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A fixed rule only"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceOut"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarketOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The modelled market (null when resampled)"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before",
+            "description": "Why no window starts earlier"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "months",
+          "count",
+          "start_worth",
+          "realizations",
+          "bounds",
+          "survival",
+          "income",
+          "sustainable",
+          "evidence",
+          "market",
+          "warnings"
+        ],
+        "title": "WithdrawManyResponse"
+      },
       "WithdrawRequest": {
         "properties": {
           "start": {
@@ -11409,6 +11877,17 @@
           "ceiling": {
             "$ref": "#/components/schemas/WithdrawSummary"
           },
+          "reversed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WithdrawSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The plan with its market months in reverse order (null on an assumed return)"
+          },
           "rows": {
             "items": {
               "$ref": "#/components/schemas/WithdrawRow"
@@ -11433,6 +11912,7 @@
           "summary",
           "floor",
           "ceiling",
+          "reversed",
           "rows",
           "warnings"
         ],
@@ -11541,6 +12021,252 @@
           "invested"
         ],
         "title": "WithdrawRow"
+      },
+      "WithdrawSimulateRequest": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "months": {
+            "type": "integer",
+            "maximum": 1200.0,
+            "minimum": 1.0,
+            "title": "Months"
+          },
+          "capital": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Capital",
+            "description": "The account's value on the first day (zero only with an apartment)"
+          },
+          "cost_share_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Cost Share Pct",
+            "description": "The share of the capital that is cost; the rest is gain",
+            "default": 50.0
+          },
+          "rule": {
+            "$ref": "#/components/schemas/RuleIn"
+          },
+          "returns": {
+            "$ref": "#/components/schemas/ReturnsIn",
+            "default": {
+              "mode": "mix",
+              "yearly_pct": 5.0
+            }
+          },
+          "market": {
+            "$ref": "#/components/schemas/AccountIn",
+            "description": "The mix (unused on an assumed return), the fees and the taxes"
+          },
+          "inflation": {
+            "$ref": "#/components/schemas/InflationIn",
+            "default": {
+              "mode": "assumed",
+              "mean_pct": 2.5,
+              "sd_pct": 0.0,
+              "persistence": 0.0
+            }
+          },
+          "home": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sustain_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 50.0,
+            "title": "Sustain Pct",
+            "description": "The share of realizations an amount must last in",
+            "default": 95.0
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "bootstrap",
+              "monte_carlo"
+            ],
+            "title": "Method",
+            "description": "The market: resampled from the mix's history in blocks, or drawn from a model",
+            "default": "bootstrap"
+          },
+          "runs": {
+            "type": "integer",
+            "maximum": 5000.0,
+            "minimum": 10.0,
+            "title": "Runs",
+            "description": "Simulated worlds",
+            "default": 1000
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 1
+          },
+          "block_months": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Block Months",
+            "default": 12
+          },
+          "market_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": -50.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Mean Pct",
+            "description": "A modelled market; null: estimated from the mix"
+          },
+          "market_sd_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 200.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Sd Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "months",
+          "capital",
+          "rule"
+        ],
+        "title": "WithdrawSimulateRequest"
+      },
+      "WithdrawStudyRequest": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "months": {
+            "type": "integer",
+            "maximum": 1200.0,
+            "minimum": 1.0,
+            "title": "Months"
+          },
+          "capital": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Capital",
+            "description": "The account's value on the first day (zero only with an apartment)"
+          },
+          "cost_share_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Cost Share Pct",
+            "description": "The share of the capital that is cost; the rest is gain",
+            "default": 50.0
+          },
+          "rule": {
+            "$ref": "#/components/schemas/RuleIn"
+          },
+          "returns": {
+            "$ref": "#/components/schemas/ReturnsIn",
+            "default": {
+              "mode": "mix",
+              "yearly_pct": 5.0
+            }
+          },
+          "market": {
+            "$ref": "#/components/schemas/AccountIn",
+            "description": "The mix (unused on an assumed return), the fees and the taxes"
+          },
+          "inflation": {
+            "$ref": "#/components/schemas/InflationIn",
+            "default": {
+              "mode": "assumed",
+              "mean_pct": 2.5,
+              "sd_pct": 0.0,
+              "persistence": 0.0
+            }
+          },
+          "home": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sustain_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 50.0,
+            "title": "Sustain Pct",
+            "description": "The share of realizations an amount must last in",
+            "default": 95.0
+          },
+          "first_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Start",
+            "description": "The first start to try"
+          },
+          "last_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Start"
+          },
+          "step_months": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Step Months",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "months",
+          "capital",
+          "rule"
+        ],
+        "title": "WithdrawStudyRequest"
       },
       "WithdrawSummary": {
         "properties": {

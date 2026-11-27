@@ -495,7 +495,7 @@ def _run(
     )
 
 
-def _shifts(base: dt.date, first: dt.date, last: dt.date, step: int) -> list[int]:
+def month_shifts(base: dt.date, first: dt.date, last: dt.date, step: int) -> list[int]:
     """The month shifts (multiples of ``step``) that start the plan inside ``first .. last``."""
     low = (first.year - base.year) * 12 + first.month - base.month - 1
     high = (last.year - base.year) * 12 + last.month - base.month + 1
@@ -519,7 +519,7 @@ def _study(
     last = min(body.last_start or today, today)
 
     def shifts(step: int) -> list[int]:
-        return [] if last < first else _shifts(base, first, last, step)
+        return [] if last < first else month_shifts(base, first, last, step)
 
     if len(shifts(body.step_months)) > MAX_WINDOWS:
         raise PlanError(f"At most {MAX_WINDOWS} starts in a study: narrow the range")
