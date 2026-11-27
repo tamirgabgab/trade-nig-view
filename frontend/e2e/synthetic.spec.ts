@@ -16,9 +16,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 const HOME = `${SYMBOL}H`;
+const STATS = `${SYMBOL}P`;
 
 test.afterEach(async ({ page }) => {
-  for (const symbol of [SYMBOL, HOME]) {
+  for (const symbol of [SYMBOL, HOME, STATS]) {
     const found = await page.request.get(`/api/synthetic/${encodeURIComponent(symbol)}`);
     if (found.ok()) {
       const { revision } = (await found.json()) as { revision: number };
@@ -201,4 +202,46 @@ test('a dwelling-price symbol: created, charted without volume, causal, explaine
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   }
   expect(bars.bars[0]?.time).toBe(yesterday.toISOString().slice(0, 10));
+});
+
+test('a parametric symbol: its statistics previewed, then charted with volume', async ({
+  page,
+}) => {
+  await page.keyboard.press('s');
+  await page
+    .getByRole('dialog', { name: 'Symbol search' })
+    .getByRole('button', { name: 'New synthetic symbol…' })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'New synthetic symbol' });
+  await dialog.getByLabel('Kind').selectOption('parametric');
+  await dialog.getByLabel('Name', { exact: true }).fill(STATS.slice(4).toLowerCase());
+  await dialog.getByLabel('Full name').fill('Fat tails and jumps');
+  await dialog.getByLabel('Bars (days)').fill('600');
+  await dialog.getByLabel('Distribution', { exact: true }).selectOption('student_t');
+  await dialog.getByLabel('Degrees of freedom ν').fill('4');
+  await dialog.getByText('Layers: memory, jumps, GARCH').click();
+  await dialog.getByLabel('Jumps a year λ').fill('3');
+  // The backend draws the preview: a histogram over the density, the drawn numbers by the asked.
+  const preview = dialog.getByRole('region', { name: 'Preview' });
+  await expect(
+    preview.getByRole('img', {
+      name: "Histogram of the daily returns over the distribution's density",
+    }),
+  ).toBeVisible();
+  await expect(preview.getByRole('row', { name: /Excess kurtosis/ })).toContainText('∞');
+  await expect(preview.getByRole('row', { name: /Mean a year/ })).toContainText('7.0 %');
+  await dialog.getByRole('button', { name: 'Create symbol' }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(legend(page)).toContainText('Fat tails and jumps · 1D · Synthetic');
+  await expect(legend(page).locator('[data-field="Vol"]')).toBeVisible();
+  const bars = (await (
+    await page.request.get(`/api/bars?symbol=${encodeURIComponent(STATS)}&interval=1D`)
+  ).json()) as { bars: unknown[] };
+  expect(bars.bars).toHaveLength(600);
+  await page
+    .getByRole('group', { name: 'Interval' })
+    .getByRole('button', { name: '1 hour' })
+    .click();
+  await expect(legend(page)).toContainText('Fat tails and jumps · 1h · Synthetic');
 });

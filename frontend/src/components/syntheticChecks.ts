@@ -1,4 +1,11 @@
-import { MAX_BARS, MIN_BARS, NAME_PATTERN, type SyntheticDefinition } from '../api/synthetic.ts';
+import {
+  MAX_BARS,
+  MIN_BARS,
+  NAME_PATTERN,
+  type ParametricDefinition,
+  type ReturnShape,
+  type SyntheticDefinition,
+} from '../api/synthetic.ts';
 
 /**
  * The synthetic symbol form's checks before a definition is sent, and the weekday arithmetic of
@@ -58,6 +65,59 @@ export function firstDateEndingBefore(today: string, bars: number): string {
   return addWeekdays(toIso(last), -(bars - 1));
 }
 
+const BARS_PROBLEM = `Bars: ${String(MIN_BARS)} to ${String(MAX_BARS)}.`;
+
+function seedProblem(seed: number): string | null {
+  return Number.isInteger(seed) && seed >= 0 && seed <= 1_000_000
+    ? null
+    : 'Seed: a whole number from 0 to 1,000,000.';
+}
+
+/** What is wrong with a parametric symbol's statistics, or null (the backend's own rules). */
+function shapeProblem(shape: ReturnShape): string | null {
+  const within = (value: number, lo: number, hi: number) =>
+    Number.isFinite(value) && value >= lo && value <= hi;
+  if (!within(shape.meanPct, -50, 100)) return 'Expected return: −50 to 100 % a year.';
+  if (!within(shape.volPct, 1, 100)) return 'Volatility: 1 to 100 % a year.';
+  // The backend checks both whatever the family (a hidden field keeps its value).
+  if (!(shape.df > 2 && shape.df <= 100)) {
+    return 'Degrees of freedom (Student-t): above 2, 100 at most.';
+  }
+  if (!within(shape.skew, -20, 20)) return 'Skew (skew-normal): −20 to 20.';
+  if (!within(shape.memory, -0.9, 0.9)) return 'Memory (phi): −0.9 to 0.9.';
+  if (!within(shape.jumpsPerYear, 0, 50)) return 'Jumps: 0 to 50 a year.';
+  if (!within(shape.jumpMeanPct, -50, 50) || !within(shape.jumpSdPct, 0, 50)) {
+    return 'Jump size: a mean of −50 to 50 % and a standard deviation of 0 to 50 %.';
+  }
+  if (!within(shape.garchAlpha, 0, 0.5) || !within(shape.garchBeta, 0, 0.99)) {
+    return 'GARCH: alpha 0 to 0.5, beta 0 to 0.99.';
+  }
+  if (shape.garchAlpha + shape.garchBeta >= 1) return 'GARCH: alpha + beta must be below 1.';
+  const jumpVariance =
+    shape.jumpsPerYear * ((shape.jumpMeanPct / 100) ** 2 + (shape.jumpSdPct / 100) ** 2);
+  if (jumpVariance >= (shape.volPct / 100) ** 2) {
+    return 'The jumps carry all of the volatility or more: fewer or smaller jumps, or a larger σ.';
+  }
+  return null;
+}
+
+/** A dated series' length and first date (a lab scenario or a parametric symbol). */
+function datedProblem(def: { bars: number; firstDate: string }, now: string): string | null {
+  if (!barsInRange(def.bars)) return BARS_PROBLEM;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(def.firstDate)) return 'Pick a first date.';
+  if (def.firstDate < FIRST_DAY) return 'The first date is 1970-01-01 or later.';
+  const last = lastDate(def.firstDate, def.bars);
+  if (last >= now) return `The last bar would be on ${last}, not before today: start earlier.`;
+  return null;
+}
+
+/** Why a parametric symbol's preview cannot be drawn (its seed, length or statistics), or null. */
+export function previewProblem(def: ParametricDefinition): string | null {
+  return (
+    seedProblem(def.seed) ?? (barsInRange(def.bars) ? null : BARS_PROBLEM) ?? shapeProblem(def)
+  );
+}
+
 /** What is wrong with a definition before it is sent, or null. */
 export function definitionProblem(def: SyntheticDefinition, now: string): string | null {
   if (!NAME_PATTERN.test(def.name)) {
@@ -65,24 +125,24 @@ export function definitionProblem(def: SyntheticDefinition, now: string): string
   }
   if (def.fullName.trim() === '') return 'Give it a full name.';
   if (!(def.firstPrice > 0)) return 'The first price must be above 0.';
-  if (!Number.isInteger(def.seed) || def.seed < 0 || def.seed > 1_000_000) {
-    return 'Seed: a whole number from 0 to 1,000,000.';
-  }
-  if (def.kind === 'dwelling') {
-    if (!(def.noisePct >= 0 && def.noisePct <= MAX_NOISE_PCT)) {
-      return `Noise: 0 to ${String(MAX_NOISE_PCT)} % a day.`;
+  const seed = seedProblem(def.seed);
+  if (seed !== null) return seed;
+  switch (def.kind) {
+    case 'scenario':
+      return datedProblem(def, now);
+    case 'parametric':
+      return shapeProblem(def) ?? datedProblem(def, now);
+    case 'dwelling':
+      if (!(def.noisePct >= 0 && def.noisePct <= MAX_NOISE_PCT)) {
+        return `Noise: 0 to ${String(MAX_NOISE_PCT)} % a day.`;
+      }
+      if (!Number.isInteger(def.lagMonths) || def.lagMonths < 0 || def.lagMonths > MAX_LAG) {
+        return `Publication lag: 0 to ${String(MAX_LAG)} months.`;
+      }
+      return null;
+    default: {
+      const never: never = def;
+      throw new Error(`Unknown kind ${String(never)}`);
     }
-    if (!Number.isInteger(def.lagMonths) || def.lagMonths < 0 || def.lagMonths > MAX_LAG) {
-      return `Publication lag: 0 to ${String(MAX_LAG)} months.`;
-    }
-    return null;
   }
-  if (!barsInRange(def.bars)) {
-    return `Bars: ${String(MIN_BARS)} to ${String(MAX_BARS)}.`;
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(def.firstDate)) return 'Pick a first date.';
-  if (def.firstDate < FIRST_DAY) return 'The first date is 1970-01-01 or later.';
-  const last = lastDate(def.firstDate, def.bars);
-  if (last >= now) return `The last bar would be on ${last}, not before today: start earlier.`;
-  return null;
 }

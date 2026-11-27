@@ -14,6 +14,8 @@ import {
   type Currency,
   type DwellingDefinition,
   type DwellingSeries,
+  type ParametricDefinition,
+  type ReturnShape,
   type ScenarioDefinition,
   type SyntheticDefinition,
   type SyntheticSymbol,
@@ -24,6 +26,7 @@ import confirm from './ConfirmDialog.module.css';
 import panel from './IndicatorSettingsPanel.module.css';
 import { LearnPage } from './LearnPage.tsx';
 import { LearnNavigation } from './learnNavigation.ts';
+import { ParametricFields } from './ParametricFields.tsx';
 import {
   barsInRange,
   definitionProblem,
@@ -32,6 +35,7 @@ import {
   lastDate,
   MAX_LAG,
   MAX_NOISE_PCT,
+  previewProblem,
 } from './syntheticChecks.ts';
 import styles from './SyntheticSymbolDialog.module.css';
 
@@ -41,17 +45,26 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-type Common = Pick<SyntheticDefinition, 'name' | 'fullName' | 'seed' | 'firstPrice'>;
+const KINDS = [
+  { id: 'scenario', label: 'Lab scenario' },
+  { id: 'dwelling', label: 'Dwelling prices (CBS)' },
+  { id: 'parametric', label: 'Statistics (parametric)' },
+] as const;
 
-function blankScenario(common: Common): ScenarioDefinition {
+type Common = Pick<SyntheticDefinition, 'name' | 'fullName' | 'seed' | 'firstPrice'>;
+/** The length, first date and currency: a lab scenario's and a parametric symbol's. */
+type Dated = Pick<ScenarioDefinition, 'firstDate' | 'bars' | 'currency'>;
+
+function blankDated(): Dated {
   return {
-    ...common,
-    kind: 'scenario',
-    scenario: 'random_walk',
     firstDate: firstDateEndingBefore(today(), DEFAULT_BARS),
     bars: DEFAULT_BARS,
     currency: 'ILS',
   };
+}
+
+function blankScenario(common: Common): ScenarioDefinition {
+  return { ...common, ...blankDated(), kind: 'scenario', scenario: 'random_walk' };
 }
 
 function blankDwelling(common: Common): DwellingDefinition {
@@ -63,6 +76,30 @@ function blankDwelling(common: Common): DwellingDefinition {
     causal: false,
     lagMonths: 2,
   };
+}
+
+function blankParametric(common: Common, dated: Dated): ParametricDefinition {
+  return {
+    ...common,
+    ...dated,
+    kind: 'parametric',
+    meanPct: 7,
+    volPct: 18,
+    distribution: 'normal',
+    df: 5,
+    skew: -4,
+    exact: false,
+    memory: 0,
+    jumpsPerYear: 0,
+    jumpMeanPct: -5,
+    jumpSdPct: 5,
+    garchAlpha: 0,
+    garchBeta: 0,
+  };
+}
+
+function dated(def: ScenarioDefinition | ParametricDefinition): Dated {
+  return { firstDate: def.firstDate, bars: def.bars, currency: def.currency };
 }
 
 function common(def: SyntheticDefinition): Common {
@@ -91,14 +128,24 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
     const start: Common = stored
       ? common(stored.definition)
       : { name: '', fullName: '', seed: Math.floor(Math.random() * 1_000_000), firstPrice: 100 };
-    return stored?.definition.kind === 'scenario' ? stored.definition : blankScenario(start);
+    if (stored?.definition.kind === 'scenario') return stored.definition;
+    const scenario = blankScenario(start);
+    return stored?.definition.kind === 'parametric'
+      ? { ...scenario, ...dated(stored.definition) }
+      : scenario;
   });
   const [dwellingDraft, setDwellingDraft] = useState<DwellingDefinition>(() =>
     stored?.definition.kind === 'dwelling'
       ? stored.definition
-      : blankDwelling(common(stored?.definition ?? scenarioDraft)),
+      : blankDwelling(common(scenarioDraft)),
   );
-  const def: SyntheticDefinition = kind === 'dwelling' ? dwellingDraft : scenarioDraft;
+  const [parametricDraft, setParametricDraft] = useState<ParametricDefinition>(() =>
+    stored?.definition.kind === 'parametric'
+      ? stored.definition
+      : blankParametric(common(scenarioDraft), dated(scenarioDraft)),
+  );
+  const drafts = { scenario: scenarioDraft, dwelling: dwellingDraft, parametric: parametricDraft };
+  const def: SyntheticDefinition = drafts[kind];
   // The learn page, read inside the dialog (a modal covers the learn drawer); the form stays.
   // The page shown ('slug' or 'slug#heading'), or null for the form.
   const [learning, setLearning] = useState<string | null>(null);
@@ -128,21 +175,31 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
     };
   }, [stored]);
 
-  // Name, full name, seed and first price are shared by both drafts.
+  // Name, full name, seed and first price are shared by every draft.
   const setCommon = (change: Partial<Common>) => {
     setScenarioDraft((d) => ({ ...d, ...change }));
     setDwellingDraft((d) => ({ ...d, ...change }));
+    setParametricDraft((d) => ({ ...d, ...change }));
+    setError(null);
+  };
+  // The length, first date and currency by the lab scenario's and the parametric draft.
+  const setDated = (change: Partial<Dated>) => {
+    const next = { ...dated(def.kind === 'dwelling' ? scenarioDraft : def), ...change };
+    // Until a first date is picked, the series keeps ending on the last weekday before today
+    // (for a length in range only: the count walks day by day).
+    if (change.bars !== undefined && !dateTouched && barsInRange(next.bars)) {
+      next.firstDate = firstDateEndingBefore(today(), next.bars);
+    }
+    setScenarioDraft((d) => ({ ...d, ...next }));
+    setParametricDraft((d) => ({ ...d, ...next }));
     setError(null);
   };
   const setScenario = (change: Partial<ScenarioDefinition>) => {
-    setScenarioDraft((d) => {
-      const next = { ...d, ...change };
-      // Until a first date is picked, the series keeps ending on the last weekday before today
-      // (for a length in range only: the count walks day by day).
-      return change.bars !== undefined && !dateTouched && barsInRange(next.bars)
-        ? { ...next, firstDate: firstDateEndingBefore(today(), next.bars) }
-        : next;
-    });
+    setScenarioDraft((d) => ({ ...d, ...change }));
+    setError(null);
+  };
+  const setShape = (change: Partial<ReturnShape>) => {
+    setParametricDraft((d) => ({ ...d, ...change }));
     setError(null);
   };
   const setDwelling = (change: Partial<DwellingDefinition>) => {
@@ -238,9 +295,12 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
     );
   }
 
+  const datedDef = def.kind === 'dwelling' ? null : def;
   const last =
-    def.kind === 'scenario' && /^\d{4}-\d{2}-\d{2}$/.test(def.firstDate) && barsInRange(def.bars)
-      ? lastDate(def.firstDate, def.bars)
+    datedDef !== null &&
+    /^\d{4}-\d{2}-\d{2}$/.test(datedDef.firstDate) &&
+    barsInRange(datedDef.bars)
+      ? lastDate(datedDef.firstDate, datedDef.bars)
       : '';
   const scenario = SCENARIOS.find((s) => s.id === scenarioDraft.scenario);
   return (
@@ -265,9 +325,12 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
           </LearnNavigation>
         </div>
       )}
+      {/* The form's own checks (definitionProblem) say what is wrong, not the browser's: a
+          typed 7.3 % or 2.1 degrees of freedom is off the spinner's steps but valid. */}
       <form
         className={styles.form}
         hidden={learning !== null}
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           void save();
@@ -281,12 +344,15 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             value={kind}
             disabled={editing}
             onChange={(event) => {
-              setKind(event.target.value === 'dwelling' ? 'dwelling' : 'scenario');
+              setKind(KINDS.find((k) => k.id === event.target.value)?.id ?? 'scenario');
               setError(null);
             }}
           >
-            <option value="scenario">Lab scenario</option>
-            <option value="dwelling">Dwelling prices (CBS)</option>
+            {KINDS.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className={styles.field}>
@@ -328,7 +394,7 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             }}
           />
         </div>
-        {kind === 'scenario' ? (
+        {kind === 'scenario' && (
           <>
             <div className={styles.field}>
               <label htmlFor="synthetic-scenario">Scenario</label>
@@ -349,7 +415,8 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             </div>
             {scenario && <p className={styles.hint}>{scenario.hint}</p>}
           </>
-        ) : (
+        )}
+        {kind === 'dwelling' && (
           <div className={styles.field}>
             <label htmlFor="synthetic-series">Index</label>
             <select
@@ -383,7 +450,7 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             }}
           />
         </div>
-        {kind === 'scenario' ? (
+        {datedDef !== null ? (
           <>
             <div className={styles.field}>
               <label htmlFor="synthetic-bars">Bars (days)</label>
@@ -394,9 +461,9 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
                 min={MIN_BARS}
                 max={MAX_BARS}
                 step={1}
-                value={scenarioDraft.bars}
+                value={datedDef.bars}
                 onChange={(event) => {
-                  setScenario({ bars: event.target.valueAsNumber });
+                  setDated({ bars: event.target.valueAsNumber });
                 }}
               />
             </div>
@@ -406,12 +473,12 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
                 id="synthetic-first-date"
                 className={panel.control}
                 type="date"
-                value={scenarioDraft.firstDate}
+                value={datedDef.firstDate}
                 min={FIRST_DAY}
                 max={today()}
                 onChange={(event) => {
                   setDateTouched(true);
-                  setScenario({ firstDate: event.target.value });
+                  setDated({ firstDate: event.target.value });
                 }}
               />
             </div>
@@ -480,21 +547,30 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
             }}
           />
         </div>
-        {kind === 'scenario' && (
+        {datedDef !== null && (
           <div className={styles.field}>
             <label htmlFor="synthetic-currency">Currency</label>
             <select
               id="synthetic-currency"
               className={panel.control}
-              value={scenarioDraft.currency}
+              value={datedDef.currency}
               onChange={(event) => {
-                setScenario({ currency: event.target.value as Currency });
+                setDated({ currency: event.target.value as Currency });
               }}
             >
               <option value="ILS">ILS</option>
               <option value="USD">USD</option>
             </select>
           </div>
+        )}
+        {kind === 'parametric' && (
+          <ParametricFields
+            shape={parametricDraft}
+            seed={parametricDraft.seed}
+            bars={parametricDraft.bars}
+            problem={previewProblem(parametricDraft)}
+            onChange={setShape}
+          />
         )}
         <p className={styles.hint}>
           {kind === 'dwelling'
@@ -504,6 +580,8 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
               : 'The close runs between month dates, so a day already knows the next month. '
             : last && `Ends on ${last}. `}
           {kind === 'dwelling' && 'In shekels, no volume; the index sets the dates. '}
+          {kind === 'parametric' &&
+            'Each day draws its return; a jump shows as a gap at the open. '}
           Each day has seven 1h bars, 09:30–16:00 New York.{' '}
           <button
             type="button"

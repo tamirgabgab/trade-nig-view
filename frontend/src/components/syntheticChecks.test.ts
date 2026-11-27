@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SyntheticDefinition } from '../api/synthetic.ts';
+import type { ParametricDefinition, SyntheticDefinition } from '../api/synthetic.ts';
 import {
   addWeekdays,
   definitionProblem,
   firstDateEndingBefore,
   lastDate,
+  previewProblem,
 } from './syntheticChecks.ts';
 
 describe('synthetic symbol dates', () => {
@@ -96,5 +97,63 @@ describe('dwelling definition checks', () => {
     [{ firstPrice: 0 }, /price/],
   ])('rejects %o', (change, message) => {
     expect(definitionProblem({ ...home, ...change }, '2026-11-27')).toMatch(message);
+  });
+});
+
+describe('parametric definition checks', () => {
+  const stats: ParametricDefinition = {
+    kind: 'parametric',
+    name: 'STAT',
+    fullName: 'Parametric',
+    seed: 1,
+    firstPrice: 100,
+    firstDate: '2015-01-02',
+    bars: 1000,
+    currency: 'ILS',
+    meanPct: 7,
+    volPct: 18,
+    distribution: 'normal',
+    df: 5,
+    skew: -4,
+    exact: false,
+    memory: 0,
+    jumpsPerYear: 0,
+    jumpMeanPct: -5,
+    jumpSdPct: 5,
+    garchAlpha: 0,
+    garchBeta: 0,
+  };
+
+  it('accepts the defaults and every layer within its range', () => {
+    expect(definitionProblem(stats, '2026-11-27')).toBeNull();
+    const layered = { ...stats, memory: 0.3, jumpsPerYear: 4, garchAlpha: 0.08, garchBeta: 0.9 };
+    expect(definitionProblem(layered, '2026-11-27')).toBeNull();
+    expect(previewProblem({ ...layered, name: '' })).toBeNull();
+  });
+
+  it.each([
+    [{ meanPct: 101 }, /Expected return/],
+    [{ volPct: 0.5 }, /Volatility/],
+    [{ distribution: 'student_t' as const, df: 2 }, /Degrees of freedom/],
+    // Checked whatever the family, as the backend does.
+    [{ df: 2 }, /Degrees of freedom/],
+    [{ skew: 21 }, /Skew/],
+    [{ memory: 0.95 }, /Memory/],
+    [{ jumpsPerYear: 51 }, /Jumps/],
+    [{ jumpSdPct: -1 }, /Jump size/],
+    [{ garchAlpha: 0.2, garchBeta: 0.8 }, /below 1/],
+    [{ garchBeta: 1 }, /GARCH/],
+    // 20 jumps of 10 % spread a year: a variance of 0.2, above 0.18^2.
+    [{ jumpsPerYear: 20, jumpSdPct: 10 }, /jumps carry/],
+    [{ bars: 99 }, /Bars/],
+    [{ firstDate: '2026-01-01' }, /not before today/],
+  ])('rejects %o', (change, message) => {
+    expect(definitionProblem({ ...stats, ...change }, '2026-11-27')).toMatch(message);
+  });
+
+  it('draws no preview for a bad seed, length or statistic, whatever the name', () => {
+    expect(previewProblem({ ...stats, seed: 1.5 })).toMatch(/Seed/);
+    expect(previewProblem({ ...stats, bars: 10_001 })).toMatch(/Bars/);
+    expect(previewProblem({ ...stats, volPct: Number.NaN })).toMatch(/Volatility/);
   });
 });

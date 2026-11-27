@@ -7,16 +7,20 @@ symbol: on the chart, in Compare, in a watchlist, in the Planner's mix. It is ma
 ## What it answers
 
 *"What does a pure random walk look like on a chart, next to a real stock? How did dwelling prices move against the
-S&P 500, on the same axis? Does my rule still work on a series with the same statistics but another history?"*
+S&P 500, on the same axis? What does a stock of 7 % a year, 18 % volatility and fat tails look like, and does my rule
+still work on it?"*
 
-Two kinds exist today:
+Three kinds exist today:
 
 - **A lab scenario**: one of the learn lab's eight scenarios (random walk, uptrend, range, reversal, shock,
   volatility regime, accumulation, regimes), from a seed, a first date, a first price and a length.
 - **Dwelling prices**: the CBS dwelling price index (Israel from 1994, or a district from 2017-10) as the close,
   with a little noise around it.
+- **Statistics (parametric)**: daily returns drawn from what you set: the expected yearly return, the yearly
+  volatility, one of five families for the daily shock (normal, Student-t, uniform, Laplace, skew-normal), and three
+  optional layers (memory, volatility clusters, jumps).
 
-Both have 1h, 4h, daily, weekly and monthly bars, Monday to Friday, seven 1h bars a day from 09:30 to 16:00 New York.
+All have 1h, 4h, daily, weekly and monthly bars, Monday to Friday, seven 1h bars a day from 09:30 to 16:00 New York.
 
 ## Formula
 
@@ -97,6 +101,129 @@ $$
 Each segment draws its own numbers, so a month added to the data leaves every earlier bar as it was. With
 $\sigma = 0$ the close is the plain interpolation (or the plain steps).
 
+### The day's return: a parametric symbol
+
+A parametric symbol draws each day's simple return $R_t$ from the statistics you set. With the layers off:
+
+$$
+C_t = C_{t-1}\,(1 + R_t), \qquad R_t = m + \sqrt{q}\, z_t, \qquad (1 + m)^N = 1 + \mu,
+\qquad q = \frac{\sigma^2}{n}
+$$
+
+| Symbol | Meaning | Units / typical range |
+|---|---|---|
+| $C_t$ | the day's close ($C_0 = P_0$, the first price) | price |
+| $R_t$ | the day's simple return | about ±3 % |
+| $\mu$ | the expected simple return of a year | −50 to 100 %, 7 % by default |
+| $\sigma$ | the yearly volatility: the standard deviation of a year's summed daily returns | 1 to 100 %, 18 % by default |
+| $N$ | the bars in an average year, 365.25 × 5/7 weekdays | 260.89 |
+| $n$ | $N$ rounded: the days a year's sum adds up | 261 |
+| $m$ | the daily mean that compounds to $\mu$ over $N$ bars | % a day |
+| $q$ | the shock's daily variance | (% a day)² |
+| $z_t$ | the day's shock, mean 0 and variance 1, from the family you pick | about −3 to 3 |
+
+The shocks have mean 0 and the days are independent, so $E\big[\prod_t (1 + R_t)\big] = (1 + m)^N = 1 + \mu$ exactly
+over a year: $\mu$ is the expected simple return of a year, an average over many paths (a typical path earns less,
+by about $\sigma^2/2$ in log terms).
+
+### The shocks: five families
+
+Each family is drawn, then shifted and scaled to mean 0 and variance 1, so $\sigma$ alone sets the spread and the
+family only the shape:
+
+$$
+z^{t} = t_\nu \sqrt{\frac{\nu - 2}{\nu}}, \qquad z^{U} \sim U(-\sqrt3, \sqrt3), \qquad
+z^{L} \sim \operatorname{Laplace}\big(0, 1/\sqrt2\big), \qquad
+z^{SN} = \frac{\delta\, \lvert u_0 \rvert + \sqrt{1 - \delta^2}\, u_1 - \delta\sqrt{2/\pi}}{\sqrt{1 - 2\delta^2/\pi}},
+\quad \delta = \frac{\alpha}{\sqrt{1 + \alpha^2}}
+$$
+
+| Symbol | Meaning | Units / typical range |
+|---|---|---|
+| $t_\nu$ | a Student-t draw with $\nu$ degrees of freedom (variance $\nu/(\nu-2)$ before scaling) | about −5 to 5 |
+| $\nu$ | degrees of freedom: the lower, the fatter the tails; above 2 for a finite variance | 2 to 100, 5 by default |
+| $U(a, b)$ | uniform between $a$ and $b$ | — |
+| $\operatorname{Laplace}(0, s)$ | the double exponential of scale $s$ (variance $2s^2$) | — |
+| $\alpha$ | the skew-normal's shape: negative, a long left tail | −20 to 20, −4 by default |
+| $\delta$ | $\alpha / \sqrt{1 + \alpha^2}$ | −1 to 1 |
+| $u_0$, $u_1$ | two standard normal draws | about −3 to 3 |
+
+What each family gives the daily shock (with $b = \delta\sqrt{2/\pi}$):
+
+| Family | Shape | Skewness | Excess kurtosis |
+|---|---|---|---|
+| Normal | the bell curve, thin tails | 0 | 0 |
+| Student-t | more quiet days and more huge ones | 0 | $6/(\nu - 4)$; infinite for $\nu \le 4$ |
+| Uniform | a flat band, nothing beyond it | 0 | −1.2 |
+| Laplace | a sharp peak, exponential tails | 0 | 3 |
+| Skew-normal | lopsided, at most about ±1 of skewness | $\frac{4 - \pi}{2}\, b^3 / (1 - b^2)^{3/2}$ | $2(\pi - 3)\, b^4 / (1 - b^2)^2$ |
+
+### The layers: memory, volatility clusters, jumps
+
+Three layers can sit on the shocks, each off by default:
+
+$$
+R_t = m + D_t + J_t, \qquad D_t = \varphi\, D_{t-1} + e_t, \qquad e_t = \sqrt{h_t}\, z_t, \qquad
+h_{t+1} = q\,(1 - a - b) + a\, e_t^2 + b\, h_t
+$$
+
+$$
+J_t = k_t\, \mu_J + \sqrt{k_t}\, \sigma_J\, y_t - \frac{\lambda}{N}\, \mu_J,
+\qquad k_t \sim \operatorname{Poisson}(\lambda / N)
+$$
+
+| Symbol | Meaning | Units / typical range |
+|---|---|---|
+| $D_t$ | the diffusion: the day's move without jumps ($D_0 = e_0 / \sqrt{1 - \varphi^2}$) | % a day |
+| $\varphi$ | memory, AR(1): the share of yesterday's move carried into today | −0.9 to 0.9, 0 by default |
+| $e_t$ | the day's innovation | % a day |
+| $h_t$ | its variance, GARCH(1,1), from its long-run value ($h_0 = q$) | (% a day)² |
+| $a$, $b$ | GARCH: how much a big day raises the next day's variance, and how long that lasts ($a + b < 1$) | 0 to 0.5; 0 to 0.99 |
+| $J_t$ | the day's jumps, less their expected sum (compensated, so they do not move $\mu$) | % |
+| $k_t$ | the jumps that day | 0, rarely 1 |
+| $\lambda$ | jumps a year | 0 to 50, 0 by default |
+| $\mu_J$, $\sigma_J$ | a jump's mean and standard deviation | −5 % and 5 % by default |
+| $y_t$ | a standard normal draw for the jump's size | about −3 to 3 |
+
+The layers keep $\mu$ and $\sigma$: the jumps take their share of a year's variance, the diffusion the rest, and
+memory spreads the diffusion's share over the year's covariances:
+
+$$
+\sigma^2 = \lambda\,(\mu_J^2 + \sigma_J^2) + \gamma_0 K, \qquad K = n + 2C, \qquad
+C = \sum_{k=1}^{n-1} (n - k)\, \varphi^k, \qquad q = \gamma_0\,(1 - \varphi^2), \qquad
+(1 + m)^N = \frac{1 + \mu}{1 + \gamma_0 C / (1 + m_0)^2}
+$$
+
+| Symbol | Meaning | Units / typical range |
+|---|---|---|
+| $\gamma_0$ | the diffusion's daily variance | (% a day)² |
+| $K$ | a year's variance of the diffusion, in units of $\gamma_0$: $n$ without memory | about $n(1+\varphi)/(1-\varphi)$ |
+| $C$ | the year's covariances between days, in units of $\gamma_0$ | 0 without memory |
+| $m_0$ | the daily mean without memory, $(1 + m_0)^N = 1 + \mu$ | % a day |
+
+Without memory the diffusion and the jumps are martingale differences, and $\mu$ holds exactly; with memory the
+year's covariances enter the product of the days, and $m$ holds $\mu$ to second order. GARCH moves the variance from
+day to day around $q$, not its average, so $\sigma$ holds with it too.
+
+### Exact in this path, and the floor
+
+By default $\mu$ and $\sigma$ are what the path is drawn from: one path lands near them, not on them. **Exact in this
+path** shifts and scales the whole path so its own daily mean and standard deviation are the targets:
+
+$$
+R_t \leftarrow m + (R_t - \bar R)\,\frac{s}{\hat s}, \qquad
+s^2 = \gamma_0 + \frac{\lambda}{N}\,(\mu_J^2 + \sigma_J^2), \qquad 1 + R_t \ge 0.01
+$$
+
+| Symbol | Meaning | Units / typical range |
+|---|---|---|
+| $\bar R$, $\hat s$ | the path's own mean and standard deviation of its daily returns | % a day |
+| $s$ | the targeted daily standard deviation | % a day |
+
+The shape, the clusters and the jumps stay, scaled. Since the whole path sets $\bar R$ and $\hat s$, a longer exact
+path is not the shorter one extended (without Exact, it is). The last rule is the **floor**: a day falls 99 % at
+most. With sane statistics it never binds; the dialog's preview counts the days it does.
+
 ### The hours and the bars
 
 A day's seven 1h bars run from its open to its close along a second bridge scaled by the day's volatility, with
@@ -107,8 +234,18 @@ $$
 H = \max_h H_h, \qquad L = \min_h L_h, \qquad O = O_{h=1}, \qquad C = C_{h=7}
 $$
 
+For a parametric symbol the hours use the day's diffusion standard deviation $\sqrt{h_t}$, the day's jumps show as a
+gap at the open, and the volume grows with the day's move:
+
+$$
+O_t = C_{t-1}\, e^{\eta_t \sqrt{h_t} / 4}\, \max\big(1 + k_t \mu_J + \sqrt{k_t}\, \sigma_J\, y_t,\ 0.05\big),
+\qquad V_t = V_0\, e^{0.3\, \xi_t + 20\, \lvert \ln (C_t / C_{t-1}) \rvert}
+$$
+
 | Symbol | Meaning | Units / typical range |
 |---|---|---|
+| $V_t$, $V_0$ | the day's volume, and its base | shares |
+| $\xi_t$ | a standard normal draw of the day (the volume's own noise) | about −3 to 3 |
 | $h$ | the day's 1h bar, 1 (09:30) to 7 (15:30, half an hour) | 1 to 7 |
 | $O_h$, $H_h$, $L_h$, $C_h$ | that bar's open, high, low and close | price |
 | $O$, $H$, $L$, $C$ | the daily bar | price |
@@ -126,6 +263,20 @@ price of 100 and no noise:
 - **The noise** at 0.2 % a day, in a month of $\tau = 22$ weekdays, is widest in the middle: at $k = 11$ its
   standard deviation is $0.2\,\% \cdot \sqrt{11 \cdot 11 / 22} \approx 0.47\,\%$, and it is 0 on the month dates.
 
+A parametric symbol with the defaults, $\mu = 7\,\%$, $\sigma = 18\,\%$, normal, no layers:
+
+- **The day**: $N = 260.89$ and $n = 261$, so $m = 1.07^{1/N} - 1 = 0.0259\,\%$ a day and
+  $\sqrt{q} = 18\,\% / \sqrt{261} = 1.114\,\%$ a day. A day with $z = -2$ returns
+  $0.0259\,\% - 2 \cdot 1.114\,\% = -2.20\,\%$: from 100 to 97.80.
+- **Student-t** with $\nu = 5$: each draw is multiplied by $\sqrt{3/5} = 0.775$, so its variance is 1 again, and
+  its excess kurtosis is $6 / (5 - 4) = 6$.
+- **Memory** $\varphi = 0.3$: $K = 483.5$ instead of 261, so the daily standard deviation falls to
+  $18\,\% / \sqrt{483.5} = 0.819\,\%$ (days that follow each other add up to more over a year) and $m$ to
+  $0.0231\,\%$.
+- **Jumps**, 4 a year of $N(-6\,\%, 4\,\%)$: they carry $4 \cdot (0.06^2 + 0.04^2) = 0.0208$ of
+  $\sigma^2 = 0.0324$; the diffusion keeps 0.0116 ($10.8\,\%$ a year, $0.667\,\%$ a day), and every day adds back
+  $4 / N \cdot 6\,\% = 0.092\,\%$.
+
 ## How to read it
 
 - **Only the close of a dwelling symbol carries information**, and only on the month dates (interpolated) or the
@@ -138,6 +289,15 @@ price of 100 and no noise:
   out would have gained, not the whole return of an apartment ([the apartment's ledger](learn:rent-or-buy)).
 - A lab scenario is the learn lab's, so what each one shows is told there; the same seed gives another path here,
   because the bars are built from hours.
+- **A parametric symbol's $\mu$ is an average over many paths.** One path of ten years can end far from it: a year's
+  return spreads by about $\sigma$. For a path whose own numbers are the targets, pick *Exact in this path*.
+- **The family shapes the days, not the years**: summed over a year, fat-tailed days mostly average out, unless
+  GARCH keeps big days together. The preview's drawn skewness and kurtosis are the days'; the asked ones are the
+  family's, and the layers add their own (negative jumps add negative skewness and kurtosis).
+- **A Student-t with $\nu \le 4$ has no finite kurtosis**: the drawn kurtosis grows with the path instead of
+  settling, and the preview shows ∞ as the asked value.
+- **With memory, $\sigma$ is a whole year's spread**: the daily moves are smaller ($\varphi > 0$) or larger
+  ($\varphi < 0$) than $\sigma / \sqrt{N}$, and the preview's "daily σ × √year" differs from $\sigma$ on purpose.
 
 ## Where it comes from
 
@@ -146,10 +306,19 @@ Bank of Israel republishes (`app/macro`). The bridge is the standard constructio
 ends: for a walk $W$ over $\tau$ steps, $W_k - \frac{k}{\tau} W_\tau$ is independent of $W_\tau$, starts and ends at
 zero, and has the variance above. The same bridge, at the scale of hours, runs each day from its open to its close.
 
+The parametric families and layers are the textbook ones: Student's t (W. S. Gosset, 1908), the skew-normal
+(A. Azzalini, 1985), jumps on a diffusion (R. C. Merton, 1976), GARCH(1,1) volatility clusters (T. Bollerslev,
+1986) and the AR(1) process. The variance of a year's sum of an AR(1) is the sum of its autocovariances
+$\gamma_0 \varphi^{\lvert i - j \rvert}$ over every pair of days, which is $\gamma_0 K$.
+
 ## Limits
 
 - A dwelling symbol is no apartment: no rent, no costs, no taxes, and a far smoother path than a single home.
 - The causal series assumes one publication lag for every month; the real dates move around it.
 - The CBS revises its latest months: the end of a dwelling symbol can change when it does.
-- The intraday bars of both kinds are invented; a dwelling symbol's hours carry nothing at all.
+- A parametric symbol has the statistics you give it and nothing else: no earnings, no regimes beyond GARCH's
+  clusters, no link to any market. Its volume is invented from its moves.
+- With memory, $\mu$ holds to second order; Exact makes the path's own numbers the targets but changes every bar
+  when the length changes.
+- The intraday bars of every kind are invented; a dwelling symbol's hours carry nothing at all.
 - The calendar is Monday to Friday, without holidays.

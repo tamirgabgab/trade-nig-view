@@ -275,3 +275,26 @@ def test_bars_are_valid_and_aggregate_their_hours(
 def test_inconsistent_statistics_are_refused(changes: dict[str, object], message: str) -> None:
     with pytest.raises(ValueError, match=message):
         shape(**changes)
+
+
+def test_the_learn_pages_worked_example() -> None:
+    # docs/indicators/synthetic-symbols.md, the parametric symbol with the defaults.
+    n = round(YEAR_BARS)
+    assert (round(YEAR_BARS, 2), n) == (260.89, 261)
+    t = targets(shape())
+    assert round(t.m * 100, 4) == 0.0259
+    assert round(math.sqrt(t.q) * 100, 3) == 1.114
+    day = t.m - 2 * math.sqrt(t.q)
+    assert (round(day * 100, 2), round(100 * (1 + day), 2)) == (-2.20, 97.80)
+    assert round(math.sqrt(3 / 5), 3) == 0.775
+    assert family_moments(shape(distribution="student_t", df=5.0)) == (0.0, 6.0)
+    memory = targets(shape(memory=0.3))
+    k = n + 2 * sum((n - j) * 0.3**j for j in range(1, n))
+    assert round(k, 1) == 483.5
+    assert round(math.sqrt(memory.gamma0) * 100, 3) == 0.819
+    assert round(memory.m * 100, 4) == 0.0231
+    jumps = targets(shape(jumps_per_year=4.0, jump_mean_pct=-6.0, jump_sd_pct=4.0))
+    assert round(jumps.gamma0 * n, 4) == 0.0116
+    assert round(math.sqrt(jumps.gamma0 * n) * 100, 1) == 10.8
+    assert round(math.sqrt(jumps.gamma0) * 100, 3) == 0.667
+    assert round(jumps.jump_rate * 6, 3) == 0.092

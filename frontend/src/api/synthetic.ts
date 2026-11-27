@@ -1,8 +1,10 @@
-import { apiDelete, apiGet, apiPut, fieldsOf, isRecord, type Schemas } from './client.ts';
+import { keepPreviousData, skipToken, useQuery } from '@tanstack/react-query';
+
+import { apiDelete, apiGet, apiPost, apiPut, fieldsOf, isRecord, type Schemas } from './client.ts';
 import { SCENARIOS, type Scenario } from './lab.ts';
 import type { SymbolInfo } from './market.ts';
 
-/** Synthetic symbols (Phase K, ADR 0031, 0032): invented series served like market data. */
+/** Synthetic symbols (Phase K, ADR 0031 to 0033): invented series served like market data. */
 
 export const SYNTHETIC_PREFIX = 'SYN:';
 /** The part after `SYN:`: a letter, then letters, digits, `.`, `-` or `_` (12 at most). */
@@ -52,7 +54,76 @@ export interface DwellingDefinition extends Common {
   lagMonths: number;
 }
 
-export type SyntheticDefinition = ScenarioDefinition | DwellingDefinition;
+/** The families of a parametric symbol's daily shocks (K2), standardised to mean 0, variance 1. */
+export const DISTRIBUTIONS = [
+  { id: 'normal', label: 'Normal', hint: 'The bell curve: thin tails, a 4-sigma day is rare.' },
+  {
+    id: 'student_t',
+    label: 'Student-t (fat tails)',
+    hint: 'Fat tails: big days far more often; the fewer degrees of freedom, the fatter.',
+  },
+  {
+    id: 'uniform',
+    label: 'Uniform (no tails)',
+    hint: 'Every return in a band equally likely, nothing beyond it.',
+  },
+  {
+    id: 'laplace',
+    label: 'Laplace (sharp peak)',
+    hint: 'Many quiet days around a sharp peak, and exponential tails.',
+  },
+  {
+    id: 'skew_normal',
+    label: 'Skew-normal',
+    hint: 'Lopsided: a negative skew gives rare deep falls and frequent small rises.',
+  },
+] as const;
+export type Distribution = (typeof DISTRIBUTIONS)[number]['id'];
+
+/** A parametric symbol's daily return (K2): its family, its yearly mean and volatility, and the
+ *  layers on top. Percentages as typed (7 = 7 %). */
+export interface ReturnShape {
+  meanPct: number;
+  volPct: number;
+  distribution: Distribution;
+  df: number;
+  skew: number;
+  /** The path's own mean and standard deviation are the targets (else the distribution's). */
+  exact: boolean;
+  memory: number;
+  jumpsPerYear: number;
+  jumpMeanPct: number;
+  jumpSdPct: number;
+  garchAlpha: number;
+  garchBeta: number;
+}
+
+/** Drawn from the user's statistics (K2). */
+export interface ParametricDefinition extends Common, ReturnShape {
+  kind: 'parametric';
+  /** 'YYYY-MM-DD' */
+  firstDate: string;
+  bars: number;
+  currency: Currency;
+}
+
+export type SyntheticDefinition = ScenarioDefinition | DwellingDefinition | ParametricDefinition;
+
+/** What the dialog's preview shows (POST /api/synthetic/preview). */
+export interface ReturnPreview {
+  edges: number[];
+  counts: number[];
+  curveX: number[];
+  curveCounts: number[];
+  meanPct: number;
+  volPct: number;
+  skewness: number;
+  excessKurtosis: number;
+  familySkewness: number;
+  /** null: infinite (a Student-t with 4 degrees of freedom or fewer). */
+  familyExcessKurtosis: number | null;
+  floored: number;
+}
 
 export interface SyntheticSymbol {
   symbol: string;
@@ -104,6 +175,32 @@ function parseDefinition(body: Record<string, unknown>): SyntheticDefinition {
     seed: num(body['seed'], 'seed'),
     firstPrice: num(body['first_price'], 'first_price'),
   };
+  if (body['kind'] === 'parametric') {
+    const def = fieldsOf<Schemas['ParametricDefinition']>(body);
+    const distribution = def('distribution');
+    if (!DISTRIBUTIONS.some((d) => d.id === distribution)) {
+      throw new Error(`Unknown distribution ${String(distribution)}`);
+    }
+    return {
+      ...common,
+      kind: 'parametric',
+      firstDate: str(def('first_date'), 'first_date'),
+      bars: num(def('bars'), 'bars'),
+      currency: def('currency') === 'USD' ? 'USD' : 'ILS',
+      meanPct: num(def('mean_pct'), 'mean_pct'),
+      volPct: num(def('vol_pct'), 'vol_pct'),
+      distribution: distribution as Distribution,
+      df: num(def('df'), 'df'),
+      skew: num(def('skew'), 'skew'),
+      exact: def('exact') === true,
+      memory: num(def('memory'), 'memory'),
+      jumpsPerYear: num(def('jumps_per_year'), 'jumps_per_year'),
+      jumpMeanPct: num(def('jump_mean_pct'), 'jump_mean_pct'),
+      jumpSdPct: num(def('jump_sd_pct'), 'jump_sd_pct'),
+      garchAlpha: num(def('garch_alpha'), 'garch_alpha'),
+      garchBeta: num(def('garch_beta'), 'garch_beta'),
+    };
+  }
   if (body['kind'] === 'dwelling') {
     const def = fieldsOf<Schemas['DwellingDefinition']>(body);
     const series = def('series');
@@ -162,25 +259,35 @@ export function getReferences(symbol: string): Promise<SyntheticReferences> {
   return apiGet(`${path(symbol)}/references`, parseReferences);
 }
 
+function shapeToWire(shape: ReturnShape) {
+  return {
+    mean_pct: shape.meanPct,
+    vol_pct: shape.volPct,
+    distribution: shape.distribution,
+    df: shape.df,
+    skew: shape.skew,
+    exact: shape.exact,
+    memory: shape.memory,
+    jumps_per_year: shape.jumpsPerYear,
+    jump_mean_pct: shape.jumpMeanPct,
+    jump_sd_pct: shape.jumpSdPct,
+    garch_alpha: shape.garchAlpha,
+    garch_beta: shape.garchBeta,
+  };
+}
+
 function toWire(
   def: SyntheticDefinition,
-): Schemas['ScenarioDefinition'] | Schemas['DwellingDefinition'] {
+): Schemas['ScenarioDefinition'] | Schemas['DwellingDefinition'] | Schemas['ParametricDefinition'] {
   const common = {
     name: def.name,
     full_name: def.fullName,
     seed: def.seed,
     first_price: def.firstPrice,
   };
-  return def.kind === 'dwelling'
-    ? {
-        ...common,
-        kind: 'dwelling',
-        series: def.series,
-        noise_pct: def.noisePct,
-        causal: def.causal,
-        lag_months: def.lagMonths,
-      }
-    : {
+  switch (def.kind) {
+    case 'scenario':
+      return {
         ...common,
         kind: 'scenario',
         scenario: def.scenario,
@@ -188,6 +295,74 @@ function toWire(
         bars: def.bars,
         currency: def.currency,
       };
+    case 'dwelling':
+      return {
+        ...common,
+        kind: 'dwelling',
+        series: def.series,
+        noise_pct: def.noisePct,
+        causal: def.causal,
+        lag_months: def.lagMonths,
+      };
+    case 'parametric':
+      return {
+        ...common,
+        ...shapeToWire(def),
+        kind: 'parametric',
+        first_date: def.firstDate,
+        bars: def.bars,
+        currency: def.currency,
+      };
+    default: {
+      const never: never = def;
+      throw new Error(`Unknown kind ${String(never)}`);
+    }
+  }
+}
+
+function parsePreview(body: unknown): ReturnPreview {
+  if (!isRecord(body)) throw new Error('Unexpected preview response');
+  const field = fieldsOf<Schemas['PreviewOut']>(body);
+  const numbers = (value: unknown) =>
+    Array.isArray(value) ? value.filter((x): x is number => typeof x === 'number') : [];
+  const kurtosis = field('family_excess_kurtosis');
+  return {
+    edges: numbers(field('edges')),
+    counts: numbers(field('counts')),
+    curveX: numbers(field('curve_x')),
+    curveCounts: numbers(field('curve_counts')),
+    meanPct: num(field('mean_pct'), 'mean_pct'),
+    volPct: num(field('vol_pct'), 'vol_pct'),
+    skewness: num(field('skewness'), 'skewness'),
+    excessKurtosis: num(field('excess_kurtosis'), 'excess_kurtosis'),
+    familySkewness: num(field('family_skewness'), 'family_skewness'),
+    familyExcessKurtosis: typeof kurtosis === 'number' ? kurtosis : null,
+    floored: num(field('floored'), 'floored'),
+  };
+}
+
+/** What a parametric symbol with these statistics, seed and length draws (none for null); the
+ *  last preview stays while the next one loads. */
+export function useReturnPreview(
+  request: { shape: ReturnShape; seed: number; bars: number } | null,
+) {
+  const body =
+    request === null
+      ? null
+      : ({
+          ...shapeToWire(request.shape),
+          seed: request.seed,
+          bars: request.bars,
+        } satisfies Schemas['PreviewRequest']);
+  return useQuery({
+    queryKey: ['syntheticPreview', body],
+    queryFn:
+      body === null
+        ? skipToken
+        : ({ signal }) => apiPost('/synthetic/preview', body, parsePreview, { signal }),
+    placeholderData: keepPreviousData,
+    staleTime: Infinity,
+  });
 }
 
 /** Create (revision 0) or edit in place. */

@@ -11,21 +11,35 @@ const pct = (v: number) => `${v >= 0 ? '+' : ''}${(v * 100).toFixed(2)}%`;
 
 /**
  * A histogram of `dist` with the normal curve of the same mean and standard deviation over it
- * (expected count per bin: n x bin width x the normal density), so fat tails and skew show.
+ * (expected count per bin: n x bin width x the normal density), so fat tails and skew show; or
+ * with `curve` (expected counts at x) instead.
  */
-export function DistributionChart({ dist, label }: { dist: Distribution; label: string }) {
-  const { edges, counts, n, mean, std } = dist;
+export function DistributionChart({
+  dist,
+  label,
+  curve: given,
+}: {
+  dist: Pick<Distribution, 'edges' | 'counts'> & Partial<Pick<Distribution, 'n' | 'mean' | 'std'>>;
+  label: string;
+  curve?: readonly (readonly [number, number])[];
+}) {
+  const { edges, counts, n = 0, mean = 0, std = Number.NaN } = dist;
   const lo = edges[0] ?? 0;
   const hi = edges.at(-1) ?? 1;
   const width = (hi - lo) / Math.max(counts.length, 1);
   const normal = Number.isFinite(std) && std > 0;
-  const curve = normal
-    ? Array.from({ length: CURVE_POINTS + 1 }, (_, i) => {
-        const v = lo + ((hi - lo) * i) / CURVE_POINTS;
-        const z = (v - mean) / std;
-        return [v, (n * width * Math.exp(-0.5 * z * z)) / (std * Math.sqrt(2 * Math.PI))] as const;
-      })
-    : [];
+  const curve =
+    given ??
+    (normal
+      ? Array.from({ length: CURVE_POINTS + 1 }, (_, i) => {
+          const v = lo + ((hi - lo) * i) / CURVE_POINTS;
+          const z = (v - mean) / std;
+          return [
+            v,
+            (n * width * Math.exp(-0.5 * z * z)) / (std * Math.sqrt(2 * Math.PI)),
+          ] as const;
+        })
+      : []);
   const x = scale([lo, hi], [4, W - 4]);
   const y = scale([0, extent([...counts, ...curve.map(([, c]) => c)], 0.08)[1]], [H - BOTTOM, 4]);
 

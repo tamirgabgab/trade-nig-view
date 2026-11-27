@@ -30,6 +30,42 @@ const REFERENCES = {
   scenarios: [],
 };
 
+const PARAMETRIC = {
+  kind: 'parametric',
+  name: 'STAT',
+  full_name: 'Skewed',
+  seed: 3,
+  first_date: '2015-01-02',
+  first_price: 100,
+  bars: 1000,
+  currency: 'USD',
+  mean_pct: 7,
+  vol_pct: 18,
+  distribution: 'skew_normal',
+  df: 5,
+  skew: -2,
+  exact: false,
+  memory: 0,
+  jumps_per_year: 0,
+  jump_mean_pct: -5,
+  jump_sd_pct: 5,
+  garch_alpha: 0,
+  garch_beta: 0,
+};
+const PREVIEW = {
+  edges: [-0.02, -0.01, 0, 0.01, 0.02],
+  counts: [10, 400, 480, 9],
+  curve_x: [-0.02, 0, 0.02],
+  curve_counts: [5, 450, 5],
+  mean_pct: 6.8,
+  vol_pct: 18.2,
+  skewness: 0.01,
+  excess_kurtosis: 4.2,
+  family_skewness: 0,
+  family_excess_kurtosis: null,
+  floored: 0,
+};
+
 let calls: { method: string; path: string; body: unknown }[] = [];
 
 function api(putStatus = 200) {
@@ -42,6 +78,10 @@ function api(putStatus = 200) {
       return jsonResponse(STORED);
     },
     '/api/synthetic/SYN%3AWALK/references': { body: REFERENCES },
+    '/api/synthetic/preview': (url, init) => {
+      calls.push({ method: 'POST', path: url.pathname, body: init?.body ?? null });
+      return jsonResponse(PREVIEW);
+    },
     '/api/synthetic/SYN%3ANEW1': (url, init) => {
       calls.push({ method: init?.method ?? 'GET', path: url.pathname, body: init?.body ?? null });
       return putStatus === 200
@@ -259,6 +299,97 @@ describe('SyntheticSymbolDialog', () => {
         first_price: 100,
       },
     });
+  });
+
+  it("creates a parametric symbol: its statistics, the family's own field, a preview", async () => {
+    api();
+    const user = userEvent.setup();
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', '');
+    const dialog = await screen.findByRole('dialog', { name: 'New synthetic symbol' });
+    await user.type(within(dialog).getByLabelText('Name', { exact: true }), 'new1');
+    await user.type(within(dialog).getByLabelText('Full name'), 'Fat tails');
+    await user.clear(within(dialog).getByLabelText('Bars (days)'));
+    await user.type(within(dialog).getByLabelText('Bars (days)'), '1000');
+    await user.selectOptions(within(dialog).getByLabelText('Kind'), 'parametric');
+    // The length typed under the lab scenario is kept.
+    expect(within(dialog).getByLabelText('Bars (days)')).toHaveValue(1000);
+    expect(within(dialog).getByLabelText('Expected return (% a year)')).toHaveValue(7);
+    expect(within(dialog).queryByLabelText('Degrees of freedom ν')).toBeNull();
+    await user.selectOptions(within(dialog).getByLabelText('Distribution'), 'student_t');
+    await user.clear(within(dialog).getByLabelText('Degrees of freedom ν'));
+    await user.type(within(dialog).getByLabelText('Degrees of freedom ν'), '4');
+    await user.selectOptions(within(dialog).getByLabelText('Mean and σ'), 'exact');
+    await user.click(within(dialog).getByText('Layers: memory, jumps, GARCH'));
+    await user.clear(within(dialog).getByLabelText('Jumps a year λ'));
+    await user.type(within(dialog).getByLabelText('Jumps a year λ'), '2');
+
+    const preview = await within(dialog).findByRole('region', { name: 'Preview' });
+    expect(within(preview).getByRole('img')).toBeInTheDocument();
+    expect(within(preview).getByRole('row', { name: /Excess kurtosis/ })).toHaveTextContent('∞');
+    await vi.waitFor(() => {
+      const previews = calls.filter((c) => c.path === '/api/synthetic/preview');
+      expect(JSON.parse(String(previews.at(-1)?.body))).toMatchObject({
+        distribution: 'student_t',
+        df: 4,
+        bars: 1000,
+      });
+    });
+    // A statistic out of range: no preview, and why.
+    await user.clear(within(dialog).getByLabelText('Volatility σ (% a year)'));
+    await user.type(within(dialog).getByLabelText('Volatility σ (% a year)'), '0');
+    expect(within(dialog).queryByRole('region', { name: 'Preview' })).toBeNull();
+    expect(within(dialog).getByText(/No preview: Volatility/)).toBeInTheDocument();
+    await user.clear(within(dialog).getByLabelText('Volatility σ (% a year)'));
+    await user.type(within(dialog).getByLabelText('Volatility σ (% a year)'), '25');
+    await user.click(within(dialog).getByRole('button', { name: 'Create symbol' }));
+
+    await vi.waitFor(() => {
+      expect(useChartStore.getState().symbol).toBe('SYN:NEW1');
+    });
+    const put = calls.find((c) => c.method === 'PUT');
+    expect(JSON.parse(String(put?.body))).toMatchObject({
+      revision: 0,
+      definition: {
+        kind: 'parametric',
+        name: 'NEW1',
+        full_name: 'Fat tails',
+        bars: 1000,
+        mean_pct: 7,
+        vol_pct: 25,
+        distribution: 'student_t',
+        df: 4,
+        exact: true,
+        jumps_per_year: 2,
+        garch_alpha: 0,
+      },
+    });
+  });
+
+  it('edits a stored parametric symbol from its values, its layers unfolded', async () => {
+    stubApi({
+      '/api/synthetic/SYN%3ASTAT': {
+        body: {
+          symbol: 'SYN:STAT',
+          revision: 1,
+          last_date: '2018-11-01',
+          definition: {
+            ...PARAMETRIC,
+            garch_alpha: 0.05,
+            garch_beta: 0.9,
+          },
+        },
+      },
+      '/api/synthetic/SYN%3ASTAT/references': { body: { ...REFERENCES, layouts: [] } },
+      '/api/synthetic/preview': { body: PREVIEW },
+    });
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', 'SYN:STAT');
+    const dialog = await screen.findByRole('dialog', { name: 'Edit SYN:STAT' });
+    expect(await within(dialog).findByLabelText('Skew α')).toHaveValue(-2);
+    expect(within(dialog).getByLabelText('Kind')).toHaveValue('parametric');
+    expect(within(dialog).getByLabelText('GARCH β (persistence)')).toBeVisible();
+    expect(within(dialog).getByLabelText('Bars (days)')).toHaveValue(1000);
   });
 
   it('reads the learn page inside the dialog and comes back to the form as it was', async () => {
