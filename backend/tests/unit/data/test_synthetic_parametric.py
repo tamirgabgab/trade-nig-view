@@ -59,6 +59,7 @@ def test_the_shocks_have_the_family_moments(family: str) -> None:
     s = shape(**changes)
     z = standard_shocks(s, 400_000, 7)
     skew, kurt = family_moments(s)
+    assert skew is not None
     assert z.mean() == pytest.approx(0, abs=0.01)
     assert z.var() == pytest.approx(1, rel=0.01)
     assert np.mean(z**3) == pytest.approx(skew, abs=0.03)
@@ -70,7 +71,8 @@ def test_a_heavy_t_keeps_its_variance_and_has_no_finite_kurtosis() -> None:
     s = shape(distribution="student_t", df=5.0)
     assert standard_shocks(s, 400_000, 3).var() == pytest.approx(1, rel=0.05)
     assert family_moments(s) == (0.0, 6.0)
-    assert family_moments(shape(distribution="student_t", df=3.0))[1] is None
+    assert family_moments(shape(distribution="student_t", df=4.0)) == (0.0, None)
+    assert family_moments(shape(distribution="student_t", df=3.0)) == (None, None)
 
 
 @pytest.mark.parametrize("family", FAMILIES)
@@ -188,6 +190,16 @@ def test_exact_with_a_heavy_t_and_jumps() -> None:
     path = parametric_returns(s, 5000, 4)
     assert path.floored == 0
     assert path.returns.std() == pytest.approx(targets(s).s, rel=1e-12)
+
+
+def test_exact_mode_scales_the_jump_in_the_open_and_the_wicks_as_the_returns() -> None:
+    s = shape(jumps_per_year=20.0, jump_mean_pct=-3.0, jump_sd_pct=2.0)
+    raw = parametric_returns(s, 2000, 6)
+    exact = parametric_returns(s.model_copy(update={"exact": True}), 2000, 6)
+    scale = targets(s).s / raw.returns.std()
+    np.testing.assert_allclose(exact.jumps, raw.jumps * scale, rtol=1e-12)
+    np.testing.assert_allclose(exact.sigma, raw.sigma * scale, rtol=1e-12)
+    assert np.count_nonzero(raw.jumps) > 0
 
 
 def test_the_floor_catches_a_fall_of_more_than_99_percent() -> None:

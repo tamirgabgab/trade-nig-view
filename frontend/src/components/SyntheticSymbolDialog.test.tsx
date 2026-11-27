@@ -366,6 +366,39 @@ describe('SyntheticSymbolDialog', () => {
     });
   });
 
+  it('keeps the layers open while one is retyped, and a hidden family field valid', async () => {
+    api();
+    const user = userEvent.setup();
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', '');
+    const dialog = await screen.findByRole('dialog', { name: 'New synthetic symbol' });
+    await user.selectOptions(within(dialog).getByLabelText('Kind'), 'parametric');
+    await user.click(within(dialog).getByText('Layers: memory, jumps, GARCH'));
+    const jumps = within(dialog).getByLabelText('Jumps a year λ');
+    await user.clear(jumps);
+    await user.type(jumps, '2');
+    await user.clear(jumps);
+    expect(within(dialog).getByLabelText('Jumps a year λ')).toBeVisible();
+    await user.type(jumps, '0');
+    // ν typed out of range, then the family left: ν is hidden, so it goes back to its default.
+    await user.selectOptions(
+      within(dialog).getByLabelText('Distribution', { exact: true }),
+      'student_t',
+    );
+    await user.clear(within(dialog).getByLabelText('Degrees of freedom ν'));
+    expect(within(dialog).getByText(/No preview: Degrees of freedom/)).toBeInTheDocument();
+    await user.selectOptions(
+      within(dialog).getByLabelText('Distribution', { exact: true }),
+      'normal',
+    );
+    expect(within(dialog).queryByText(/No preview/)).toBeNull();
+    await user.selectOptions(
+      within(dialog).getByLabelText('Distribution', { exact: true }),
+      'student_t',
+    );
+    expect(within(dialog).getByLabelText('Degrees of freedom ν')).toHaveValue(5);
+  });
+
   it('edits a stored parametric symbol from its values, its layers unfolded', async () => {
     stubApi({
       '/api/synthetic/SYN%3ASTAT': {

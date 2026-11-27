@@ -86,13 +86,15 @@ def standard_shocks(shape: ReturnShape, n: int, seed: int) -> FloatArray:
             return (x - mean) / sd
 
 
-def family_moments(shape: ReturnShape) -> tuple[float, float | None]:
-    """The standardised family's skewness and excess kurtosis (None: infinite, t with nu <= 4)."""
+def family_moments(shape: ReturnShape) -> tuple[float | None, float | None]:
+    """The standardised family's skewness and excess kurtosis (None: no finite value, a t's
+    skewness with nu <= 3 and its kurtosis with nu <= 4)."""
     match shape.distribution:
         case "normal":
             return 0.0, 0.0
         case "student_t":
-            return 0.0, (6 / (shape.df - 4) if shape.df > 4 else None)  # noqa: PLR2004
+            skew = 0.0 if shape.df > 3 else None  # noqa: PLR2004
+            return skew, (6 / (shape.df - 4) if shape.df > 4 else None)  # noqa: PLR2004
         case "uniform":
             return 0.0, -1.2
         case "laplace":
@@ -156,7 +158,8 @@ def targets(shape: ReturnShape) -> Targets:
 @dataclass(frozen=True, slots=True)
 class ParametricPath:
     """``n`` daily simple returns, each day's diffusion standard deviation (for the hours and the
-    wicks), its raw jump (for the open), and how many days the floor caught."""
+    wicks) and its jump (for the open), both scaled as the returns are in exact mode, and how
+    many days the floor caught."""
 
     returns: FloatArray
     sigma: FloatArray
@@ -181,12 +184,14 @@ def parametric_returns(shape: ReturnShape, n: int, seed: int) -> ParametricPath:
     counts = np.random.default_rng([seed, 2]).poisson(t.jump_rate, n)
     sizes = np.random.default_rng([seed, 3]).standard_normal(n)
     mu_j, sd_j = shape.jump_mean_pct / 100, shape.jump_sd_pct / 100
-    raw_jumps = counts * mu_j + np.sqrt(counts) * sd_j * sizes
-    returns = t.m + d + raw_jumps - t.jump_rate * mu_j
+    jumps = counts * mu_j + np.sqrt(counts) * sd_j * sizes
+    returns = t.m + d + jumps - t.jump_rate * mu_j
+    scale = 1.0
     if shape.exact and n > 1:
-        returns = t.m + (returns - returns.mean()) * (t.s / returns.std())
+        scale = t.s / returns.std()
+        returns = t.m + (returns - returns.mean()) * scale
     floored = int(np.count_nonzero(returns < FLOOR))
-    return ParametricPath(np.maximum(returns, FLOOR), np.sqrt(h), raw_jumps, floored)
+    return ParametricPath(np.maximum(returns, FLOOR), np.sqrt(h) * scale, jumps * scale, floored)
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,7 +208,7 @@ class Preview:
     vol_pct: float
     skewness: float
     excess_kurtosis: float
-    family_skewness: float
+    family_skewness: float | None
     family_excess_kurtosis: float | None
     floored: int
 

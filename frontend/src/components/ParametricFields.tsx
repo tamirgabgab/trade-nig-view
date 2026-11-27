@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import {
   DISTRIBUTIONS,
   type Distribution,
@@ -26,6 +28,9 @@ const TARGETS: readonly NumberSpec[] = [
 // The spinner's lowest; a typed 2.1 is fine (the form's own checks, not the browser's).
 const DF: NumberSpec = { key: 'df', label: 'Degrees of freedom ν', min: 2.5, max: 100, step: 0.5 };
 const SKEW: NumberSpec = { key: 'skew', label: 'Skew α', min: -20, max: 20, step: 1 };
+/** What a hidden family field goes back to when it is not valid (the backend checks it anyway). */
+const DEFAULT_DF = 5;
+const DEFAULT_SKEW = -4;
 const LAYERS: readonly NumberSpec[] = [
   { key: 'memory', label: 'Memory φ (AR(1))', min: -0.9, max: 0.9, step: 0.05 },
   { key: 'jumpsPerYear', label: 'Jumps a year λ', min: 0, max: 50, step: 1 },
@@ -45,6 +50,11 @@ export function ParametricFields({
   onChange: (change: Partial<ReturnShape>) => void;
 }) {
   const problem = previewProblem(def);
+  // Open while a layer is on, at first; then only the user opens and closes it (a layer cleared
+  // to retype it must not fold the field away).
+  const [layersOpen, setLayersOpen] = useState(
+    def.memory !== 0 || def.jumpsPerYear > 0 || def.garchAlpha > 0 || def.garchBeta > 0,
+  );
   const row = (spec: NumberSpec) => (
     <div key={spec.key} className={styles.field}>
       <label htmlFor={`synthetic-${spec.key}`}>{spec.label}</label>
@@ -65,8 +75,6 @@ export function ParametricFields({
     </div>
   );
   const family = DISTRIBUTIONS.find((d) => d.id === def.distribution);
-  const layered =
-    def.memory !== 0 || def.jumpsPerYear > 0 || def.garchAlpha > 0 || def.garchBeta > 0;
   return (
     <>
       {TARGETS.map(row)}
@@ -77,7 +85,12 @@ export function ParametricFields({
           className={panel.control}
           value={def.distribution}
           onChange={(event) => {
-            onChange({ distribution: event.target.value as Distribution });
+            // The field of the family left behind is hidden: put it back to a valid value.
+            onChange({
+              distribution: event.target.value as Distribution,
+              ...(def.df > 2 && def.df <= 100 ? {} : { df: DEFAULT_DF }),
+              ...(def.skew >= -20 && def.skew <= 20 ? {} : { skew: DEFAULT_SKEW }),
+            });
           }}
         >
           {DISTRIBUTIONS.map((d) => (
@@ -104,7 +117,13 @@ export function ParametricFields({
           <option value="exact">Exact in this path</option>
         </select>
       </div>
-      <details className={styles.layers} open={layered}>
+      <details
+        className={styles.layers}
+        open={layersOpen}
+        onToggle={(event) => {
+          setLayersOpen(event.currentTarget.open);
+        }}
+      >
         <summary>Layers: memory, jumps, GARCH</summary>
         {LAYERS.map(row)}
       </details>

@@ -25,21 +25,24 @@ new part of the `synthetic-symbols` learn page; the hours as in K0; defaults μ 
   normal sizes), and the daily mean m with (1 + m)^N = 1 + μ, corrected for memory's covariances (exact without
   memory, second order with it). The formulas are in the module's docstring and on the learn page.
 - **Exact in the path**: the whole path is shifted and scaled so its own daily mean and standard deviation are the
-  targets m and s. It is not prefix-stable (the whole path sets them); without it a longer path starts with the
+  targets m and s; each day's diffusion standard deviation and jump are scaled by the same factor, so the open's gap
+  and the wicks follow the scaled close. It is not prefix-stable (the whole path sets them); without it a longer path starts with the
   shorter one (separate seeded streams per draw kind: `[seed, 1]` shocks, `[seed, 2]` counts, `[seed, 3]` sizes).
 - **The floor**: 1 + R ≥ 0.01, applied last (after Exact), counted for the preview.
 - **The bars** reuse K0's hours: seven 1h bars a day along a bridge from the open to the close, with the day's
   diffusion standard deviation √h for the wicks and the gap; the day's raw jump enters the **open** (a jump is a
   gap), floored at 5 % of the last close; the volume grows with the day's move. The daily close is exactly the
-  drawn return's.
+  drawn return's. As K0's, the hours are memoised for the last four definitions and the daily bars for every one
+  (`MAX_DEFINITIONS`), so a quote poll does not redraw them.
 - **The preview**: `POST /api/synthetic/preview` with the shape, the seed and the length (no name, nothing
   stored) returns a 40-bin histogram of the drawn daily returns over mean ± 5 sd (the tails in the end bins), the
   family's density as expected counts at 161 points, the realized yearly mean ((1 + r̄)^N − 1) and daily sd × √N,
-  the realized skewness and excess kurtosis next to the family's (null: infinite, a t with ν ≤ 4), and the floored
-  days. The dialog asks for it 300 ms after the last change and keeps the last one while the next loads.
+  the realized skewness and excess kurtosis next to the family's (null when it has no finite value: a t's
+  skewness with ν ≤ 3, its kurtosis with ν ≤ 4), and the floored days. The dialog asks for it 300 ms after the last change and keeps the last one while the next loads.
 - **The dialog** gets the kind "Statistics (parametric)": the targets, the family (and only its own field: ν for
-  the t, α for the skew-normal), Exact, the layers folded while all are off, the preview, and the reason when there
-  is none. The length, first date and currency are shared with the lab scenario's draft. The form checks every
+  the t, α for the skew-normal; a hidden one that is not valid goes back to its default when the family changes),
+  Exact, the layers (folded at first while all are off, then opened and closed only by the user), the preview, and
+  the reason when there is none. The length, first date and currency are shared with the lab scenario's draft. The form checks every
   rule itself (`noValidate`: a typed 7.3 % is off the spinner's step but valid).
 
 ## What holds (the tests)

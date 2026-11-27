@@ -127,7 +127,7 @@ def parametric_hourly(definition: ParametricDefinition) -> BarFrame:
 
 def parametric_daily(definition: ParametricDefinition) -> BarFrame:
     """The daily bars of a parametric symbol: each the aggregate of its session's 1h bars."""
-    return _aggregate(_parametric_hourly(definition.model_dump_json()))
+    return _parametric_daily(definition.model_dump_json())
 
 
 # Memoised by the whole definition (its JSON) and, for a dwelling symbol, its index's values: an
@@ -155,6 +155,11 @@ def _hourly(key: str) -> BarFrame:
 @lru_cache(maxsize=MAX_DEFINITIONS)
 def _daily(key: str) -> BarFrame:
     return _aggregate(_hourly(key))
+
+
+@lru_cache(maxsize=MAX_DEFINITIONS)
+def _parametric_daily(key: str) -> BarFrame:
+    return _aggregate(_parametric_hourly(key))
 
 
 @lru_cache(maxsize=4)

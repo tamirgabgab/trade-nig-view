@@ -119,7 +119,8 @@ export interface ReturnPreview {
   volPct: number;
   skewness: number;
   excessKurtosis: number;
-  familySkewness: number;
+  /** null: none (a Student-t with 3 degrees of freedom or fewer). */
+  familySkewness: number | null;
   /** null: infinite (a Student-t with 4 degrees of freedom or fewer). */
   familyExcessKurtosis: number | null;
   floored: number;
@@ -325,7 +326,7 @@ function parsePreview(body: unknown): ReturnPreview {
   const field = fieldsOf<Schemas['PreviewOut']>(body);
   const numbers = (value: unknown) =>
     Array.isArray(value) ? value.filter((x): x is number => typeof x === 'number') : [];
-  const kurtosis = field('family_excess_kurtosis');
+  const optional = (value: unknown) => (typeof value === 'number' ? value : null);
   return {
     edges: numbers(field('edges')),
     counts: numbers(field('counts')),
@@ -335,8 +336,8 @@ function parsePreview(body: unknown): ReturnPreview {
     volPct: num(field('vol_pct'), 'vol_pct'),
     skewness: num(field('skewness'), 'skewness'),
     excessKurtosis: num(field('excess_kurtosis'), 'excess_kurtosis'),
-    familySkewness: num(field('family_skewness'), 'family_skewness'),
-    familyExcessKurtosis: typeof kurtosis === 'number' ? kurtosis : null,
+    familySkewness: optional(field('family_skewness')),
+    familyExcessKurtosis: optional(field('family_excess_kurtosis')),
     floored: num(field('floored'), 'floored'),
   };
 }

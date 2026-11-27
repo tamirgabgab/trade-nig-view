@@ -153,7 +153,7 @@ What each family gives the daily shock (with $b = \delta\sqrt{2/\pi}$):
 | Family | Shape | Skewness | Excess kurtosis |
 |---|---|---|---|
 | Normal | the bell curve, thin tails | 0 | 0 |
-| Student-t | more quiet days and more huge ones | 0 | $6/(\nu - 4)$; infinite for $\nu \le 4$ |
+| Student-t | more quiet days and more huge ones | 0; none for $\nu \le 3$ | $6/(\nu - 4)$; infinite for $\nu \le 4$ |
 | Uniform | a flat band, nothing beyond it | 0 | −1.2 |
 | Laplace | a sharp peak, exponential tails | 0 | 3 |
 | Skew-normal | lopsided, at most about ±1 of skewness | $\frac{4 - \pi}{2}\, b^3 / (1 - b^2)^{3/2}$ | $2(\pi - 3)\, b^4 / (1 - b^2)^2$ |
@@ -295,7 +295,7 @@ A parametric symbol with the defaults, $\mu = 7\,\%$, $\sigma = 18\,\%$, normal,
   GARCH keeps big days together. The preview's drawn skewness and kurtosis are the days'; the asked ones are the
   family's, and the layers add their own (negative jumps add negative skewness and kurtosis).
 - **A Student-t with $\nu \le 4$ has no finite kurtosis**: the drawn kurtosis grows with the path instead of
-  settling, and the preview shows ∞ as the asked value.
+  settling, and the preview shows ∞ as the asked value; with $\nu \le 3$ not even the skewness exists ("none").
 - **With memory, $\sigma$ is a whole year's spread**: the daily moves are smaller ($\varphi > 0$) or larger
   ($\varphi < 0$) than $\sigma / \sqrt{N}$, and the preview's "daily σ × √year" differs from $\sigma$ on purpose.
 

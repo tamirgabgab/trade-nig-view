@@ -4,7 +4,8 @@ import { useDebounced } from './lab/useDebounced.ts';
 import styles from './SyntheticSymbolDialog.module.css';
 
 const pct = (v: number) => `${v.toFixed(1)} %`;
-const moment = (v: number | null) => (v === null ? '∞' : v.toFixed(2));
+/** A moment, or what stands for one with no finite value. */
+const moment = (v: number | null, none = '∞') => (v === null ? none : v.toFixed(2));
 
 /** What a parametric symbol draws (null: nothing to ask): its daily returns as a histogram over
  *  the family's density, and the drawn numbers next to the asked ones. */
@@ -50,7 +51,7 @@ export function ReturnPreview({ def }: { def: ParametricDefinition | null }) {
           <tr>
             <th scope="row">Skewness</th>
             <td>{moment(p.skewness)}</td>
-            <td>{moment(p.familySkewness)}</td>
+            <td>{moment(p.familySkewness, 'none')}</td>
           </tr>
           <tr>
             <th scope="row">Excess kurtosis</th>

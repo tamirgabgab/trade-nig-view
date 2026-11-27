@@ -8540,7 +8540,14 @@
             "title": "Excess Kurtosis"
           },
           "family_skewness": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Family Skewness"
           },
           "family_excess_kurtosis": {
@@ -8574,7 +8581,7 @@
           "floored"
         ],
         "title": "PreviewOut",
-        "description": "What a parametric symbol draws: its daily returns as a histogram (``edges``, ``counts``),\nthe family's density as expected counts per bin at ``curve_x``, the realized yearly mean and\nvolatility (%), skewness and excess kurtosis, the family's own (null: infinite), and the days\nthe floor of -99 % caught."
+        "description": "What a parametric symbol draws: its daily returns as a histogram (``edges``, ``counts``),\nthe family's density as expected counts per bin at ``curve_x``, the realized yearly mean and\nvolatility (%), skewness and excess kurtosis, the family's own (null: no finite value), and\nthe days the floor of -99 % caught."
       },
       "PreviewRequest": {
         "properties": {

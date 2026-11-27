@@ -123,8 +123,8 @@ class PreviewRequest(ReturnShape):
 class PreviewOut(BaseModel):
     """What a parametric symbol draws: its daily returns as a histogram (``edges``, ``counts``),
     the family's density as expected counts per bin at ``curve_x``, the realized yearly mean and
-    volatility (%), skewness and excess kurtosis, the family's own (null: infinite), and the days
-    the floor of -99 % caught."""
+    volatility (%), skewness and excess kurtosis, the family's own (null: no finite value), and
+    the days the floor of -99 % caught."""
 
     edges: list[float]
     counts: list[int]
@@ -134,7 +134,7 @@ class PreviewOut(BaseModel):
     vol_pct: float
     skewness: float
     excess_kurtosis: float
-    family_skewness: float
+    family_skewness: float | None
     family_excess_kurtosis: float | None
     floored: int
 

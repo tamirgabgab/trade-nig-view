@@ -3672,8 +3672,8 @@ export interface components {
          * PreviewOut
          * @description What a parametric symbol draws: its daily returns as a histogram (``edges``, ``counts``),
          *     the family's density as expected counts per bin at ``curve_x``, the realized yearly mean and
-         *     volatility (%), skewness and excess kurtosis, the family's own (null: infinite), and the days
-         *     the floor of -99 % caught.
+         *     volatility (%), skewness and excess kurtosis, the family's own (null: no finite value), and
+         *     the days the floor of -99 % caught.
          */
         PreviewOut: {
             /** Edges */
@@ -3693,7 +3693,7 @@ export interface components {
             /** Excess Kurtosis */
             excess_kurtosis: number;
             /** Family Skewness */
-            family_skewness: number;
+            family_skewness: number | null;
             /** Family Excess Kurtosis */
             family_excess_kurtosis: number | null;
             /** Floored */
