@@ -20,11 +20,16 @@ OPENAPI_FILE = REPO_ROOT / "frontend" / "src" / "api" / "openapi.json"
 
 def openapi_schema() -> dict[str, Any]:
     """OpenAPI document of the app, built with isolated settings (no ``.env``, no repo data dir)."""
-    from app.main import create_app  # noqa: PLC0415 (keeps this module import-light)
+    from app.main import close_stores, create_app  # noqa: PLC0415 (keeps this module import-light)
 
     with tempfile.TemporaryDirectory(prefix="chartlab-openapi-") as tmp:
         settings = Settings(_env_file=None, offline=True, chartlab_data_dir=Path(tmp))  # pyright: ignore[reportCallIssue]
-        return create_app(settings).openapi()
+        app = create_app(settings)
+        try:
+            return app.openapi()
+        finally:
+            # Windows cannot delete a database that is still open (WinError 32).
+            close_stores(app)
 
 
 def openapi_text() -> str:

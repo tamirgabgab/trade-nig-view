@@ -73,6 +73,13 @@ def build_providers(settings: Settings) -> list[DataProvider]:
     return providers
 
 
+def close_stores(app: FastAPI) -> None:
+    """Close the connections to ``app.db`` an app opened (a throw-away app, before its data
+    directory is deleted)."""
+    for name in ("drawings", "layouts", "watchlists", "scenarios"):
+        getattr(app.state, name).close()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the ASGI app. Tests pass their own ``settings``; production uses the environment."""
     settings = settings or get_settings()
