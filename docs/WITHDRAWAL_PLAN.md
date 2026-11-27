@@ -5,7 +5,7 @@ there is a **starting capital**, money comes **out** by a rule, and the Planner 
 This phase runs next, before Phase K (synthetic symbols and completions) and Phase 4 (the user's order,
 2026-11-27), and extends the Planner; Phases 4 and 5 keep their numbers.
 
-Status: **J0 done and approved (2026-11-27, ADR 0026); J1 in progress.** The user's answers are under "Decided" at the end.
+Status: **J0 approved; J1 done (2026-11-27, ADR 0026, ADR 0027); J2 is next.** The user's answers are under "Decided" at the end.
 
 ## What the user asked for
 - A **Withdraw** tab in the Planner.
@@ -200,7 +200,7 @@ the price of an income that moves. Those numbers are for US data and are not car
 | Round | Content | Size |
 |---|---|---|
 | **J0** ✅ 2026-11-27 | The engine for an account: one lot per asset with a cost share, the two rules, net in hand, losses carried, depletion; the golden model and the known answers; `POST /planner/withdraw`; the Withdraw tab with the cards, the balance and income chart, the table and CSV; the two tax bounds on the page. | M |
-| **J1** | The apartment in the balance: an owned apartment's cash flows, its three sale options and a forced sale, at most one mortgage track, the cost fields for betterment tax. | M |
+| **J1** ✅ 2026-11-27 | The apartment in the balance: an owned apartment's cash flows, its three sale options and a forced sale, at most one mortgage track, the cost fields for betterment tax. | M |
 | **J2** | Many realizations: windows of history and the simulated worlds; the survival curve, the depletion histogram, the income fan; the sustainable amount by bisection; the sequence-risk view; the evidence-depth notes. | L |
 | **J3** | The learn page with its pinned example; the tab in saved scenarios; a UX pass. | S |
 | **J4** (optional) | Lot-exact tax when the capital comes from a Market-tab plan (accumulate, then withdraw; first in, first out), after the order-of-sale rule is confirmed from a primary source; two withdrawal plans side by side. | M |
@@ -218,6 +218,12 @@ round: the tests before the code, the cleanup pipeline, a demo checklist, and a 
   is neither a balance nor a shortfall; the chart is in shekels of the first day by default, with a switch.
 - Not in J0, as planned: the apartment (J1), many realizations (J2), the learn page and the tab in saved scenarios
   (J3).
+
+## J1 results (2026-11-27, ADR 0027)
+- The engine takes the apartment as two arrays (its cash and what its sale would leave) from `run_home`, so it knows
+  nothing of rent, loans or betterment, and the J2 worlds can feed it the same way.
+- A golden scalar model matches the engine across the three roles and both rules, with random cash and worth.
+- One expectation was wrong before the code ran, not the engine: after a forced sale the apartment's costs stop too.
 
 ## Later, if wanted
 Pension and study funds with their own tax rules; an annuity against a lump sum; age-based and guardrail rules;

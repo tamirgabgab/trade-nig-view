@@ -31,3 +31,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0024](0024-planner-two-options.md) | The planner's two options, saved scenarios and CSV | Accepted |
 | [0025](0025-planner-learn-pages.md) | The planner's learn pages, their notation and the rate stress test | Accepted |
 | [0026](0026-planner-withdrawals.md) | The planner's withdrawals: one lot, a cost share, and a month as one event | Accepted |
+| [0027](0027-planner-withdrawals-apartment.md) | An owned apartment in a withdrawal plan: cash only, through `run_home` | Accepted |
