@@ -1253,8 +1253,6 @@ export interface components {
              * @description Bars traded, from `start`
              */
             bars: number;
-            /** Capital */
-            capital: number;
             /** Max Trades */
             max_trades: number;
             /** Reversal Window */

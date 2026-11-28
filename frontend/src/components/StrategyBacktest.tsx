@@ -117,6 +117,13 @@ export function StrategyBacktest({ strategy }: { strategy: Strategy }) {
             {d.conflict_short}, neither {d.conflict_none}); {d.skipped_by_cap} entries over the cap
             of {data.maxTrades} a {profile?.capPeriod ?? 'period'}.
           </p>
+          {Object.keys(d.scores).length > 0 && (
+            <p className={f.note}>
+              After an opposite entry, over {data.reversalWindow} bars, a year: reverse{' '}
+              {pct(d.scores['reverse'] ?? null)}, close {pct(d.scores['close'] ?? null)}, hold{' '}
+              {pct(d.scores['hold'] ?? null)}.
+            </p>
+          )}
           <p className={f.note}>
             Over {data.bars} {data.interval} bars, {cost}% a fill, the whole equity in each trade
             {data.openAtEnd ? '; the trade still open is closed at the last close' : ''}.

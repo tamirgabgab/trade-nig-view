@@ -101,7 +101,6 @@ class BacktestResponse(BaseModel):
     symbol: str
     interval: Interval
     bars: int = Field(description="Bars traded, from `start`")
-    capital: float
     max_trades: int
     reversal_window: int
     strategy: Metrics
@@ -165,7 +164,6 @@ def backtest(
         symbol=ev.bars.symbol.symbol,
         interval=ev.interval,
         bars=len(frame) - start,
-        capital=s.capital,
         max_trades=max_trades,
         reversal_window=settings.reversal_window,
         strategy=compute(result.equity, result.trades, result.in_market, years, bpy),

@@ -32,7 +32,6 @@ const BODY = {
   symbol: 'AAPL',
   interval: '1D',
   bars: 5000,
-  capital: 100000,
   max_trades: 10,
   reversal_window: 20,
   strategy: metrics({
@@ -120,6 +119,9 @@ describe('StrategyBacktest', () => {
     expect(screen.getByText(/Hindsight ceiling/)).toHaveTextContent('12.00%');
     expect(screen.getByText(/opposite entries/)).toHaveTextContent(
       '7 opposite entries in a position (reversed 4, closed 1, held 2)',
+    );
+    expect(screen.getByText(/After an opposite entry/)).toHaveTextContent(
+      'over 20 bars, a year: reverse 10.00%, close -0.10%, hold 5.00%',
     );
     expect(screen.getByText(/entries over the cap/)).toHaveTextContent(
       '2 entries over the cap of 10 a month',

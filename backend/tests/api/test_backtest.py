@@ -29,7 +29,7 @@ def test_an_example_strategy(api: TestClient) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["interval"] == "1D"
-    assert (body["capital"], body["max_trades"], body["reversal_window"]) == (100_000, 10, 20)
+    assert (body["max_trades"], body["reversal_window"]) == (10, 20)
     n = body["bars"]
     assert len(body["time"]) == len(body["equity"]) == len(body["buy_and_hold_equity"]) == n
     s = body["strategy"]

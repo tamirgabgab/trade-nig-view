@@ -3592,10 +3592,6 @@
             "title": "Bars",
             "description": "Bars traded, from `start`"
           },
-          "capital": {
-            "type": "number",
-            "title": "Capital"
-          },
           "max_trades": {
             "type": "integer",
             "title": "Max Trades"
@@ -3665,7 +3661,6 @@
           "symbol",
           "interval",
           "bars",
-          "capital",
           "max_trades",
           "reversal_window",
           "strategy",

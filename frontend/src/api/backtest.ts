@@ -11,6 +11,8 @@ export interface BacktestResult {
   interval: string;
   bars: number;
   maxTrades: number;
+  /** H: the decision bars each reversal window spans. */
+  reversalWindow: number;
   strategy: Metrics;
   buyAndHold: Metrics;
   hindsight: { netProfit: number; cagr: number | null };
@@ -55,6 +57,7 @@ export function parseBacktest(body: unknown): BacktestResult {
     interval: String(f('interval')),
     bars: num(f('bars')),
     maxTrades: num(f('max_trades')),
+    reversalWindow: num(f('reversal_window')),
     strategy: parseMetrics(f('strategy')),
     buyAndHold: parseMetrics(f('buy_and_hold')),
     hindsight: { netProfit: num(top['net_profit']), cagr: numOrNull(top['cagr']) },
