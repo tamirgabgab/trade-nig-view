@@ -8,9 +8,9 @@ symbol: on the chart, in Compare, in a watchlist, in the Planner's mix. It is ma
 
 *"What does a pure random walk look like on a chart, next to a real stock? How did dwelling prices move against the
 S&P 500, on the same axis? What does a stock of 7 % a year, 18 % volatility and fat tails look like, and does my rule
-still work on it?"*
+still work on it? Would my rule still have worked on the same days of the S&P 500 in another order?"*
 
-Three kinds exist today:
+Four kinds exist today:
 
 - **A lab scenario**: one of the learn lab's eight scenarios (random walk, uptrend, range, reversal, shock,
   volatility regime, accumulation, regimes), from a seed, a first date, a first price and a length.
@@ -19,8 +19,11 @@ Three kinds exist today:
 - **Statistics (parametric)**: daily returns drawn from what you set: the expected yearly return, the yearly
   volatility, one of five families for the daily shock (normal, Student-t, uniform, Laplace, skew-normal), and three
   optional layers (memory, volatility clusters, jumps).
+- **A shuffled copy** of a market symbol: its real days in a frozen range, cut into blocks and put in another order,
+  on its own dates. The total return and the set of days are the real ones; only the order changes.
 
-All have 1h, 4h, daily, weekly and monthly bars, Monday to Friday, seven 1h bars a day from 09:30 to 16:00 New York.
+All have 1h, 4h, daily, weekly and monthly bars, seven 1h bars a day from 09:30 to 16:00 New York; the first three
+are Monday to Friday, a shuffled copy has its source's trading days.
 
 ## Formula
 
@@ -225,6 +228,43 @@ The shape, the clusters and the jumps stay, scaled; the day's $\sqrt{h_t}$ and j
 path is not the shorter one extended (without Exact, it is). The last rule is the **floor**: a day falls 99 % at
 most. With sane statistics it never binds; the dialog's preview counts the days it does.
 
+### A shuffled copy: the same days in another order
+
+A copy takes its source's dividend-adjusted daily bars in the range you set, $t = 0 \dots n-1$, and keeps every bar
+after the first as its ratios to the previous close, so it can be moved without a jump at either side:
+
+$$
+o_t = \frac{O_t}{C_{t-1}}, \qquad h_t = \frac{H_t}{C_{t-1}}, \qquad \ell_t = \frac{L_t}{C_{t-1}}, \qquad
+c_t = \frac{C_t}{C_{t-1}} \qquad (t \ge 1)
+$$
+
+Days $1 \dots n-1$ are cut in order into blocks of $B$ days (the last one may be shorter), and the blocks are put in
+another order drawn from the seed: a permutation, drawn again if it leaves every block in place. With $\pi(t)$ the
+source's day that lands on day $t$, the copy is rebuilt from the source's first bar on the source's dates:
+
+$$
+C'_t = C'_{t-1}\, c_{\pi(t)}, \quad O'_t = C'_{t-1}\, o_{\pi(t)}, \quad H'_t = C'_{t-1}\, h_{\pi(t)}, \quad
+L'_t = C'_{t-1}\, \ell_{\pi(t)}, \quad V'_t = V_{\pi(t)}, \qquad C'_0 = C_0
+$$
+
+$$
+C'_{n-1} = C_0 \prod_{t=1}^{n-1} c_{\pi(t)} = C_0 \prod_{t=1}^{n-1} c_t = C_{n-1}
+$$
+
+| Symbol | Meaning | Units / typical range |
+|---|---|---|
+| $t$, $n$ | the day in the range, and the days in it | 0 to $n-1$; 100 days at least |
+| $O_t$, $H_t$, $L_t$, $C_t$, $V_t$ | the source's dividend-adjusted bar on day $t$, and its volume | price; shares |
+| $o_t$, $h_t$, $\ell_t$, $c_t$ | the day's open, high, low and close over the previous close | about 0.9 to 1.1 |
+| $B$ | the days in a block | 1 to 1,000, 21 by default (about a month) |
+| $\pi(t)$ | the source's day on the copy's day $t$: whole blocks, each in its own order, the blocks permuted | a day number |
+| $O'_t$, $H'_t$, $L'_t$, $C'_t$, $V'_t$ | the copy's bar on day $t$ | price; shares |
+
+The product of the same ratios in any order is the same, so the copy ends on the source's last close: the same
+total return, the same days, the same set of gaps, ranges and volumes. What changes is everything that depends on
+the order: the drawdowns, the worst year, the streaks, and what a rule sees before each day. Inside a block the days
+keep their order, so a block keeps its own trend and its volatility clusters; across a joint nothing carries over.
+
 ### The hours and the bars
 
 A day's seven 1h bars run from its open to its close along a second bridge scaled by the day's volatility, with
@@ -250,6 +290,10 @@ $$
 | $h$ | the day's 1h bar, 1 (09:30) to 7 (15:30, half an hour) | 1 to 7 |
 | $O_h$, $H_h$, $L_h$, $C_h$ | that bar's open, high, low and close | price |
 | $O$, $H$, $L$, $C$ | the daily bar | price |
+
+A shuffled copy's daily bar is the source's real one, moved; its seven hours are invented to land on it exactly: a
+bridge from the open to the close kept inside the day's range, every wick inside it too, one hour touching the high
+and one the low.
 
 ## Worked example
 
@@ -278,6 +322,14 @@ A parametric symbol with the defaults, $\mu = 7\,\%$, $\sigma = 18\,\%$, normal,
   $\sigma^2 = 0.0324$; the diffusion keeps 0.0116 ($10.8\,\%$ a year, $0.667\,\%$ a day), and every day adds back
   $4 / N \cdot 6\,\% = 0.092\,\%$.
 
+A shuffled copy of five closes, 100, 120, 108, 86.4 and 108, in blocks of $B = 2$: block A is days 1 and 2
+(×1.2, ×0.9), block B days 3 and 4 (×0.8, ×1.25). With two blocks the only order that moves one is B then A, so the
+copy is 100, 80, 100, 120, 108:
+
+- **The same total return**: +8 % in both, since $1.2 \cdot 0.9 \cdot 0.8 \cdot 1.25 = 1.08$ in any order.
+- **Another path**: the source falls 28 % from its peak (120 to 86.4); the copy only 20 % (100 to 80). The source
+  falls two days in a row, the copy never more than one.
+
 ## How to read it
 
 - **Only the close of a dwelling symbol carries information**, and only on the month dates (interpolated) or the
@@ -297,6 +349,16 @@ A parametric symbol with the defaults, $\mu = 7\,\%$, $\sigma = 18\,\%$, normal,
   family's, and the layers add their own (negative jumps add negative skewness and kurtosis).
 - **A Student-t with $\nu \le 4$ has no finite kurtosis**: the drawn kurtosis grows with the path instead of
   settling, and the preview shows ∞ as the asked value; with $\nu \le 3$ not even the skewness exists ("none").
+- **A shuffled copy changes the order, not the days.** The total return, the worst day and the set of gaps are the
+  real ones; the drawdowns, the worst year and the streaks are not. A rule that does well on the source and badly on
+  most copies was fitted to that one history: try several seeds.
+- **The block length sets what survives**: one day breaks every trend and cluster (the days become independent);
+  21 days keeps a month's trend; 250 keeps whole years.
+- **A copy is not causal against its source**: its 2010 can hold the source's 2020. Testing a rule on the copy alone
+  is fine; reading the copy and the source against each other date by date means nothing but at the ends.
+- **They line up at 1D and above**: the same dates, the same first bar and the same last close. The copy's hours are
+  invented, and it is built from dividend-adjusted prices, so with ADJ off the source no longer ends where it does.
+  Its range, order and returns are fixed; its level follows the source's adjustment (a new dividend rescales it).
 - **With memory, $\sigma$ is a whole year's spread**: the daily moves are smaller ($\varphi > 0$) or larger
   ($\varphi < 0$) than $\sigma / \sqrt{N}$, and the preview's "daily σ × √year" differs from $\sigma$ on purpose.
 
@@ -306,6 +368,10 @@ The scenarios are the learn lab's (`app/analysis/synthetic.py`). The index is th
 Bank of Israel republishes (`app/macro`). The bridge is the standard construction of a Brownian motion pinned at both
 ends: for a walk $W$ over $\tau$ steps, $W_k - \frac{k}{\tau} W_\tau$ is independent of $W_\tau$, starts and ends at
 zero, and has the variance above. The same bridge, at the scale of hours, runs each day from its open to its close.
+
+A shuffled copy is a permutation test of a history's order, in blocks so that what happens inside a few days stays
+together: the block bootstrap (H. R. Künsch, 1989) draws blocks with replacement, as the Planner's simulated worlds
+do; a copy draws them without, so its days are exactly the real ones.
 
 The parametric families and layers are the textbook ones: Student's t (W. S. Gosset, 1908), the skew-normal
 (A. Azzalini, 1985), jumps on a diffusion (R. C. Merton, 1976), GARCH(1,1) volatility clusters (T. Bollerslev,
@@ -321,5 +387,8 @@ $\gamma_0 \varphi^{\lvert i - j \rvert}$ over every pair of days, which is $\gam
   clusters, no link to any market. Its volume is invented from its moves.
 - With memory, $\mu$ holds to second order; Exact makes the path's own numbers the targets but changes every bar
   when the length changes.
+- A shuffled copy has no day the source did not have: its worst day is the source's. It tests the order, not the
+  distribution; and a joint between blocks breaks whatever ran across it.
+- A copy follows its source's data: a dividend after its range rescales its level, and a corrected old bar changes it.
 - The intraday bars of every kind are invented; a dwelling symbol's hours carry nothing at all.
 - The calendar is Monday to Friday, without holidays.

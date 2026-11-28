@@ -29,7 +29,7 @@
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
-| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅, K2 ✅ (2026-11-27, ADR 0031 to 0033) |
+| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅, K2 ✅ (2026-11-27), K3 ✅ (2026-11-28; ADR 0031 to 0034) |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -437,8 +437,9 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   return, the deepest drawdown, the worst calendar year, the longest losing streak, in both). **Market symbols
   only** as sources. After creation, **the copy opens with the source in Compare**. A **new part of the
   `synthetic-symbols` page**, with a worked example.
-- [ ] **K3: a shuffled copy of a real symbol.** The bars are cut into k blocks, the blocks are put in a random order
-  (a seed) and joined again.
+- [x] **K3: a shuffled copy of a real symbol** (ADR 0034, 2026-11-28: blocks of a length in days, a permutation,
+  a frozen range on the source's dates, hours that land on the real daily bar, a preview with sequence measures).
+  The bars are cut into k blocks, the blocks are put in a random order (a seed) and joined again.
   - The join is on **returns**, not on prices, or every joint would be a jump: each bar is kept as its ratios to
     the previous close, and the path is rebuilt from the first price.
   - It is a permutation, so the whole period's return and the set of daily returns are the real ones; only their
