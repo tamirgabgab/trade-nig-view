@@ -646,7 +646,20 @@ def test_a_copy_without_source_data_is_flat_at_100_with_a_warning(client: TestCl
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["stale"] is True
-    assert result["warnings"][0].startswith("No data for BBB: a flat placeholder at 100")
+    assert result["warnings"][0].startswith(
+        "No data for BBB: a flat placeholder at 100, until it can be fetched"
+    )
     assert {b["close"] for b in result["bars"]} == {100.0}
     assert result["bars"][0]["time"] == "2024-01-01"
     assert result["bars"][-1]["time"] == "2024-03-29"
+    # A plan does not run on a placeholder: it says why instead.
+    plan = {
+        "assets": [{"symbol": COPY_SYMBOL, "currency": "USD"}],
+        "use_fx": False,
+        "deposits": [{"date": "2024-02-01", "amount": 1000}],
+        "end": "2024-03-29",
+        "taxes": {"gains_pct": 0, "dividend_pct": 0},
+    }
+    refused_plan = client.post("/api/planner/market", json=plan)
+    assert refused_plan.status_code == 422, refused_plan.text
+    assert "No data for BBB: a flat placeholder at 100" in refused_plan.text

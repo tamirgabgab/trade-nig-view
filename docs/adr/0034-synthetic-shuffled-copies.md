@@ -70,9 +70,13 @@ sources, the copy opening with its source in Compare, and a new part of the `syn
 ## Consequences
 - K4 (the open completions) closes Phase K; Phase 4's backtester can run a rule on several copies of a symbol to see
   how much of its result is the order of one history.
-- A stored copy whose source has no bars (offline and nothing cached, the symbol gone from the universe, or too
-  few bars in the range) is not an error: it is a flat placeholder at 100 on every weekday of its range, no volume,
-  marked stale, with the warning "No data for SOURCE: a flat placeholder at 100 until it can be fetched (why)"; the
-  chart's status line shows it (the reason after "(" stays in the API's warnings). The real copy comes back by itself
-  once the source's bars can be read. Creating or saving a copy still needs the source's bars (the user's decision,
-  2026-11-28).
+- A stored copy whose source has no bars is not an error: it is a flat placeholder at 100 on every weekday of its
+  range and on its stored first and last dates (the source's own calendar is unknown without its data), no volume
+  (its `has_volume` stays the source's, so the volume pane is empty meanwhile), marked stale, with a warning that
+  starts with `PLACEHOLDER_PREFIX` ("No data for SOURCE: a flat placeholder at 100, ..."). It ends "until it can be
+  fetched (why)" when the source's bars are unavailable, and the copy comes back by itself once they can be read;
+  "it cannot be rebuilt (why)" when the source left the universe or the range no longer has enough bars, so the
+  copy must be edited or deleted. Only those errors fall back; anything else still fails. The chart's status line
+  shows the placeholder's warning (without the reason after " ("); other stale data keeps "Cached data (refresh
+  failed)". The Planner refuses a placeholder asset with that warning (422) instead of computing on it. Creating or
+  saving a copy still needs the source's bars (the user's decision, 2026-11-28).

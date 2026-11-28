@@ -3,7 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { isIntraday, useBarHistory, useCompareBars, type Bar } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
-import { isSynthetic } from '../api/synthetic.ts';
+import { isSynthetic, PLACEHOLDER_PREFIX } from '../api/synthetic.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
 import type { ChartEngine, ChartPointer, CompareBars, PaneLayout } from '../chart/ChartEngine.ts';
@@ -570,9 +570,11 @@ export function ChartArea({ className }: ChartAreaProps) {
   if (history.isLoading) {
     status = `Loading ${name}…`;
   } else if (data?.stale) {
-    // A synthetic symbol says why: its source or index could not be read (the reason after "(").
-    const why = isSynthetic(info) ? data.warnings[0]?.split(' (')[0] : undefined;
-    status = why ?? 'Cached data (refresh failed)';
+    // A copy's placeholder says so (the technical reason after " (" stays in the API's warnings).
+    const placeholder = isSynthetic(info)
+      ? data.warnings.find((w) => w.startsWith(PLACEHOLDER_PREFIX))
+      : undefined;
+    status = placeholder?.split(' (')[0] ?? 'Cached data (refresh failed)';
   }
 
   const backdrop = useMemo(

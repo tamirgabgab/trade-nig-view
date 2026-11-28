@@ -13,6 +13,7 @@ from datetime import UTC, date, datetime
 from app.data.adjust import dividend_adjust
 from app.data.providers.base import ProviderError
 from app.data.synthetic import (
+    PLACEHOLDER_PREFIX,
     daily_bars,
     dwelling_daily,
     dwelling_hourly,
@@ -99,25 +100,40 @@ class SyntheticProvider:
             case ParametricDefinition():
                 return (parametric_hourly if hourly else parametric_daily)(definition), False, ()
             case ShuffleDefinition():
-                try:
-                    frame, stale, warnings = self._source_daily(definition.source)
-                    source = source_slice(definition, dividend_adjust(frame))
-                except (DataUnavailableError, ProviderError, ValueError) as exc:
-                    # No bars to shuffle: a flat placeholder, flagged, until the source's come.
-                    flat = (placeholder_hourly if hourly else placeholder_daily)(definition)
-                    warning = (
-                        f"No data for {definition.source}: a flat placeholder at 100 until it"
-                        f" can be fetched ({exc})"
-                    )
-                    return flat, True, (warning,)
-                bars = (shuffle_hourly if hourly else shuffle_daily)(definition, source)
-                return bars, stale, warnings
+                return self._shuffle_bars(definition, hourly=hourly)
+
+    def _shuffle_bars(
+        self, definition: ShuffleDefinition, *, hourly: bool
+    ) -> tuple[BarFrame, bool, tuple[str, ...]]:
+        """A copy's bars from its source's, or its placeholder when they cannot be read."""
+        try:
+            frame, stale, warnings = self._source_daily(definition.source)
+        except DataUnavailableError as exc:
+            return _placeholder(definition, hourly, f"until it can be fetched ({exc})")
+        except ProviderError as exc:  # no longer in the universe
+            return _placeholder(definition, hourly, f"it cannot be rebuilt ({exc})")
+        try:
+            source = source_slice(definition, dividend_adjust(frame))
+        except ValueError as exc:  # the range's checks
+            return _placeholder(definition, hourly, f"it cannot be rebuilt ({exc})")
+        bars = (shuffle_hourly if hourly else shuffle_daily)(definition, source)
+        return bars, stale, warnings
 
     def _lookup(self, symbol: SymbolInfo) -> SyntheticDefinition:
         definition = self._definition(symbol.symbol)
         if definition is None:
             raise ProviderError(f"{symbol.symbol} is no longer defined")
         return definition
+
+
+def _placeholder(
+    definition: ShuffleDefinition, hourly: bool, why: str
+) -> tuple[BarFrame, bool, tuple[str, ...]]:
+    """A copy with no source bars to shuffle: flat at 100, stale, and the warning that says so
+    (``why``: waiting for a fetch, or to be edited or deleted)."""
+    flat = (placeholder_hourly if hourly else placeholder_daily)(definition)
+    warning = f"{PLACEHOLDER_PREFIX}{definition.source}: a flat placeholder at 100, {why}"
+    return flat, True, (warning,)
 
 
 def _between(frame: BarFrame, start: date, end: date) -> BarFrame:

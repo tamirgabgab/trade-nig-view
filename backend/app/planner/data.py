@@ -27,6 +27,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from app.data.bar_service import BarService
+from app.data.synthetic import is_placeholder
 from app.data.universe import Universe
 from app.errors import DataUnavailableError, IntervalUnavailableError
 from app.macro.service import CachedSeries
@@ -180,7 +181,10 @@ def load_asset(
 ) -> LoadedAsset:
     """The asset's whole daily history (unadjusted prices and the dividend factor)."""
     info = asset_info(universe, request)
-    frame = service.daily(info).frame
+    cached = service.daily(info)
+    if is_placeholder(cached.warnings):  # a shuffled copy without its source: not real bars
+        raise PlanError(f"{info.symbol}: {cached.warnings[0]}")
+    frame = cached.frame
     if len(frame) == 0:
         raise DataUnavailableError(f"No daily bars for {info.symbol}")
     days = frame.time // SECONDS_PER_DAY

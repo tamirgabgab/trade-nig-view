@@ -10,6 +10,9 @@ export const SYNTHETIC_PREFIX = 'SYN:';
 /** The part after `SYN:`: a letter, then letters, digits, `.`, `-` or `_` (12 at most). */
 export const NAME_PATTERN = /^[A-Z][A-Z0-9._-]{0,11}$/;
 export const MIN_BARS = 100;
+/** How a shuffled copy's placeholder warning starts (the backend's `PLACEHOLDER_PREFIX`): its
+ *  source's bars could not be read, so its bars are a flat line at 100. */
+export const PLACEHOLDER_PREFIX = 'No data for ';
 export const MAX_BARS = 10_000;
 
 export type Currency = 'USD' | 'ILS';

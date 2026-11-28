@@ -398,15 +398,18 @@ describe('ChartArea status', () => {
       has_volume: false,
       decimals: 2,
     };
+    const home = { ...copy, symbol: 'SYN:HOME', display: 'SYN:HOME', name: 'Homes' };
     stubApi({
-      '/api/symbols': { body: [...SYMBOLS, copy] },
+      '/api/symbols': { body: [...SYMBOLS, copy, home] },
       '/api/quotes': { body: QUOTES },
       '/api/bars': (url) => {
         const symbol = url.searchParams.get('symbol') ?? '';
         const warning =
-          symbol === 'SYN:CP'
-            ? 'No data for AAPL: a flat placeholder at 100 until it can be fetched (offline)'
-            : 'AAPL: the refresh failed';
+          {
+            'SYN:CP':
+              'No data for AAPL: a flat placeholder at 100, until it can be fetched (offline)',
+            'SYN:HOME': 'dwelling: Serving cached data; refresh failed: (timeout)',
+          }[symbol] ?? 'AAPL: the refresh failed';
         return jsonResponse({
           ...barsBody(symbol, '1D', AAPL_BARS),
           stale: true,
@@ -417,7 +420,7 @@ describe('ChartArea status', () => {
     useChartStore.setState({ symbol: 'SYN:CP' });
     renderWithQuery(<ChartArea />);
     const status = await within(legend()).findByText(
-      'No data for AAPL: a flat placeholder at 100 until it can be fetched',
+      'No data for AAPL: a flat placeholder at 100, until it can be fetched',
     );
     expect(status).toHaveAttribute('role', 'status');
     expect(within(legend()).queryByText(/offline/)).toBeNull();
@@ -425,5 +428,12 @@ describe('ChartArea status', () => {
       useChartStore.getState().setSymbol('AAPL');
     });
     expect(await within(legend()).findByText('Cached data (refresh failed)')).toBeInTheDocument();
+    // Another synthetic symbol's stale data keeps the generic note too.
+    act(() => {
+      useChartStore.getState().setSymbol('SYN:HOME');
+    });
+    expect(await within(legend()).findByText(/Homes/)).toBeInTheDocument();
+    expect(await within(legend()).findByText('Cached data (refresh failed)')).toBeInTheDocument();
+    expect(within(legend()).queryByText(/Serving cached data/)).toBeNull();
   });
 });

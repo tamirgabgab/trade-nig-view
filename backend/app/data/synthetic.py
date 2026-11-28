@@ -146,6 +146,13 @@ def shuffle_daily(definition: ShuffleDefinition, source: BarFrame) -> BarFrame:
 
 #: A shuffled copy's level while its source has no bars to read.
 PLACEHOLDER_PRICE = 100.0
+#: How a placeholder's warning starts (the frontend's status line and the Planner look for it).
+PLACEHOLDER_PREFIX = "No data for "
+
+
+def is_placeholder(warnings: tuple[str, ...]) -> bool:
+    """Whether bars with these warnings are a copy's placeholder, not its real bars."""
+    return any(w.startswith(PLACEHOLDER_PREFIX) for w in warnings)
 
 
 def placeholder_hourly(definition: ShuffleDefinition) -> BarFrame:
@@ -155,7 +162,8 @@ def placeholder_hourly(definition: ShuffleDefinition) -> BarFrame:
 
 def placeholder_daily(definition: ShuffleDefinition) -> BarFrame:
     """The daily bars of a copy whose source has no data: one at ``PLACEHOLDER_PRICE`` on every
-    weekday of its range, no volume (its source's own dates are not known without its data)."""
+    weekday of its range and on its first and last dates, no volume (the source's own calendar,
+    a Sunday-to-Thursday one say, is not known without its data)."""
     return _placeholder_daily(definition.model_dump_json())
 
 
@@ -244,7 +252,7 @@ def _placeholder_daily(key: str) -> BarFrame:
     definition = ShuffleDefinition.model_validate_json(key)
     first, last = (np.datetime64(d, "D") for d in (definition.start, definition.end))
     days = np.arange(first, last + np.timedelta64(1, "D"))
-    days = days[np.is_busday(days)].astype(np.int64)
+    days = days[np.is_busday(days) | (days == first) | (days == last)].astype(np.int64)
     flat = np.full(len(days), PLACEHOLDER_PRICE)
     return _read_only(
         BarFrame.from_columns(

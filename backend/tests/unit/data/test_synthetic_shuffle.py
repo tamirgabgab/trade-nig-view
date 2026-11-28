@@ -22,7 +22,14 @@ from app.data.providers.base import ProviderError
 from app.data.providers.synthetic import SyntheticProvider
 from app.data.resample import resample, resample_intraday
 from app.data.sessions import session_days
-from app.data.synthetic import PLACEHOLDER_PRICE, SESSION_BARS, shuffle_daily, shuffle_hourly
+from app.data.synthetic import (
+    PLACEHOLDER_PRICE,
+    SESSION_BARS,
+    is_placeholder,
+    placeholder_daily,
+    shuffle_daily,
+    shuffle_hourly,
+)
 from app.data.synthetic_shuffle import (
     MIN_BARS,
     PREVIEW_POINTS,
@@ -303,6 +310,7 @@ def test_a_copy_carries_its_sources_staleness_and_reads_its_bars() -> None:
     frame, stale, (warning,) = short.generate(info, Interval.D1, d.start, d.end)
     assert stale
     assert (frame.close == PLACEHOLDER_PRICE).all()
+    assert warning.startswith("No data for AAPL: a flat placeholder at 100, it cannot be rebuilt (")
     assert "needs 100" in warning
 
 
@@ -358,13 +366,15 @@ def test_a_sunday_to_thursday_source_keeps_its_days_at_every_interval() -> None:
 
 
 @pytest.mark.parametrize(
-    "error",
+    ("error", "why"),
     [
-        DataUnavailableError("No 1D data for AAPL: offline and nothing cached"),
-        ProviderError("AAPL is not a market symbol in the universe"),
+        (DataUnavailableError("No 1D data for AAPL: offline"), "until it can be fetched"),
+        (ProviderError("AAPL is not a market symbol in the universe"), "it cannot be rebuilt"),
     ],
 )
-def test_without_its_sources_data_a_copy_is_flat_at_100_and_says_so(error: Exception) -> None:
+def test_without_its_sources_data_a_copy_is_flat_at_100_and_says_so(
+    error: Exception, why: str
+) -> None:
     d = definition(start=date(2024, 1, 1), end=date(2024, 3, 29))
 
     def no_index(series: str) -> CachedSeries:
@@ -377,7 +387,7 @@ def test_without_its_sources_data_a_copy_is_flat_at_100_and_says_so(error: Excep
     info = d.info()
     daily, stale, (warning,) = provider.generate(info, Interval.D1, d.start, d.end)
     assert stale
-    assert warning.startswith("No data for AAPL: a flat placeholder at 100 until it can be fetched")
+    assert warning == f"No data for AAPL: a flat placeholder at 100, {why} ({error})"
     assert str(error) in warning
     weekdays = np.busday_count(np.datetime64("2024-01-01"), np.datetime64("2024-03-30"))
     assert len(daily) == weekdays
@@ -391,3 +401,16 @@ def test_without_its_sources_data_a_copy_is_flat_at_100_and_says_so(error: Excep
     assert (hours.high == PLACEHOLDER_PRICE).all()
     assert (hours.low == PLACEHOLDER_PRICE).all()
     assert validate_bars(hours)[1].ok
+
+
+def test_a_placeholder_keeps_the_stored_first_and_last_dates() -> None:
+    # A Sunday-to-Thursday source's range can start and end on days a weekday calendar lacks.
+    d = definition(start=date(2024, 1, 7), end=date(2024, 2, 4))  # two Sundays
+    flat = placeholder_daily(d)
+    assert flat.time[0] == date_to_ts(date(2024, 1, 7))
+    assert flat.time[-1] == date_to_ts(date(2024, 2, 4))
+    assert len(flat) == 2 + np.busday_count(
+        np.datetime64("2024-01-07"), np.datetime64("2024-02-04")
+    )
+    assert is_placeholder(("No data for AAPL: a flat placeholder at 100, until it can be fetched",))
+    assert not is_placeholder(("AAPL: the refresh failed",))
