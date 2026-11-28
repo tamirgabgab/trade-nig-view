@@ -2,12 +2,8 @@ import { useSymbols } from '../api/market.ts';
 import { isSynthetic, type ShuffleDefinition } from '../api/synthetic.ts';
 import panel from './IndicatorSettingsPanel.module.css';
 import { ShufflePreview } from './ShufflePreview.tsx';
-import { FIRST_DAY, MAX_BLOCK_DAYS, shuffleProblem } from './syntheticChecks.ts';
+import { FIRST_DAY, MAX_BLOCK_DAYS, shuffleProblem, today } from './syntheticChecks.ts';
 import styles from './SyntheticSymbolDialog.module.css';
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** A shuffled copy's source (a market symbol), range and block length (K3), and what they draw.
  *  Picking a source asks for its whole range (`onSource`); the dates can then be narrowed. */

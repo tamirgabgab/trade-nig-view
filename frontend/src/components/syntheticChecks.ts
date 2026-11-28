@@ -15,6 +15,11 @@ import {
  */
 
 const DAY_MS = 86_400_000;
+
+/** Today's date in UTC, 'YYYY-MM-DD'. */
+export function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 /** Bars are day numbers since 1970-01-01 (the backend's floor too). */
 export const FIRST_DAY = '1970-01-01';
 

@@ -38,14 +38,11 @@ import {
   lastDate,
   MAX_LAG,
   MAX_NOISE_PCT,
+  today,
 } from './syntheticChecks.ts';
 import styles from './SyntheticSymbolDialog.module.css';
 
 const DEFAULT_BARS = 2500;
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const KINDS = [
   { id: 'scenario', label: 'Lab scenario' },

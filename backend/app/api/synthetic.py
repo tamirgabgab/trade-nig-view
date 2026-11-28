@@ -32,7 +32,7 @@ from app.data.synthetic_returns import preview
 from app.data.synthetic_shuffle import chart_points, measures, source_slice
 from app.data.universe import Universe
 from app.errors import ChartLabError
-from app.models.bars import SECONDS_PER_DAY, BarFrame
+from app.models.bars import BarFrame, date_to_ts, ts_to_date
 from app.models.symbols import SymbolInfo
 from app.models.synthetic import (
     FIRST_DAY,
@@ -215,13 +215,11 @@ def preview_shuffle(
 ) -> ShufflePreviewOut:
     """What a shuffled copy draws: the source against the copy, and their sequences."""
     _, frame = _market_daily(body.source, universe, bars)
-    days = frame.time // SECONDS_PER_DAY
-    today = dt.datetime.now(dt.UTC).date()
-    before_today = days[days < (today - dt.date(1970, 1, 1)).days]
+    before_today = frame.time[frame.time < date_to_ts(dt.datetime.now(dt.UTC).date())]
     if len(before_today) == 0:
         raise InvalidSyntheticError(f"{body.source} has no daily bars before today")
-    first = max(_date(int(before_today[0])), FIRST_DAY)
-    start, end = body.start or first, body.end or _date(int(before_today[-1]))
+    first = max(ts_to_date(int(before_today[0])), FIRST_DAY)
+    start, end = body.start or first, body.end or ts_to_date(int(before_today[-1]))
     try:
         definition = ShuffleDefinition(
             name="PREVIEW",
@@ -238,20 +236,16 @@ def preview_shuffle(
     copy = shuffle_daily(definition, source)
     points = chart_points(len(source))
     return ShufflePreviewOut(
-        start=_date(int(source.time[0] // SECONDS_PER_DAY)),
-        end=_date(int(source.time[-1] // SECONDS_PER_DAY)),
+        start=ts_to_date(int(source.time[0])),
+        end=ts_to_date(int(source.time[-1])),
         bars=len(source),
         blocks=-(-(len(source) - 1) // body.block_days),
-        dates=[_date(int(t // SECONDS_PER_DAY)) for t in source.time[points]],
+        dates=[ts_to_date(int(t)) for t in source.time[points]],
         source_close=source.close[points].tolist(),
         copy_close=copy.close[points].tolist(),
         source_measures=SequenceOut.model_validate(asdict(measures(source.time, source.close))),
         copy_measures=SequenceOut.model_validate(asdict(measures(copy.time, copy.close))),
     )
-
-
-def _date(day: int) -> dt.date:
-    return dt.date(1970, 1, 1) + dt.timedelta(days=day)
 
 
 @router.get("/synthetic", response_model=list[SyntheticOut])

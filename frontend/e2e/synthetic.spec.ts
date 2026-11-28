@@ -281,7 +281,7 @@ test('a shuffled copy: its range filled in, previewed, then charted next to its 
   await expect(legend(page)).toContainText('Apple, shuffled · 1D · Synthetic');
   await expect(page.getByRole('list', { name: 'Compared symbols' })).toContainText('AAPL');
   const window = 'start=2010-01-04&end=2026-11-20&limit=50000';
-  const [copy, source] = await Promise.all(
+  const [copy = [], source = []] = await Promise.all(
     [COPY, 'AAPL'].map(async (symbol) => {
       const response = await page.request.get(
         `/api/bars?symbol=${encodeURIComponent(symbol)}&interval=1D&${window}`,
@@ -289,8 +289,8 @@ test('a shuffled copy: its range filled in, previewed, then charted next to its 
       return ((await response.json()) as { bars: { time: string; close: number }[] }).bars;
     }),
   );
-  expect(copy.map((b) => b.time)).toEqual(source?.map((b) => b.time));
-  expect(copy?.at(-1)?.close).toBeCloseTo(source?.at(-1)?.close ?? 0, 6);
+  expect(copy.map((b) => b.time)).toEqual(source.map((b) => b.time));
+  expect(copy.at(-1)?.close).toBeCloseTo(source.at(-1)?.close ?? 0, 6);
   await page
     .getByRole('group', { name: 'Interval' })
     .getByRole('button', { name: '1 hour' })
