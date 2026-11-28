@@ -30,6 +30,7 @@
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
 | PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅, K2 ✅ (2026-11-27), K3 ✅, K4 ✅ in code (2026-11-28; ADR 0031 to 0035); open for the user: the run on real data, regulation 5 |
+| PA | Market data from Alpaca (data only): years of minute bars, bars to the second from trades, quotes and spreads, live prices; rounds A0–A4 ([ALPACA_PLAN.md](ALPACA_PLAN.md)); recommended before P4 | XL | planned (2026-11-28); A0 is a gate: the probe decides the feed, the user approves the §10 amendment |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -514,6 +515,18 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   the whole definition (an edit still applies at once); the last bar must be *before* today (today's hours are not
   over); the first date is 1970-01-01 or later; a stored symbol keeps its name (Save as copy gives another); in the
   watchlist the SYN badge stands for the prefix, under a name cut to the column's width.
+
+### Phase A — Market data from Alpaca (planned)
+Asked for by the user on 2026-11-28: deeper and finer US data than Yahoo, historical and live. The plan, the facts
+with their sources and the questions are in [ALPACA_PLAN.md](ALPACA_PLAN.md). **Data only**: it needs the user's
+approval of an amendment to CLAUDE.md §10 ("no broker APIs or credentials") before A0.
+- [ ] A0 — keys, the probe on the user's machine, recorded fixtures, the safety rule and its hosts test (the gate:
+  which feed the account may use)
+- [ ] A1 — 1m/5m/1h bars from Alpaca since 2016, one source per series (no splice into Yahoo's bars), backfill, a
+  scoreboard against Yahoo
+- [ ] A2 — trades and quotes: bars to the second (1s–30s, on demand by day), the spread
+- [ ] A3 — live trades and bars over one stream connection, passed on to the chart and the watchlist
+- [ ] A4 — corporate actions, a data-quality page, Phase 4's Day data and spread
 
 ### Phase 5 — Paper trading agent
 - Rule-based agent first (strategies from P4) running on replay windows and delayed data; later ML/LLM-assisted

@@ -58,7 +58,8 @@ Intraday history (round **D0**, done 2026-11-26, ADR 0017): 1m, 2m, 5m, 10m, 15m
 downloaded stays in the cache so history **accumulates**, and a daily collector (a Windows scheduled task that runs
 `scripts/collect-intraday.ps1` after the US close) keeps the 30/60-day windows from leaving gaps. After a year of
 collecting, the Day profile has a year of minute bars. A paid data source (data only, never a broker) is the other
-way, for the user to decide.
+way, for the user to decide. Phase A ([ALPACA_PLAN.md](ALPACA_PLAN.md), planned 2026-11-28) proposes Alpaca's market-data API:
+1m bars since 2016, data only, once the user approves an amendment to CLAUDE.md §10 (Alpaca is also a broker).
 
 ## What Phases 1–3 already give us
 | Piece | Where | Used for |
@@ -211,6 +212,7 @@ B6 M, B7 L.
 3. **Fills:** next bar's open by default (recommended), or the signal bar's close?
 4. **Profiles first:** which profile to build first (recommended: Position, then Swing and Long-term, Day last once the
    collector has gathered intraday history)?
-5. **Day data:** the free daily collection from Yahoo (running since D0), or also a paid data feed?
+5. **Day data:** the free daily collection from Yahoo (running since D0), or also a paid data feed? (Phase A's A0
+   probe answers it.)
 6. **Results:** which metrics and views matter most to you (to put first in B2)?
 7. **Portfolio (B5):** equal weight, or risk parity (inverse volatility)?
