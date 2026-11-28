@@ -7,7 +7,7 @@ indicator is added in the backend only (docs/ARCHITECTURE.md section 5.1).
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from typing import Literal
@@ -179,8 +179,15 @@ def _coerce(spec: ParamSpec, value: object) -> ParamValue:
 
 def resolve_params(spec: IndicatorSpec, raw: Mapping[str, object]) -> dict[str, ParamValue]:
     """Defaults overlaid with ``raw``; unknown names and out-of-range values are rejected."""
-    known = {p.name: p for p in spec.params}
+    return resolve_values(spec.id, spec.params, raw)
+
+
+def resolve_values(
+    owner: str, params: Sequence[ParamSpec], raw: Mapping[str, object]
+) -> dict[str, ParamValue]:
+    """``resolve_params`` for any list of parameters (``owner`` names them in errors)."""
+    known = {p.name: p for p in params}
     unknown = sorted(set(raw) - known.keys())
     if unknown:
-        raise InvalidParamsError(f"Unknown parameter(s) for {spec.id}: {', '.join(unknown)}")
+        raise InvalidParamsError(f"Unknown parameter(s) for {owner}: {', '.join(unknown)}")
     return {name: _coerce(p, raw[name]) if name in raw else p.default for name, p in known.items()}

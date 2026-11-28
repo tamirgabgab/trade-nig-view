@@ -31,6 +31,7 @@ from app.api import (
     scenario,
     scenarios,
     simulate,
+    strategies,
     symbols,
     synthetic,
     trade_plan,
@@ -39,6 +40,7 @@ from app.api import (
     withdraw,
     withdraw_study,
 )
+from app.backtest.python_loader import PythonStrategies
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
 from app.data.cache.bar_cache import BarCache
@@ -84,7 +86,7 @@ def build_providers(settings: Settings) -> list[DataProvider]:
 def close_stores(app: FastAPI) -> None:
     """Close the connections to ``app.db`` an app opened (a throw-away app, before its data
     directory is deleted)."""
-    for name in ("drawings", "layouts", "watchlists", "scenarios", "synthetic"):
+    for name in ("drawings", "layouts", "watchlists", "scenarios", "strategies", "synthetic"):
         getattr(app.state, name).close()
 
 
@@ -139,6 +141,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)
     app.state.watchlists = DocumentStore(app_db, "watchlists", watchlists.WatchlistNotFoundError)
     app.state.scenarios = DocumentStore(app_db, "scenarios", scenarios.ScenarioNotFoundError)
+    app.state.strategies = DocumentStore(app_db, "strategies", strategies.StrategyNotFoundError)
+    app.state.python_strategies = PythonStrategies(settings.strategies_dir)
 
     for router in (
         health.router,
@@ -162,6 +166,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         home.router,
         scenario.router,
         scenarios.router,
+        strategies.router,
         simulate.router,
         withdraw.router,
         withdraw_study.router,

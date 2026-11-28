@@ -2689,6 +2689,252 @@
         }
       }
     },
+    "/api/strategies/profiles": {
+      "get": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "List Profiles",
+        "description": "The four trader profiles.",
+        "operationId": "list_profiles_api_strategies_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TraderProfile"
+                  },
+                  "type": "array",
+                  "title": "Response List Profiles Api Strategies Profiles Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/strategies": {
+      "get": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Strategy Catalog",
+        "description": "Saved strategies (without their rules), the built-in examples and the Python files.",
+        "operationId": "strategy_catalog_api_strategies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyCatalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/strategies/{name}": {
+      "get": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Get Strategy",
+        "operationId": "get_strategy_api_strategies__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyDocument"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No strategy with this name (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Put Strategy",
+        "description": "Create (``revision`` 0) or replace a strategy; a stale ``revision`` is a 409.",
+        "operationId": "put_strategy_api_strategies__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StrategyUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyDocument"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Delete Strategy",
+        "operationId": "delete_strategy_api_strategies__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Name"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Revision the client last read",
+              "title": "Revision"
+            },
+            "description": "Revision the client last read"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No strategy with this name (problem+json)"
+          },
+          "409": {
+            "description": "Saved meanwhile elsewhere: reload (problem+json)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/strategies/signals": {
+      "post": {
+        "tags": [
+          "strategies"
+        ],
+        "summary": "Strategy Signals",
+        "description": "Where the strategy enters and leaves, long and short, on the symbol's decision bars.",
+        "operationId": "strategy_signals_api_strategies_signals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/planner/simulate": {
       "post": {
         "tags": [
@@ -4574,6 +4820,70 @@
           "history_months"
         ],
         "title": "EvidenceOut"
+      },
+      "Exits": {
+        "properties": {
+          "on_opposite": {
+            "type": "boolean",
+            "title": "On Opposite",
+            "description": "Leave when the other side's entry fires",
+            "default": true
+          },
+          "stop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Level"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Level"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trailing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Level"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "time_stop_bars": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Stop Bars"
+          },
+          "atr_length": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Atr Length",
+            "description": "ATR of the ATR levels",
+            "default": 14
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Exits"
       },
       "FanYear": {
         "properties": {
@@ -6926,6 +7236,32 @@
         ],
         "title": "LearnPage"
       },
+      "Level": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "percent",
+              "atr"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "type": "number",
+            "maximum": 1000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Value",
+            "description": "Percent of the entry price, or ATR multiples"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "Level"
+      },
       "LiquidityOut": {
         "properties": {
           "discount": {
@@ -8789,6 +9125,16 @@
         "title": "PreviewRequest",
         "description": "A parametric symbol's statistics, its seed and its length (no name needed)."
       },
+      "ProfileId": {
+        "type": "string",
+        "enum": [
+          "day",
+          "swing",
+          "position",
+          "long_term"
+        ],
+        "title": "ProfileId"
+      },
       "ProviderStatus": {
         "properties": {
           "id": {
@@ -8872,6 +9218,181 @@
           "brackets"
         ],
         "title": "PurchasePresetOut"
+      },
+      "PythonFile": {
+        "properties": {
+          "module": {
+            "type": "string",
+            "title": "Module",
+            "description": "File stem in strategies/"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/PythonParam"
+            },
+            "type": "array",
+            "title": "Params"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Why the file cannot be used (import or SPEC error)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "module",
+          "description",
+          "params",
+          "error"
+        ],
+        "title": "PythonFile"
+      },
+      "PythonParam": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Default"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "default",
+          "label",
+          "min",
+          "max"
+        ],
+        "title": "PythonParam"
+      },
+      "PythonStrategy": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Description",
+            "default": ""
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileId"
+          },
+          "exits": {
+            "$ref": "#/components/schemas/Exits"
+          },
+          "max_trades": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Trades",
+            "description": "Trade cap per the profile's period; null = the profile's default"
+          },
+          "kind": {
+            "type": "string",
+            "const": "python",
+            "title": "Kind",
+            "default": "python"
+          },
+          "module": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+            "title": "Module",
+            "description": "File stem in strategies/"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Missing parameters use defaults"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile",
+          "module"
+        ],
+        "title": "PythonStrategy"
       },
       "QuoteOut": {
         "properties": {
@@ -10033,6 +10554,76 @@
         "type": "object",
         "title": "RuleIn"
       },
+      "RulesStrategy": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Description",
+            "default": ""
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileId"
+          },
+          "exits": {
+            "$ref": "#/components/schemas/Exits"
+          },
+          "max_trades": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Trades",
+            "description": "Trade cap per the profile's period; null = the profile's default"
+          },
+          "kind": {
+            "type": "string",
+            "const": "rules",
+            "title": "Kind",
+            "default": "rules"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/StrategyIndicator"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Indicators"
+          },
+          "long": {
+            "$ref": "#/components/schemas/SideRules"
+          },
+          "short": {
+            "$ref": "#/components/schemas/SideRules"
+          },
+          "filters": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/Condition"
+              },
+              "type": "array",
+              "maxItems": 8,
+              "minItems": 1
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Filters",
+            "description": "Gate both sides' entries"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile"
+        ],
+        "title": "RulesStrategy"
+      },
       "RunResponse": {
         "properties": {
           "start": {
@@ -10758,6 +11349,222 @@
         "title": "ShufflePreviewRequest",
         "description": "A shuffled copy's source, range (null: the source's whole history from 1970 to its last bar\nbefore today), block length and seed."
       },
+      "SideRules": {
+        "properties": {
+          "entry": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/Condition"
+              },
+              "type": "array",
+              "maxItems": 8,
+              "minItems": 1
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Entry",
+            "description": "OR of AND-groups"
+          },
+          "exit": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/Condition"
+              },
+              "type": "array",
+              "maxItems": 8,
+              "minItems": 1
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Exit",
+            "description": "OR of AND-groups"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SideRules"
+      },
+      "SignalsRequest": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Symbol"
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RulesStrategy"
+              },
+              {
+                "$ref": "#/components/schemas/PythonStrategy"
+              }
+            ],
+            "title": "Strategy",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "python": "#/components/schemas/PythonStrategy",
+                "rules": "#/components/schemas/RulesStrategy"
+              }
+            }
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Interval"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A decision interval of the profile; null = its default"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until",
+            "description": "Replay cursor (inclusive)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "strategy"
+        ],
+        "title": "SignalsRequest"
+      },
+      "SignalsResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars",
+            "description": "Decision bars evaluated (the whole history up to `until`)"
+          },
+          "long_entry": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Long Entry",
+            "description": "Bar times, as in /api/bars"
+          },
+          "long_exit": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Long Exit"
+          },
+          "short_entry": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Short Entry"
+          },
+          "short_exit": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Short Exit"
+          },
+          "conflict": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Conflict",
+            "description": "Both entries fire: the engine settles it (ADR 0036)"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "bars",
+          "long_entry",
+          "long_exit",
+          "short_entry",
+          "short_exit",
+          "conflict",
+          "warnings"
+        ],
+        "title": "SignalsResponse"
+      },
       "SimulateRequest": {
         "properties": {
           "x": {
@@ -11094,6 +11901,229 @@
           "hit_rate"
         ],
         "title": "StatsBlock"
+      },
+      "StrategyCatalog": {
+        "properties": {
+          "saved": {
+            "items": {
+              "$ref": "#/components/schemas/StrategySummary"
+            },
+            "type": "array",
+            "title": "Saved",
+            "description": "Newest first"
+          },
+          "examples": {
+            "items": {
+              "$ref": "#/components/schemas/StrategyExample"
+            },
+            "type": "array",
+            "title": "Examples"
+          },
+          "python": {
+            "items": {
+              "$ref": "#/components/schemas/PythonFile"
+            },
+            "type": "array",
+            "title": "Python"
+          }
+        },
+        "type": "object",
+        "required": [
+          "saved",
+          "examples",
+          "python"
+        ],
+        "title": "StrategyCatalog"
+      },
+      "StrategyDocument": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RulesStrategy"
+              },
+              {
+                "$ref": "#/components/schemas/PythonStrategy"
+              }
+            ],
+            "title": "Strategy",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "python": "#/components/schemas/PythonStrategy",
+                "rules": "#/components/schemas/RulesStrategy"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "revision",
+          "updated_at",
+          "strategy"
+        ],
+        "title": "StrategyDocument"
+      },
+      "StrategyExample": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RulesStrategy"
+              },
+              {
+                "$ref": "#/components/schemas/PythonStrategy"
+              }
+            ],
+            "title": "Strategy",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "python": "#/components/schemas/PythonStrategy",
+                "rules": "#/components/schemas/RulesStrategy"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "strategy"
+        ],
+        "title": "StrategyExample"
+      },
+      "StrategyIndicator": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Id",
+            "description": "Indicator id"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "Missing parameters use defaults"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Interval"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null: the decision interval; else one of the profile's context intervals (its value reaches a decision bar once that context bar has closed)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "StrategyIndicator"
+      },
+      "StrategySummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "revision",
+          "updated_at",
+          "kind",
+          "profile"
+        ],
+        "title": "StrategySummary"
+      },
+      "StrategyUpdate": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "description": "Revision the client last read; 0 = create"
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RulesStrategy"
+              },
+              {
+                "$ref": "#/components/schemas/PythonStrategy"
+              }
+            ],
+            "title": "Strategy",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "python": "#/components/schemas/PythonStrategy",
+                "rules": "#/components/schemas/RulesStrategy"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "strategy"
+        ],
+        "title": "StrategyUpdate"
       },
       "StressOut": {
         "properties": {
@@ -12159,6 +13189,76 @@
           "actual_r"
         ],
         "title": "TradePlanResponse"
+      },
+      "TraderProfile": {
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ProfileId"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "decision_intervals": {
+            "items": {
+              "$ref": "#/components/schemas/Interval"
+            },
+            "type": "array",
+            "title": "Decision Intervals",
+            "description": "The first one is the default"
+          },
+          "context_intervals": {
+            "items": {
+              "$ref": "#/components/schemas/Interval"
+            },
+            "type": "array",
+            "title": "Context Intervals",
+            "description": "Longer intervals a rule may read; a value arrives once its bar has closed"
+          },
+          "cap_period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "title": "Cap Period",
+            "description": "Calendar period the trade cap counts over"
+          },
+          "default_max_trades": {
+            "type": "integer",
+            "title": "Default Max Trades",
+            "description": "Default trade cap per period (a parameter)"
+          },
+          "overnight": {
+            "type": "boolean",
+            "title": "Overnight",
+            "description": "False: flat at the session close (Day)"
+          },
+          "no_entry_last_minutes": {
+            "type": "integer",
+            "title": "No Entry Last Minutes",
+            "description": "No new entries this close to the close"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description",
+          "decision_intervals",
+          "context_intervals",
+          "cap_period",
+          "default_max_trades",
+          "overnight",
+          "no_entry_last_minutes"
+        ],
+        "title": "TraderProfile"
       },
       "Transform": {
         "type": "string",

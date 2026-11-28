@@ -863,6 +863,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/strategies/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Profiles
+         * @description The four trader profiles.
+         */
+        get: operations["list_profiles_api_strategies_profiles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/strategies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Strategy Catalog
+         * @description Saved strategies (without their rules), the built-in examples and the Python files.
+         */
+        get: operations["strategy_catalog_api_strategies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/strategies/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Strategy */
+        get: operations["get_strategy_api_strategies__name__get"];
+        /**
+         * Put Strategy
+         * @description Create (``revision`` 0) or replace a strategy; a stale ``revision`` is a 409.
+         */
+        put: operations["put_strategy_api_strategies__name__put"];
+        post?: never;
+        /** Delete Strategy */
+        delete: operations["delete_strategy_api_strategies__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/strategies/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Strategy Signals
+         * @description Where the strategy enters and leaves, long and short, on the symbol's decision bars.
+         */
+        post: operations["strategy_signals_api_strategies_signals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/planner/simulate": {
         parameters: {
             query?: never;
@@ -1761,6 +1843,26 @@ export interface components {
              * @description The history a bootstrap was cut from
              */
             history_months: number | null;
+        };
+        /** Exits */
+        Exits: {
+            /**
+             * On Opposite
+             * @description Leave when the other side's entry fires
+             * @default true
+             */
+            on_opposite: boolean;
+            stop?: components["schemas"]["Level"] | null;
+            target?: components["schemas"]["Level"] | null;
+            trailing?: components["schemas"]["Level"] | null;
+            /** Time Stop Bars */
+            time_stop_bars?: number | null;
+            /**
+             * Atr Length
+             * @description ATR of the ATR levels
+             * @default 14
+             */
+            atr_length: number;
         };
         /** FanYear */
         FanYear: {
@@ -2919,6 +3021,19 @@ export interface components {
             /** Markdown */
             markdown: string;
         };
+        /** Level */
+        Level: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "percent" | "atr";
+            /**
+             * Value
+             * @description Percent of the entry price, or ATR multiples
+             */
+            value: number;
+        };
         /** LiquidityOut */
         LiquidityOut: {
             /** Discount */
@@ -3832,6 +3947,11 @@ export interface components {
             bars: number;
         };
         /**
+         * ProfileId
+         * @enum {string}
+         */
+        ProfileId: "day" | "swing" | "position" | "long_term";
+        /**
          * ProviderStatus
          * @description One market-data provider in the active chain (in priority order).
          */
@@ -3871,6 +3991,70 @@ export interface components {
             note: string;
             /** Brackets */
             brackets: components["schemas"]["BracketIn"][];
+        };
+        /** PythonFile */
+        PythonFile: {
+            /**
+             * Module
+             * @description File stem in strategies/
+             */
+            module: string;
+            /** Description */
+            description: string;
+            /** Params */
+            params: components["schemas"]["PythonParam"][];
+            /**
+             * Error
+             * @description Why the file cannot be used (import or SPEC error)
+             */
+            error: string | null;
+        };
+        /** PythonParam */
+        PythonParam: {
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+            /** Default */
+            default: number | boolean | string;
+            /** Label */
+            label: string;
+            /** Min */
+            min: number | null;
+            /** Max */
+            max: number | null;
+        };
+        /** PythonStrategy */
+        PythonStrategy: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            profile: components["schemas"]["ProfileId"];
+            exits?: components["schemas"]["Exits"];
+            /**
+             * Max Trades
+             * @description Trade cap per the profile's period; null = the profile's default
+             */
+            max_trades?: number | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "python";
+            /**
+             * Module
+             * @description File stem in strategies/
+             */
+            module: string;
+            /**
+             * Params
+             * @description Missing parameters use defaults
+             */
+            params?: {
+                [key: string]: number | boolean | string;
+            };
         };
         /** QuoteOut */
         QuoteOut: {
@@ -4395,6 +4579,35 @@ export interface components {
              */
             percent: number;
         };
+        /** RulesStrategy */
+        RulesStrategy: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            profile: components["schemas"]["ProfileId"];
+            exits?: components["schemas"]["Exits"];
+            /**
+             * Max Trades
+             * @description Trade cap per the profile's period; null = the profile's default
+             */
+            max_trades?: number | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "rules";
+            /** Indicators */
+            indicators?: components["schemas"]["StrategyIndicator"][];
+            long?: components["schemas"]["SideRules"];
+            short?: components["schemas"]["SideRules"];
+            /**
+             * Filters
+             * @description Gate both sides' entries
+             */
+            filters?: components["schemas"]["Condition"][][];
+        };
         /** RunResponse */
         RunResponse: {
             /**
@@ -4775,6 +4988,62 @@ export interface components {
             /** Seed */
             seed: number;
         };
+        /** SideRules */
+        SideRules: {
+            /**
+             * Entry
+             * @description OR of AND-groups
+             */
+            entry?: components["schemas"]["Condition"][][];
+            /**
+             * Exit
+             * @description OR of AND-groups
+             */
+            exit?: components["schemas"]["Condition"][][];
+        };
+        /** SignalsRequest */
+        SignalsRequest: {
+            /** Symbol */
+            symbol: string;
+            /** Strategy */
+            strategy: components["schemas"]["RulesStrategy"] | components["schemas"]["PythonStrategy"];
+            /** @description A decision interval of the profile; null = its default */
+            interval?: components["schemas"]["Interval"] | null;
+            /**
+             * Until
+             * @description Replay cursor (inclusive)
+             */
+            until?: string | null;
+        };
+        /** SignalsResponse */
+        SignalsResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Bars
+             * @description Decision bars evaluated (the whole history up to `until`)
+             */
+            bars: number;
+            /**
+             * Long Entry
+             * @description Bar times, as in /api/bars
+             */
+            long_entry: string[] | number[];
+            /** Long Exit */
+            long_exit: string[] | number[];
+            /** Short Entry */
+            short_entry: string[] | number[];
+            /** Short Exit */
+            short_exit: string[] | number[];
+            /**
+             * Conflict
+             * @description Both entries fire: the engine settles it (ADR 0036)
+             */
+            conflict: string[] | number[];
+            /** Warnings */
+            warnings: string[];
+        };
         /** SimulateRequest */
         SimulateRequest: {
             x: components["schemas"]["OptionIn"];
@@ -4926,6 +5195,76 @@ export interface components {
              * @description Share of returns > 0
              */
             hit_rate: number | null;
+        };
+        /** StrategyCatalog */
+        StrategyCatalog: {
+            /**
+             * Saved
+             * @description Newest first
+             */
+            saved: components["schemas"]["StrategySummary"][];
+            /** Examples */
+            examples: components["schemas"]["StrategyExample"][];
+            /** Python */
+            python: components["schemas"]["PythonFile"][];
+        };
+        /** StrategyDocument */
+        StrategyDocument: {
+            /** Name */
+            name: string;
+            /** Revision */
+            revision: number;
+            /** Updated At */
+            updated_at: string;
+            /** Strategy */
+            strategy: components["schemas"]["RulesStrategy"] | components["schemas"]["PythonStrategy"];
+        };
+        /** StrategyExample */
+        StrategyExample: {
+            /** Name */
+            name: string;
+            /** Strategy */
+            strategy: components["schemas"]["RulesStrategy"] | components["schemas"]["PythonStrategy"];
+        };
+        /** StrategyIndicator */
+        StrategyIndicator: {
+            /**
+             * Id
+             * @description Indicator id
+             */
+            id: string;
+            /**
+             * Params
+             * @description Missing parameters use defaults
+             */
+            params?: {
+                [key: string]: number | boolean | string;
+            };
+            /** @description Null: the decision interval; else one of the profile's context intervals (its value reaches a decision bar once that context bar has closed) */
+            interval?: components["schemas"]["Interval"] | null;
+        };
+        /** StrategySummary */
+        StrategySummary: {
+            /** Name */
+            name: string;
+            /** Revision */
+            revision: number;
+            /** Updated At */
+            updated_at: string;
+            /** Kind */
+            kind: string;
+            /** Profile */
+            profile: string;
+        };
+        /** StrategyUpdate */
+        StrategyUpdate: {
+            /**
+             * Revision
+             * @description Revision the client last read; 0 = create
+             */
+            revision: number;
+            /** Strategy */
+            strategy: components["schemas"]["RulesStrategy"] | components["schemas"]["PythonStrategy"];
         };
         /** StressOut */
         StressOut: {
@@ -5427,6 +5766,45 @@ export interface components {
             actual: ("target" | "stop" | "both" | "neither" | "open" | "not_filled") | null;
             /** Actual R */
             actual_r: number | null;
+        };
+        /** TraderProfile */
+        TraderProfile: {
+            id: components["schemas"]["ProfileId"];
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /**
+             * Decision Intervals
+             * @description The first one is the default
+             */
+            decision_intervals: components["schemas"]["Interval"][];
+            /**
+             * Context Intervals
+             * @description Longer intervals a rule may read; a value arrives once its bar has closed
+             */
+            context_intervals: components["schemas"]["Interval"][];
+            /**
+             * Cap Period
+             * @description Calendar period the trade cap counts over
+             * @enum {string}
+             */
+            cap_period: "day" | "week" | "month" | "year";
+            /**
+             * Default Max Trades
+             * @description Default trade cap per period (a parameter)
+             */
+            default_max_trades: number;
+            /**
+             * Overnight
+             * @description False: flat at the session close (Day)
+             */
+            overnight: boolean;
+            /**
+             * No Entry Last Minutes
+             * @description No new entries this close to the close
+             */
+            no_entry_last_minutes: number;
         };
         /**
          * Transform
@@ -7803,6 +8181,205 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_profiles_api_strategies_profiles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraderProfile"][];
+                };
+            };
+        };
+    };
+    strategy_catalog_api_strategies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StrategyCatalog"];
+                };
+            };
+        };
+    };
+    get_strategy_api_strategies__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StrategyDocument"];
+                };
+            };
+            /** @description No strategy with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_strategy_api_strategies__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StrategyDocument"];
+                };
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_strategy_api_strategies__name__delete: {
+        parameters: {
+            query: {
+                /** @description Revision the client last read */
+                revision: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No strategy with this name (problem+json) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Saved meanwhile elsewhere: reload (problem+json) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategy_signals_api_strategies_signals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalsResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

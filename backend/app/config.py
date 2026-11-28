@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     refresh_ttl_s: float = 900.0
     macro_ttl_s: float = 6 * 3600.0  # Bank of Israel series: daily or monthly
     learn_dir: Path = REPO_ROOT / "docs" / "indicators"  # learn pages, <learn_slug>.md
+    strategies_dir: Path = REPO_ROOT / "strategies"  # the user's Python strategies, <name>.py
 
     @field_validator("tiingo_api_key", mode="before")
     @classmethod

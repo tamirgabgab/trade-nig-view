@@ -6,6 +6,7 @@ from typing import cast
 
 from fastapi import Request
 
+from app.backtest.python_loader import PythonStrategies
 from app.data.bar_service import BarService
 from app.data.universe import Universe
 from app.macro.service import MacroService
@@ -36,6 +37,14 @@ def get_watchlists(request: Request) -> DocumentStore:
 
 def get_scenarios(request: Request) -> DocumentStore:
     return cast("DocumentStore", request.app.state.scenarios)
+
+
+def get_strategies(request: Request) -> DocumentStore:
+    return cast("DocumentStore", request.app.state.strategies)
+
+
+def get_python_strategies(request: Request) -> PythonStrategies:
+    return cast("PythonStrategies", request.app.state.python_strategies)
 
 
 def get_macro_service(request: Request) -> MacroService:
