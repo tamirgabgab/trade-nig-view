@@ -76,6 +76,12 @@ describe('PlannerCompare', () => {
     expect(
       screen.getByRole('img', { name: 'End value by exit month: Apartment and Market' }),
     ).toBeVisible();
+    // Both options' net worth along the plan, a line each, with its CSV.
+    const worth = screen.getByRole('img', {
+      name: 'Net worth along the plan: Apartment and Market',
+    });
+    expect(worth.querySelectorAll('polyline')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /net worth/i })).toBeInTheDocument();
     expect(cells('Liquidity', 'Cash at once')).toEqual(['Cash at once', '₪0', '₪2,500,000']);
     expect(cells('Liquidity', 'Apartment, forced sale at −10%')).toEqual([
       'Apartment, forced sale at −10%',

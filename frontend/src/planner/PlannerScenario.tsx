@@ -3,6 +3,8 @@ import styles from './Planner.module.css';
 import { PlannerCards, type PlannerCard } from './PlannerCards.tsx';
 import { PlannerExplain } from './PlannerExplain.tsx';
 import { inline, percent, points, shekels } from './plannerFormat.ts';
+import { PlannerHeading } from './PlannerHeading.tsx';
+import { PlannerWorthChart } from './PlannerWorthChart.tsx';
 
 const NONE = 'None in range';
 
@@ -78,6 +80,22 @@ export function PlannerScenario({ result, names, rents }: ScenarioProps) {
           {warning}
         </p>
       ))}
+      <PlannerHeading
+        csv="net worth"
+        rows={[
+          ...result.paths.x.map((p) => ({ option: 'x', ...p })),
+          ...result.paths.y.map((p) => ({ option: 'y', ...p })),
+        ]}
+        fields={['option', 'date', 'worth']}
+      >
+        Net worth along the plan
+      </PlannerHeading>
+      <PlannerWorthChart paths={result.paths} names={names} />
+      <p className={styles.note}>
+        What each option is worth month by month as the plan runs: the apartment’s value less its
+        loan, plus the account at its market value. It is before selling costs and taxes, so it ends
+        above the values at the end (the cards), which are after them.
+      </p>
       <h2 className={styles.heading}>Breakeven rates</h2>
       <PlannerCards cards={breakeven} />
       <p className={styles.note}>

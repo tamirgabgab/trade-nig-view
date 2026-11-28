@@ -383,3 +383,21 @@ def test_a_sale_on_the_end_day_is_the_old_request(
 ) -> None:
     both = {"x": {"home": HOME, "sold_on": "2020-01-15"}, "y": {"market": MARKET}}
     assert post(client, path, **both, **extra) == post(client, path, **extra)
+
+
+def test_the_net_worth_paths_of_two_market_accounts(client: TestClient) -> None:
+    # Two market accounts: each path is its account's month-end value, from its first deposit.
+    saver = {**MARKET, "recurring": [{"start": "2010-01-15", "amount": 1_000, "count": 120}]}
+    body = post(client, "run", x={"market": saver}, y={"market": {**saver, "fees": {}}})
+    for side in ("x", "y"):
+        path = body["paths"][side]
+        assert len(path) >= 119
+        assert path[0]["date"] >= "2010-01-15"
+        assert path[-1]["date"] <= "2020-01-15"
+        assert all(p["worth"] >= 0 for p in path)
+    # An apartment's path runs on its month dates: value less loan plus the mirror's account.
+    homes = post(client, "run")
+    assert homes["paths"]["x"][0]["date"] == "2010-01-15"
+    assert homes["paths"]["x"][-1]["date"] == "2020-01-15"
+    first = homes["paths"]["x"][0]["worth"]
+    assert first == pytest.approx(HOME["price"] - (HOME["price"] - HOME["equity"]), rel=0.05)

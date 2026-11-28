@@ -164,6 +164,11 @@ test('planner: the apartment against the same money in the market, for one plan 
   await expect(card('Leads at the end')).toContainText(/Apartment|Market|A tie/);
   const lead = compare.getByRole('img', { name: 'End value by exit month: Apartment and Market' });
   await expect(lead.locator('polyline')).toHaveCount(3);
+  // Both options' net worth along the plan as it runs, a line each.
+  const worth = compare.getByRole('img', {
+    name: 'Net worth along the plan: Apartment and Market',
+  });
+  await expect(worth.locator('polyline')).toHaveCount(2);
   // A forced sale at the default 10 % off; at 0 % it is the sale itself, and the line is gone.
   const liquidity = compare.getByRole('table', { name: 'Liquidity' });
   await expect(liquidity.getByRole('row').filter({ hasText: 'forced sale at −10%' })).toBeVisible();

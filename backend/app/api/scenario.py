@@ -205,6 +205,21 @@ class CorrelationOut(BaseModel):
     high: float
 
 
+class WorthPoint(BaseModel):
+    date: dt.date
+    worth: float
+
+
+class PathsOut(BaseModel):
+    """Each option's net worth along the plan, before any exit cost or tax: its apartment's value
+    less its loan while held, plus its account's market value
+    (``app.planner.study.worth_path``); on the apartment's month dates, else the account's month
+    ends."""
+
+    x: list[WorthPoint]
+    y: list[WorthPoint]
+
+
 class RunResponse(BaseModel):
     start: dt.date
     end: dt.date
@@ -225,6 +240,7 @@ class RunResponse(BaseModel):
     correlation: CorrelationOut | None = Field(
         description="Null: no apartment or account, or no history (reads the dwelling index)"
     )
+    paths: PathsOut
     warnings: list[str]
 
 
@@ -327,6 +343,14 @@ def scenario_spec(
         )
     spec = ScenarioSpec(options[0], options[1], body.end, inflation_spec(body.inflation))
     return spec, warnings, rates
+
+
+def _worth(side: SideResult) -> list[WorthPoint]:
+    days, worth = study.worth_path(side)
+    return [
+        WorthPoint(date=dt.date(1970, 1, 1) + dt.timedelta(days=int(d)), worth=float(w))
+        for d, w in zip(days, worth, strict=True)
+    ]
 
 
 def _option(side: SideResult) -> OptionOut:
@@ -502,6 +526,7 @@ def _run(
             y=_forced(y, result.y, discount),
         ),
         correlation=_correlation(spec, macro),
+        paths=PathsOut(x=_worth(result.x), y=_worth(result.y)),
         warnings=list(dict.fromkeys(warnings)),
     )
 

@@ -78,6 +78,18 @@ export const SCENARIO_RESULT = {
     y: { cash: 2_500_000, apartment: null, forced: null, wealth_forced: 2_500_000 },
   },
   correlation: { value: 0.12, years: 30, low: -0.25, high: 0.46 },
+  paths: {
+    x: [
+      { date: '2015-01-15', worth: 600_000 },
+      { date: '2020-01-15', worth: 1_300_000 },
+      { date: '2025-01-15', worth: 2_300_000 },
+    ],
+    y: [
+      { date: '2015-01-31', worth: 610_000 },
+      { date: '2020-01-31', worth: 1_500_000 },
+      { date: '2024-12-31', worth: 2_900_000 },
+    ],
+  },
   warnings: ['After the last published CPI it is held flat'],
 };
 

@@ -8457,6 +8457,31 @@
         ],
         "title": "PathPoint"
       },
+      "PathsOut": {
+        "properties": {
+          "x": {
+            "items": {
+              "$ref": "#/components/schemas/WorthPoint"
+            },
+            "type": "array",
+            "title": "X"
+          },
+          "y": {
+            "items": {
+              "$ref": "#/components/schemas/WorthPoint"
+            },
+            "type": "array",
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "PathsOut",
+        "description": "Each option's net worth along the plan, before any exit cost or tax: its apartment's value\nless its loan while held, plus its account's market value\n(``app.planner.study.worth_path``); on the apartment's month dates, else the account's month\nends."
+      },
       "PlanSummary": {
         "properties": {
           "paths": {
@@ -10080,6 +10105,9 @@
             ],
             "description": "Null: no apartment or account, or no history (reads the dwelling index)"
           },
+          "paths": {
+            "$ref": "#/components/schemas/PathsOut"
+          },
           "warnings": {
             "items": {
               "type": "string"
@@ -10105,6 +10133,7 @@
           "lead",
           "liquidity",
           "correlation",
+          "paths",
           "warnings"
         ],
         "title": "RunResponse"
@@ -13739,6 +13768,25 @@
           "home_sale"
         ],
         "title": "WithdrawSummary"
+      },
+      "WorthPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "worth": {
+            "type": "number",
+            "title": "Worth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "worth"
+        ],
+        "title": "WorthPoint"
       }
     }
   }

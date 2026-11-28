@@ -3638,6 +3638,19 @@ export interface components {
             /** Deposited */
             deposited: number;
         };
+        /**
+         * PathsOut
+         * @description Each option's net worth along the plan, before any exit cost or tax: its apartment's value
+         *     less its loan while held, plus its account's market value
+         *     (``app.planner.study.worth_path``); on the apartment's month dates, else the account's month
+         *     ends.
+         */
+        PathsOut: {
+            /** X */
+            x: components["schemas"]["WorthPoint"][];
+            /** Y */
+            y: components["schemas"]["WorthPoint"][];
+        };
         /** PlanSummary */
         PlanSummary: {
             /**
@@ -4416,6 +4429,7 @@ export interface components {
             liquidity: components["schemas"]["LiquidityOut"];
             /** @description Null: no apartment or account, or no history (reads the dwelling index) */
             correlation: components["schemas"]["CorrelationOut"] | null;
+            paths: components["schemas"]["PathsOut"];
             /** Warnings */
             warnings: string[];
         };
@@ -6137,6 +6151,16 @@ export interface components {
             /** Home Sold On */
             home_sold_on: string | null;
             home_sale: components["schemas"]["Cause"] | null;
+        };
+        /** WorthPoint */
+        WorthPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Worth */
+            worth: number;
         };
     };
     responses: never;

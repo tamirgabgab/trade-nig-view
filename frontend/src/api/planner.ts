@@ -123,6 +123,9 @@ export function parseScenario(body: unknown): ScenarioResult {
     !isRecord(body['liquidity']) ||
     !isRecord(body['liquidity']['x']) ||
     !isRecord(body['liquidity']['y']) ||
+    !isRecord(body['paths']) ||
+    !Array.isArray(body['paths']['x']) ||
+    !Array.isArray(body['paths']['y']) ||
     !Array.isArray(body['warnings']) ||
     typeof body['difference'] !== 'number'
   ) {
