@@ -462,7 +462,11 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
 - [ ] A run of Phase H on real data on the user's machine (`make-fixtures.ps1`, `make_macro_fixtures.py`), and a
   pass over anything it shows.
 - [ ] Tax facts still read from secondary sources, to check against the Tax Authority: the order of sale of
-  identical securities (first in, first out), the surtax threshold, the rent exemption ceiling.
+  identical securities (first in, first out), the surtax threshold, the rent exemption ceiling. *K4 (2026-11-28):
+  the surtax (3 % above ILS 721,560 a year, plus 2 % on capital income) and the rent ceiling (ILS 5,654 a month)
+  verified in the Tax Authority's 2026 withholding booklet, unchanged; the regulation behind first in, first out
+  could not be read from the cloud session (its hosts are blocked): still secondary sources, now five that agree
+  (docs/WITHDRAWAL_PLAN.md). Open: read regulation 5 itself.*
 - [ ] From the J3 UX audit: the Planner's SVG charts scale their text with the chart, so in the narrow results
   column at 960 px it reads at about 8 px. Draw their text at a fixed size (measure the chart's width).
 
