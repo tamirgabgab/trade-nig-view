@@ -110,6 +110,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
   // A loaded scenario runs the basic comparison once its forms are on screen and the tax tables
   // are in (the latest load wins). One that cannot run leaves Compare disabled, as when typed.
   const pendingRun = useRef(false);
+  // A render even when the loaded forms equal those on screen: the run waits for one.
   const [, setLoads] = useState(0);
   const loaded = () => {
     pendingRun.current = true;

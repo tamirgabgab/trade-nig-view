@@ -270,8 +270,9 @@ def _side_outcome(
     includes the apartment's bills of the last day, which the ledger settles in cash. Yearly
     returns use every twelfth point: a last part of a year is left out."""
     home, market = side.home, side.market
-    held = home is not None and side.home_held
-    last = float(home.payment[-1] + home.costs[-1] - home.rent[-1]) if held and home else 0.0
+    last = 0.0
+    if home is not None and side.home_held:  # bills of the end day, settled in cash
+        last = float(home.payment[-1] + home.costs[-1] - home.rent[-1])
     days: IntArray = np.append(result.days, day_number(result.end))
     put_in = np.cumsum(np.append(result.budget, last))
     grid, worth = worth_path(side)
