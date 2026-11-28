@@ -27,8 +27,8 @@ const PROFILES = [
   no_entry_last_minutes: 0,
 }));
 
-const close = { price: 'close' as const };
-const ma = (i: number) => ({ indicator: i, output: 'ma' });
+const close = { price: 'close' as const, ago: 0 };
+const ma = (i: number) => ({ indicator: i, output: 'ma', ago: 0 });
 
 const CROSS: RulesStrategy = {
   kind: 'rules',
@@ -47,8 +47,8 @@ const CROSS: RulesStrategy = {
     ],
     exit: [[{ left: close, op: 'crosses_below', right: ma(0) }]],
   },
-  short: { entry: [[{ left: close, op: 'lt', right: { value: 5 } }]], exit: [] },
-  exits: { stop: { kind: 'atr', value: 3 }, time_stop_bars: 10 },
+  short: { entry: [[{ left: close, op: 'lt', right: { value: 5, ago: 0 } }]], exit: [] },
+  exits: { on_opposite: true, atr_length: 14, stop: { kind: 'atr', value: 3 }, time_stop_bars: 10 },
 };
 
 const CATALOG = {
@@ -82,8 +82,8 @@ describe('strategy text', () => {
   it('names operands, conditions and groups', () => {
     expect(operandText(ma(1), ind)).toBe('SMA(30) 1W');
     expect(operandText({ price: 'close', ago: 2 }, ind)).toBe('close 2 bars ago');
-    expect(operandText({ value: 30 }, ind)).toBe('30');
-    expect(operandText({ indicator: 0, output: 'upper' }, ind)).toBe('SMA(20) upper');
+    expect(operandText({ value: 30, ago: 0 }, ind)).toBe('30');
+    expect(operandText({ indicator: 0, output: 'upper', ago: 0 }, ind)).toBe('SMA(20) upper');
     expect(groupsText(CROSS.long?.entry ?? [], ind)).toEqual([
       'close crosses above SMA(20) and close > SMA(30) 1W',
     ]);
@@ -95,9 +95,9 @@ describe('strategy text', () => {
       'stop 3 × ATR(14)',
       'after 10 bars',
     ]);
-    expect(exitsText({ on_opposite: false, target: { kind: 'percent', value: 5 } })).toEqual([
-      'target 5 %',
-    ]);
+    expect(
+      exitsText({ on_opposite: false, atr_length: 14, target: { kind: 'percent', value: 5 } }),
+    ).toEqual(['target 5 %']);
     const profile = { capPeriod: 'month' } as Parameters<typeof capText>[1];
     expect(capText(10, profile)).toBe('10 a month');
   });
@@ -151,11 +151,11 @@ describe('StrategyPanel', () => {
       '/api/strategies/profiles': { body: PROFILES },
       '/api/strategies': { body: CATALOG },
       '/api/strategies/signals': (_url, init) => {
-        posted.push(JSON.parse(String(init?.body)));
+        posted.push(JSON.parse(init?.body as string));
         return jsonResponse(SIGNALS);
       },
       '/api/strategies/My%20cross': (_url, init) => {
-        saved.push(JSON.parse(String(init?.body)));
+        saved.push(JSON.parse(init?.body as string));
         return jsonResponse({ name: 'My cross', revision: 1, updated_at: '', strategy: CROSS });
       },
     });
