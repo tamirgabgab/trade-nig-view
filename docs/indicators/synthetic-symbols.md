@@ -391,5 +391,7 @@ $\gamma_0 \varphi^{\lvert i - j \rvert}$ over every pair of days, which is $\gam
 - A shuffled copy has no day the source did not have: its worst day is the source's. It tests the order, not the
   distribution; and a joint between blocks breaks whatever ran across it.
 - A copy follows its source's data: a dividend after its range rescales its level, and a corrected old bar changes it.
+  Without the source's bars (offline and nothing cached) a stored copy is a flat line at 100, marked on the chart as
+  a placeholder, until they can be fetched; creating a copy needs them.
 - The intraday bars of every kind are invented; a dwelling symbol's hours carry nothing at all.
 - The calendar is Monday to Friday, without holidays.

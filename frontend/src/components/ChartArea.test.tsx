@@ -385,3 +385,45 @@ describe('ChartArea', () => {
     });
   });
 });
+
+describe('ChartArea status', () => {
+  it("says why a synthetic symbol's bars are a placeholder; a market keeps the generic note", async () => {
+    const copy = {
+      symbol: 'SYN:CP',
+      display: 'SYN:CP',
+      name: 'Apple, shuffled',
+      type: 'synthetic',
+      group: 'Synthetic',
+      exchange: 'Synthetic',
+      has_volume: false,
+      decimals: 2,
+    };
+    stubApi({
+      '/api/symbols': { body: [...SYMBOLS, copy] },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': (url) => {
+        const symbol = url.searchParams.get('symbol') ?? '';
+        const warning =
+          symbol === 'SYN:CP'
+            ? 'No data for AAPL: a flat placeholder at 100 until it can be fetched (offline)'
+            : 'AAPL: the refresh failed';
+        return jsonResponse({
+          ...barsBody(symbol, '1D', AAPL_BARS),
+          stale: true,
+          warnings: [warning],
+        });
+      },
+    });
+    useChartStore.setState({ symbol: 'SYN:CP' });
+    renderWithQuery(<ChartArea />);
+    const status = await within(legend()).findByText(
+      'No data for AAPL: a flat placeholder at 100 until it can be fetched',
+    );
+    expect(status).toHaveAttribute('role', 'status');
+    expect(within(legend()).queryByText(/offline/)).toBeNull();
+    act(() => {
+      useChartStore.getState().setSymbol('AAPL');
+    });
+    expect(await within(legend()).findByText('Cached data (refresh failed)')).toBeInTheDocument();
+  });
+});

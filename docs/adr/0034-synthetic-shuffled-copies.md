@@ -70,5 +70,9 @@ sources, the copy opening with its source in Compare, and a new part of the `syn
 ## Consequences
 - K4 (the open completions) closes Phase K; Phase 4's backtester can run a rule on several copies of a symbol to see
   how much of its result is the order of one history.
-- A copy depends on its source's data: without it (offline and not cached) its bars are a data error, as the
-  source's would be.
+- A stored copy whose source has no bars (offline and nothing cached, the symbol gone from the universe, or too
+  few bars in the range) is not an error: it is a flat placeholder at 100 on every weekday of its range, no volume,
+  marked stale, with the warning "No data for SOURCE: a flat placeholder at 100 until it can be fetched (why)"; the
+  chart's status line shows it (the reason after "(" stays in the API's warnings). The real copy comes back by itself
+  once the source's bars can be read. Creating or saving a copy still needs the source's bars (the user's decision,
+  2026-11-28).

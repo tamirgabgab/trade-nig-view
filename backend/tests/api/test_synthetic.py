@@ -17,7 +17,7 @@ from app.data.synthetic import daily_bars
 from app.data.universe import Universe
 from app.main import close_stores, create_app
 from app.models.bars import date_to_ts
-from app.models.synthetic import MAX_DEFINITIONS, ScenarioDefinition
+from app.models.synthetic import MAX_DEFINITIONS, ScenarioDefinition, ShuffleDefinition
 from app.planner.data import AssetRequest, asset_info
 from app.planner.market import PlanError
 
@@ -633,3 +633,20 @@ def test_the_shuffle_preview_refuses_what_saving_would(
     response = e2e_client.post(f"{URL}/shuffle/preview", json=body)
     assert response.status_code == 422, response.text
     assert message in response.text
+
+
+def test_a_copy_without_source_data_is_flat_at_100_with_a_warning(client: TestClient) -> None:
+    # BBB has no fixture bars: creating a copy of it needs them, loading a stored one does not.
+    body = {**COPY, "source": "BBB", "start": "2024-01-01", "end": "2024-03-29"}
+    refused = client.put(f"{URL}/{COPY_SYMBOL}", json={"revision": 0, "definition": body})
+    assert refused.status_code == 503, refused.text
+    store = cast("FastAPI", client.app).state.synthetic
+    store.put(ShuffleDefinition.model_validate(body), 0)
+    response = client.get("/api/bars", params={"symbol": COPY_SYMBOL, "interval": "1D"})
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["stale"] is True
+    assert result["warnings"][0].startswith("No data for BBB: a flat placeholder at 100")
+    assert {b["close"] for b in result["bars"]} == {100.0}
+    assert result["bars"][0]["time"] == "2024-01-01"
+    assert result["bars"][-1]["time"] == "2024-03-29"

@@ -22,7 +22,7 @@ from app.data.providers.base import ProviderError
 from app.data.providers.synthetic import SyntheticProvider
 from app.data.resample import resample, resample_intraday
 from app.data.sessions import session_days
-from app.data.synthetic import SESSION_BARS, shuffle_daily, shuffle_hourly
+from app.data.synthetic import PLACEHOLDER_PRICE, SESSION_BARS, shuffle_daily, shuffle_hourly
 from app.data.synthetic_shuffle import (
     MIN_BARS,
     PREVIEW_POINTS,
@@ -33,6 +33,7 @@ from app.data.synthetic_shuffle import (
     source_slice,
 )
 from app.data.validate import validate_bars
+from app.errors import DataUnavailableError
 from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, Interval, date_to_ts
 from app.models.synthetic import ShuffleDefinition
@@ -297,9 +298,12 @@ def test_a_copy_carries_its_sources_staleness_and_reads_its_bars() -> None:
     daily = provider.fetch_daily(info, date(2000, 1, 1), date(2030, 1, 1))
     np.testing.assert_array_equal(daily.close, shuffle_daily(d, source_slice(d, src)).close)
     assert len(provider.fetch_intraday(info, Interval.H1, FIRST, FIRST)) == SESSION_BARS
+    # Too few bars in the range: the placeholder, flagged, with the reason.
     short = SyntheticProvider(lambda _: d, no_index, lambda _: (src.take(slice(0, 50)), False, ()))
-    with pytest.raises(ProviderError, match="needs 100"):
-        short.fetch_daily(info, date(2000, 1, 1), date(2030, 1, 1))
+    frame, stale, (warning,) = short.generate(info, Interval.D1, d.start, d.end)
+    assert stale
+    assert (frame.close == PLACEHOLDER_PRICE).all()
+    assert "needs 100" in warning
 
 
 def test_a_bar_off_its_range_by_the_tolerance_is_widened_not_broken() -> None:
@@ -351,3 +355,39 @@ def test_a_sunday_to_thursday_source_keeps_its_days_at_every_interval() -> None:
     weekly = resample(daily, Interval.W1)
     assert weekly.close[-1] == daily.close[-1]
     assert validate_bars(weekly)[1].ok
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        DataUnavailableError("No 1D data for AAPL: offline and nothing cached"),
+        ProviderError("AAPL is not a market symbol in the universe"),
+    ],
+)
+def test_without_its_sources_data_a_copy_is_flat_at_100_and_says_so(error: Exception) -> None:
+    d = definition(start=date(2024, 1, 1), end=date(2024, 3, 29))
+
+    def no_index(series: str) -> CachedSeries:
+        raise AssertionError(f"a copy needs no index ({series})")
+
+    def no_source(symbol: str) -> tuple[BarFrame, bool, tuple[str, ...]]:
+        raise error
+
+    provider = SyntheticProvider(lambda _: d, no_index, no_source)
+    info = d.info()
+    daily, stale, (warning,) = provider.generate(info, Interval.D1, d.start, d.end)
+    assert stale
+    assert warning.startswith("No data for AAPL: a flat placeholder at 100 until it can be fetched")
+    assert str(error) in warning
+    weekdays = np.busday_count(np.datetime64("2024-01-01"), np.datetime64("2024-03-30"))
+    assert len(daily) == weekdays
+    assert daily.time[0] == date_to_ts(date(2024, 1, 1))
+    assert daily.time[-1] == date_to_ts(date(2024, 3, 29))
+    for column in (daily.open, daily.high, daily.low, daily.close):
+        assert (column == PLACEHOLDER_PRICE).all()
+    assert (daily.volume == 0).all()
+    hours, _, _ = provider.generate(info, Interval.H1, d.start, d.end)
+    assert len(hours) == SESSION_BARS * weekdays
+    assert (hours.high == PLACEHOLDER_PRICE).all()
+    assert (hours.low == PLACEHOLDER_PRICE).all()
+    assert validate_bars(hours)[1].ok

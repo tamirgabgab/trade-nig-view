@@ -19,10 +19,13 @@ from app.data.synthetic import (
     hourly_bars,
     parametric_daily,
     parametric_hourly,
+    placeholder_daily,
+    placeholder_hourly,
     shuffle_daily,
     shuffle_hourly,
 )
 from app.data.synthetic_shuffle import source_slice
+from app.errors import DataUnavailableError
 from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, Interval, date_to_ts
 from app.models.symbols import SymbolInfo
@@ -96,11 +99,17 @@ class SyntheticProvider:
             case ParametricDefinition():
                 return (parametric_hourly if hourly else parametric_daily)(definition), False, ()
             case ShuffleDefinition():
-                frame, stale, warnings = self._source_daily(definition.source)
                 try:
+                    frame, stale, warnings = self._source_daily(definition.source)
                     source = source_slice(definition, dividend_adjust(frame))
-                except ValueError as exc:
-                    raise ProviderError(str(exc)) from exc
+                except (DataUnavailableError, ProviderError, ValueError) as exc:
+                    # No bars to shuffle: a flat placeholder, flagged, until the source's come.
+                    flat = (placeholder_hourly if hourly else placeholder_daily)(definition)
+                    warning = (
+                        f"No data for {definition.source}: a flat placeholder at 100 until it"
+                        f" can be fetched ({exc})"
+                    )
+                    return flat, True, (warning,)
                 bars = (shuffle_hourly if hourly else shuffle_daily)(definition, source)
                 return bars, stale, warnings
 

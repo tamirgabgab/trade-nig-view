@@ -144,6 +144,21 @@ def shuffle_daily(definition: ShuffleDefinition, source: BarFrame) -> BarFrame:
     return _shuffle_daily(definition.model_dump_json(), _Slice(source))
 
 
+#: A shuffled copy's level while its source has no bars to read.
+PLACEHOLDER_PRICE = 100.0
+
+
+def placeholder_hourly(definition: ShuffleDefinition) -> BarFrame:
+    """The 1h bars of a copy whose source has no data: flat at ``PLACEHOLDER_PRICE``."""
+    return _placeholder_hourly(definition.model_dump_json())
+
+
+def placeholder_daily(definition: ShuffleDefinition) -> BarFrame:
+    """The daily bars of a copy whose source has no data: one at ``PLACEHOLDER_PRICE`` on every
+    weekday of its range, no volume (its source's own dates are not known without its data)."""
+    return _placeholder_daily(definition.model_dump_json())
+
+
 class _Slice:
     """A source's bars as a memo key: compared and hashed by a digest of their values (a revised
     bar or a new adjustment is a new key; the key holds no copy of the arrays)."""
@@ -222,6 +237,27 @@ def _shuffle_hourly(key: str, source: _Slice) -> BarFrame:
     seed = ShuffleDefinition.model_validate_json(key).seed
     days = daily.time // SECONDS_PER_DAY
     return _sessions_within(days, daily, np.random.default_rng([seed, 6]))
+
+
+@lru_cache(maxsize=4)
+def _placeholder_daily(key: str) -> BarFrame:
+    definition = ShuffleDefinition.model_validate_json(key)
+    first, last = (np.datetime64(d, "D") for d in (definition.start, definition.end))
+    days = np.arange(first, last + np.timedelta64(1, "D"))
+    days = days[np.is_busday(days)].astype(np.int64)
+    flat = np.full(len(days), PLACEHOLDER_PRICE)
+    return _read_only(
+        BarFrame.from_columns(
+            time=days * SECONDS_PER_DAY, open=flat, high=flat, low=flat, close=flat
+        )
+    )
+
+
+@lru_cache(maxsize=4)
+def _placeholder_hourly(key: str) -> BarFrame:
+    daily = _placeholder_daily(key)
+    rng = np.random.default_rng(0)  # flat: the draws change nothing
+    return _sessions_within(daily.time // SECONDS_PER_DAY, daily, rng)
 
 
 _DwellingKey = tuple[str, tuple[int, ...], tuple[float, ...], int]

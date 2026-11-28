@@ -570,7 +570,9 @@ export function ChartArea({ className }: ChartAreaProps) {
   if (history.isLoading) {
     status = `Loading ${name}…`;
   } else if (data?.stale) {
-    status = 'Cached data (refresh failed)';
+    // A synthetic symbol says why: its source or index could not be read (the reason after "(").
+    const why = isSynthetic(info) ? data.warnings[0]?.split(' (')[0] : undefined;
+    status = why ?? 'Cached data (refresh failed)';
   }
 
   const backdrop = useMemo(
