@@ -426,6 +426,17 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   - Open, high, low and close cannot each have a distribution of their own: a bar needs low ≤ open, close ≤ high.
     So the parameters describe the close-to-close return, the gap and the range, from which the four are built.
     `app/analysis/synthetic.py` already does this for the lab's fixed scenarios; K2 opens its parameters.
+- **Decided by the user before K3 (2026-11-28):** K2 approved. **Blocks of a length in trading days** (21 by
+  default; the last block may be shorter), **a permutation only** (each block exactly once: the total return and the
+  set of daily returns are the source's). **A chosen range, frozen**: a first and a last date (by default the whole
+  history up to the creation day), stored, so the copy never changes by itself. **The source's dates**: the same
+  trading days, so the copy and the source line up in Compare bar for bar. **1h and 4h invented** and landing
+  exactly on the real daily open, high, low and close. The copy **starts at the source's first price**. **Whole bars
+  only** (no separate shuffle of open, high, low and close). **Dividend-adjusted** prices (total return; splits are
+  always adjusted). The dialog shows **a small chart of the source against the copy and sequence measures** (total
+  return, the deepest drawdown, the worst calendar year, the longest losing streak, in both). **Market symbols
+  only** as sources. After creation, **the copy opens with the source in Compare**. A **new part of the
+  `synthetic-symbols` page**, with a worked example.
 - [ ] **K3: a shuffled copy of a real symbol.** The bars are cut into k blocks, the blocks are put in a random order
   (a seed) and joined again.
   - The join is on **returns**, not on prices, or every joint would be a jump: each bar is kept as its ratios to
