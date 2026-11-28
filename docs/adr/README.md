@@ -39,3 +39,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0032](0032-synthetic-dwelling-symbols.md) | Dwelling prices as a synthetic symbol, and two kinds of definition | Accepted |
 | [0033](0033-synthetic-parametric-symbols.md) | A parametric synthetic symbol: the user's statistics and distribution | Accepted |
 | [0034](0034-synthetic-shuffled-copies.md) | A shuffled copy of a market symbol | Accepted |
+| [0035](0035-open-completions.md) | The open completions of Phases H and J (K4) | Accepted |

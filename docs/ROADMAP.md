@@ -29,7 +29,7 @@
 | D0 | Minute intervals 1m–90m, accumulated intraday history, daily collector (ADR 0017) | M | ✅ (2026-11-26) |
 | PH | Home vs Market: apartment (mortgage tracks, rent, dwelling index) vs the stock market, A/B and A+B, history and statistics, rounds H0–H5 ([HOME_VS_MARKET_PLAN.md](HOME_VS_MARKET_PLAN.md)); before P4 | XL | H0–H5 ✅ (2026-11-26) |
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
-| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅, K2 ✅ (2026-11-27), K3 ✅ (2026-11-28; ADR 0031 to 0034) |
+| PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅, K2 ✅ (2026-11-27), K3 ✅, K4 ✅ in code (2026-11-28; ADR 0031 to 0035); open for the user: the run on real data, regulation 5 |
 | P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | planned |
 
 ---
@@ -457,18 +457,20 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
   lead chart's exit values; **the Planner charts' text at a fixed size** (the chart measures its width); **the
   flaky `U3: compare` end-to-end test fixed**; **the tax facts checked against official sources**; the run on real
   data **prepared as a guide** for the user's machine (it cannot run in the cloud).
-- [ ] From H4: the second apartment sold on its own day (today both must be bought on the same day of the month);
-  loading a saved scenario reruns the comparison; a chart of the net-worth paths of two market accounts.
+- [x] From H4 (K4, ADR 0035, 2026-11-28): the second apartment sold on its own day (today both must be bought on
+  the same day of the month); loading a saved scenario reruns the comparison; a chart of the net-worth paths of two
+  market accounts.
 - [ ] A run of Phase H on real data on the user's machine (`make-fixtures.ps1`, `make_macro_fixtures.py`), and a
-  pass over anything it shows.
+  pass over anything it shows. *K4: the steps are in `HANDOFF.md`; open until the user runs them.*
 - [ ] Tax facts still read from secondary sources, to check against the Tax Authority: the order of sale of
   identical securities (first in, first out), the surtax threshold, the rent exemption ceiling. *K4 (2026-11-28):
   the surtax (3 % above ILS 721,560 a year, plus 2 % on capital income) and the rent ceiling (ILS 5,654 a month)
   verified in the Tax Authority's 2026 withholding booklet, unchanged; the regulation behind first in, first out
   could not be read from the cloud session (its hosts are blocked): still secondary sources, now five that agree
   (docs/WITHDRAWAL_PLAN.md). Open: read regulation 5 itself.*
-- [ ] From the J3 UX audit: the Planner's SVG charts scale their text with the chart, so in the narrow results
-  column at 960 px it reads at about 8 px. Draw their text at a fixed size (measure the chart's width).
+- [x] From the J3 UX audit (K4, 2026-11-28): the Planner's SVG charts scale their text with the chart, so in the
+  narrow results column at 960 px it reads at about 8 px. Draw their text at a fixed size (measure the chart's
+  width).
 
 **Decided by the user (2026-11-27):**
 - **The dwelling symbol** is the national index first; the districts later, where a series exists.
