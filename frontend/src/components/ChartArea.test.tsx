@@ -262,7 +262,6 @@ describe('ChartArea', () => {
           short_entry: [],
           short_exit: [],
           conflict: ['2026-11-20'],
-          warnings: [],
         },
       },
     });

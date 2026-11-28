@@ -1,7 +1,7 @@
 """The four trader profiles (``docs/PHASE4_PLAN.md``): how often the trader acts.
 
 A profile fixes the decision interval (the bars rules are evaluated on), the longer context
-intervals a rule may read, the calendar period the trade cap counts over, and the session rules.
+intervals a rule may read, the calendar period the trade cap counts over, and overnight holding.
 The cap itself (``default_max_trades``) is only a default: every strategy can change it, and the
 B4/B7 sweeps tune it like any other parameter (the user, 2026-11-28). What tells the profiles apart
 is the period it counts over: a day, an ISO week, a month or a year.
@@ -37,7 +37,6 @@ class TraderProfile(BaseModel):
     cap_period: CapPeriod = Field(description="Calendar period the trade cap counts over")
     default_max_trades: int = Field(description="Default trade cap per period (a parameter)")
     overnight: bool = Field(description="False: flat at the session close (Day)")
-    no_entry_last_minutes: int = Field(description="No new entries this close to the close")
 
     def context_for(self, decision: Interval) -> list[Interval]:
         """The context intervals longer than ``decision``."""
@@ -64,7 +63,6 @@ PROFILES: dict[ProfileId, TraderProfile] = {
             cap_period="day",
             default_max_trades=10,
             overnight=False,
-            no_entry_last_minutes=15,
         ),
         TraderProfile(
             id=ProfileId.SWING,
@@ -75,7 +73,6 @@ PROFILES: dict[ProfileId, TraderProfile] = {
             cap_period="week",
             default_max_trades=10,
             overnight=True,
-            no_entry_last_minutes=0,
         ),
         TraderProfile(
             id=ProfileId.POSITION,
@@ -86,7 +83,6 @@ PROFILES: dict[ProfileId, TraderProfile] = {
             cap_period="month",
             default_max_trades=10,
             overnight=True,
-            no_entry_last_minutes=0,
         ),
         TraderProfile(
             id=ProfileId.LONG_TERM,
@@ -97,7 +93,6 @@ PROFILES: dict[ProfileId, TraderProfile] = {
             cap_period="year",
             default_max_trades=12,
             overnight=True,
-            no_entry_last_minutes=0,
         ),
     )
 }

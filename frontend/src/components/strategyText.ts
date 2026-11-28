@@ -1,4 +1,4 @@
-import type { Condition, Operand, RulesStrategy, TraderProfile } from '../api/strategies.ts';
+import type { Condition, Operand, RulesStrategy } from '../api/strategies.ts';
 
 /** Readable rules for the Strategy tab (P4 B0); the rule builder arrives in B2. */
 
@@ -31,11 +31,6 @@ export function conditionText(c: Condition, indicators: Indicators): string {
 /** One line per group (its conditions ANDed); the groups are ORed. */
 export function groupsText(groups: readonly Condition[][], indicators: Indicators): string[] {
   return groups.map((g) => g.map((c) => conditionText(c, indicators)).join(' and '));
-}
-
-/** "10 a month": the cap and the calendar period it counts over. */
-export function capText(maxTrades: number, profile: TraderProfile): string {
-  return `${String(maxTrades)} a ${profile.capPeriod}`;
 }
 
 type Exits = NonNullable<RulesStrategy['exits']>;

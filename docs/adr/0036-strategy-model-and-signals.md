@@ -15,8 +15,8 @@ profiles apart is the calendar period it counts over, and a higher cap that earn
 - **`TraderProfile`** (`app/backtest/profiles.py`), four fixed objects: the decision intervals (the first is the
   default; Day 5m or 15m, Swing 1h, Position 1D, Long-term 1W or 1M), the longer context intervals a rule may read
   (Day 1h and 1D, Swing 1D, Position 1W, Long-term 1M), the cap's period (day, ISO week, month, year), the cap's
-  **default** (10, 10, 10, 12), overnight holding (Day: flat at the close) and the Day's no-entry minutes before the
-  close (15). Costs, evaluation windows and the metrics in front are added by the rounds that use them (B3, B4, B2).
+  **default** (10, 10, 10, 12) and overnight holding (Day: flat at the close). The Day's no-entry minutes before the
+  close, costs, evaluation windows and the metrics in front are added by the rounds that use them (B1, B3, B4, B2).
 - **The trade cap is a strategy parameter** (`max_trades`, null = the profile's default), stored now and enforced
   by the engine per period (B1); B4 and B7 tune it like any parameter, out of sample.
 - **The strategy document** (`DocumentStore("strategies")` in `app.db`, like layouts): a description, a profile, the

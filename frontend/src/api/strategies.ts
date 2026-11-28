@@ -44,8 +44,6 @@ export interface PythonFile {
 
 export interface SavedStrategy {
   name: string;
-  revision: number;
-  kind: string;
   profile: string;
 }
 
@@ -65,7 +63,6 @@ export const SIGNAL_KINDS = [
 export type SignalKind = (typeof SIGNAL_KINDS)[number];
 
 export interface Signals {
-  symbol: string;
   interval: string;
   bars: number;
   /** Bar times (as in /api/bars) per signal. */
@@ -109,12 +106,7 @@ export function parseCatalog(body: unknown): StrategyCatalog {
   return {
     saved: records(f('saved')).map((item) => {
       const g = fieldsOf<Schemas['StrategySummary']>(item);
-      return {
-        name: String(g('name')),
-        revision: Number(g('revision')),
-        kind: String(g('kind')),
-        profile: String(g('profile')),
-      };
+      return { name: String(g('name')), profile: String(g('profile')) };
     }),
     examples: records(f('examples')).map((item) => ({
       name: String(item['name']),
@@ -150,7 +142,6 @@ export function parseSignals(body: unknown): Signals {
   const times = (key: SignalKind) =>
     list(f(key)).map((t) => (typeof t === 'number' ? t : String(t)));
   return {
-    symbol: String(f('symbol')),
     interval: String(f('interval')),
     bars: Number(f('bars')),
     times: {

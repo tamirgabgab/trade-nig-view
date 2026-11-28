@@ -8,7 +8,7 @@ import { useChartStore } from '../store/chartStore.ts';
 import { useStrategyStore } from '../store/strategyStore.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
 import { StrategyPanel } from './StrategyPanel.tsx';
-import { capText, exitsText, groupsText, operandText } from './strategyText.ts';
+import { exitsText, groupsText, operandText } from './strategyText.ts';
 
 const PROFILES = [
   ['day', 'Day', ['5m', '15m'], ['1h', '1D'], 'day', 10, false],
@@ -24,7 +24,6 @@ const PROFILES = [
   cap_period: period,
   default_max_trades: cap,
   overnight,
-  no_entry_last_minutes: 0,
 }));
 
 const close = { price: 'close' as const, ago: 0 };
@@ -74,7 +73,6 @@ const SIGNALS = {
   short_entry: [],
   short_exit: [],
   conflict: [],
-  warnings: [],
 };
 
 describe('strategy text', () => {
@@ -89,7 +87,7 @@ describe('strategy text', () => {
     ]);
   });
 
-  it('describes the exits and the cap', () => {
+  it('describes the exits', () => {
     expect(exitsText(CROSS.exits)).toEqual([
       'on the other side’s entry',
       'stop 3 × ATR(14)',
@@ -98,8 +96,6 @@ describe('strategy text', () => {
     expect(
       exitsText({ on_opposite: false, atr_length: 14, target: { kind: 'percent', value: 5 } }),
     ).toEqual(['target 5 %']);
-    const profile = { capPeriod: 'month' } as Parameters<typeof capText>[1];
-    expect(capText(10, profile)).toBe('10 a month');
   });
 });
 

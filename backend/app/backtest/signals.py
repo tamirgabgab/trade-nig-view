@@ -51,12 +51,6 @@ class Signals:
     def conflict(self) -> BoolArray:
         return self.long_entry & self.short_entry
 
-    def take(self, n: int) -> Signals:
-        """The first ``n`` bars."""
-        return Signals(
-            self.long_entry[:n], self.long_exit[:n], self.short_entry[:n], self.short_exit[:n]
-        )
-
 
 SIGNAL_NAMES = ("long_entry", "long_exit", "short_entry", "short_exit")
 

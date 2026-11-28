@@ -118,7 +118,6 @@ class SignalsResponse(BaseModel):
     short_entry: Times
     short_exit: Times
     conflict: Times = Field(description="Both entries fire: the engine settles it (ADR 0036)")
-    warnings: list[str]
 
 
 def _field(document: Document, key: str) -> str:
@@ -267,5 +266,4 @@ def strategy_signals(
         short_entry=times("short_entry"),
         short_exit=times("short_exit"),
         conflict=times("conflict"),
-        warnings=list(result.warnings),
     )

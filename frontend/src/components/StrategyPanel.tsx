@@ -19,7 +19,7 @@ import { ConfirmDialog } from './ConfirmDialog.tsx';
 import f from './ForecastPanel.module.css';
 import { NumberField } from './NumberField.tsx';
 import styles from './StrategyPanel.module.css';
-import { capText, exitsText, groupsText } from './strategyText.ts';
+import { exitsText, groupsText } from './strategyText.ts';
 import { useChartSignals } from './useChartSignals.ts';
 
 const ROWS: { kind: SignalKind; label: string; glyph: string; color: string }[] = [
@@ -219,7 +219,9 @@ export function StrategyPanel() {
                 : 'none'}
             </dd>
             <dt>Trade cap</dt>
-            <dd>{capText(profile.defaultMaxTrades, profile)} by default (a parameter)</dd>
+            <dd>
+              {profile.defaultMaxTrades} a {profile.capPeriod} by default (a parameter)
+            </dd>
             <dt>Overnight</dt>
             <dd>{profile.overnight ? 'held' : 'flat at the close'}</dd>
           </dl>

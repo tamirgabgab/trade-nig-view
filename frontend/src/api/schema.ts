@@ -5041,8 +5041,6 @@ export interface components {
              * @description Both entries fire: the engine settles it (ADR 0036)
              */
             conflict: string[] | number[];
-            /** Warnings */
-            warnings: string[];
         };
         /** SimulateRequest */
         SimulateRequest: {
@@ -5800,11 +5798,6 @@ export interface components {
              * @description False: flat at the session close (Day)
              */
             overnight: boolean;
-            /**
-             * No Entry Last Minutes
-             * @description No new entries this close to the close
-             */
-            no_entry_last_minutes: number;
         };
         /**
          * Transform

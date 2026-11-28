@@ -11542,13 +11542,6 @@
             ],
             "title": "Conflict",
             "description": "Both entries fire: the engine settles it (ADR 0036)"
-          },
-          "warnings": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Warnings"
           }
         },
         "type": "object",
@@ -11560,8 +11553,7 @@
           "long_exit",
           "short_entry",
           "short_exit",
-          "conflict",
-          "warnings"
+          "conflict"
         ],
         "title": "SignalsResponse"
       },
@@ -13239,11 +13231,6 @@
             "type": "boolean",
             "title": "Overnight",
             "description": "False: flat at the session close (Day)"
-          },
-          "no_entry_last_minutes": {
-            "type": "integer",
-            "title": "No Entry Last Minutes",
-            "description": "No new entries this close to the close"
           }
         },
         "type": "object",
@@ -13255,8 +13242,7 @@
           "context_intervals",
           "cap_period",
           "default_max_trades",
-          "overnight",
-          "no_entry_last_minutes"
+          "overnight"
         ],
         "title": "TraderProfile"
       },
