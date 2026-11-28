@@ -449,7 +449,14 @@ Compare, the Planner's mix and (later) the backtester use it with no change of t
     of the four, low = the smallest), and it breaks what the four have in common inside a bar. Offered as an
     option, marked as such.
 
-**Open completions gathered here** (K4, each small):
+**Open completions gathered here** (K4, each small).
+- **Decided before K4 (2026-11-28):** K3 approved. The user asked for K4 without questions, each choice the
+  recommended one: **each apartment sold on its own "Sold on"** (the comparison ends on the later sale; an earlier
+  sale's proceeds go into that option's mix until then); **loading a scenario reruns the basic comparison**; **a
+  chart of both options' net worth along the plan**, month by month (two market accounts included), next to the
+  lead chart's exit values; **the Planner charts' text at a fixed size** (the chart measures its width); **the
+  flaky `U3: compare` end-to-end test fixed**; **the tax facts checked against official sources**; the run on real
+  data **prepared as a guide** for the user's machine (it cannot run in the cloud).
 - [ ] From H4: the second apartment sold on its own day (today both must be bought on the same day of the month);
   loading a saved scenario reruns the comparison; a chart of the net-worth paths of two market accounts.
 - [ ] A run of Phase H on real data on the user's machine (`make-fixtures.ps1`, `make_macro_fixtures.py`), and a
