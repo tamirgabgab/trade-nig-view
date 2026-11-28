@@ -30,7 +30,7 @@ describe('a saved scenario', () => {
     usePlannerHomeStore.getState().swap('b');
     usePlannerHomeStore.getState().update({ price: 3_000_000 });
     const state = captureScenario(PRESETS);
-    expect([state.version, state.same]).toEqual([1, false]);
+    expect([state.version, state.same]).toEqual([2, false]);
     expect([state.market.a.end, state.market.b.end]).toEqual(['2030-01-01', DEFAULT_FORM.end]);
     expect([state.home.a.price, state.home.b.price]).toEqual([DEFAULT_HOME.price, 3_000_000]);
     expect(state.contents.b).toEqual({ home: true, deposits: false });
@@ -136,10 +136,30 @@ describe('a saved scenario', () => {
     expect(usePlannerStore.getState().same).toBe(true);
   });
 
+  it("reads a scenario of version 1 with two apartments as it computed then: B sold on A's day", () => {
+    const state = captureScenario(PRESETS);
+    const old = {
+      ...state,
+      version: 1,
+      same: false,
+      contents: { a: { home: true, deposits: false }, b: { home: true, deposits: false } },
+      home: {
+        a: { ...state.home.a, end: '2035-03-01' },
+        b: { ...state.home.b, end: '2025-01-15' },
+      },
+    };
+    const read = parseScenarioState(JSON.parse(JSON.stringify(old)));
+    expect(read.version).toBe(2);
+    expect(read.home.b.end).toBe('2035-03-01');
+    // One apartment: its own date was always used.
+    const one = { ...old, contents: { a: { home: false, deposits: true }, b: old.contents.b } };
+    expect(parseScenarioState(JSON.parse(JSON.stringify(one))).home.b.end).toBe('2025-01-15');
+  });
+
   it('refuses what is not a scenario of this version', () => {
     const state = captureScenario(PRESETS);
-    expect(() => parseScenarioState({ ...state, version: 2 })).toThrow(/newer version/);
-    expect(() => parseScenarioState({ version: 1 })).toThrow(/not a planner scenario/);
+    expect(() => parseScenarioState({ ...state, version: 3 })).toThrow(/newer version/);
+    expect(() => parseScenarioState({ version: 2 })).toThrow(/not a planner scenario/);
     expect(() => parseScenarioState({ ...state, market: { a: state.market.a } })).toThrow(
       /not a planner scenario/,
     );

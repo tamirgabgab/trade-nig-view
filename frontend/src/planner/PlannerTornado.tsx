@@ -25,7 +25,8 @@ function unit(move: Move): string {
     : points;
 }
 
-const LABEL = 250;
+/** The inputs' names; narrower on a narrow chart, which keeps 120 px for the bars. */
+const LABEL_MAX = 250;
 const ROW = 30;
 const TOP = 6;
 const AXIS = 22;
@@ -52,6 +53,7 @@ interface PlannerTornadoProps {
  */
 export function PlannerTornado({ moves, names }: PlannerTornadoProps) {
   const [box, W] = useChartWidth();
+  const LABEL = Math.max(Math.min(LABEL_MAX, W - 120), 0);
   if (moves.length === 0) {
     return <p className={styles.note}>No input of this comparison can be moved.</p>;
   }

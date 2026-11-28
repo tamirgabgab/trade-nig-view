@@ -408,6 +408,51 @@ describe('PlannerCompare', () => {
     expect(await screen.findByRole('heading', { name: /against/ })).toBeInTheDocument();
   });
 
+  it('runs a loaded scenario only after a comparison still going ends', async () => {
+    const user = userEvent.setup();
+    const sent: { home?: { price?: number } }[] = [];
+    let release: () => void = () => undefined;
+    const first = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    usePlannerStore.getState().update({ assets: [ASSET] });
+    usePlannerHomeStore.getState().update({ price: 4_444_444 });
+    const state = captureScenario(SCENARIO_PRESETS);
+    usePlannerHomeStore.setState({ ...sanitizeHome(null) });
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': async (_url, init) => {
+        sent.push((body(init) as { x: { home?: { price?: number } } }).x);
+        if (sent.length === 1) await first;
+        return jsonResponse(SCENARIO_RESULT);
+      },
+      '/api/planner/scenarios': {
+        body: { scenarios: [{ name: 'Haifa', revision: 1, updated_at: '2026-11-26T10:00:00Z' }] },
+      },
+      '/api/planner/scenarios/Haifa': {
+        body: { name: 'Haifa', revision: 1, updated_at: '2026-11-26T10:00:00Z', state },
+      },
+    });
+    renderWithQuery(<PlannerCompare hidden={false} />);
+    const compare = screen.getByRole('button', { name: 'Compare' });
+    await vi.waitFor(() => {
+      expect(compare).toBeEnabled();
+    });
+    await user.click(compare);
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Saved scenario' }),
+      'Haifa',
+    );
+    await user.click(screen.getByRole('button', { name: 'Load scenario' }));
+    await screen.findByText('Loaded “Haifa”');
+    expect(sent).toHaveLength(1); // the first comparison is still going
+    release();
+    await vi.waitFor(() => {
+      expect(sent).toHaveLength(2);
+    });
+    expect(sent[1]?.home?.price).toBe(4_444_444);
+  });
+
   it('shows why a comparison cannot run and drops the earlier results', async () => {
     const user = userEvent.setup();
     let fail = false;

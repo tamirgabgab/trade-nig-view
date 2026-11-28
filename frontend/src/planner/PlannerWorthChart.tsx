@@ -6,7 +6,8 @@ import { useChartWidth } from './useChartWidth.ts';
 
 const H = 220;
 const LEFT = 10;
-const RIGHT = 160;
+/** The names at the lines' ends; narrower on a narrow chart, which keeps 130 px to plot. */
+const RIGHT_MAX = 160;
 const TOP = 12;
 const AXIS = 24;
 /** The least distance between the two names at the lines' ends. */
@@ -30,6 +31,7 @@ export function PlannerWorthChart({
   names: [string, string];
 }) {
   const [box, W] = useChartWidth();
+  const RIGHT = Math.max(Math.min(RIGHT_MAX, W - 130), 0);
   const series: [Path, string, string | undefined][] = [
     [paths.x, names[0], styles.lineX],
     [paths.y, names[1], styles.lineY],

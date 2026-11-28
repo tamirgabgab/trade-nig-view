@@ -358,8 +358,9 @@ def test_each_apartment_is_sold_on_its_own_day(client: TestClient) -> None:
     assert body["end"] == "2020-01-15"
     assert body["y"]["home"]["net_worth"] > 0  # at its own sale, 2015-01-15
     sale = body["y"]["home"]["net_worth"]
-    # Its money is in the account (with the top-ups), not counted again as an apartment.
-    assert body["y"]["account"]["deposited"] == pytest.approx(body["y"]["topped_up"] + sale)
+    # Its money is in the account, apart from the budget's top-ups, not counted again as a home.
+    assert body["y"]["account"]["deposited"] == pytest.approx(body["y"]["topped_up"])
+    assert body["y"]["account"]["from_sale"] == pytest.approx(sale)
     assert body["y"]["wealth"] == pytest.approx(body["y"]["account"]["net_value"])
     assert body["liquidity"]["y"]["apartment"] is None
     assert body["liquidity"]["y"]["wealth_forced"] == body["y"]["wealth"]
@@ -401,3 +402,31 @@ def test_the_net_worth_paths_of_two_market_accounts(client: TestClient) -> None:
     assert homes["paths"]["x"][-1]["date"] == "2020-01-15"
     first = homes["paths"]["x"][0]["worth"]
     assert first == pytest.approx(HOME["price"] - (HOME["price"] - HOME["equity"]), rel=0.05)
+
+
+def test_the_term_and_the_path_follow_the_apartment_sold_last(client: TestClient) -> None:
+    # A sells after 5 years, B holds 10: the term (the exit months) is B's, the end B's sale.
+    body = post(
+        client,
+        "run",
+        x={"home": HOME, "sold_on": "2015-01-15", "market": MARKET},
+        y={"home": HOME, "market": MARKET},
+    )
+    assert body["months"] == 120
+    assert body["average"]["points"][-1]["months"] == 120
+    # A's path goes on in its account, the sale's exit costs added back: no fall on the sale.
+    path = body["paths"]["x"]
+    sale = next(i for i, p in enumerate(path) if p["date"] == "2015-01-15")
+    after = path[sale + 1]["worth"]
+    assert after >= 0.9 * path[sale]["worth"]
+    assert path[-1]["date"] > "2019-12-01"
+
+
+def test_sold_on_needs_its_apartment_and_comes_by_the_end(client: TestClient) -> None:
+    for option in (
+        {"market": MARKET, "sold_on": "2015-01-15"},
+        {"home": HOME, "sold_on": "2021-01-15"},
+    ):
+        response = client.post("/api/planner/run", json={**BASE, "y": option})
+        assert response.status_code == 422, response.text
+        assert "sold_on needs its apartment" in response.json()["detail"]

@@ -92,6 +92,8 @@ class SideResult:
     #: Its apartment is sold on the end day (its net worth is in ``wealth``); False when it is
     #: sold before (its money is in the account) or there is none.
     home_held: bool
+    #: What an apartment sold before the end put into the account (not money from the budget).
+    from_sale: float
     #: Per ledger day: the option's own spending, and what it invests to match the budget.
     own: FloatArray
     top_up: FloatArray
@@ -212,6 +214,7 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
             home=home,
             market=market,
             home_held=held,
+            from_sale=sum(d.amount for d in proceeds),
             own=own,
             top_up=top_up,
             wealth=wealth,

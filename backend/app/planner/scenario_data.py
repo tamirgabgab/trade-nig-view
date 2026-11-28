@@ -6,8 +6,8 @@ market account and its deposits, as the user set them. :func:`build` turns it in
 one realization, under a :class:`Change`:
 
 * **shift**: every date moves by this many months (a window of history);
-* **months**: another horizon. The scenario's term is its first apartment's months held (or,
-  without an apartment, the months from the first deposit to the end); a horizon of
+* **months**: another horizon. The scenario's term is the months held by its apartment sold
+  last (or, without an apartment, the months from the first deposit to the end); a horizon of
   :math:`h` moves every sale and the end by :math:`h` minus that term, so two apartments sold
   on days of their own keep the months between their sales (a horizon that would hold one for
   less than a month cannot run). The end is the last sale;
@@ -121,11 +121,12 @@ def _homes(spec: ScenarioSpec) -> list[HomeSpec]:
 
 
 def term_months(spec: ScenarioSpec) -> int:
-    """The scenario's term: the first apartment's months held, or the months from the first
-    deposit to the end."""
+    """The scenario's term: the months held by the apartment sold last (the one that ends the
+    comparison; the first one's when both sell on one day), or the months from the first deposit
+    to the end."""
     homes = _homes(spec)
     if homes:
-        return homes[0].plan.months
+        return max(homes, key=lambda h: add_months(h.plan.start, h.plan.months)).plan.months
     first = first_day(spec)
     return (spec.end.year - first.year) * 12 + spec.end.month - first.month
 

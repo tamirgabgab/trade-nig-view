@@ -86,8 +86,9 @@ class ScenarioRequest(BaseModel):
     x: OptionIn
     y: OptionIn
     end: dt.date = Field(
-        description="Everything still held is sold on it (an apartment: on its month date); "
-        "with an apartment of its own sale date, the comparison ends on the last sale"
+        description="Without an apartment, everything is sold on it. With one, it is the latest "
+        "any apartment may be sold (by its own sold_on, or by this day) and the comparison "
+        "ends on the last sale"
     )
     inflation: InflationIn = InflationIn()
     forced_discount_pct: Percent = Field(
@@ -116,7 +117,8 @@ class HomeOut(BaseModel):
 
 
 class AccountOut(BaseModel):
-    deposited: float
+    deposited: float = Field(description="Put in from the budget: its own deposits and top-ups")
+    from_sale: float = Field(description="What its apartment, sold before the end, put in")
     value: float
     tax: float
     net_value: float
@@ -313,6 +315,8 @@ def scenario_spec(
     if not starts:
         raise PlanError("There is nothing to compare: neither option has an apartment or a deposit")
     for option in (body.x, body.y):
+        if option.sold_on is not None and (option.home is None or option.sold_on > body.end):
+            raise PlanError("An option's sold_on needs its apartment, and comes by the end date")
         sale = option.sold_on or body.end
         home = None if option.home is None else home_spec(option.home, sale)
         market = option.market
@@ -373,7 +377,8 @@ def _option(side: SideResult) -> OptionOut:
         account=None
         if market is None
         else AccountOut(
-            deposited=market.deposited,
+            deposited=market.deposited - side.from_sale,
+            from_sale=side.from_sale,
             value=market.value,
             tax=market.tax,
             net_value=market.net_value,

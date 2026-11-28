@@ -56,3 +56,22 @@ choice the recommended one: every decision below is **chosen without asking** an
 
 ## Consequences
 - Phase K is done in code. Two things stay open for the user: the run on real data, and reading regulation 5 itself.
+
+## What the review settled
+- A load while a comparison, study or simulation is still going waits for it: the older run would otherwise end
+  last over the loaded plan's results.
+- The term (the exit months, the horizons, the windows' effective count) is the months held by the apartment sold
+  last, which ends the comparison; on a tie, the first one's, so the old requests are unchanged.
+- After an early sale the net worth on the way adds back the exit costs the sale paid (selling costs, early
+  repayment fee, betterment tax): the apartment held to the end pays none on the way, so the sale is no fall in
+  the path and no false drawdown.
+- A scenario saved before K4 (version 1) with two apartments sold option B on A's "Sold on": it now reads with B's
+  date set to A's, so it gives the result it gave (saved scenarios are version 2). The browser's working state is
+  left as it is: B's "Sold on" was already used by B's own Apartment tab.
+- The charts keep at least about 120 px to plot on a narrow column (the margins shrink); the width hook is a
+  callback ref, so a chart that first rendered without its figure is measured once it has one.
+- The account of an option shows what an early sale put in apart (`from_sale`); `deposited` is what came from the
+  budget.
+- `sold_on` needs its apartment and comes by the end date (a 422 otherwise); `end` is described as what it is with
+  an apartment: the latest a sale may be.
+

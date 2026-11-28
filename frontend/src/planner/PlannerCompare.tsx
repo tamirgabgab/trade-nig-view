@@ -117,7 +117,8 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
     setLoads((n) => n + 1);
   };
   const runLoaded = useEffectEvent(() => {
-    if (!pendingRun.current || taxes === null) return;
+    // Not alongside a run still going: it would finish last over the loaded plan's results.
+    if (!pendingRun.current || taxes === null || status !== 'idle') return;
     pendingRun.current = false;
     if (ready) compare();
   });

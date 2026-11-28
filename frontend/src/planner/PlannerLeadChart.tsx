@@ -23,7 +23,8 @@ const KEY: Record<Series, string | undefined> = {
 
 const H = 240;
 const LEFT = 10;
-const RIGHT = 160;
+/** The names at the lines' ends; narrower on a narrow chart, which keeps 130 px to plot. */
+const RIGHT_MAX = 160;
 /** The least distance between the two names at the lines' ends. */
 const LINE_GAP = 14;
 const TOP = 18;
@@ -46,6 +47,7 @@ interface PlannerLeadChartProps {
  */
 export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadChartProps) {
   const [box, W] = useChartWidth();
+  const RIGHT = Math.max(Math.min(RIGHT_MAX, W - 130), 0);
   const off = `forced sale at −${plainPercent(discount)}`;
   const label: Record<Series, string> = {
     x: names[0],

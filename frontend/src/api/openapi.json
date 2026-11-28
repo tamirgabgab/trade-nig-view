@@ -2903,7 +2903,13 @@
         "properties": {
           "deposited": {
             "type": "number",
-            "title": "Deposited"
+            "title": "Deposited",
+            "description": "Put in from the budget: its own deposits and top-ups"
+          },
+          "from_sale": {
+            "type": "number",
+            "title": "From Sale",
+            "description": "What its apartment, sold before the end, put in"
           },
           "value": {
             "type": "number",
@@ -2921,6 +2927,7 @@
         "type": "object",
         "required": [
           "deposited",
+          "from_sale",
           "value",
           "tax",
           "net_value"
@@ -10393,7 +10400,7 @@
             "type": "string",
             "format": "date",
             "title": "End",
-            "description": "Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale"
+            "description": "Without an apartment, everything is sold on it. With one, it is the latest any apartment may be sold (by its own sold_on, or by this day) and the comparison ends on the last sale"
           },
           "inflation": {
             "$ref": "#/components/schemas/InflationIn",
@@ -10763,7 +10770,7 @@
             "type": "string",
             "format": "date",
             "title": "End",
-            "description": "Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale"
+            "description": "Without an apartment, everything is sold on it. With one, it is the latest any apartment may be sold (by its own sold_on, or by this day) and the comparison ends on the last sale"
           },
           "inflation": {
             "$ref": "#/components/schemas/InflationIn",
@@ -11126,7 +11133,7 @@
             "type": "string",
             "format": "date",
             "title": "End",
-            "description": "Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale"
+            "description": "Without an apartment, everything is sold on it. With one, it is the latest any apartment may be sold (by its own sold_on, or by this day) and the comparison ends on the last sale"
           },
           "inflation": {
             "$ref": "#/components/schemas/InflationIn",

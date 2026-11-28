@@ -77,7 +77,7 @@ describe('PlannerScenarios', () => {
     expect([method, name]).toEqual(['PUT', 'New one']);
     expect(sent).toMatchObject({
       revision: 0,
-      state: { version: 1, market: { a: { end: '2030-01-01' } } },
+      state: { version: 2, market: { a: { end: '2030-01-01' } } },
     });
     expect(screen.getByRole('status')).toHaveTextContent('Saved “New one”');
     // Enter in the name field saves too (it would submit the Compare form around it).

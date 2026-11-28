@@ -243,7 +243,9 @@ def worth_path(side: SideResult) -> tuple[IntArray, FloatArray]:
     its loan while it holds it, plus its account's market value. It is followed on the
     apartment's month dates, the account's value on each being that of the last month end (so a
     deposit of the last days is not in it yet); without an apartment, and after one sold before
-    the end, on the account's month ends."""
+    the end, on the account's month ends. After such a sale the exit costs it paid (selling
+    costs, early repayment fee, betterment tax) are added back, as the apartment held to the end
+    pays none on the way: the sale is not a fall in the path."""
     home, market = side.home, side.market
     if home is None:
         if market is None:
@@ -259,7 +261,8 @@ def worth_path(side: SideResult) -> tuple[IntArray, FloatArray]:
     if side.home_held:
         return grid, worth
     after = days > grid[-1]  # the apartment's money is in the account from its sale
-    return np.append(grid, days[after]), np.append(worth, values[after])
+    paid = float(home.value[-1] - home.balance[-1] - home.net_worth[-1])
+    return np.append(grid, days[after]), np.append(worth, values[after] + paid)
 
 
 def _side_outcome(

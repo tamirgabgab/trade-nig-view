@@ -983,8 +983,16 @@ export interface components {
         };
         /** AccountOut */
         AccountOut: {
-            /** Deposited */
+            /**
+             * Deposited
+             * @description Put in from the budget: its own deposits and top-ups
+             */
             deposited: number;
+            /**
+             * From Sale
+             * @description What its apartment, sold before the end, put in
+             */
+            from_sale: number;
             /** Value */
             value: number;
             /** Tax */
@@ -4565,7 +4573,7 @@ export interface components {
             /**
              * End
              * Format: date
-             * @description Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale
+             * @description Without an apartment, everything is sold on it. With one, it is the latest any apartment may be sold (by its own sold_on, or by this day) and the comparison ends on the last sale
              */
             end: string;
             /**
@@ -4774,7 +4782,7 @@ export interface components {
             /**
              * End
              * Format: date
-             * @description Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale
+             * @description Without an apartment, everything is sold on it. With one, it is the latest any apartment may be sold (by its own sold_on, or by this day) and the comparison ends on the last sale
              */
             end: string;
             /**
@@ -4944,7 +4952,7 @@ export interface components {
             /**
              * End
              * Format: date
-             * @description Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale
+             * @description Without an apartment, everything is sold on it. With one, it is the latest any apartment may be sold (by its own sold_on, or by this day) and the comparison ends on the last sale
              */
             end: string;
             /**

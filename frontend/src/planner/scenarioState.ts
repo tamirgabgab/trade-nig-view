@@ -24,7 +24,8 @@ import {
   type WithdrawSettings,
 } from '../store/plannerStore.ts';
 
-const VERSION = 1;
+/** 2 (K4): option B's apartment is sold on its own "Sold on"; version 1 sold it on A's. */
+const VERSION = 2;
 
 /** Everything a comparison is made of, as it is saved under a name. */
 export interface ScenarioState {
@@ -86,15 +87,18 @@ export function parseScenarioState(value: unknown): ScenarioState {
   // Read field by field; a scenario saved before the tab had settings has none.
   // Both options' entries must be there: anything else is a scenario without these settings.
   const withdraw = pair(state['withdraw'], (v) => (isRecord(v) ? readWithdraw(v) : null));
-  if (version !== VERSION || market === null || home === null) {
+  if ((version !== VERSION && version !== 1) || market === null || home === null) {
     throw new Error('This is not a planner scenario.');
   }
+  const contents = readContents(state['contents']);
+  // Saved before K4, two apartments were both sold on A's "Sold on": the result stays as saved.
+  const both = version === 1 && contents.a.home && contents.b.home;
   return {
     version: VERSION,
     same: state['same'] !== false,
     market,
-    home,
-    contents: readContents(state['contents']),
+    home: both ? { a: home.a, b: { ...home.b, end: home.a.end } } : home,
+    contents,
     compare: readCompare(state['compare']),
     ...(withdraw === null ? {} : { withdraw }),
   };
