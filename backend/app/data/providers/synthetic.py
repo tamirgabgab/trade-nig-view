@@ -65,46 +65,44 @@ class SyntheticProvider:
         return is_synthetic(symbol) and base is Interval.H1
 
     def fetch_daily(self, symbol: SymbolInfo, start: date, end: date) -> BarFrame:
-        return _between(self._bars(symbol, hourly=False), start, end)
+        return self.generate(symbol, Interval.D1, start, end)[0]
 
     def fetch_intraday(
         self, symbol: SymbolInfo, base: Interval, start: date, end: date
     ) -> BarFrame:
         if not self.supports_intraday(symbol, base):
             raise ProviderError(f"{symbol.symbol} has no {base} bars")
-        return _between(self._bars(symbol, hourly=True), start, end)
+        return self.generate(symbol, base, start, end)[0]
 
-    def freshness(self, symbol: SymbolInfo) -> tuple[bool, tuple[str, ...]]:
-        """Whether the data behind ``symbol`` is a stale copy, and why (a dwelling symbol's index,
-        a shuffled copy's source, when its refresh failed)."""
-        match self._lookup(symbol):
-            case DwellingDefinition() as definition:
-                cached = self._index(definition.series)
-                return cached.stale, cached.warnings
-            case ShuffleDefinition() as definition:
-                _, stale, warnings = self._source_daily(definition.source)
-                return stale, warnings
-            case _:
-                return False, ()  # generated from the definition alone
+    def generate(
+        self, symbol: SymbolInfo, base: Interval, start: date, end: date
+    ) -> tuple[BarFrame, bool, tuple[str, ...]]:
+        """The 1D or 1h bars of ``symbol`` between the dates, and whether the data behind them is
+        a stale copy and why (a dwelling symbol's index, a shuffled copy's source, when its
+        refresh failed), from one read of that data."""
+        frame, stale, warnings = self._bars(self._lookup(symbol), hourly=base.is_intraday)
+        return _between(frame, start, end), stale, warnings
 
-    def _bars(self, symbol: SymbolInfo, *, hourly: bool) -> BarFrame:
-        definition = self._lookup(symbol)
+    def _bars(
+        self, definition: SyntheticDefinition, *, hourly: bool
+    ) -> tuple[BarFrame, bool, tuple[str, ...]]:
         match definition:
             case ScenarioDefinition():
-                return hourly_bars(definition) if hourly else daily_bars(definition)
+                return (hourly_bars if hourly else daily_bars)(definition), False, ()
             case DwellingDefinition():
-                index = self._index(definition.series).data
+                cached = self._index(definition.series)
                 bars = dwelling_hourly if hourly else dwelling_daily
-                return bars(definition, index, self._today())
+                return bars(definition, cached.data, self._today()), cached.stale, cached.warnings
             case ParametricDefinition():
-                return parametric_hourly(definition) if hourly else parametric_daily(definition)
+                return (parametric_hourly if hourly else parametric_daily)(definition), False, ()
             case ShuffleDefinition():
-                frame, _, _ = self._source_daily(definition.source)
+                frame, stale, warnings = self._source_daily(definition.source)
                 try:
                     source = source_slice(definition, dividend_adjust(frame))
                 except ValueError as exc:
                     raise ProviderError(str(exc)) from exc
-                return (shuffle_hourly if hourly else shuffle_daily)(definition, source)
+                bars = (shuffle_hourly if hourly else shuffle_daily)(definition, source)
+                return bars, stale, warnings
 
     def _lookup(self, symbol: SymbolInfo) -> SyntheticDefinition:
         definition = self._definition(symbol.symbol)

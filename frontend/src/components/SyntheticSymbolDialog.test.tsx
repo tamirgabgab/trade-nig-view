@@ -454,6 +454,8 @@ describe('SyntheticSymbolDialog', () => {
 
   it('creates a shuffled copy: the range fills in, a preview, then the copy next to its source', async () => {
     api();
+    // A full compare list and ADJ off: the copy still opens next to its source, both adjusted.
+    useChartStore.setState({ compare: ['TSLA', '^GSPC', 'GBPUSD=X'], adjusted: false });
     const user = userEvent.setup();
     renderWithQuery(<SyntheticSymbolDialog />);
     useUiStore.getState().openModal('synthetic', '');
@@ -490,6 +492,7 @@ describe('SyntheticSymbolDialog', () => {
       expect(useChartStore.getState().symbol).toBe('SYN:NEW1');
     });
     expect(useChartStore.getState().compare).toEqual(['AAPL']);
+    expect(useChartStore.getState().adjusted).toBe(true);
     const put = calls.find((c) => c.method === 'PUT');
     const sent = JSON.parse(String(put?.body)) as { definition: Record<string, unknown> };
     expect(sent.definition).toMatchObject({
@@ -501,6 +504,43 @@ describe('SyntheticSymbolDialog', () => {
       block_days: 63,
     });
     expect(sent.definition).not.toHaveProperty('first_price');
+  });
+
+  it('drops the answer for a source picked before the current one', async () => {
+    api();
+    let releaseTsla: () => void = () => undefined;
+    const tslaAnswered = new Promise<void>((resolve) => {
+      releaseTsla = resolve;
+    });
+    stubApi({
+      '/api/symbols': { body: SYMBOLS },
+      '/api/synthetic/shuffle/preview': async (_url, init) => {
+        const body = JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as {
+          source: string;
+        };
+        if (body.source === 'TSLA') {
+          await tslaAnswered;
+          return jsonResponse(
+            { detail: 'TSLA has 50 daily bars', code: 'invalid_synthetic', status: 422 },
+            422,
+          );
+        }
+        return jsonResponse(SHUFFLE_PREVIEW);
+      },
+    });
+    const user = userEvent.setup();
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', '');
+    const dialog = await screen.findByRole('dialog', { name: 'New synthetic symbol' });
+    await user.selectOptions(within(dialog).getByLabelText('Kind'), 'shuffle');
+    await user.selectOptions(within(dialog).getByLabelText('Source'), 'TSLA');
+    await user.selectOptions(within(dialog).getByLabelText('Source'), 'AAPL');
+    await vi.waitFor(() => {
+      expect(within(dialog).getByLabelText('From')).toHaveValue('2001-12-24');
+    });
+    releaseTsla();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(within(dialog).queryByText(/TSLA has 50 daily bars/)).toBeNull();
   });
 
   it('edits a stored copy from its values, and blocks a range that ends today', async () => {

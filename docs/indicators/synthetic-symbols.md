@@ -293,7 +293,8 @@ $$
 
 A shuffled copy's daily bar is the source's real one, moved; its seven hours are invented to land on it exactly: a
 bridge from the open to the close kept inside the day's range, every wick inside it too, one hour touching the high
-and one the low.
+and one the low. They are stamped 09:30–16:00 New York on each of the source's dates, weekend ones included for a
+source that trades on them.
 
 ## Worked example
 

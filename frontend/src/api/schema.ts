@@ -122,8 +122,9 @@ export interface paths {
          *
          *     The symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already
          *     taken is a 409 too (the stored revision is not 0). The last bar must be before today. A
-         *     shuffled copy's source must be a market symbol with enough bars in the range; its currency,
-         *     volume and decimals are copied into the definition.
+         *     shuffled copy's source must be a market symbol with enough bars in the range; the source is
+         *     stored as the universe's symbol, the range on its first and last bars, and the source's
+         *     currency, volume and decimals are copied into the definition.
          */
         put: operations["put_synthetic_api_synthetic__symbol__put"];
         post?: never;

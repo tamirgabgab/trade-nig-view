@@ -22,7 +22,11 @@ that lands on day :math:`t` (:math:`\pi(0) = 0`).
 
 :math:`\prod_t c_{\pi(t)} = \prod_t c_t`, so :math:`C'_{n-1} = C_{n-1}`: the copy has the source's
 first bar, last close, total return and set of daily bars; only their order changes (each block
-keeps its own days in order, so a block's trend and its volatility clusters stay).
+keeps its own days in order, so a block's trend and its volatility clusters stay). A bar whose open
+or close lies outside its range by the validator's tolerance gets its high and low widened to them.
+
+The dates are the source's, weekends included for a source that trades on them; the copy's 1h
+bars are stamped 09:30-16:00 New York on each date, as every synthetic symbol's.
 """
 
 from __future__ import annotations
@@ -64,8 +68,8 @@ def source_slice(definition: ShuffleDefinition, adjusted: BarFrame) -> BarFrame:
 
 
 def block_order(moves: int, block_days: int, seed: int) -> IntArray:
-    """The source bars (1 to ``moves``) in their new order: blocks of ``block_days`` permuted,
-    never all in place (``moves // block_days`` must leave two blocks at least)."""
+    """The source bars (1 to ``moves``) in their new order: the ``ceil(moves / block_days)``
+    blocks permuted, never all in place (two blocks at least, else ``ValueError``)."""
     starts = np.arange(1, moves + 1, block_days)
     if len(starts) < 2:  # noqa: PLR2004
         raise ValueError(
@@ -87,11 +91,14 @@ def shuffled(source: BarFrame, block_days: int, seed: int) -> BarFrame:
     o, h, low, c = (r[pick] for r in ratios)
     close = source.close[0] * np.concatenate(([1.0], np.cumprod(c)))
     before = close[:-1]
+    day_open = np.concatenate((source.open[:1], before * o))
+    high = np.concatenate((source.high[:1], before * h))
+    low_ = np.concatenate((source.low[:1], before * low))
     return BarFrame.from_columns(
         time=source.time.copy(),
-        open=np.concatenate((source.open[:1], before * o)),
-        high=np.concatenate((source.high[:1], before * h)),
-        low=np.concatenate((source.low[:1], before * low)),
+        open=day_open,
+        high=np.maximum(high, np.maximum(day_open, close)),
+        low=np.minimum(low_, np.minimum(day_open, close)),
         close=close,
         volume=np.concatenate((source.volume[:1], source.volume[1:][pick])),
     )
@@ -112,6 +119,16 @@ class Measures:
 
 
 def measures(time: IntArray, close: FloatArray) -> Measures:
+    r"""The sequence of the closes :math:`C_0 \dots C_{n-1}` at ``time``:
+
+    .. math::
+        R = \frac{C_{n-1}}{C_0} - 1, \qquad
+        D = \min_t \Big(\frac{C_t}{\max_{s \le t} C_s} - 1\Big), \qquad
+        Y_y = \frac{C_{\text{last}(y)}}{C_{\text{last}(y-1)}} - 1
+
+    with :math:`C_{\text{last}(y-1)} = C_0` for the first year, the worst year the smallest
+    :math:`Y_y`, and the longest losing streak the longest run of :math:`C_t < C_{t-1}`.
+    """
     peak = np.maximum.accumulate(close)
     years = (time // SECONDS_PER_DAY).astype("datetime64[D]").astype("datetime64[Y]")
     last = np.flatnonzero(np.r_[years[1:] != years[:-1], True])  # each year's last bar

@@ -166,7 +166,7 @@ class ShufflePreviewRequest(BaseModel):
     before today), block length and seed."""
 
     source: Annotated[str, Field(min_length=1, max_length=20)]
-    start: dt.date | None = None
+    start: Annotated[dt.date | None, Field(ge=FIRST_DAY)] = None
     end: dt.date | None = None
     block_days: Annotated[int, Field(ge=1, le=1000)] = 21
     seed: Annotated[int, Field(ge=0, le=1_000_000)]
@@ -215,7 +215,10 @@ def preview_shuffle(
 ) -> ShufflePreviewOut:
     """What a shuffled copy draws: the source against the copy, and their sequences."""
     _, frame = _market_daily(body.source, universe, bars)
-    before_today = frame.time[frame.time < date_to_ts(dt.datetime.now(dt.UTC).date())]
+    today = dt.datetime.now(dt.UTC).date()
+    if body.end is not None and body.end >= today:
+        raise InvalidSyntheticError(f"The range ends on {body.end}, not before today ({today})")
+    before_today = frame.time[frame.time < date_to_ts(today)]
     if len(before_today) == 0:
         raise InvalidSyntheticError(f"{body.source} has no daily bars before today")
     first = max(ts_to_date(int(before_today[0])), FIRST_DAY)
@@ -307,8 +310,9 @@ def put_synthetic(
 
     The symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already
     taken is a 409 too (the stored revision is not 0). The last bar must be before today. A
-    shuffled copy's source must be a market symbol with enough bars in the range; its currency,
-    volume and decimals are copied into the definition.
+    shuffled copy's source must be a market symbol with enough bars in the range; the source is
+    stored as the universe's symbol, the range on its first and last bars, and the source's
+    currency, volume and decimals are copied into the definition.
     """
     definition = body.definition
     if symbol.strip().upper() != definition.symbol:
@@ -326,11 +330,15 @@ def put_synthetic(
                 )
             info, frame = _market_daily(definition.source, universe, bars)
             try:
-                source_slice(definition, frame)
+                source = source_slice(definition, frame)
             except ValueError as exc:
                 raise InvalidSyntheticError(str(exc)) from exc
+            # The source as the universe names it, the range on its first and last bars.
             definition = definition.model_copy(
                 update={
+                    "source": info.symbol,
+                    "start": ts_to_date(int(source.time[0])),
+                    "end": ts_to_date(int(source.time[-1])),
                     "currency": info.currency,
                     "has_volume": info.has_volume,
                     "decimals": info.decimals,

@@ -190,7 +190,9 @@ def rescaled_before(cached: BarFrame, fresh: BarFrame) -> BarFrame:
 class SyntheticSource(DataProvider, Protocol):
     """The synthetic symbols' provider: bars, and whether the data behind them is stale."""
 
-    def freshness(self, symbol: SymbolInfo) -> tuple[bool, tuple[str, ...]]: ...
+    def generate(
+        self, symbol: SymbolInfo, base: Interval, start: date, end: date
+    ) -> tuple[BarFrame, bool, tuple[str, ...]]: ...
 
 
 class BarService:
@@ -268,12 +270,7 @@ class BarService:
             )
         today = self._today()
         try:
-            frame = (
-                provider.fetch_intraday(info, base, HISTORY_START, today)
-                if base.is_intraday
-                else provider.fetch_daily(info, HISTORY_START, today)
-            )
-            stale, warnings = provider.freshness(info)
+            frame, stale, warnings = provider.generate(info, base, HISTORY_START, today)
         except ProviderError as exc:
             raise DataUnavailableError(str(exc)) from exc
         return CachedBars(

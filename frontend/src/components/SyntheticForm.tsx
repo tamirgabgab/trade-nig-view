@@ -236,18 +236,20 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
     setError(null);
   };
   // A new source: its whole range (from 1970 to its last bar before today) fills the dates, once
-  // they are known and if the source is still the one picked.
+  // they are known and if the source is still the one picked (an answer for an earlier pick,
+  // range or error, is dropped).
+  const picked = useRef('');
   const chooseSource = (source: string) => {
+    picked.current = source;
     setShuffle({ source, start: '', end: '' });
     if (source === '') return;
     fetchShuffleRange(client, { source, blockDays: 1, seed: shuffleDraft.seed })
       .then((range) => {
-        setShuffleDraft((d) =>
-          d.source === source && d.start === '' ? { ...d, start: range.start, end: range.end } : d,
-        );
+        if (picked.current !== source) return;
+        setShuffleDraft((d) => (d.start === '' ? { ...d, start: range.start, end: range.end } : d));
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : String(e));
+        if (picked.current === source) setError(e instanceof Error ? e.message : String(e));
       });
   };
 
@@ -265,8 +267,14 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
       // Its bars, quotes and indicators are cached under many keys: refetch them all.
       void client.invalidateQueries();
       if (!editing) setSymbol(saved.symbol);
-      // A copy opens next to its source, so the same days in another order show at once.
-      if (!editing && def.kind === 'shuffle') useChartStore.getState().addCompare(def.source);
+      if (!editing && def.kind === 'shuffle') {
+        // A copy opens next to its source alone (a full compare list would leave no room for it),
+        // both dividend-adjusted as the copy is, so they share their first and last prices.
+        const chart = useChartStore.getState();
+        chart.compare.forEach(chart.removeCompare);
+        chart.addCompare(def.source);
+        chart.setAdjusted(true);
+      }
       useUiStore.getState().showToast(`${editing ? 'Saved' : 'Created'} ${saved.symbol}`);
       onClose();
     } catch (e: unknown) {
@@ -625,8 +633,8 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
           {kind === 'parametric' &&
             'Each day draws its return; a jump shows as a gap at the open. '}
           {kind === 'shuffle' &&
-            "The source's days in another order, on its dates: the first bar, the last close " +
-              'and the set of days stay. A day may hold a later day of the source. '}
+            "The source's dividend-adjusted days in another order, on its dates: the first bar, " +
+              'the last close and the set of days stay. A day may hold a later day of the source. '}
           Each day has seven 1h bars, 09:30–16:00 New York.{' '}
           <button
             type="button"

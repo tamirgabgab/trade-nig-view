@@ -291,10 +291,30 @@ def test_a_copy_carries_its_sources_staleness_and_reads_its_bars() -> None:
 
     provider = SyntheticProvider(lambda _: d, no_index, lambda _: (src, True, warnings))
     info = d.info()
-    assert provider.freshness(info) == (True, warnings)
+    assert provider.generate(info, Interval.D1, FIRST, FIRST)[1:] == (True, warnings)
     daily = provider.fetch_daily(info, date(2000, 1, 1), date(2030, 1, 1))
     np.testing.assert_array_equal(daily.close, shuffle_daily(d, source_slice(d, src)).close)
     assert len(provider.fetch_intraday(info, Interval.H1, FIRST, FIRST)) == SESSION_BARS
     short = SyntheticProvider(lambda _: d, no_index, lambda _: (src.take(slice(0, 50)), False, ()))
     with pytest.raises(ProviderError, match="needs 100"):
         short.fetch_daily(info, date(2000, 1, 1), date(2030, 1, 1))
+
+
+def test_a_bar_off_its_range_by_the_tolerance_is_widened_not_broken() -> None:
+    # The validator keeps an open or close up to 1e-6 outside [low, high]: the hours stay valid.
+    src = source(MIN_BARS)
+    o, h, lo, c = (col.copy() for col in (src.open, src.high, src.low, src.close))
+    o[5] = h[5] * (1 + 5e-7)
+    c[6] = lo[6] * (1 - 5e-7)
+    nudged = BarFrame.from_columns(
+        time=src.time, open=o, high=h, low=lo, close=c, volume=src.volume
+    )
+    d = definition(block_days=1)
+    daily = shuffle_daily(d, nudged)
+    hours = shuffle_hourly(d, nudged)
+    assert (daily.high >= np.maximum(daily.open, daily.close)).all()
+    assert (daily.low <= np.minimum(daily.open, daily.close)).all()
+    assert validate_bars(hours)[1].ok
+    shape = (len(daily), SESSION_BARS)
+    np.testing.assert_array_equal(hours.high.reshape(shape).max(axis=1), daily.high)
+    np.testing.assert_array_equal(hours.low.reshape(shape).min(axis=1), daily.low)

@@ -260,7 +260,7 @@
           "synthetic"
         ],
         "summary": "Put Synthetic",
-        "description": "Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.\n\nThe symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already\ntaken is a 409 too (the stored revision is not 0). The last bar must be before today. A\nshuffled copy's source must be a market symbol with enough bars in the range; its currency,\nvolume and decimals are copied into the definition.",
+        "description": "Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.\n\nThe symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already\ntaken is a 409 too (the stored revision is not 0). The last bar must be before today. A\nshuffled copy's source must be a market symbol with enough bars in the range; the source is\nstored as the universe's symbol, the range on its first and last bars, and the source's\ncurrency, volume and decimals are copied into the definition.",
         "operationId": "put_synthetic_api_synthetic__symbol__put",
         "parameters": [
           {

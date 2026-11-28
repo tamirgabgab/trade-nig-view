@@ -605,3 +605,31 @@ def test_the_shuffle_preview_fills_the_range_and_keeps_the_ends(e2e_client: Test
     assert copy["max_drawdown_pct"] != source["max_drawdown_pct"]
     bad = e2e_client.post(f"{URL}/shuffle/preview", json={"source": "SYN:CP", "seed": 2})
     assert bad.status_code == 422
+
+
+def test_a_copy_is_stored_with_the_universes_symbol_and_its_bars_range(
+    e2e_client: TestClient,
+) -> None:
+    # SPX is the index's display name; 2016-06-04 is a Saturday, 2019-12-29 a Sunday.
+    created = put_copy(e2e_client, source="spx", start="2016-06-04", end="2019-12-29")
+    assert created.status_code == 200, created.text
+    stored = created.json()["definition"]
+    assert (stored["source"], stored["start"], stored["end"]) == (
+        "^GSPC",
+        "2016-06-06",
+        "2019-12-27",
+    )
+    assert created.json()["last_date"] == "2019-12-27"
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [({"end": "2100-01-01"}, "before today"), ({"start": "1960-01-04"}, "1970")],
+)
+def test_the_shuffle_preview_refuses_what_saving_would(
+    e2e_client: TestClient, changes: dict[str, Any], message: str
+) -> None:
+    body = {"source": "AAPL", "seed": 2, **changes}
+    response = e2e_client.post(f"{URL}/shuffle/preview", json=body)
+    assert response.status_code == 422, response.text
+    assert message in response.text

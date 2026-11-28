@@ -198,6 +198,10 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((x): x is string => typeof x === 'string') : [];
 }
 
+function numbers(value: unknown): number[] {
+  return Array.isArray(value) ? value.filter((x): x is number => typeof x === 'number') : [];
+}
+
 function isScenario(value: unknown): value is Scenario {
   return SCENARIOS.some((s) => s.id === value);
 }
@@ -402,8 +406,6 @@ function parseSequence(body: unknown): Sequence {
 function parseShufflePreview(body: unknown): ShufflePreview {
   if (!isRecord(body)) throw new Error('Unexpected shuffle preview response');
   const field = fieldsOf<Schemas['ShufflePreviewOut']>(body);
-  const numbers = (value: unknown) =>
-    Array.isArray(value) ? value.filter((x): x is number => typeof x === 'number') : [];
   return {
     start: str(field('start'), 'start'),
     end: str(field('end'), 'end'),
@@ -465,8 +467,6 @@ export function fetchShuffleRange(
 function parsePreview(body: unknown): ReturnPreview {
   if (!isRecord(body)) throw new Error('Unexpected preview response');
   const field = fieldsOf<Schemas['PreviewOut']>(body);
-  const numbers = (value: unknown) =>
-    Array.isArray(value) ? value.filter((x): x is number => typeof x === 'number') : [];
   const optional = (value: unknown) => (typeof value === 'number' ? value : null);
   return {
     edges: numbers(field('edges')),
