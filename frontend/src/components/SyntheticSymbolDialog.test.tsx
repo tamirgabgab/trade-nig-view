@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { useChartStore } from '../store/chartStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
-import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
+import { jsonResponse, renderWithQuery, stubApi, SYMBOLS } from '../test/render.tsx';
 import { SyntheticSymbolDialog } from './SyntheticSymbolDialog.tsx';
 
 const STORED = {
@@ -66,6 +66,25 @@ const PREVIEW = {
   floored: 0,
 };
 
+const SEQUENCE = {
+  total_return_pct: 250.0,
+  max_drawdown_pct: -45.2,
+  worst_year: 2008,
+  worst_year_pct: -38.1,
+  longest_losing_streak: 9,
+};
+const SHUFFLE_PREVIEW = {
+  start: '2001-12-24',
+  end: '2026-11-20',
+  bars: 6500,
+  blocks: 310,
+  dates: ['2001-12-24', '2014-06-02', '2026-11-20'],
+  source_close: [1.2, 20, 23.5],
+  copy_close: [1.2, 6, 23.5],
+  source_measures: SEQUENCE,
+  copy_measures: { ...SEQUENCE, max_drawdown_pct: -61.7, worst_year: 2011 },
+};
+
 let calls: { method: string; path: string; body: unknown }[] = [];
 
 function api(putStatus = 200) {
@@ -78,6 +97,11 @@ function api(putStatus = 200) {
       return jsonResponse(STORED);
     },
     '/api/synthetic/SYN%3AWALK/references': { body: REFERENCES },
+    '/api/symbols': { body: SYMBOLS },
+    '/api/synthetic/shuffle/preview': (url, init) => {
+      calls.push({ method: 'POST', path: url.pathname, body: init?.body ?? null });
+      return jsonResponse(SHUFFLE_PREVIEW);
+    },
     '/api/synthetic/preview': (url, init) => {
       calls.push({ method: 'POST', path: url.pathname, body: init?.body ?? null });
       return jsonResponse(PREVIEW);
@@ -426,6 +450,97 @@ describe('SyntheticSymbolDialog', () => {
     expect(within(dialog).getByLabelText('Bars (days)')).toHaveValue(1000);
     const preview = await within(dialog).findByRole('region', { name: 'Preview' });
     expect(within(preview).getByRole('row', { name: /^Skewness/ })).toHaveTextContent('none');
+  });
+
+  it('creates a shuffled copy: the range fills in, a preview, then the copy next to its source', async () => {
+    api();
+    const user = userEvent.setup();
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', '');
+    const dialog = await screen.findByRole('dialog', { name: 'New synthetic symbol' });
+    await user.type(within(dialog).getByLabelText('Name', { exact: true }), 'new1');
+    await user.type(within(dialog).getByLabelText('Full name'), 'Apple shuffled');
+    await user.selectOptions(within(dialog).getByLabelText('Kind'), 'shuffle');
+    // A copy starts at its source's first price: no field for one.
+    expect(within(dialog).queryByLabelText('First price')).toBeNull();
+    expect(within(dialog).queryByLabelText('Bars (days)')).toBeNull();
+    await user.selectOptions(within(dialog).getByLabelText('Source'), 'AAPL');
+    await vi.waitFor(() => {
+      expect(within(dialog).getByLabelText('From')).toHaveValue('2001-12-24');
+    });
+    expect(within(dialog).getByLabelText('To')).toHaveValue('2026-11-20');
+    await user.clear(within(dialog).getByLabelText('Block (days)'));
+    await user.type(within(dialog).getByLabelText('Block (days)'), '63');
+    const preview = await within(dialog).findByRole('region', { name: 'Preview' });
+    expect(within(preview).getByRole('img')).toBeInTheDocument();
+    expect(within(preview).getByRole('row', { name: /Deepest drawdown/ })).toHaveTextContent(
+      '-45.2 %-61.7 %',
+    );
+    await vi.waitFor(() => {
+      const asked = calls.filter((c) => c.path === '/api/synthetic/shuffle/preview');
+      expect(JSON.parse(String(asked.at(-1)?.body))).toMatchObject({
+        source: 'AAPL',
+        start: '2001-12-24',
+        block_days: 63,
+      });
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Create symbol' }));
+
+    await vi.waitFor(() => {
+      expect(useChartStore.getState().symbol).toBe('SYN:NEW1');
+    });
+    expect(useChartStore.getState().compare).toEqual(['AAPL']);
+    const put = calls.find((c) => c.method === 'PUT');
+    const sent = JSON.parse(String(put?.body)) as { definition: Record<string, unknown> };
+    expect(sent.definition).toMatchObject({
+      kind: 'shuffle',
+      name: 'NEW1',
+      source: 'AAPL',
+      start: '2001-12-24',
+      end: '2026-11-20',
+      block_days: 63,
+    });
+    expect(sent.definition).not.toHaveProperty('first_price');
+  });
+
+  it('edits a stored copy from its values, and blocks a range that ends today', async () => {
+    stubApi({
+      '/api/symbols': { body: SYMBOLS },
+      '/api/synthetic/SYN%3ACP': {
+        body: {
+          symbol: 'SYN:CP',
+          revision: 1,
+          last_date: '2019-12-31',
+          definition: {
+            kind: 'shuffle',
+            name: 'CP',
+            full_name: 'Copy',
+            source: 'AAPL',
+            start: '2010-01-04',
+            end: '2019-12-31',
+            block_days: 21,
+            seed: 4,
+            currency: 'USD',
+            has_volume: true,
+            decimals: 2,
+          },
+        },
+      },
+      '/api/synthetic/SYN%3ACP/references': { body: { ...REFERENCES, layouts: [] } },
+      '/api/synthetic/shuffle/preview': { body: SHUFFLE_PREVIEW },
+    });
+    const user = userEvent.setup();
+    renderWithQuery(<SyntheticSymbolDialog />);
+    useUiStore.getState().openModal('synthetic', 'SYN:CP');
+    const dialog = await screen.findByRole('dialog', { name: 'Edit SYN:CP' });
+    expect(await within(dialog).findByLabelText('Source')).toHaveValue('AAPL');
+    expect(within(dialog).getByLabelText('From')).toHaveValue('2010-01-04');
+    expect(within(dialog).getByLabelText('Block (days)')).toHaveValue(21);
+    await user.clear(within(dialog).getByLabelText('To'));
+    await user.type(within(dialog).getByLabelText('To'), new Date().toISOString().slice(0, 10));
+    expect(
+      within(dialog).getByText(/No preview: The last date is before today/),
+    ).toBeInTheDocument();
   });
 
   it('reads the learn page inside the dialog and comes back to the form as it was', async () => {

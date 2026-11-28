@@ -1,10 +1,10 @@
-import { keepPreviousData, skipToken, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, type QueryClient, skipToken, useQuery } from '@tanstack/react-query';
 
 import { apiDelete, apiGet, apiPost, apiPut, fieldsOf, isRecord, type Schemas } from './client.ts';
 import { SCENARIOS, type Scenario } from './lab.ts';
 import type { SymbolInfo } from './market.ts';
 
-/** Synthetic symbols (Phase K, ADR 0031 to 0033): invented series served like market data. */
+/** Synthetic symbols (Phase K, ADR 0031 to 0034): invented series served like market data. */
 
 export const SYNTHETIC_PREFIX = 'SYN:';
 /** The part after `SYN:`: a letter, then letters, digits, `.`, `-` or `_` (12 at most). */
@@ -18,11 +18,15 @@ interface Common {
   name: string;
   fullName: string;
   seed: number;
+}
+
+/** Every kind but a shuffled copy (which starts at its source's first price). */
+interface Priced {
   firstPrice: number;
 }
 
 /** A lab scenario (K0). */
-export interface ScenarioDefinition extends Common {
+export interface ScenarioDefinition extends Common, Priced {
   kind: 'scenario';
   scenario: Scenario;
   /** 'YYYY-MM-DD' */
@@ -44,7 +48,7 @@ export const DWELLING_SERIES = [
 export type DwellingSeries = (typeof DWELLING_SERIES)[number]['id'];
 
 /** A dwelling price index as the close (K1); prices in shekels, no volume. */
-export interface DwellingDefinition extends Common {
+export interface DwellingDefinition extends Common, Priced {
   kind: 'dwelling';
   series: DwellingSeries;
   /** The noise's daily standard deviation, % (0 to 5). */
@@ -99,7 +103,7 @@ export interface ReturnShape {
 }
 
 /** Drawn from the user's statistics (K2). */
-export interface ParametricDefinition extends Common, ReturnShape {
+export interface ParametricDefinition extends Common, Priced, ReturnShape {
   kind: 'parametric';
   /** 'YYYY-MM-DD' */
   firstDate: string;
@@ -107,7 +111,40 @@ export interface ParametricDefinition extends Common, ReturnShape {
   currency: Currency;
 }
 
-export type SyntheticDefinition = ScenarioDefinition | DwellingDefinition | ParametricDefinition;
+/** A market symbol's bars in another order (K3): blocks of `blockDays` permuted, on its dates. */
+export interface ShuffleDefinition extends Common {
+  kind: 'shuffle';
+  source: string;
+  /** 'YYYY-MM-DD', or '' until the source's range is known. */
+  start: string;
+  end: string;
+  blockDays: number;
+}
+
+export type SyntheticDefinition =
+  ScenarioDefinition | DwellingDefinition | ParametricDefinition | ShuffleDefinition;
+
+/** A path's sequence (the shuffle preview), in %. */
+export interface Sequence {
+  totalReturnPct: number;
+  maxDrawdownPct: number;
+  worstYear: number;
+  worstYearPct: number;
+  longestLosingStreak: number;
+}
+
+/** What a shuffled copy draws (POST /api/synthetic/shuffle/preview). */
+export interface ShufflePreview {
+  start: string;
+  end: string;
+  bars: number;
+  blocks: number;
+  dates: string[];
+  sourceClose: number[];
+  copyClose: number[];
+  sourceMeasures: Sequence;
+  copyMeasures: Sequence;
+}
 
 /** What the dialog's preview shows (POST /api/synthetic/preview). */
 export interface ReturnPreview {
@@ -174,8 +211,19 @@ function parseDefinition(body: Record<string, unknown>): SyntheticDefinition {
     name: str(body['name'], 'name'),
     fullName: str(body['full_name'], 'full_name'),
     seed: num(body['seed'], 'seed'),
-    firstPrice: num(body['first_price'], 'first_price'),
   };
+  if (body['kind'] === 'shuffle') {
+    const def = fieldsOf<Schemas['ShuffleDefinition']>(body);
+    return {
+      ...common,
+      kind: 'shuffle',
+      source: str(def('source'), 'source'),
+      start: str(def('start'), 'start'),
+      end: str(def('end'), 'end'),
+      blockDays: num(def('block_days'), 'block_days'),
+    };
+  }
+  const firstPrice = num(body['first_price'], 'first_price');
   if (body['kind'] === 'parametric') {
     const def = fieldsOf<Schemas['ParametricDefinition']>(body);
     const distribution = def('distribution');
@@ -184,6 +232,7 @@ function parseDefinition(body: Record<string, unknown>): SyntheticDefinition {
     }
     return {
       ...common,
+      firstPrice,
       kind: 'parametric',
       firstDate: str(def('first_date'), 'first_date'),
       bars: num(def('bars'), 'bars'),
@@ -208,6 +257,7 @@ function parseDefinition(body: Record<string, unknown>): SyntheticDefinition {
     if (!isDwellingSeries(series)) throw new Error(`Unknown dwelling series ${String(series)}`);
     return {
       ...common,
+      firstPrice,
       kind: 'dwelling',
       series,
       noisePct: num(def('noise_pct'), 'noise_pct'),
@@ -220,6 +270,7 @@ function parseDefinition(body: Record<string, unknown>): SyntheticDefinition {
   if (!isScenario(scenario)) throw new Error(`Unknown scenario ${String(scenario)}`);
   return {
     ...common,
+    firstPrice,
     kind: 'scenario',
     scenario,
     firstDate: str(def('first_date'), 'first_date'),
@@ -279,17 +330,17 @@ function shapeToWire(shape: ReturnShape) {
 
 function toWire(
   def: SyntheticDefinition,
-): Schemas['ScenarioDefinition'] | Schemas['DwellingDefinition'] | Schemas['ParametricDefinition'] {
-  const common = {
-    name: def.name,
-    full_name: def.fullName,
-    seed: def.seed,
-    first_price: def.firstPrice,
-  };
+):
+  | Schemas['ScenarioDefinition']
+  | Schemas['DwellingDefinition']
+  | Schemas['ParametricDefinition']
+  | Schemas['ShuffleDefinition'] {
+  const common = { name: def.name, full_name: def.fullName, seed: def.seed };
   switch (def.kind) {
     case 'scenario':
       return {
         ...common,
+        first_price: def.firstPrice,
         kind: 'scenario',
         scenario: def.scenario,
         first_date: def.firstDate,
@@ -299,6 +350,7 @@ function toWire(
     case 'dwelling':
       return {
         ...common,
+        first_price: def.firstPrice,
         kind: 'dwelling',
         series: def.series,
         noise_pct: def.noisePct,
@@ -309,16 +361,105 @@ function toWire(
       return {
         ...common,
         ...shapeToWire(def),
+        first_price: def.firstPrice,
         kind: 'parametric',
         first_date: def.firstDate,
         bars: def.bars,
         currency: def.currency,
+      };
+    case 'shuffle':
+      return {
+        ...common,
+        kind: 'shuffle',
+        source: def.source,
+        start: def.start,
+        end: def.end,
+        block_days: def.blockDays,
+        // Set by the server from the source when it is saved.
+        currency: 'USD',
+        has_volume: true,
+        decimals: 2,
       };
     default: {
       const never: never = def;
       throw new Error(`Unknown kind ${String(never)}`);
     }
   }
+}
+
+function parseSequence(body: unknown): Sequence {
+  if (!isRecord(body)) throw new Error('Unexpected sequence');
+  const field = fieldsOf<Schemas['SequenceOut']>(body);
+  return {
+    totalReturnPct: num(field('total_return_pct'), 'total_return_pct'),
+    maxDrawdownPct: num(field('max_drawdown_pct'), 'max_drawdown_pct'),
+    worstYear: num(field('worst_year'), 'worst_year'),
+    worstYearPct: num(field('worst_year_pct'), 'worst_year_pct'),
+    longestLosingStreak: num(field('longest_losing_streak'), 'longest_losing_streak'),
+  };
+}
+
+function parseShufflePreview(body: unknown): ShufflePreview {
+  if (!isRecord(body)) throw new Error('Unexpected shuffle preview response');
+  const field = fieldsOf<Schemas['ShufflePreviewOut']>(body);
+  const numbers = (value: unknown) =>
+    Array.isArray(value) ? value.filter((x): x is number => typeof x === 'number') : [];
+  return {
+    start: str(field('start'), 'start'),
+    end: str(field('end'), 'end'),
+    bars: num(field('bars'), 'bars'),
+    blocks: num(field('blocks'), 'blocks'),
+    dates: strings(field('dates')),
+    sourceClose: numbers(field('source_close')),
+    copyClose: numbers(field('copy_close')),
+    sourceMeasures: parseSequence(field('source_measures')),
+    copyMeasures: parseSequence(field('copy_measures')),
+  };
+}
+
+/** A shuffled copy's preview request; null dates ask for the source's whole range. */
+export interface ShuffleRequest {
+  source: string;
+  start: string | null;
+  end: string | null;
+  blockDays: number;
+  seed: number;
+}
+
+function shuffleQuery(request: ShuffleRequest) {
+  const body = {
+    source: request.source,
+    start: request.start,
+    end: request.end,
+    block_days: request.blockDays,
+    seed: request.seed,
+  } satisfies Schemas['ShufflePreviewRequest'];
+  return {
+    queryKey: ['shufflePreview', body],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      apiPost('/synthetic/shuffle/preview', body, parseShufflePreview, { signal }),
+    staleTime: Infinity,
+  };
+}
+
+/** The source against a shuffled copy, and their sequences (none for null); the last preview
+ *  stays while the next one loads. */
+export function useShufflePreview(request: ShuffleRequest | null) {
+  const query = request === null ? null : shuffleQuery(request);
+  return useQuery({
+    queryKey: query?.queryKey ?? ['shufflePreview', null],
+    queryFn: query?.queryFn ?? skipToken,
+    placeholderData: keepPreviousData,
+    staleTime: Infinity,
+  });
+}
+
+/** A source's whole range (from 1970 to its last bar before today), from the same preview. */
+export function fetchShuffleRange(
+  client: QueryClient,
+  request: Omit<ShuffleRequest, 'start' | 'end'>,
+): Promise<ShufflePreview> {
+  return client.query(shuffleQuery({ ...request, start: null, end: null }));
 }
 
 function parsePreview(body: unknown): ReturnPreview {

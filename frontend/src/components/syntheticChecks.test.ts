@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ParametricDefinition, SyntheticDefinition } from '../api/synthetic.ts';
+import type {
+  ParametricDefinition,
+  ShuffleDefinition,
+  SyntheticDefinition,
+} from '../api/synthetic.ts';
 import {
   addWeekdays,
   definitionProblem,
@@ -155,5 +159,36 @@ describe('parametric definition checks', () => {
     expect(previewProblem({ ...stats, seed: 1.5 })).toMatch(/Seed/);
     expect(previewProblem({ ...stats, bars: 10_001 })).toMatch(/Bars/);
     expect(previewProblem({ ...stats, volPct: Number.NaN })).toMatch(/Volatility/);
+  });
+});
+
+describe('shuffled copy checks', () => {
+  const copy: ShuffleDefinition = {
+    kind: 'shuffle',
+    name: 'CP',
+    fullName: 'A copy',
+    seed: 1,
+    source: 'AAPL',
+    start: '2010-01-04',
+    end: '2019-12-31',
+    blockDays: 21,
+  };
+
+  it('needs no first price, and accepts a range before today', () => {
+    expect(definitionProblem(copy, '2026-11-27')).toBeNull();
+    expect(definitionProblem({ ...copy, blockDays: 1 }, '2026-11-27')).toBeNull();
+  });
+
+  it.each([
+    [{ source: '' }, /source/],
+    [{ start: '' }, /first and the last dates/],
+    [{ start: '1969-12-31' }, /1970/],
+    [{ end: '2010-01-04' }, /after the first/],
+    [{ end: '2026-11-27' }, /before today/],
+    [{ blockDays: 0 }, /Block/],
+    [{ blockDays: 1.5 }, /Block/],
+    [{ blockDays: 1001 }, /Block/],
+  ])('rejects %o', (change, message) => {
+    expect(definitionProblem({ ...copy, ...change }, '2026-11-27')).toMatch(message);
   });
 });

@@ -17,9 +17,10 @@ test.beforeEach(async ({ page }) => {
 
 const HOME = `${SYMBOL}H`;
 const STATS = `${SYMBOL}P`;
+const COPY = `${SYMBOL}C`;
 
 test.afterEach(async ({ page }) => {
-  for (const symbol of [SYMBOL, HOME, STATS]) {
+  for (const symbol of [SYMBOL, HOME, STATS, COPY]) {
     const found = await page.request.get(`/api/synthetic/${encodeURIComponent(symbol)}`);
     if (found.ok()) {
       const { revision } = (await found.json()) as { revision: number };
@@ -248,4 +249,51 @@ test('a parametric symbol: its statistics previewed, then charted with volume', 
     .getByRole('button', { name: '1 hour' })
     .click();
   await expect(legend(page)).toContainText('Fat tails and jumps · 1h · Synthetic');
+});
+
+test('a shuffled copy: its range filled in, previewed, then charted next to its source', async ({
+  page,
+}) => {
+  await page.keyboard.press('s');
+  await page
+    .getByRole('dialog', { name: 'Symbol search' })
+    .getByRole('button', { name: 'New synthetic symbol…' })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'New synthetic symbol' });
+  await dialog.getByLabel('Kind').selectOption('shuffle');
+  await dialog.getByLabel('Name', { exact: true }).fill(COPY.slice(4).toLowerCase());
+  await dialog.getByLabel('Full name').fill('Apple, shuffled');
+  await expect(dialog.getByLabel('First price')).toHaveCount(0);
+  await dialog.getByLabel('Source').selectOption('AAPL');
+  // The source's whole range (its first bar, its last before today) fills the dates.
+  await expect(dialog.getByLabel('From')).toHaveValue('2001-12-24');
+  await expect(dialog.getByLabel('To')).toHaveValue('2026-11-20');
+  await dialog.getByLabel('From').fill('2010-01-04');
+  const preview = dialog.getByRole('region', { name: 'Preview' });
+  await expect(preview.getByRole('img', { name: /AAPL and its shuffled copy/ })).toBeVisible();
+  // A permutation: the same total return, another path.
+  const total = preview.getByRole('row', { name: /Total return/ }).getByRole('cell');
+  await expect(total.nth(0)).not.toHaveText('');
+  expect(await total.nth(0).textContent()).toBe(await total.nth(1).textContent());
+  await dialog.getByRole('button', { name: 'Create symbol' }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(legend(page)).toContainText('Apple, shuffled · 1D · Synthetic');
+  await expect(page.getByRole('list', { name: 'Compared symbols' })).toContainText('AAPL');
+  const window = 'start=2010-01-04&end=2026-11-20&limit=50000';
+  const [copy, source] = await Promise.all(
+    [COPY, 'AAPL'].map(async (symbol) => {
+      const response = await page.request.get(
+        `/api/bars?symbol=${encodeURIComponent(symbol)}&interval=1D&${window}`,
+      );
+      return ((await response.json()) as { bars: { time: string; close: number }[] }).bars;
+    }),
+  );
+  expect(copy.map((b) => b.time)).toEqual(source?.map((b) => b.time));
+  expect(copy?.at(-1)?.close).toBeCloseTo(source?.at(-1)?.close ?? 0, 6);
+  await page
+    .getByRole('group', { name: 'Interval' })
+    .getByRole('button', { name: '1 hour' })
+    .click();
+  await expect(legend(page)).toContainText('Apple, shuffled · 1h · Synthetic');
 });

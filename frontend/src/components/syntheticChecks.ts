@@ -4,6 +4,7 @@ import {
   NAME_PATTERN,
   type ParametricDefinition,
   type ReturnShape,
+  type ShuffleDefinition,
   type SyntheticDefinition,
 } from '../api/synthetic.ts';
 
@@ -118,13 +119,30 @@ export function previewProblem(def: ParametricDefinition): string | null {
   );
 }
 
+export const MAX_BLOCK_DAYS = 1000;
+
+/** What is wrong with a shuffled copy's source, range or block before its preview, or null (the
+ *  bars in the range are counted by the backend). */
+export function shuffleProblem(def: ShuffleDefinition, now: string): string | null {
+  if (def.source === '') return 'Pick the source symbol.';
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  if (!iso.test(def.start) || !iso.test(def.end)) return 'Pick the first and the last dates.';
+  if (def.start < FIRST_DAY) return 'The first date is 1970-01-01 or later.';
+  if (def.end <= def.start) return 'The last date is after the first one.';
+  if (def.end >= now) return 'The last date is before today.';
+  if (!Number.isInteger(def.blockDays) || def.blockDays < 1 || def.blockDays > MAX_BLOCK_DAYS) {
+    return `Block: a whole number of days from 1 to ${String(MAX_BLOCK_DAYS)}.`;
+  }
+  return null;
+}
+
 /** What is wrong with a definition before it is sent, or null. */
 export function definitionProblem(def: SyntheticDefinition, now: string): string | null {
   if (!NAME_PATTERN.test(def.name)) {
     return 'Name: 1 to 12 of A–Z, 0–9, ".", "-", "_", starting with a letter.';
   }
   if (def.fullName.trim() === '') return 'Give it a full name.';
-  if (!(def.firstPrice > 0)) return 'The first price must be above 0.';
+  if (def.kind !== 'shuffle' && !(def.firstPrice > 0)) return 'The first price must be above 0.';
   const seed = seedProblem(def.seed);
   if (seed !== null) return seed;
   switch (def.kind) {
@@ -132,6 +150,8 @@ export function definitionProblem(def: SyntheticDefinition, now: string): string
       return datedProblem(def, now);
     case 'parametric':
       return shapeProblem(def) ?? datedProblem(def, now);
+    case 'shuffle':
+      return shuffleProblem(def, now);
     case 'dwelling':
       if (!(def.noisePct >= 0 && def.noisePct <= MAX_NOISE_PCT)) {
         return `Noise: 0 to ${String(MAX_NOISE_PCT)} % a day.`;
