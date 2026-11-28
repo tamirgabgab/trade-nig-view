@@ -40,3 +40,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0033](0033-synthetic-parametric-symbols.md) | A parametric synthetic symbol: the user's statistics and distribution | Accepted |
 | [0034](0034-synthetic-shuffled-copies.md) | A shuffled copy of a market symbol | Accepted |
 | [0035](0035-open-completions.md) | The open completions of Phases H and J (K4) | Accepted |
+| [0036](0036-strategy-model-and-signals.md) | Trader profiles, the strategy model and causal signals (B0) | Accepted |

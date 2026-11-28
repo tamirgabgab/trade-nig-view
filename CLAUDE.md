@@ -52,7 +52,8 @@ ruff), never `uv run <tool>`. The user's Windows blocks the unsigned launcher `.
 ("An Application Control policy has blocked this file", os error 4551).
 
 ## 4. Repo map
-- `backend/` — FastAPI app (`app/api`, `app/data/{providers,cache}`, `app/macro`, `app/planner`, `app/indicators`, `app/analysis`, `app/models`, `app/storage`, `app/errors.py`, `app/config.py`), `config/universe.toml`, and `tests/` (`unit`, `api`, `golden`, `property`, `fixtures`).
+- `backend/` — FastAPI app (`app/api`, `app/data/{providers,cache}`, `app/macro`, `app/planner`, `app/indicators`, `app/analysis`, `app/backtest`, `app/models`, `app/storage`, `app/errors.py`, `app/config.py`), `config/universe.toml`, and `tests/` (`unit`, `api`, `golden`, `property`, `fixtures`).
+- `strategies/` — the user's Python strategies (`SPEC` + `signals(bars, params, ind)`, ADR 0036), in git.
 - `frontend/` — React app (`src/api`, `src/chart`, `src/drawings`, `src/components`, `src/planner`, `src/store`, `src/styles`, `src/test`), `e2e/`.
 - `docs/` — `ROADMAP.md`, `ARCHITECTURE.md`, `TRADINGVIEW_RESEARCH.md`, `adr/`, `indicators/` (learn pages).
 - `scripts/` — setup, dev, test, lint, update, gen-api in `.ps1` + `.sh`; `make-fixtures.ps1`, `install-shortcut.ps1`, `install-collector.ps1` (Windows only).

@@ -21,7 +21,7 @@ often the trader acts. The user picks a profile; the whole Strategy tab (interva
 evaluation windows, metrics) follows it. **The final models of Phase 4 are one honest, validated model set per
 profile** (B7).
 
-| Profile | Trades at most | Decision bars | Context bars | Typical hold | Forecast horizon | Overnight |
+| Profile | Trades at most (default cap, a parameter) | Decision bars | Context bars | Typical hold | Forecast horizon | Overnight |
 |---|---|---|---|---|---|---|
 | **Day** | 10 a day | 5m (15m) | 1h, the day's open, the previous close | minutes to hours | the next 1–12 bars (≤ 1 hour), the rest of the session | none: flat at the close |
 | **Swing** | 10 a week | 1h | 1D | hours to ~10 days | 1–10 daily bars | allowed |
@@ -94,7 +94,7 @@ way, for the user to decide. Phase A ([ALPACA_PLAN.md](ALPACA_PLAN.md), planned 
 - Tests: the 1m request chunks, resampling counts, totals and no lookahead for every minute interval, 5m blocks of an
   hour equal the 1h bars, a split keeps the older bars rescaled, the collector on fixtures, E2E on 15m bars.
 
-### B0 — Trader profiles, strategy model and signals (M)
+### B0 — Trader profiles, strategy model and signals (M) — ✅ done 2026-11-28 (ADR 0036)
 - **`TraderProfile`** (the four profiles above) in the backend and a profile picker at the top of the Strategy tab;
   the chart opens on the profile's decision interval.
 - A **strategy document** (stored like layouts, `DocumentStore("strategies")`): name, **profile**, symbol(s), side
@@ -205,14 +205,16 @@ B6 M, B7 L.
   `TradeLayer` primitive in `chart/` (the only place that imports the chart library).
 - Performance targets: one daily backtest over 25 years under 200 ms on the server; a 100-point sweep under 5 s.
 
-## Questions for the user (asked before B0)
-1. **Authoring:** a rule builder only, or also strategies written in Python files (the plugin API deferred from
-   Phase 3)?
-2. **Side:** long only first, or long and short from B1?
-3. **Fills:** next bar's open by default (recommended), or the signal bar's close?
-4. **Profiles first:** which profile to build first (recommended: Position, then Swing and Long-term, Day last once the
-   collector has gathered intraday history)?
-5. **Day data:** the free daily collection from Yahoo (running since D0), or also a paid data feed? (Phase A's A0
-   probe answers it.)
-6. **Results:** which metrics and views matter most to you (to put first in B2)?
-7. **Portfolio (B5):** equal weight, or risk parity (inverse volatility)?
+## The user's answers (2026-11-28, before B0)
+1. **Authoring:** both: a rule builder and strategies written in Python files (`strategies/` at the repo root, in
+   git).
+2. **Side:** long and short, always.
+3. **Fills:** the next bar's open (the recommendation).
+4. **Profiles first:** Position, then Swing and Long-term, Day last.
+5. **Day data:** the data collected so far (D0); a paid feed (Phase A) later.
+6. **Results:** net profit after costs, or the equivalent net annual return, comes first (B2, B3).
+7. **Portfolio (B5):** both equal weight and risk parity, with a risk level the user chooses.
+8. **Trade cap:** 10 (12 for Long-term) is only a default parameter; the profiles differ by the period it counts
+   over, and a higher cap that earns more out of sample may be chosen (B4, B7).
+9. **Both entries on one bar:** take the side whose closed trades so far earned more per unit of time (net annual
+   return), causally; neither while it cannot tell (B1).

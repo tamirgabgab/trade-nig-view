@@ -4,8 +4,8 @@ A personal, local, TradingView-style charting, analysis and research platform: c
 gap detection and bar replay — built so that education pages, custom indicators, backtesting and a **paper-only**
 trading agent can plug in later.
 
-> **Status (2026-11-26):** Phases 1–3 are complete and the Phase-1 review is done; **Phase 4 (backtesting) is
-> planned** in [docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md).
+> **Status (2026-11-28):** Phases 1–3 are complete and the Phase-1 review is done; **Phase 4 (backtesting) has
+> started** ([docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md)): B0, the trader profiles, strategies and their signals.
 > - **Charting:** candles and other chart types, 35 indicators (each verified like a DUT against scalar golden
 >   models, TA-Lib and property tests incl. no lookahead), 20+ drawing tools (lines, Fib, channels, measuring and
 >   statistics tools, the trade plan, patterns, icons), market structure, compare, layouts, undo/redo, bar replay.
@@ -74,7 +74,8 @@ The screenshot uses the synthetic end-to-end fixtures; real data comes from Yaho
 | Dwelling prices as a symbol (Phase K, K1; ADR 0032): the CBS dwelling price index (Israel from 1994, or one of six districts from 2017) as a `SYN:` symbol's close, with a first price of your own, a little noise that lands on the index on every month date, and a choice of interpolated (smooth, looks ahead) or causal (each value from its assumed publication, for replay and backtests); 1h to monthly bars, no volume; a learn page on how synthetic symbols are built, read inside their dialog | ✅ Done |
 | A parametric synthetic symbol (Phase K, K2; ADR 0033): a `SYN:` symbol drawn from statistics of your own: the expected yearly return and volatility, a distribution for the daily return (normal, Student-t, uniform, Laplace, skew-normal), in the distribution or exact in the path, and optional layers (AR(1) memory, Merton jumps, GARCH(1,1) volatility clusters) that keep the mean and the volatility; a live preview in the dialog (the drawn daily returns over the family's density, the drawn mean, volatility, skewness and kurtosis next to the asked ones); 1h to monthly bars with volume; the formulas on the synthetic-symbols learn page | ✅ Done |
 | A shuffled copy of a market symbol (Phase K, K3; ADR 0034): a `SYN:` symbol made of a real symbol's days in a frozen range, cut into blocks of a length of your own and put in another order, on the source's dates, from its dividend-adjusted prices: the same first bar, last close, total return and set of days, another path; 1h bars that land exactly on each real daily bar; a preview in the dialog of the source against the copy with both paths' sequence measures (total return, deepest drawdown, worst year, longest losing streak); the copy opens next to its source in Compare; without the source's bars a stored copy shows a flat placeholder at 100 and says so | ✅ Done |
-| More custom indicators (designed with the user), backtesting, paper agent (Phases 3–5) | 🗺️ Roadmap |
+| Strategies and their signals (Phase 4, B0; ADR 0036): a Strategy tab with four trader profiles (Day, Swing, Position, Long-term: the bars a profile decides on, the longer bars it may read once they have closed, and the period its trade cap counts over, a parameter), strategies as rules (OR of AND groups for long and short entries and exits, filters, exits) or as Python files in `strategies/` (checked for lookahead on every run), two examples and a Python example, saved strategies, and the signals on the chart: arrows for entries, dots for exits, a square where both entries fire | ✅ Done |
+| The backtest engine, results, costs, honest evaluation, portfolio, final models per profile (Phase 4, B1–B7), paper agent (Phase 5) | 🗺️ Roadmap |
 
 ## Quick start
 
@@ -162,6 +163,7 @@ Indicator verification: `cd backend; uv run python -m pytest tests/golden` write
 backend/    FastAPI app, data providers + cache, indicators, analysis, storage, tests
 frontend/   React + TypeScript + Vite app, ChartEngine wrapper, drawings, UI components
 docs/       ROADMAP, ARCHITECTURE, TRADINGVIEW_RESEARCH, ADRs, indicator learn pages
+strategies/ your Python strategies (see strategies/README.md), with an example
 scripts/    setup / dev / test / lint / update / gen-api scripts (PowerShell + bash), make-fixtures and
             install-shortcut (PowerShell)
 ```
