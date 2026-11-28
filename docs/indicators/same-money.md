@@ -53,7 +53,8 @@ option with nothing of its own (a market account without deposits) has $f = 0$ a
 
 ### The end
 
-Everything is sold on one day. That day's own bills are paid in cash, not invested:
+Everything still held is sold on one day, the last apartment sale (or the market's end without an apartment). That
+day's own bills are paid in cash, not invested:
 
 $$
 W_A = \mathrm{NW}_A + \text{account}_A - f_A(d_{\text{end}})
@@ -156,6 +157,8 @@ made at time $\tau$ becomes $u(1 + g)^{\tau_{\text{end}} - \tau}$, which is prec
   generous about the total. Matching by month instead would blur which option had the money when.
 - **The top-up goes into the option's own mix**, at that mix's fees and tax. An apartment option with a costly mix
   is charged for it.
-- **One end day for everything.** Two apartments must be bought on the same day of the month so that both are sold
-  on it after whole months.
+- **Each apartment is sold on its own day.** The comparison ends on the later sale. An apartment sold earlier puts
+  what it nets into its option's mix (its own, else the other's), where it waits for the end: it is the option's
+  own money, not new money, so the other option does not match it. A sale that leaves a debt is paid like a bill,
+  and the other option matches that.
 - **Deposit times of day are not used** in a comparison: each deposit buys at its day's bar.

@@ -601,7 +601,7 @@ test('planner: the charts draw their text at its own size in the narrow column a
     .locator('text')
     .first()
     .evaluate((el) => {
-      const svg = el.ownerSVGElement;
+      const svg = el instanceof SVGElement ? el.ownerSVGElement : null;
       const scale = svg ? svg.getBoundingClientRect().width / svg.viewBox.baseVal.width : 0;
       return parseFloat(getComputedStyle(el).fontSize) * scale;
     });

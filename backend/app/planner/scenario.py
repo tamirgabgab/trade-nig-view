@@ -24,7 +24,7 @@ everything the apartment costs, when it costs it.
 Flows on different days do not offset each other: a deposit of X on the 5th and one of Y on the
 20th make both options spend both.
 
-**The end** (day :math:`T`): every apartment is sold on it and every account is sold on it. The
+**The end** (day :math:`T`): every account is sold on it, and every apartment sold on it. The
 flows of that day are settled in cash, not invested:
 
 .. math::
@@ -32,6 +32,11 @@ flows of that day are settled in cash, not invested:
 
 with the apartment's net worth after the selling costs, the loan and the betterment tax, and the
 account's value after the sell commission and the capital-gains tax.
+
+**An apartment sold before the end** (on its own sale day :math:`s < T`) pays that month's bills
+as on any month date, and what it nets goes into its option's account on :math:`s` (its own mix,
+else the other's), held to :math:`T`: the option's own money, not the budget's. A sale that
+leaves a debt (the loan above what it nets) is paid like a bill: the other option matches it.
 
 **The return** of an option is the XIRR of :math:`-b(d)` on each day and :math:`+W` at the end.
 The outflows are equal on both sides, so the higher :math:`W` is the higher return. An option
@@ -84,6 +89,9 @@ class Side:
 class SideResult:
     home: HomeResult | None
     market: MarketResult | None
+    #: Its apartment is sold on the end day (its net worth is in ``wealth``); False when it is
+    #: sold before (its money is in the account) or there is none.
+    home_held: bool
     #: Per ledger day: the option's own spending, and what it invests to match the budget.
     own: FloatArray
     top_up: FloatArray
@@ -103,29 +111,36 @@ class PairResult:
     y: SideResult
 
 
-def _own_flows(side: Side, end_day: int) -> tuple[dict[int, float], HomeResult | None]:
-    """The option's own spending by day, and its apartment's result."""
+def _own_flows(
+    side: Side, end_day: int
+) -> tuple[dict[int, float], HomeResult | None, list[Deposit]]:
+    """The option's own spending by day, its apartment's result, and what an apartment sold
+    before the end puts into the account."""
     flows: dict[int, float] = {}
     result = None
+    proceeds: list[Deposit] = []
     if side.home is not None:
         if side.series is None:
             raise PlanError("An apartment needs its monthly series")
         result = run_home(side.home, side.series)
-        if day_number(result.dates[-1]) != end_day:
-            raise PlanError(
-                f"Every apartment must be sold on the end date: this one is sold on "
-                f"{result.dates[-1]}"
-            )
+        sold = day_number(result.dates[-1])
+        if sold > end_day:
+            raise PlanError(f"An apartment is sold on {result.dates[-1]}, after the end")
         spent = result.payment + result.costs - result.rent
         spent[0] = side.home.equity + result.purchase_costs
         for day, amount in zip(result.dates, spent, strict=True):
             flows[day_number(day)] = float(amount)
+        worth = float(result.net_worth[-1])
+        if sold < end_day and worth > 0:
+            proceeds.append(Deposit(result.dates[-1], worth))
+        elif sold < end_day:
+            flows[sold] -= worth  # a debt left by the sale: paid from the budget
     for deposit in side.deposits:
         day = day_number(deposit.day)
         if day >= end_day:
             raise PlanError("Every deposit must be before the end date")
         flows[day] = flows.get(day, 0.0) + deposit.amount
-    return flows, result
+    return flows, result, proceeds
 
 
 def _return(days: IntArray, flows: FloatArray) -> float | None:
@@ -137,8 +152,8 @@ def _return(days: IntArray, flows: FloatArray) -> float | None:
 def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
     """Run both options on the same money (see the module docstring)."""
     end_day = day_number(end)
-    flows_x, home_x = _own_flows(x, end_day)
-    flows_y, home_y = _own_flows(y, end_day)
+    flows_x, home_x, proceeds_x = _own_flows(x, end_day)
+    flows_y, home_y, proceeds_y = _own_flows(y, end_day)
     days = np.array(sorted(d for d in flows_x.keys() | flows_y.keys() if d < end_day), np.int64)
     if len(days) == 0:
         raise PlanError("There is nothing to compare: neither option spends before the end date")
@@ -148,11 +163,21 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
     deflate = float(cpi.at(int(days[0]))) / cpi.at(np.append(days, end_day))
 
     def side_result(
-        side: Side, other: Side, own: FloatArray, flows: dict[int, float], home: HomeResult | None
+        side: Side,
+        other: Side,
+        own: FloatArray,
+        flows: dict[int, float],
+        home: HomeResult | None,
+        proceeds: list[Deposit],
     ) -> SideResult:
         top_up = budget - own
         top_up[top_up < DUST] = 0.0
-        deposits = list(side.deposits)
+        if proceeds and side.account is None and other.account is None:
+            raise PlanError(
+                "An apartment sold before the end needs an asset mix to hold its money until "
+                "then: give its option, or the other, one"
+            )
+        deposits = [*side.deposits, *proceeds]
         deposits += [
             Deposit(EPOCH + timedelta(days=int(d)), float(a))
             for d, a in zip(days, top_up, strict=True)
@@ -175,8 +200,9 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
                 fill=account.fill,
                 cpi=cpi,
             )
+        held = home is not None and day_number(home.dates[-1]) == end_day
         wealth = (
-            (0.0 if home is None else float(home.net_worth[-1]))
+            (float(home.net_worth[-1]) if home is not None and held else 0.0)
             + (0.0 if market is None else market.net_value)
             - flows.get(end_day, 0.0)  # the end day's own bills, settled in cash
         )
@@ -185,6 +211,7 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
         return SideResult(
             home=home,
             market=market,
+            home_held=held,
             own=own,
             top_up=top_up,
             wealth=wealth,
@@ -197,6 +224,6 @@ def run_pair(x: Side, y: Side, end: date, cpi: CpiPath) -> PairResult:
         days=days,
         budget=budget,
         end=end,
-        x=side_result(x, y, own_x, flows_x, home_x),
-        y=side_result(y, x, own_y, flows_y, home_y),
+        x=side_result(x, y, own_x, flows_x, home_x, proceeds_x),
+        y=side_result(y, x, own_y, flows_y, home_y, proceeds_y),
     )

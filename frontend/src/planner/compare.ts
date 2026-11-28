@@ -25,8 +25,9 @@ export interface ComparedOptions {
 /**
  * The comparison of option A (x) with option B (y). An option always holds its own Market tab's
  * mix, where the money it has to match is invested; its apartment and its own deposits only
- * when it contains them. Everything is sold on one day: the sale of the first apartment, or
- * option A's market end without one. The inflation is the planner's one.
+ * when it contains them. Each apartment is sold on its own "Sold on"; the comparison ends on the
+ * later sale (an earlier one's money waits in its option's mix), or on option A's market end
+ * without an apartment. The inflation is the planner's one.
  */
 export function toScenario(options: ComparedOptions): ScenarioRequest {
   const { market, home, taxes, contents, discount } = options;
@@ -38,7 +39,7 @@ export function toScenario(options: ComparedOptions): ScenarioRequest {
       taxes[slot],
     );
     const option: ScenarioRequest['x'] = {
-      ...(contents[slot].home ? { home: apartment } : {}),
+      ...(contents[slot].home ? { home: apartment, sold_on: end } : {}),
       market: {
         assets: account.assets,
         use_fx: account.use_fx,
@@ -50,13 +51,15 @@ export function toScenario(options: ComparedOptions): ScenarioRequest {
           : {}),
       },
     };
-    return { option, end, inflation };
+    return { option, end: contents[slot].home ? end : null, inflation };
   };
   const [a, b] = [build('a'), build('b')];
+  // 'YYYY-MM-DD' strings sort as dates.
+  const sales = [a.end, b.end].filter((end): end is string => end !== null).sort();
   return {
     x: a.option,
     y: b.option,
-    end: contents.a.home ? a.end : contents.b.home ? b.end : market.a.end,
+    end: sales.at(-1) ?? market.a.end,
     inflation: a.inflation,
     forced_discount_pct: discount,
   };

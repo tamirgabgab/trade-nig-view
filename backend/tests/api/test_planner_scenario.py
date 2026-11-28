@@ -125,8 +125,9 @@ def test_scenarios_that_cannot_run_say_why(client: TestClient) -> None:
     assert "AAPL has no data before 2001-12-24" in refused(
         x={"home": {**HOME, "start": "2000-01-15"}}, end="2010-01-15"
     )
-    other_day = {**HOME, "start": "2010-01-20"}
-    assert "sold on the end date" in refused(y={"home": other_day, "market": MARKET})
+    # Sold before the end with no mix on either side: its money has nowhere to wait.
+    early = {"home": HOME, "sold_on": "2015-01-15"}
+    assert "sold before the end needs an asset mix" in refused(x={"home": HOME}, y=early)
     timed = {**MARKET, "deposits": [{"date": "2012-01-15", "amount": 100, "time": "10:00"}]}
     notes = post(client, "run", y={"market": timed})["warnings"]
     assert any("times of day" in note for note in notes)
@@ -337,7 +338,7 @@ def test_two_mixes_that_differ_only_by_the_shekel_rate_are_different_mixes(
     assert not any("different mixes" in note for note in post(client, "run", **late)["warnings"])
 
 
-def test_two_apartments_bought_in_different_months_share_one_sale_day(client: TestClient) -> None:
+def test_two_apartments_bought_in_different_months(client: TestClient) -> None:
     later = {**HOME, "start": "2012-03-15", "price": 2_000_000}
     body = post(
         client, "run", y={"home": later, "market": MARKET}, x={"home": HOME, "market": MARKET}
@@ -346,8 +347,39 @@ def test_two_apartments_bought_in_different_months_share_one_sale_day(client: Te
     # Until it buys, the later buyer holds in its mix what the earlier one has spent.
     assert body["y"]["home"] is not None
     assert body["y"]["account"]["deposited"] > 0
-    # Another day of the month cannot land on the one sale day: said, not computed around.
+    # Another day of the month: sold on its own last month date before the end (K4).
     other_day = {"home": {**later, "start": "2012-03-20"}, "market": MARKET}
-    response = client.post("/api/planner/run", json={**BASE, "y": other_day})
-    assert response.status_code == 422
-    assert "Every apartment must be sold on the end date" in response.json()["detail"]
+    assert post(client, "run", y=other_day)["liquidity"]["y"]["apartment"] is None
+
+
+def test_each_apartment_is_sold_on_its_own_day(client: TestClient) -> None:
+    # Option A holds to the end; option B sells five years in and holds the money in AAPL.
+    body = post(client, "run", y={"home": HOME, "sold_on": "2015-01-20", "market": MARKET})
+    assert body["end"] == "2020-01-15"
+    assert body["y"]["home"]["net_worth"] > 0  # at its own sale, 2015-01-15
+    sale = body["y"]["home"]["net_worth"]
+    # Its money is in the account (with the top-ups), not counted again as an apartment.
+    assert body["y"]["account"]["deposited"] == pytest.approx(body["y"]["topped_up"] + sale)
+    assert body["y"]["wealth"] == pytest.approx(body["y"]["account"]["net_value"])
+    assert body["liquidity"]["y"]["apartment"] is None
+    assert body["liquidity"]["y"]["wealth_forced"] == body["y"]["wealth"]
+    # The same money: neither side puts in more than the apartment held to the end costs.
+    assert body["spent"] == pytest.approx(post(client, "run", y={"home": HOME})["spent"])
+
+
+def test_apartments_bought_on_different_days_of_the_month_run(client: TestClient) -> None:
+    # Before K4 these were refused: both had to be sold on the one end day.
+    body = post(client, "run", y={"home": {**HOME, "start": "2010-01-20"}, "market": MARKET})
+    assert body["end"] == "2020-01-15"
+    assert body["liquidity"]["y"]["apartment"] is None  # sold on 2019-12-20, before the end
+
+
+@pytest.mark.parametrize(
+    ("path", "extra"),
+    [("run", {}), ("study", {"step_months": 12}), ("simulate", {"runs": 20, "seed": 1})],
+)
+def test_a_sale_on_the_end_day_is_the_old_request(
+    client: TestClient, path: str, extra: dict[str, Any]
+) -> None:
+    both = {"x": {"home": HOME, "sold_on": "2020-01-15"}, "y": {"market": MARKET}}
+    assert post(client, path, **both, **extra) == post(client, path, **extra)

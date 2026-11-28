@@ -7654,6 +7654,19 @@
               }
             ]
           },
+          "sold_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold On",
+            "description": "Its apartment's own sale, on the last whole month from its purchase up to this day; null: by the comparison's end. Sold before the end, what it nets is held in the account until then"
+          },
           "market": {
             "anyOf": [
               {
@@ -10351,7 +10364,7 @@
             "type": "string",
             "format": "date",
             "title": "End",
-            "description": "Everything is sold on it (an apartment: on its month date)"
+            "description": "Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale"
           },
           "inflation": {
             "$ref": "#/components/schemas/InflationIn",
@@ -10721,7 +10734,7 @@
             "type": "string",
             "format": "date",
             "title": "End",
-            "description": "Everything is sold on it (an apartment: on its month date)"
+            "description": "Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale"
           },
           "inflation": {
             "$ref": "#/components/schemas/InflationIn",
@@ -11084,7 +11097,7 @@
             "type": "string",
             "format": "date",
             "title": "End",
-            "description": "Everything is sold on it (an apartment: on its month date)"
+            "description": "Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale"
           },
           "inflation": {
             "$ref": "#/components/schemas/InflationIn",

@@ -71,6 +71,12 @@ class OptionIn(BaseModel):
     invests whatever the other option spends, in the other's asset mix."""
 
     home: HomeOptionIn | None = None
+    sold_on: dt.date | None = Field(
+        default=None,
+        description="Its apartment's own sale, on the last whole month from its purchase up to "
+        "this day; null: by the comparison's end. Sold before the end, what it nets is held in "
+        "the account until then",
+    )
     market: MarketOptionIn | None = Field(
         default=None, description="Its mix and its own deposits (none: only the top-ups)"
     )
@@ -79,7 +85,10 @@ class OptionIn(BaseModel):
 class ScenarioRequest(BaseModel):
     x: OptionIn
     y: OptionIn
-    end: dt.date = Field(description="Everything is sold on it (an apartment: on its month date)")
+    end: dt.date = Field(
+        description="Everything still held is sold on it (an apartment: on its month date); "
+        "with an apartment of its own sale date, the comparison ends on the last sale"
+    )
     inflation: InflationIn = InflationIn()
     forced_discount_pct: Percent = Field(
         default=10.0, description="Off the apartment's value in a forced sale"
@@ -288,7 +297,8 @@ def scenario_spec(
     if not starts:
         raise PlanError("There is nothing to compare: neither option has an apartment or a deposit")
     for option in (body.x, body.y):
-        home = None if option.home is None else home_spec(option.home, body.end)
+        sale = option.sold_on or body.end
+        home = None if option.home is None else home_spec(option.home, sale)
         market = option.market
         if market is None:
             options.append(OptionSpec(home=home))
@@ -375,7 +385,8 @@ def _forced(side: Side, result: SideResult, discount: float) -> OptionLiquidity:
     """What of an option is cash at once, and its end value if the apartment sells low."""
     cash = 0.0 if result.market is None else result.market.net_value
     home = result.home
-    if home is None or side.home is None or side.series is None:
+    # An apartment sold before the end is cash by then: nothing left to sell low.
+    if home is None or not result.home_held or side.home is None or side.series is None:
         return OptionLiquidity(cash=cash, apartment=None, forced=None, wealth_forced=result.wealth)
     normal = float(home.net_worth[-1])
     forced = explain.forced_sale(side.home, side.series, home, discount)
@@ -470,10 +481,10 @@ def _run(
                     x=p.x,
                     y=p.y,
                     x_forced=_forced(sides[p.end][0], p.result.x, discount).wealth_forced
-                    if p.result.x.home is not None
+                    if p.result.x.home_held
                     else None,
                     y_forced=_forced(sides[p.end][1], p.result.y, discount).wealth_forced
-                    if p.result.y.home is not None
+                    if p.result.y.home_held
                     else None,
                 )
                 for p in average.points

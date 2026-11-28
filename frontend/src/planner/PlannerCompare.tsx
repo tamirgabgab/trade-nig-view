@@ -77,10 +77,8 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
   const bought = SLOTS.filter((slot) => contents[slot].home).map((slot) => homes[slot]);
   const request =
     taxes === null ? null : toScenario({ market, home: homes, taxes, contents, discount });
-  // Two apartments are sold on one day, each after whole months: so bought on one day of a month.
-  const apart = bought.length > 1 && bought[0]?.start.slice(8) !== bought[1]?.start.slice(8);
   const ready =
-    request !== null && request.end !== '' && bought.every((h) => h.start !== '') && !apart;
+    request !== null && request.end !== '' && bought.every((h) => h.start !== '' && h.end !== '');
   const start = (next: Status, work: (request: ScenarioRequest, next: Shown) => Promise<void>) => {
     if (!ready) return;
     setStatus(next);
@@ -169,8 +167,9 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
               : 'Each option is made of its own Market and Apartment tabs.'}{' '}
             Both spend the same money on the same days: what one option pays and the other does not
             (an apartment’s equity and purchase costs, then every month its payment and owner costs
-            less the rent, or a deposit), the other invests in its own mix. Everything is sold on
-            one day: the sale of the first apartment ticked, or option A’s market end with none.
+            less the rent, or a deposit), the other invests in its own mix. Each apartment is sold
+            on its own “Sold on”; the rest is sold on the later sale, or on option A’s market end
+            with no apartment. What an earlier sale nets waits in its option’s mix until then.
           </p>
           <PlannerLearn page="same-money">The same money rule</PlannerLearn>
           <div className={styles.grid}>
@@ -187,13 +186,6 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
                   Option {slot.toUpperCase()}: {name}
                 </label>
               )),
-            )}
-            {apart && (
-              <p className={`${styles.error ?? ''} ${styles.wide ?? ''}`} role="alert">
-                Two apartments must be bought on the same day of the month: both are sold on one day
-                (option A’s “Sold on”; option B’s is not used), each after a whole number of months.
-                Change a “Bought on” date.
-              </p>
             )}
             <PlannerField
               label="Forced sale discount %"

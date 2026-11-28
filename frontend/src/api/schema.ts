@@ -3274,6 +3274,11 @@ export interface components {
          */
         OptionIn: {
             home?: components["schemas"]["HomeOptionIn"] | null;
+            /**
+             * Sold On
+             * @description Its apartment's own sale, on the last whole month from its purchase up to this day; null: by the comparison's end. Sold before the end, what it nets is held in the account until then
+             */
+            sold_on?: string | null;
             /** @description Its mix and its own deposits (none: only the top-ups) */
             market?: components["schemas"]["MarketOptionIn"] | null;
         };
@@ -4546,7 +4551,7 @@ export interface components {
             /**
              * End
              * Format: date
-             * @description Everything is sold on it (an apartment: on its month date)
+             * @description Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale
              */
             end: string;
             /**
@@ -4755,7 +4760,7 @@ export interface components {
             /**
              * End
              * Format: date
-             * @description Everything is sold on it (an apartment: on its month date)
+             * @description Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale
              */
             end: string;
             /**
@@ -4925,7 +4930,7 @@ export interface components {
             /**
              * End
              * Format: date
-             * @description Everything is sold on it (an apartment: on its month date)
+             * @description Everything still held is sold on it (an apartment: on its month date); with an apartment of its own sale date, the comparison ends on the last sale
              */
             end: string;
             /**

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, timedelta
 
 import numpy as np
@@ -161,12 +162,58 @@ def test_an_option_that_ends_with_a_debt_lost_everything() -> None:
 def test_pairs_that_cannot_run_say_why() -> None:
     with pytest.raises(PlanError, match="asset mix"):
         run_pair(home(price=1_840_000), home(), END, FLAT_CPI)
-    with pytest.raises(PlanError, match="sold on the end date"):
-        run_pair(home(), Side(account=account()), END + timedelta(days=3), FLAT_CPI)
+    with pytest.raises(PlanError, match="after the end"):
+        run_pair(home(), Side(account=account()), END - timedelta(days=3), FLAT_CPI)
+    with pytest.raises(PlanError, match="sold before the end needs an asset mix"):
+        run_pair(home(months=12), home(), END, FLAT_CPI)
     with pytest.raises(PlanError, match="before the end"):
         run_pair(Side(account=account(), deposits=[Deposit(END, 5.0)]), Side(), END, FLAT_CPI)
     with pytest.raises(PlanError, match="nothing to compare"):
         run_pair(Side(), Side(account=account()), END, FLAT_CPI)
+
+
+def test_an_apartment_sold_before_the_end_puts_its_money_in_the_account() -> None:
+    # Option x sells after 12 of the 24 months (a flat value, no costs): it nets the price less
+    # the loan left; y holds to the end. Both are invested at a zero return.
+    early = home(months=12)
+    early = Side(home=early.home, series=early.series, account=account())
+    result = run_pair(early, home(), END, FLAT_CPI)
+    sold = run_home(early.home, early.series)  # type: ignore[arg-type]
+    sale_day = add_months(START, 12)
+    proceeds = float(sold.net_worth[-1])
+    assert proceeds > 0
+    assert result.x.home_held is False
+    assert result.y.home_held is True
+    assert result.x.market is not None
+    rows = {(row.day, round(row.amount, 6)) for row in result.x.market.deposits}
+    assert (sale_day, round(proceeds, 6)) in rows
+    # After its sale x spends nothing of its own: the budget is y's, x invests all of it.
+    after = result.days > day_number(sale_day)
+    assert (result.x.own[after] == 0).all()
+    np.testing.assert_allclose(result.x.top_up[after], result.budget[after])
+    # Its end value is the account alone (zero return, no costs): what went in.
+    assert result.x.wealth == pytest.approx(result.x.market.deposited)
+
+
+def test_a_sale_that_leaves_a_debt_is_paid_from_the_budget() -> None:
+    # Bought with no money down at a value that halves at once: sold after a year below its loan.
+    side = home(price=1_000_000, equity=0, months=12)
+    half = np.full(241, 0.5)
+    half[0] = 1.0
+    assert side.home is not None
+    assert side.series is not None
+    falling = Side(
+        home=side.home,
+        series=replace(side.series, value=half),
+        account=account(),
+    )
+    result = run_pair(falling, Side(account=account()), END, FLAT_CPI)
+    debt = -float(run_home(falling.home, falling.series).net_worth[-1])  # type: ignore[arg-type]
+    assert debt > 0
+    sale = int(np.flatnonzero(result.days == day_number(add_months(START, 12)))[0])
+    assert result.x.own[sale] >= debt  # that month's bills and the debt
+    assert result.y.top_up[sale] == pytest.approx(result.x.own[sale])  # matched by the other
+    assert result.x.market is None  # nothing of x's to invest: the debt is spent, not saved
 
 
 # ---------------------------------------------------------------- the golden model

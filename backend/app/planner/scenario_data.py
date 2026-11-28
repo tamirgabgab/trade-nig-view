@@ -8,7 +8,9 @@ one realization, under a :class:`Change`:
 * **shift**: every date moves by this many months (a window of history);
 * **months**: another horizon. The scenario's term is its first apartment's months held (or,
   without an apartment, the months from the first deposit to the end); a horizon of
-  :math:`h` moves every sale and the end by :math:`h` minus that term;
+  :math:`h` moves every sale and the end by :math:`h` minus that term, so two apartments sold
+  on days of their own keep the months between their sales (a horizon that would hold one for
+  less than a month cannot run). The end is the last sale;
 * **historical**: the realization is a window of real data, so
   - a series that would be held flat past its last published value refuses the window;
   - every asset must have bars from the window's first day (the youngest asset limits it);
@@ -314,7 +316,7 @@ def build(
         for o in (spec.x, spec.y)
     ]
     sold = [add_months(h.plan.start, h.plan.months) for h in homes if h is not None]
-    end = sold[0] if sold else add_months(spec.end, change.shift + delta)
+    end = max(sold) if sold else add_months(spec.end, change.shift + delta)
     first = day_number(add_months(first_day(spec), change.shift))
     end_day = day_number(end)
     if end_day <= first:
@@ -495,7 +497,7 @@ def world_spec(
     (yearly mean growth, volatility) instead of the accounts' resampled assets."""
     homes = _homes(spec)
     first = first_day(spec)
-    end = add_months(homes[0].plan.start, homes[0].plan.months) if homes else spec.end
+    end = max(add_months(h.plan.start, h.plan.months) for h in homes) if homes else spec.end
     months = (end.year - first.year) * 12 + end.month - first.month
     months += add_months(first, months) < end
     rates = any(h.rates_mode == "historical" for h in homes)

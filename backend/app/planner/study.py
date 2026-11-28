@@ -238,36 +238,48 @@ class Outcome:
     y: SideOutcome
 
 
+def worth_path(side: SideResult) -> tuple[IntArray, FloatArray]:
+    """An option's net worth on the way, before any exit cost or tax: its apartment's value less
+    its loan while it holds it, plus its account's market value. It is followed on the
+    apartment's month dates, the account's value on each being that of the last month end (so a
+    deposit of the last days is not in it yet); without an apartment, and after one sold before
+    the end, on the account's month ends."""
+    home, market = side.home, side.market
+    if home is None:
+        if market is None:
+            return np.array([], dtype=np.int64), np.array([])
+        return np.array(market.path_days, dtype=np.int64), np.array(market.path_value)
+    grid = np.array([day_number(d) for d in home.dates], dtype=np.int64)
+    worth = home.value - home.balance
+    if market is None:
+        return grid, worth
+    days, values = np.array(market.path_days, dtype=np.int64), np.array(market.path_value)
+    month_end = np.searchsorted(days, grid, side="right") - 1
+    worth = worth + np.where(month_end >= 0, values[np.maximum(month_end, 0)], 0.0)
+    if side.home_held:
+        return grid, worth
+    after = days > grid[-1]  # the apartment's money is in the account from its sale
+    return np.append(grid, days[after]), np.append(worth, values[after])
+
+
 def _side_outcome(
     side: SideResult, result: PairResult, cpi: CpiPath, income: float | None
 ) -> SideOutcome:
-    """The path risks of one option. Net worth on the way is before any exit cost or tax: the
-    apartment's value less its loan, plus the account's market value. It is followed on the
-    apartment's month dates, the account's value on each being that of the last month end (so
-    a deposit of the last days is not in it yet); without an apartment, on the account's month
-    ends. A net worth below zero counts as zero in the drawdown: the whole peak is lost. The
-    money put in includes the apartment's bills of the last day, which the ledger settles in
-    cash. Yearly returns use every twelfth point: a last part of a year is left out."""
+    """The path risks of one option, on its net worth on the way (:func:`worth_path`). A net
+    worth below zero counts as zero in the drawdown: the whole peak is lost. The money put in
+    includes the apartment's bills of the last day, which the ledger settles in cash. Yearly
+    returns use every twelfth point: a last part of a year is left out."""
     home, market = side.home, side.market
-    last = 0.0 if home is None else float(home.payment[-1] + home.costs[-1] - home.rent[-1])
+    held = home is not None and side.home_held
+    last = float(home.payment[-1] + home.costs[-1] - home.rent[-1]) if held and home else 0.0
     days: IntArray = np.append(result.days, day_number(result.end))
     put_in = np.cumsum(np.append(result.budget, last))
-    grid = np.array([], dtype=np.int64)
-    worth = np.array([])
+    grid, worth = worth_path(side)
     stress = None
-    if home is not None:
-        grid = np.array([day_number(d) for d in home.dates], dtype=np.int64)
-        worth = home.value - home.balance
-        if market is not None:
-            month_end = np.searchsorted(market.path_days, grid, side="right") - 1
-            value = np.array(market.path_value)[np.maximum(month_end, 0)]
-            worth = worth + np.where(month_end >= 0, value, 0.0)
-        if income is not None and len(home.payment) > 1:
-            earned = income * cpi.at(grid[1:]) / cpi.at(int(days[0]))
-            stress = float(np.max(home.payment[1:] / earned))
-    elif market is not None:
-        grid = np.array(market.path_days, dtype=np.int64)
-        worth = np.array(market.path_value)
+    if home is not None and income is not None and len(home.payment) > 1:
+        months = grid[1 : len(home.payment)]
+        earned = income * cpi.at(months) / cpi.at(int(days[0]))
+        stress = float(np.max(home.payment[1:] / earned))
     yearly = worth[::12].copy()
     paid = np.searchsorted(days, grid[::12], side="right") - 1
     paid_in = np.where(paid >= 0, put_in[np.maximum(paid, 0)], 0.0)

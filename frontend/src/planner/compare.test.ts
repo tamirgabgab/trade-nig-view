@@ -68,13 +68,19 @@ describe('toScenario', () => {
     expect(request.y.market).toMatchObject({ assets: [{ symbol: 'QQQ' }], deposits: [{}] });
   });
 
-  it('ends on the sale of the first apartment, or on the market’s end without one', () => {
+  it('sells each apartment on its own day and ends on the later sale, or on the market’s end', () => {
     const late = { ...DEFAULT_HOME, end: '2030-06-15' };
     const only = options({
       home: { a: DEFAULT_HOME, b: late },
       contents: contents({ home: false, deposits: true }, { home: true }),
     });
     expect(toScenario(only).end).toBe('2030-06-15');
+    const both = toScenario(
+      options({ home: { a: late, b: DEFAULT_HOME }, contents: contents({}, { home: true }) }),
+    );
+    expect(both.end).toBe('2030-06-15');
+    expect(both.x.sold_on).toBe('2030-06-15');
+    expect(both.y.sold_on).toBe(DEFAULT_HOME.end);
     const none = options({ contents: contents({ home: false, deposits: true }, {}) });
     expect(toScenario(none).end).toBe(DEFAULT_FORM.end);
   });

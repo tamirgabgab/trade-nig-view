@@ -295,16 +295,13 @@ describe('PlannerCompare', () => {
     });
     expect(card('Apartment A: worth at the end')).toHaveTextContent('₪2,100,000');
     expect(usePlannerStore.getState().contents.b.home).toBe(true);
-    // One sale day for both, each after whole months: another day of the month cannot run.
+    // Each apartment is sold on its own "Sold on": another day of the month runs too (K4).
+    expect(sent[0]).toMatchObject({
+      x: { sold_on: DEFAULT_HOME.end },
+      y: { sold_on: DEFAULT_HOME.end },
+    });
     act(() => {
       usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, start: '2016-03-20' } });
-    });
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Two apartments must be bought on the same day of the month',
-    );
-    expect(compare).toBeDisabled();
-    act(() => {
-      usePlannerHomeStore.setState({ other: { ...DEFAULT_HOME, start: '2016-03-15' } });
     });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(compare).toBeEnabled();
