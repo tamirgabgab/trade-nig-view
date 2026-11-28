@@ -30,6 +30,7 @@ Files are imported again when their modification time changes.
 from __future__ import annotations
 
 import importlib.util
+import sys
 import threading
 import traceback
 from collections.abc import Callable, Mapping
@@ -43,7 +44,13 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.analysis.conditions import BoolArray
 from app.errors import ChartLabError
-from app.indicators.registry import ParamSpec, ParamValue, resolve_values
+from app.indicators.registry import (
+    InvalidParamsError,
+    ParamSpec,
+    ParamValue,
+    UnknownIndicatorError,
+    resolve_values,
+)
 from app.models.bars import BarFrame, Interval
 
 from .signals import SIGNAL_NAMES, IndicatorSource, Outputs, Signals
@@ -61,6 +68,14 @@ class PythonStrategyError(ChartLabError):
 
     status = HTTPStatus.UNPROCESSABLE_ENTITY
     code = "python_strategy_error"
+
+
+class _DataError(Exception):
+    """A data error raised while ``ind`` loads bars: reported as itself, not as the file's fault."""
+
+    def __init__(self, error: ChartLabError) -> None:
+        super().__init__(error.detail)
+        self.error = error
 
 
 class StrategyLookaheadError(ChartLabError):
@@ -108,9 +123,12 @@ def _import(name: str, path: Path) -> PythonModule:
     if spec is None or spec.loader is None:  # pragma: no cover - a .py file always has a loader
         raise PythonStrategyError(f"{path.name}: cannot be imported")
     module = importlib.util.module_from_spec(spec)
+    # Registered like any import: dataclasses and typing look a class's module up there.
+    sys.modules[spec.name] = module
     try:
         spec.loader.exec_module(module)
-    except Exception as e:
+    except Exception as e:  # any error in the user's file is reported, not raised
+        del sys.modules[spec.name]
         raise PythonStrategyError(_where(e, path)) from None
     raw_spec: object = getattr(module, "SPEC", {})
     fn: object = getattr(module, "signals", None)
@@ -142,7 +160,7 @@ class PythonStrategies:
         self._cache: dict[str, tuple[int, PythonModule]] = {}
 
     def names(self) -> list[str]:
-        """Stems of the ``.py`` files (files starting with ``_`` are helpers, not strategies)."""
+        """Stems of the ``.py`` files; a file starting with ``_`` is not listed (a draft)."""
         if not self._dir.is_dir():
             return []
         return sorted(p.stem for p in self._dir.glob("*.py") if not p.stem.startswith("_"))
@@ -192,7 +210,12 @@ def _call(
     n = len(source.frame)
 
     def ind(indicator_id: str, interval: str | None = None, **params: object) -> Outputs:
-        return source(indicator_id, None if interval is None else Interval(interval), params)
+        try:
+            return source(indicator_id, None if interval is None else Interval(interval), params)
+        except (UnknownIndicatorError, InvalidParamsError):
+            raise  # the file's mistake: reported with its line
+        except ChartLabError as e:
+            raise _DataError(e) from e
 
     try:
         raw = module.signals(_readonly(source.frame), dict(values), ind)
@@ -208,7 +231,9 @@ def _call(
             else np.zeros(n, dtype=np.bool_)
             for name in SIGNAL_NAMES
         }
-    except Exception as e:
+    except _DataError as e:
+        raise e.error from None
+    except Exception as e:  # reported with the line of the user's file
         raise PythonStrategyError(_where(e, module.path)) from None
     return Signals(**arrays)
 

@@ -8,18 +8,16 @@ import {
   useProfiles,
   useStrategyCatalog,
   type PythonFile,
-  type RulesStrategy,
   type SignalKind,
   type Strategy,
 } from '../api/strategies.ts';
-import { CONFLICT_COLOR } from '../chart/signalMarkers.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useStrategyStore, type CurrentStrategy } from '../store/strategyStore.ts';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
 import f from './ForecastPanel.module.css';
 import { NumberField } from './NumberField.tsx';
 import styles from './StrategyPanel.module.css';
-import { exitsText, groupsText } from './strategyText.ts';
+import { StrategyRules } from './StrategyRules.tsx';
 import { useChartSignals } from './useChartSignals.ts';
 
 const ROWS: { kind: SignalKind; label: string; glyph: string; color: string }[] = [
@@ -27,7 +25,7 @@ const ROWS: { kind: SignalKind; label: string; glyph: string; color: string }[] 
   { kind: 'long_exit', label: 'Long exits', glyph: '●', color: 'var(--color-up)' },
   { kind: 'short_entry', label: 'Short entries', glyph: '▼', color: 'var(--color-down)' },
   { kind: 'short_exit', label: 'Short exits', glyph: '●', color: 'var(--color-down)' },
-  { kind: 'conflict', label: 'Both entries', glyph: '■', color: CONFLICT_COLOR },
+  { kind: 'conflict', label: 'Both entries', glyph: '■', color: 'var(--color-warning)' },
 ];
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -40,41 +38,6 @@ function pythonStrategy(file: PythonFile, profile: Strategy['profile']): Strateg
     description: file.description,
     params: Object.fromEntries(file.params.map((p) => [p.name, p.default])),
   };
-}
-
-function Rules({ strategy }: { strategy: RulesStrategy }) {
-  const ind = strategy.indicators ?? [];
-  const side = (label: string, rules: RulesStrategy['long']) => {
-    const entry = groupsText(rules?.entry ?? [], ind);
-    const exit = groupsText(rules?.exit ?? [], ind);
-    return (
-      <>
-        <p className={styles.side}>{label}</p>
-        {entry.length === 0 ? (
-          <p className={f.note}>No entries.</p>
-        ) : (
-          <ul className={styles.rules} aria-label={`${label} rules`}>
-            {entry.map((text, i) => (
-              <li key={`e${String(i)}`}>{`${i > 0 ? 'or ' : ''}enter when ${text}`}</li>
-            ))}
-            {exit.map((text, i) => (
-              <li key={`x${String(i)}`}>{`${i > 0 ? 'or ' : ''}exit when ${text}`}</li>
-            ))}
-          </ul>
-        )}
-      </>
-    );
-  };
-  const filters = groupsText(strategy.filters ?? [], ind);
-  const exits = exitsText(strategy.exits);
-  return (
-    <>
-      {side('Long', strategy.long)}
-      {side('Short', strategy.short)}
-      {filters.length > 0 && <p className={f.note}>Entries only while {filters.join(', or ')}.</p>}
-      {exits.length > 0 && <p className={f.note}>Also exits {exits.join(', ')}.</p>}
-    </>
-  );
 }
 
 /**
@@ -100,8 +63,10 @@ export function StrategyPanel() {
   const saved = (catalog.data?.saved ?? []).filter((s) => s.profile === profileId);
   const examples = (catalog.data?.examples ?? []).filter((e) => e.strategy.profile === profileId);
   const files = catalog.data?.python ?? [];
+  // By the module, not the source: a saved Python strategy shows its file's parameters too.
+  const chosen = current?.strategy;
   const file =
-    current?.source === 'python' ? files.find((p) => p.module === current.name) : undefined;
+    chosen?.kind === 'python' ? files.find((p) => p.module === chosen.module) : undefined;
 
   const pick = (current: CurrentStrategy | null, defaultName = '') => {
     choose(current);
@@ -275,7 +240,7 @@ export function StrategyPanel() {
           <>
             {strategy.description !== '' && <p className={f.note}>{strategy.description}</p>}
             {strategy.kind === 'rules' ? (
-              <Rules strategy={strategy} />
+              <StrategyRules strategy={strategy} />
             ) : file?.error ? (
               <p className={styles.error} role="alert">
                 {file.error}
@@ -302,11 +267,12 @@ export function StrategyPanel() {
                       key={p.name}
                       label={p.label}
                       value={Number(strategy.params?.[p.name] ?? p.default)}
-                      min={(p.min ?? -1e12) - (p.type === 'int' ? 1 : 1e-9)}
+                      min={(p.min ?? -1e12) - (p.type === 'int' ? 0.5 : 1e-9)}
                       max={p.max ?? 1e12}
                       step={p.type === 'int' ? 1 : 0.1}
                       onCommit={(v) => {
-                        edit({ ...strategy, params: { ...strategy.params, [p.name]: v } });
+                        const value = p.type === 'int' ? Math.round(v) : v;
+                        edit({ ...strategy, params: { ...strategy.params, [p.name]: value } });
                       }}
                     />
                   ),
@@ -318,7 +284,7 @@ export function StrategyPanel() {
                 <NumberField
                   label={`Trades a ${profile.capPeriod} at most`}
                   value={maxTrades}
-                  min={0}
+                  min={0.5}
                   max={10_000}
                   step={1}
                   onCommit={(v) => {

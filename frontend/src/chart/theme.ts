@@ -23,6 +23,8 @@ export interface ChartTheme {
   compare1: string;
   compare2: string;
   compare3: string;
+  /** Strategy signals: both entries on one bar. */
+  warning: string;
   fontFamily: string;
 }
 
@@ -44,6 +46,7 @@ export const FALLBACK_THEME: ChartTheme = {
   compare1: '#ff9800',
   compare2: '#ab47bc',
   compare3: '#00bcd4',
+  warning: '#f7a600',
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif",
 };
 
@@ -65,6 +68,7 @@ const TOKENS: Record<keyof ChartTheme, string> = {
   compare1: '--color-compare-1',
   compare2: '--color-compare-2',
   compare3: '--color-compare-3',
+  warning: '--color-warning',
   fontFamily: '--font-sans',
 };
 

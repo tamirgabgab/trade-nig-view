@@ -238,7 +238,7 @@ describe('ChartArea', () => {
       '/api/quotes': { body: QUOTES },
       '/api/bars': (url) =>
         jsonResponse(barsBody('AAPL', url.searchParams.get('interval') ?? '', AAPL_BARS)),
-      '/api/strategies/profiles': {
+      '/api/strategy-profiles': {
         body: [
           {
             id: 'position',

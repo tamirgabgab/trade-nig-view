@@ -62,7 +62,7 @@ def _signals(api: TestClient, strategy: dict[str, Any], **extra: Any) -> Any:
 
 
 def test_profiles(api: TestClient) -> None:
-    body = api.get("/api/strategies/profiles").json()
+    body = api.get("/api/strategy-profiles").json()
     assert [p["id"] for p in body] == ["day", "swing", "position", "long_term"]
     position = body[2]
     assert position["decision_intervals"] == ["1D"]
@@ -185,12 +185,24 @@ def test_signals_errors(
     assert response.json()["code"] == code
 
 
-def test_a_context_interval_must_be_longer_than_the_decision_interval(api: TestClient) -> None:
+def test_a_monthly_context_on_weekly_and_on_monthly_decisions(api: TestClient) -> None:
     monthly = SMA_CROSS | {
         "profile": "long_term",
         "indicators": [{"id": "sma", "params": {"length": 5}, "interval": "1M"}],
     }
-    assert _signals(api, monthly).status_code == 200  # 1W decisions, 1M context
-    response = _signals(api, monthly, interval="1M")
-    assert response.status_code == 422
-    assert "not longer than" in response.json()["detail"]
+    assert _signals(api, monthly).json()["interval"] == "1W"  # 1W decisions, 1M context
+    # On 1M decisions the 1M "context" is the decision bars themselves.
+    on_months = _signals(api, monthly, interval="1M")
+    assert on_months.status_code == 200
+    assert on_months.json()["long_entry"]
+
+
+def test_a_strategy_may_be_named_like_a_route(api: TestClient) -> None:
+    for name in ("profiles", "signals"):
+        assert (
+            api.put(
+                f"/api/strategies/{name}", json={"revision": 0, "strategy": SMA_CROSS}
+            ).status_code
+            == 200
+        )
+        assert api.get(f"/api/strategies/{name}").json()["strategy"]["kind"] == "rules"

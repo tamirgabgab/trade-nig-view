@@ -863,7 +863,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/strategies/profiles": {
+    "/api/strategy-profiles": {
         parameters: {
             query?: never;
             header?: never;
@@ -874,7 +874,7 @@ export interface paths {
          * List Profiles
          * @description The four trader profiles.
          */
-        get: operations["list_profiles_api_strategies_profiles_get"];
+        get: operations["list_profiles_api_strategy_profiles_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8186,7 +8186,7 @@ export interface operations {
             };
         };
     };
-    list_profiles_api_strategies_profiles_get: {
+    list_profiles_api_strategy_profiles_get: {
         parameters: {
             query?: never;
             header?: never;

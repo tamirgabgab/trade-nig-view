@@ -25,14 +25,11 @@ export const SIGNAL_LOOK: Record<
   conflict: { shape: 'square', position: 'aboveBar', side: 'both' },
 };
 
-/** Amber: both entries on one bar. */
-export const CONFLICT_COLOR = '#f9a825';
-
 /** One fixed-look marker source per signal kind, over `n` bars. */
 export function signalSources(
   marks: readonly SignalMark[],
   n: number,
-  colors: { up: string; down: string },
+  colors: { up: string; down: string; warning: string },
 ): MarkerSource[] {
   const kinds = Object.keys(SIGNAL_LOOK) as SignalMarkKind[];
   const values = new Map(kinds.map((k) => [k, new Array<number | null>(n).fill(null)]));
@@ -48,7 +45,7 @@ export function signalSources(
     const look = SIGNAL_LOOK[kind];
     return {
       values: values.get(kind) ?? [],
-      color: look.side === 'both' ? CONFLICT_COLOR : look.side === 'up' ? colors.up : colors.down,
+      color: look.side === 'both' ? colors.warning : look.side === 'up' ? colors.up : colors.down,
       shape: look.shape,
       position: look.position,
     };

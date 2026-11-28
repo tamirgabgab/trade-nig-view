@@ -1,6 +1,6 @@
 # Python strategies
 
-Each `.py` file here (except files starting with `_`) is a strategy the Strategy tab lists under **Python files**.
+Each `.py` file here is a strategy (a file starting with `_` is not listed: a draft) the Strategy tab lists under **Python files**.
 A file is imported again whenever it changes, so edit it and press **Show signals** again.
 
 ```python

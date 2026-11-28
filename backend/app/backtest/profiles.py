@@ -43,12 +43,12 @@ class TraderProfile(BaseModel):
         return [c for c in self.context_intervals if _rank(c) > _rank(decision)]
 
 
-_ORDER = list(Interval)
+_DAYS = {Interval.D1: 1, Interval.W1: 7, Interval.M1: 31}
 
 
 def _rank(interval: Interval) -> int:
-    """Position in ``Interval`` (declared from shortest to longest)."""
-    return _ORDER.index(interval)
+    """The bar's length in seconds (a month as 31 days): orders intervals by length."""
+    return interval.seconds if interval.is_intraday else _DAYS[interval] * 86_400
 
 
 PROFILES: dict[ProfileId, TraderProfile] = {

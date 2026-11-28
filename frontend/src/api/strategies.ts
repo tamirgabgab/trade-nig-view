@@ -157,7 +157,7 @@ export function parseSignals(body: unknown): Signals {
 export const useProfiles = () =>
   useQuery({
     queryKey: ['strategy-profiles'],
-    queryFn: () => apiGet('/strategies/profiles', parseProfiles),
+    queryFn: () => apiGet('/strategy-profiles', parseProfiles),
     staleTime: Infinity,
   });
 

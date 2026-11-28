@@ -28,8 +28,8 @@ from app.storage.documents import SCHEMA_VERSION, Document, DocumentStore
 
 router = APIRouter(tags=["strategies"])
 
-#: Bars loaded per interval: the whole history (25 years of days, ~2 of hours), so a bar's signal
-#: does not depend on where a window would start (warm-up).
+#: Bars loaded per interval: the whole history (80 years of days; Yahoo keeps ~2 years of hours), so
+#: a bar's signal does not depend on where a window would start (warm-up).
 HISTORY_LIMIT = 20_000
 _STRATEGY: TypeAdapter[RulesStrategy | PythonStrategy] = TypeAdapter(Strategy)
 _CONFLICT: dict[int | str, dict[str, Any]] = {
@@ -127,7 +127,7 @@ def _field(document: Document, key: str) -> str:
     )
 
 
-@router.get("/strategies/profiles", response_model=list[TraderProfile])
+@router.get("/strategy-profiles", response_model=list[TraderProfile])
 def list_profiles() -> list[TraderProfile]:
     """The four trader profiles."""
     return list(PROFILES.values())
@@ -232,14 +232,9 @@ def strategy_signals(
         raise InvalidStrategyError(
             f"{interval} is not a decision interval of the {profile.label} profile ({allowed})"
         )
+    # A rules strategy's context intervals are the profile's (validated), each longer than or equal
+    # to its decision intervals (tested); an equal one is the decision bars (1M context, 1M bars).
     context = profile.context_for(interval)
-    if isinstance(strategy, RulesStrategy):
-        for i, ind in enumerate(strategy.indicators):
-            if ind.interval is not None and ind.interval not in context:
-                raise InvalidStrategyError(
-                    f"indicators[{i}]: {ind.interval} is not longer than the decision interval "
-                    f"{interval}"
-                )
     result = service.get_bars(body.symbol, interval, until=body.until, limit=HISTORY_LIMIT)
     frame = result.frame
 

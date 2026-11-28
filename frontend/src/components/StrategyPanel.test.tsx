@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { parseCatalog, parseSignals, type RulesStrategy } from '../api/strategies.ts';
-import { CONFLICT_COLOR, signalSources } from '../chart/signalMarkers.ts';
+import { signalSources } from '../chart/signalMarkers.ts';
 import { useChartStore } from '../store/chartStore.ts';
 import { useStrategyStore } from '../store/strategyStore.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
@@ -101,7 +101,7 @@ describe('strategy text', () => {
 
 describe('signal markers', () => {
   it('one fixed-look source per kind, nothing without marks', () => {
-    expect(signalSources([], 3, { up: 'g', down: 'r' })).toEqual([]);
+    expect(signalSources([], 3, { up: 'g', down: 'r', warning: 'y' })).toEqual([]);
     const sources = signalSources(
       [
         { index: 0, kind: 'long_entry' },
@@ -109,14 +109,14 @@ describe('signal markers', () => {
         { index: 9, kind: 'short_entry' }, // not a bar: dropped
       ],
       3,
-      { up: 'g', down: 'r' },
+      { up: 'g', down: 'r', warning: 'y' },
     );
     expect(sources.map((s) => [s.shape, s.position, s.color])).toEqual([
       ['arrowUp', 'belowBar', 'g'],
       ['circle', 'aboveBar', 'g'],
       ['arrowDown', 'aboveBar', 'r'],
       ['circle', 'belowBar', 'r'],
-      ['square', 'aboveBar', CONFLICT_COLOR],
+      ['square', 'aboveBar', 'y'],
     ]);
     expect(sources[0]?.values).toEqual([1, null, null]);
     expect(sources[4]?.values).toEqual([null, null, 1]);
@@ -144,7 +144,7 @@ describe('StrategyPanel', () => {
     useStrategyStore.setState({ profile: 'position', current: null, show: false });
     useChartStore.setState({ symbol: 'AAPL', interval: '1D' });
     stubApi({
-      '/api/strategies/profiles': { body: PROFILES },
+      '/api/strategy-profiles': { body: PROFILES },
       '/api/strategies': { body: CATALOG },
       '/api/strategies/signals': (_url, init) => {
         posted.push(JSON.parse(init?.body as string));
@@ -200,6 +200,23 @@ describe('StrategyPanel', () => {
     expect(posted[0]).toMatchObject({
       strategy: { kind: 'python', module: 'breakout', profile: 'position', params: { length: 55 } },
     });
+    // Integers stay integers; a cap under 1 is not taken.
+    const bars = screen.getByRole('spinbutton', { name: 'Bars' });
+    await user.clear(bars);
+    await user.type(bars, '20.6{Enter}');
+    const cap = screen.getByRole('spinbutton', { name: 'Trades a month at most' });
+    await user.clear(cap);
+    await user.type(cap, '0.3{Enter}');
+    expect(useStrategyStore.getState().current?.strategy).toMatchObject({
+      params: { length: 21 },
+    });
+    expect(useStrategyStore.getState().current?.strategy.max_trades).toBeUndefined();
+    // Saved, it keeps its file's parameters.
+    await user.clear(screen.getByRole('textbox', { name: 'Name' }));
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'My cross');
+    await user.click(screen.getByRole('button', { name: 'Save strategy' }));
+    await screen.findByText('Saved as “My cross”.');
+    expect(screen.getByRole('spinbutton', { name: 'Bars' })).toHaveValue(21);
     await user.selectOptions(select, 'python:broken');
     expect(screen.getByRole('alert')).toHaveTextContent('broken.py line 1: SyntaxError');
   });

@@ -54,6 +54,18 @@ def test_context_intervals_are_longer_than_the_decision_interval() -> None:
     long_term = PROFILES[ProfileId.LONG_TERM]
     assert long_term.context_for(Interval.W1) == [Interval.M1]
     assert long_term.context_for(Interval.M1) == []
+    # Every context interval is longer than, or the same as, every decision interval: a validated
+    # rules strategy never asks for a shorter one (the API relies on it).
+    for p in PROFILES.values():
+        for d in p.decision_intervals:
+            assert set(p.context_intervals) <= {*p.context_for(d), d}
+
+
+def test_intervals_are_ordered_by_length() -> None:
+    hourly = PROFILES[ProfileId.SWING].model_copy(update={"context_intervals": [Interval.MIN90]})
+    # 90m is declared before 1h in ``Interval`` but is longer.
+    assert hourly.context_for(Interval.H1) == [Interval.MIN90]
+    assert hourly.context_for(Interval.H4) == []
 
 
 # ---------------------------------------------------------------- context alignment

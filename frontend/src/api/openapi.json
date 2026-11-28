@@ -2689,14 +2689,14 @@
         }
       }
     },
-    "/api/strategies/profiles": {
+    "/api/strategy-profiles": {
       "get": {
         "tags": [
           "strategies"
         ],
         "summary": "List Profiles",
         "description": "The four trader profiles.",
-        "operationId": "list_profiles_api_strategies_profiles_get",
+        "operationId": "list_profiles_api_strategy_profiles_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2707,7 +2707,7 @@
                     "$ref": "#/components/schemas/TraderProfile"
                   },
                   "type": "array",
-                  "title": "Response List Profiles Api Strategies Profiles Get"
+                  "title": "Response List Profiles Api Strategy Profiles Get"
                 }
               }
             }

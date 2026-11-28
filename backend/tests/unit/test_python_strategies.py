@@ -20,6 +20,7 @@ from app.backtest.python_loader import (
 )
 from app.backtest.signals import IndicatorSource
 from app.data.resample import resample
+from app.errors import DataUnavailableError
 from app.indicators.registry import InvalidParamsError
 from app.models.bars import BarFrame, Interval
 
@@ -38,6 +39,10 @@ def signals(bars, params, ind):
 
 
 _EMPTY = "def signals(b, p, i): return {}\n"
+_WEEKLY = """
+def signals(bars, params, ind):
+    return {"long_entry": bars.close > ind("sma", interval="1W", length=5)["ma"]}
+"""
 
 
 def _write(folder: Path, name: str, body: str) -> PythonStrategies:
@@ -141,6 +146,33 @@ def test_a_bad_result_is_reported(
     files = _write(tmp_path, "bad", f"\ndef signals(bars, params, ind):\n    return {returns}\n")
     with pytest.raises(PythonStrategyError, match=message):
         python_signals(files.load("bad"), {}, _source(frame))
+
+
+def test_a_dataclass_in_a_strategy_file(tmp_path: Path, frame: BarFrame) -> None:
+    body = """
+    from __future__ import annotations
+    from dataclasses import dataclass
+
+    @dataclass
+    class Rule:
+        n: int
+
+    def signals(bars, params, ind):
+        return {"long_entry": bars.close > bars.close[0] * Rule(1).n}
+    """
+    files = _write(tmp_path, "dc", body)
+    assert python_signals(files.load("dc"), {}, _source(frame)).long_entry.any()
+
+
+def test_a_data_error_is_not_the_files_fault(tmp_path: Path, frame: BarFrame) -> None:
+    files = _write(tmp_path, "weekly", _WEEKLY)
+
+    def no_bars(_: Interval) -> BarFrame:
+        raise DataUnavailableError("no weekly bars")
+
+    source = IndicatorSource(frame, Interval.D1, no_bars, (Interval.W1,))
+    with pytest.raises(DataUnavailableError, match="no weekly bars"):
+        python_signals(files.load("weekly"), {}, source)
 
 
 def test_the_bars_are_read_only(tmp_path: Path, frame: BarFrame) -> None:
