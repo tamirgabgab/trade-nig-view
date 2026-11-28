@@ -13,7 +13,7 @@ const KEY = ['planner', 'scenarios'];
  * The comparisons kept under a name by the backend (in its database, not in this browser):
  * both options, what each contains and the Compare tab's settings.
  */
-export function PlannerScenarios() {
+export function PlannerScenarios({ onLoaded }: { onLoaded?: () => void } = {}) {
   const client = useQueryClient();
   const { presets } = useHomeTaxes();
   const list = useQuery({ queryKey: KEY, queryFn: fetchScenarios });
@@ -63,6 +63,7 @@ export function PlannerScenarios() {
     act(async () => {
       applyScenario(parseScenarioState((await fetchScenario(chosen)).state));
       setName(chosen);
+      onLoaded?.();
       return `Loaded “${chosen}”`;
     });
   };

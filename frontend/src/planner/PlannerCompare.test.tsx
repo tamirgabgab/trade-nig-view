@@ -1,12 +1,14 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { TaxPresets } from '../api/planner.ts';
 import { DEFAULT_HOME, sanitizeHome, usePlannerHomeStore } from '../store/plannerHomeStore.ts';
 import { DEFAULT_FORM, sanitizePersisted, usePlannerStore } from '../store/plannerStore.ts';
 import { SCENARIO_RESULT, SIMULATION_RESULT, STUDY_RESULT } from '../test/plannerCompareBody.ts';
 import { TAX_PRESETS } from '../test/plannerHomeBody.ts';
 import { jsonResponse, renderWithQuery, stubApi } from '../test/render.tsx';
 import { PlannerCompare } from './PlannerCompare.tsx';
+import { captureScenario } from './scenarioState.ts';
 
 beforeEach(() => {
   usePlannerStore.setState({ ...sanitizePersisted(null) });
@@ -15,6 +17,7 @@ beforeEach(() => {
 
 const body = (init: RequestInit | undefined): unknown =>
   JSON.parse(typeof init?.body === 'string' ? init.body : '{}');
+const SCENARIO_PRESETS = TAX_PRESETS as TaxPresets;
 const ASSET = { symbol: 'SPY', weight: 100, currency: 'USD' as const, dividendYield: 0 };
 const card = (label: string) => screen.getByText(label, { selector: 'dt' }).parentElement;
 
@@ -367,6 +370,42 @@ describe('PlannerCompare', () => {
       market: { assets: [{ symbol: 'SPY' }] },
     });
     expect(sent).toHaveLength(3);
+  });
+
+  it('runs the comparison again when a saved scenario is loaded', async () => {
+    const user = userEvent.setup();
+    const sent: { home?: { price?: number } }[] = [];
+    // A scenario saved with another price; the page starts from the defaults.
+    usePlannerStore.getState().update({ assets: [ASSET] });
+    usePlannerHomeStore.getState().update({ price: 4_444_444 });
+    const state = captureScenario(SCENARIO_PRESETS);
+    usePlannerStore.setState({ ...sanitizePersisted(null) });
+    usePlannerHomeStore.setState({ ...sanitizeHome(null) });
+    stubApi({
+      '/api/planner/tax-presets': { body: TAX_PRESETS },
+      '/api/planner/run': (_url, init) => {
+        sent.push((body(init) as { x: { home?: { price?: number } } }).x);
+        return jsonResponse(SCENARIO_RESULT);
+      },
+      '/api/planner/scenarios': {
+        body: { scenarios: [{ name: 'Haifa', revision: 1, updated_at: '2026-11-26T10:00:00Z' }] },
+      },
+      '/api/planner/scenarios/Haifa': {
+        body: { name: 'Haifa', revision: 1, updated_at: '2026-11-26T10:00:00Z', state },
+      },
+    });
+    renderWithQuery(<PlannerCompare hidden={false} />);
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Saved scenario' }),
+      'Haifa',
+    );
+    await user.click(screen.getByRole('button', { name: 'Load scenario' }));
+    // No click on Compare: the loaded plan is compared by itself, with its own price.
+    await vi.waitFor(() => {
+      expect(sent).toHaveLength(1);
+    });
+    expect(sent[0]?.home?.price).toBe(4_444_444);
+    expect(await screen.findByRole('heading', { name: /against/ })).toBeInTheDocument();
   });
 
   it('shows why a comparison cannot run and drops the earlier results', async () => {

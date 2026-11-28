@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
@@ -107,6 +107,28 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
       setShown(next);
     });
   };
+  // A loaded scenario runs the basic comparison once its forms are on screen and the tax tables
+  // are in (the latest load wins). One that cannot run leaves Compare disabled, as when typed.
+  const pendingRun = useRef(false);
+  const [, setLoads] = useState(0);
+  const loaded = () => {
+    pendingRun.current = true;
+    setLoads((n) => n + 1);
+  };
+  const runLoaded = useEffectEvent(() => {
+    if (!pendingRun.current || taxes === null) return;
+    pendingRun.current = false;
+    if (ready) compare();
+  });
+  useEffect(() => {
+    // After the render: the run sets the status, so not within the effect itself.
+    const timer = window.setTimeout(() => {
+      runLoaded();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  });
   const runStudy = () => {
     start('studying', async (request, next) => {
       const [one, many] = await Promise.all([
@@ -265,7 +287,7 @@ export function PlannerCompare({ hidden }: { hidden: boolean }) {
             setCompare({ simulation });
           }}
         />
-        <PlannerScenarios />
+        <PlannerScenarios onLoaded={loaded} />
         <div className={styles.actions}>
           <button type="submit" className={panel.primary} disabled={status !== 'idle' || !ready}>
             {status === 'comparing' ? 'Comparing…' : 'Compare'}
