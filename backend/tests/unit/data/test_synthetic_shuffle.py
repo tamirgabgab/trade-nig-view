@@ -20,6 +20,8 @@ from hypothesis import strategies as st
 
 from app.data.providers.base import ProviderError
 from app.data.providers.synthetic import SyntheticProvider
+from app.data.resample import resample, resample_intraday
+from app.data.sessions import session_days
 from app.data.synthetic import SESSION_BARS, shuffle_daily, shuffle_hourly
 from app.data.synthetic_shuffle import (
     MIN_BARS,
@@ -318,3 +320,34 @@ def test_a_bar_off_its_range_by_the_tolerance_is_widened_not_broken() -> None:
     shape = (len(daily), SESSION_BARS)
     np.testing.assert_array_equal(hours.high.reshape(shape).max(axis=1), daily.high)
     np.testing.assert_array_equal(hours.low.reshape(shape).min(axis=1), daily.low)
+
+
+def test_a_sunday_to_thursday_source_keeps_its_days_at_every_interval() -> None:
+    # A Tel Aviv index (before 2026): Sunday to Thursday, no volume.
+    src = source(300)
+    days_ = np.busday_offset(
+        np.datetime64("2015-01-04", "D"),
+        np.arange(300),
+        roll="forward",
+        weekmask="Sun Mon Tue Wed Thu",
+    )
+    tase = BarFrame.from_columns(
+        time=days_.astype(np.int64) * SECONDS_PER_DAY,
+        open=src.open,
+        high=src.high,
+        low=src.low,
+        close=src.close,
+    )
+    d = definition(start=date(2015, 1, 4), end=date(2016, 12, 31))
+    daily = shuffle_daily(d, tase)
+    hours = shuffle_hourly(d, tase)
+    np.testing.assert_array_equal(daily.time, tase.time)
+    assert (daily.volume == 0).all()
+    sessions = session_days(hours.time, "America/New_York")
+    np.testing.assert_array_equal(sessions[::SESSION_BARS], daily.time // SECONDS_PER_DAY)
+    four = resample_intraday(hours, sessions, Interval.H4)
+    assert len(four) == 2 * len(daily)
+    assert validate_bars(four)[1].ok
+    weekly = resample(daily, Interval.W1)
+    assert weekly.close[-1] == daily.close[-1]
+    assert validate_bars(weekly)[1].ok

@@ -22,7 +22,7 @@ import {
   type SyntheticDefinition,
   type SyntheticSymbol,
 } from '../api/synthetic.ts';
-import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
+import { DEFAULT_SYMBOL, MAX_COMPARE, useChartStore } from '../store/chartStore.ts';
 import { useUiStore } from '../store/uiStore.ts';
 import confirm from './ConfirmDialog.module.css';
 import panel from './IndicatorSettingsPanel.module.css';
@@ -268,10 +268,12 @@ export function SyntheticForm({ stored, deleteFirst, onClose }: FormProps) {
       void client.invalidateQueries();
       if (!editing) setSymbol(saved.symbol);
       if (!editing && def.kind === 'shuffle') {
-        // A copy opens next to its source alone (a full compare list would leave no room for it),
-        // both dividend-adjusted as the copy is, so they share their first and last prices.
+        // A copy opens next to its source (a full compare list drops its oldest line to make
+        // room), both dividend-adjusted as the copy is, so they share their first and last prices.
         const chart = useChartStore.getState();
-        chart.compare.forEach(chart.removeCompare);
+        const oldest = chart.compare[0];
+        if (chart.compare.length >= MAX_COMPARE && oldest !== undefined)
+          chart.removeCompare(oldest);
         chart.addCompare(def.source);
         chart.setAdjusted(true);
       }

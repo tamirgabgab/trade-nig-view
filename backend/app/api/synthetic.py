@@ -27,9 +27,8 @@ from app.api.deps import (
 )
 from app.data.adjust import dividend_adjust
 from app.data.bar_service import BarService
-from app.data.synthetic import shuffle_daily
 from app.data.synthetic_returns import preview
-from app.data.synthetic_shuffle import chart_points, measures, source_slice
+from app.data.synthetic_shuffle import chart_points, measures, shuffled, source_slice
 from app.data.universe import Universe
 from app.errors import ChartLabError
 from app.models.bars import BarFrame, date_to_ts, ts_to_date
@@ -236,7 +235,8 @@ def preview_shuffle(
         source = source_slice(definition, frame)
     except ValueError as exc:
         raise InvalidSyntheticError(str(exc)) from exc
-    copy = shuffle_daily(definition, source)
+    # Not the bars' memo: every block, seed or date tried in the dialog would take a place in it.
+    copy = shuffled(source, body.block_days, body.seed)
     points = chart_points(len(source))
     return ShufflePreviewOut(
         start=ts_to_date(int(source.time[0])),

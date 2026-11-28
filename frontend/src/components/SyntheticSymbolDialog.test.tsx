@@ -491,7 +491,8 @@ describe('SyntheticSymbolDialog', () => {
     await vi.waitFor(() => {
       expect(useChartStore.getState().symbol).toBe('SYN:NEW1');
     });
-    expect(useChartStore.getState().compare).toEqual(['AAPL']);
+    // The oldest line made room for the source.
+    expect(useChartStore.getState().compare).toEqual(['^GSPC', 'GBPUSD=X', 'AAPL']);
     expect(useChartStore.getState().adjusted).toBe(true);
     const put = calls.find((c) => c.method === 'PUT');
     const sent = JSON.parse(String(put?.body)) as { definition: Record<string, unknown> };

@@ -45,12 +45,13 @@ sources, the copy opening with its source in Compare, and a new part of the `syn
   block length and the seed returns the range used, its bars
   and blocks, both closes at up to 400 dates (the ends among them), and both paths' sequence measures: the total
   return, the deepest drawdown of the closes from their running peak, the worst calendar year (from the previous
-  year's last close, partial years included) and the longest run of closes below the previous close.
+  year's last close, partial years included) and the longest run of closes below the previous close. It shuffles
+  outside the bars' memo, so the tries in the dialog take no place in it.
 - **The dialog**: the kind "Shuffled copy of a symbol"; the source from the universe's market symbols; picking one
   asks for its whole range and fills the dates (an answer for an earlier pick, range or error, is dropped); the
   block length; the preview (the source against the copy on a log scale, the measures side by side). No first price
-  field. After creation the chart opens on the copy with its source alone in Compare (the earlier compares go, so a
-  full list leaves room) and dividend adjustment on, so the two share their first and last prices.
+  field. After creation the chart opens on the copy with its source in Compare (a full list of three drops its oldest
+  line to make room) and dividend adjustment on, so the two share their first and last prices.
 
 ## What holds (the tests)
 - The order is a permutation of whole blocks, each in its own order, never the identity (two blocks: every seed
