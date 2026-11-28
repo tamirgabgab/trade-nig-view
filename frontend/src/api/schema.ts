@@ -945,6 +945,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/backtest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Backtest */
+        post: operations["backtest_api_backtest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/planner/simulate": {
         parameters: {
             query?: never;
@@ -1205,6 +1222,84 @@ export interface components {
             x_forced: number | null;
             /** Y Forced */
             y_forced: number | null;
+        };
+        /** BacktestRequest */
+        BacktestRequest: {
+            /** Symbol */
+            symbol: string;
+            /** Strategy */
+            strategy: components["schemas"]["RulesStrategy"] | components["schemas"]["PythonStrategy"];
+            /** @description A decision interval of the profile; null = its default */
+            interval?: components["schemas"]["Interval"] | null;
+            /**
+             * Until
+             * @description Replay cursor (inclusive)
+             */
+            until?: string | null;
+            /**
+             * Start
+             * @description First bar traded (inclusive)
+             */
+            start?: string | null;
+            settings?: components["schemas"]["BacktestSettings"];
+        };
+        /** BacktestResponse */
+        BacktestResponse: {
+            /** Symbol */
+            symbol: string;
+            interval: components["schemas"]["Interval"];
+            /**
+             * Bars
+             * @description Bars traded, from `start`
+             */
+            bars: number;
+            /** Capital */
+            capital: number;
+            /** Max Trades */
+            max_trades: number;
+            /** Reversal Window */
+            reversal_window: number;
+            strategy: components["schemas"]["Metrics"];
+            buy_and_hold: components["schemas"]["Metrics"];
+            /** @description The same run deciding reversals and conflicts with the future: a ceiling */
+            hindsight: components["schemas"]["Hindsight"];
+            decisions: components["schemas"]["DecisionsOut"];
+            /** Open At End */
+            open_at_end: boolean;
+            /** Trades */
+            trades: components["schemas"]["TradeOut"][];
+            /** Time */
+            time: string[] | number[];
+            /** Equity */
+            equity: number[];
+            /** Buy And Hold Equity */
+            buy_and_hold_equity: number[];
+        };
+        /** BacktestSettings */
+        BacktestSettings: {
+            /**
+             * Capital
+             * @description Starting equity
+             * @default 100000
+             */
+            capital: number;
+            /**
+             * Cost Pct
+             * @description Per fill, % of the traded value (commission and slippage together)
+             * @default 0.05
+             */
+            cost_pct: number;
+            /**
+             * Decide After
+             * @description Ended reversal windows, and closed trades on each side for a conflict, before the past decides
+             * @default 5
+             */
+            decide_after: number;
+            /**
+             * Reversal Window
+             * @description H in decision bars; null = the profile's
+             */
+            reversal_window?: number | null;
         };
         /** Bar */
         Bar: {
@@ -1517,6 +1612,37 @@ export interface components {
             floor: number;
             /** Ceiling */
             ceiling: number;
+        };
+        /** DecisionsOut */
+        DecisionsOut: {
+            /** Skipped By Cap */
+            skipped_by_cap: number;
+            /** Conflicts */
+            conflicts: number;
+            /** Conflict Long */
+            conflict_long: number;
+            /** Conflict Short */
+            conflict_short: number;
+            /** Conflict None */
+            conflict_none: number;
+            /**
+             * Opposite
+             * @description Opposite entries while in a position (decisions)
+             */
+            opposite: number;
+            /** Reversed */
+            reversed: number;
+            /** Closed */
+            closed: number;
+            /** Held */
+            held: number;
+            /**
+             * Scores
+             * @description Net annual return of reversing, closing and holding over the ended windows
+             */
+            scores: {
+                [key: string]: number;
+            };
         };
         /**
          * DecompositionOut
@@ -2099,6 +2225,15 @@ export interface components {
             offline: boolean;
             /** Providers */
             providers: components["schemas"]["ProviderStatus"][];
+        };
+        /** Hindsight */
+        Hindsight: {
+            /** Net Profit */
+            net_profit: number;
+            /** Total Return */
+            total_return: number;
+            /** Cagr */
+            cagr: number | null;
         };
         /** Histogram */
         Histogram: {
@@ -3340,6 +3475,39 @@ export interface components {
             path: components["schemas"]["PathPoint"][];
             /** Warnings */
             warnings: string[];
+        };
+        /** Metrics */
+        Metrics: {
+            /** Net Profit */
+            net_profit: number;
+            /** Total Return */
+            total_return: number;
+            /** Cagr */
+            cagr: number | null;
+            /** Volatility */
+            volatility: number | null;
+            /** Sharpe */
+            sharpe: number | null;
+            /** Sortino */
+            sortino: number | null;
+            /** Max Drawdown */
+            max_drawdown: number;
+            /** Max Drawdown Bars */
+            max_drawdown_bars: number;
+            /** Calmar */
+            calmar: number | null;
+            /** Trades */
+            trades: number;
+            /** Win Rate */
+            win_rate: number | null;
+            /** Profit Factor */
+            profit_factor: number | null;
+            /** Expectancy */
+            expectancy: number | null;
+            /** Avg R */
+            avg_r: number | null;
+            /** Exposure */
+            exposure: number;
         };
         /**
          * MoveOut
@@ -5715,6 +5883,42 @@ export interface components {
             /** Total Linkage */
             total_linkage: number;
         };
+        /** TradeOut */
+        TradeOut: {
+            /**
+             * Side
+             * @description long or short
+             */
+            side: string;
+            /** Entry Time */
+            entry_time: string | number;
+            /** Entry Price */
+            entry_price: number;
+            /** Exit Time */
+            exit_time: string | number;
+            /** Exit Price */
+            exit_price: number;
+            /**
+             * Reason
+             * @description exit, time, opposite, stop, trailing, target, session, ruin or end
+             */
+            reason: string;
+            /** Bars */
+            bars: number;
+            /** Pnl */
+            pnl: number;
+            /**
+             * Ret
+             * @description Net return of the trade (both fills' costs in)
+             */
+            ret: number;
+            /** R Multiple */
+            r_multiple: number | null;
+            /** Mae */
+            mae: number;
+            /** Mfe */
+            mfe: number;
+        };
         /** TradePlanResponse */
         TradePlanResponse: {
             /** Symbol */
@@ -5798,6 +6002,16 @@ export interface components {
              * @description False: flat at the session close (Day)
              */
             overnight: boolean;
+            /**
+             * No Entry Last Minutes
+             * @description No new entry this close to the session close
+             */
+            no_entry_last_minutes: number;
+            /**
+             * Reversal Window
+             * @description H: decision bars after an opposite entry over which reversing, closing and holding are scored (the profile's long horizon)
+             */
+            reversal_window: number;
         };
         /**
          * Transform
@@ -8372,6 +8586,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SignalsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtest_api_backtest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BacktestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestResponse"];
                 };
             };
             /** @description Validation Error */

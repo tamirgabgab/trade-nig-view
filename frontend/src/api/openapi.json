@@ -2935,6 +2935,47 @@
         }
       }
     },
+    "/api/backtest": {
+      "post": {
+        "tags": [
+          "backtest"
+        ],
+        "summary": "Backtest",
+        "operationId": "backtest_api_backtest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BacktestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/planner/simulate": {
       "post": {
         "tags": [
@@ -3462,6 +3503,226 @@
           "y_forced"
         ],
         "title": "AveragePoint"
+      },
+      "BacktestRequest": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Symbol"
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RulesStrategy"
+              },
+              {
+                "$ref": "#/components/schemas/PythonStrategy"
+              }
+            ],
+            "title": "Strategy",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "python": "#/components/schemas/PythonStrategy",
+                "rules": "#/components/schemas/RulesStrategy"
+              }
+            }
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Interval"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A decision interval of the profile; null = its default"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until",
+            "description": "Replay cursor (inclusive)"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "First bar traded (inclusive)"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/BacktestSettings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "strategy"
+        ],
+        "title": "BacktestRequest"
+      },
+      "BacktestResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars",
+            "description": "Bars traded, from `start`"
+          },
+          "capital": {
+            "type": "number",
+            "title": "Capital"
+          },
+          "max_trades": {
+            "type": "integer",
+            "title": "Max Trades"
+          },
+          "reversal_window": {
+            "type": "integer",
+            "title": "Reversal Window"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/Metrics"
+          },
+          "buy_and_hold": {
+            "$ref": "#/components/schemas/Metrics"
+          },
+          "hindsight": {
+            "$ref": "#/components/schemas/Hindsight",
+            "description": "The same run deciding reversals and conflicts with the future: a ceiling"
+          },
+          "decisions": {
+            "$ref": "#/components/schemas/DecisionsOut"
+          },
+          "open_at_end": {
+            "type": "boolean",
+            "title": "Open At End"
+          },
+          "trades": {
+            "items": {
+              "$ref": "#/components/schemas/TradeOut"
+            },
+            "type": "array",
+            "title": "Trades"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Time"
+          },
+          "equity": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Equity"
+          },
+          "buy_and_hold_equity": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Buy And Hold Equity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "interval",
+          "bars",
+          "capital",
+          "max_trades",
+          "reversal_window",
+          "strategy",
+          "buy_and_hold",
+          "hindsight",
+          "decisions",
+          "open_at_end",
+          "trades",
+          "time",
+          "equity",
+          "buy_and_hold_equity"
+        ],
+        "title": "BacktestResponse"
+      },
+      "BacktestSettings": {
+        "properties": {
+          "capital": {
+            "type": "number",
+            "maximum": 1000000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Capital",
+            "description": "Starting equity",
+            "default": 100000
+          },
+          "cost_pct": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Cost Pct",
+            "description": "Per fill, % of the traded value (commission and slippage together)",
+            "default": 0.05
+          },
+          "decide_after": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Decide After",
+            "description": "Ended reversal windows, and closed trades on each side for a conflict, before the past decides",
+            "default": 5
+          },
+          "reversal_window": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversal Window",
+            "description": "H in decision bars; null = the profile's"
+          }
+        },
+        "type": "object",
+        "title": "BacktestSettings"
       },
       "Bar": {
         "properties": {
@@ -4157,6 +4418,69 @@
           "ceiling"
         ],
         "title": "CurvePoint"
+      },
+      "DecisionsOut": {
+        "properties": {
+          "skipped_by_cap": {
+            "type": "integer",
+            "title": "Skipped By Cap"
+          },
+          "conflicts": {
+            "type": "integer",
+            "title": "Conflicts"
+          },
+          "conflict_long": {
+            "type": "integer",
+            "title": "Conflict Long"
+          },
+          "conflict_short": {
+            "type": "integer",
+            "title": "Conflict Short"
+          },
+          "conflict_none": {
+            "type": "integer",
+            "title": "Conflict None"
+          },
+          "opposite": {
+            "type": "integer",
+            "title": "Opposite",
+            "description": "Opposite entries while in a position (decisions)"
+          },
+          "reversed": {
+            "type": "integer",
+            "title": "Reversed"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held"
+          },
+          "scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Scores",
+            "description": "Net annual return of reversing, closing and holding over the ended windows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "skipped_by_cap",
+          "conflicts",
+          "conflict_long",
+          "conflict_short",
+          "conflict_none",
+          "opposite",
+          "reversed",
+          "closed",
+          "held",
+          "scores"
+        ],
+        "title": "DecisionsOut"
       },
       "DecompositionOut": {
         "properties": {
@@ -5371,6 +5695,36 @@
         ],
         "title": "HealthResponse",
         "description": "Response body of ``GET /api/health``."
+      },
+      "Hindsight": {
+        "properties": {
+          "net_profit": {
+            "type": "number",
+            "title": "Net Profit"
+          },
+          "total_return": {
+            "type": "number",
+            "title": "Total Return"
+          },
+          "cagr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cagr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "net_profit",
+          "total_return",
+          "cagr"
+        ],
+        "title": "Hindsight"
       },
       "Histogram": {
         "properties": {
@@ -7863,6 +8217,152 @@
           "warnings"
         ],
         "title": "MarketResponse"
+      },
+      "Metrics": {
+        "properties": {
+          "net_profit": {
+            "type": "number",
+            "title": "Net Profit"
+          },
+          "total_return": {
+            "type": "number",
+            "title": "Total Return"
+          },
+          "cagr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cagr"
+          },
+          "volatility": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volatility"
+          },
+          "sharpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe"
+          },
+          "sortino": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortino"
+          },
+          "max_drawdown": {
+            "type": "number",
+            "title": "Max Drawdown"
+          },
+          "max_drawdown_bars": {
+            "type": "integer",
+            "title": "Max Drawdown Bars"
+          },
+          "calmar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calmar"
+          },
+          "trades": {
+            "type": "integer",
+            "title": "Trades"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          },
+          "profit_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Factor"
+          },
+          "expectancy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy"
+          },
+          "avg_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg R"
+          },
+          "exposure": {
+            "type": "number",
+            "title": "Exposure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "net_profit",
+          "total_return",
+          "cagr",
+          "volatility",
+          "sharpe",
+          "sortino",
+          "max_drawdown",
+          "max_drawdown_bars",
+          "calmar",
+          "trades",
+          "win_rate",
+          "profit_factor",
+          "expectancy",
+          "avg_r",
+          "exposure"
+        ],
+        "title": "Metrics"
       },
       "MoveOut": {
         "properties": {
@@ -13030,6 +13530,98 @@
         ],
         "title": "TrackOut"
       },
+      "TradeOut": {
+        "properties": {
+          "side": {
+            "type": "string",
+            "title": "Side",
+            "description": "long or short"
+          },
+          "entry_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Entry Time"
+          },
+          "entry_price": {
+            "type": "number",
+            "title": "Entry Price"
+          },
+          "exit_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Exit Time"
+          },
+          "exit_price": {
+            "type": "number",
+            "title": "Exit Price"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "exit, time, opposite, stop, trailing, target, session, ruin or end"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars"
+          },
+          "pnl": {
+            "type": "number",
+            "title": "Pnl"
+          },
+          "ret": {
+            "type": "number",
+            "title": "Ret",
+            "description": "Net return of the trade (both fills' costs in)"
+          },
+          "r_multiple": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R Multiple"
+          },
+          "mae": {
+            "type": "number",
+            "title": "Mae"
+          },
+          "mfe": {
+            "type": "number",
+            "title": "Mfe"
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "entry_time",
+          "entry_price",
+          "exit_time",
+          "exit_price",
+          "reason",
+          "bars",
+          "pnl",
+          "ret",
+          "r_multiple",
+          "mae",
+          "mfe"
+        ],
+        "title": "TradeOut"
+      },
       "TradePlanResponse": {
         "properties": {
           "symbol": {
@@ -13231,6 +13823,16 @@
             "type": "boolean",
             "title": "Overnight",
             "description": "False: flat at the session close (Day)"
+          },
+          "no_entry_last_minutes": {
+            "type": "integer",
+            "title": "No Entry Last Minutes",
+            "description": "No new entry this close to the session close"
+          },
+          "reversal_window": {
+            "type": "integer",
+            "title": "Reversal Window",
+            "description": "H: decision bars after an opposite entry over which reversing, closing and holding are scored (the profile's long horizon)"
           }
         },
         "type": "object",
@@ -13242,7 +13844,9 @@
           "context_intervals",
           "cap_period",
           "default_max_trades",
-          "overnight"
+          "overnight",
+          "no_entry_last_minutes",
+          "reversal_window"
         ],
         "title": "TraderProfile"
       },

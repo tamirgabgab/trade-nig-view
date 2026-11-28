@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.api import (
     analysis,
+    backtest,
     bars,
     drawings,
     forecast,
@@ -167,6 +168,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         scenario.router,
         scenarios.router,
         strategies.router,
+        backtest.router,
         simulate.router,
         withdraw.router,
         withdraw_study.router,

@@ -2,19 +2,11 @@
 
 from __future__ import annotations
 
-import shutil
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
-from tests.api.conftest import E2E_DATA
-from tests.conftest import IsolatedSettings
-
-REPO_STRATEGIES = Path(__file__).resolve().parents[3] / "strategies"
 _CLOSE = {"price": "close"}
 
 
@@ -29,30 +21,6 @@ SMA_CROSS: dict[str, Any] = {
     "long": {"entry": [[_cond(_CLOSE, "crosses_above", {"indicator": 0, "output": "ma"})]]},
     "short": {"entry": [[_cond(_CLOSE, "crosses_below", {"indicator": 0, "output": "ma"})]]},
 }
-
-
-@pytest.fixture
-def api(tmp_path: Path) -> Iterator[TestClient]:
-    """The e2e universe (long synthetic histories) with a strategies folder of its own."""
-    folder = tmp_path / "strategies"
-    folder.mkdir()
-    shutil.copy(REPO_STRATEGIES / "breakout_weekly_trend.py", folder)
-    (folder / "cheat.py").write_text(
-        "import numpy as np\n"
-        "def signals(bars, params, ind):\n"
-        "    return {'long_entry': np.roll(bars.close, -1) > bars.close}\n",
-        encoding="utf-8",
-    )
-    (folder / "broken.py").write_text("def signals(:\n", encoding="utf-8")
-    settings = IsolatedSettings(
-        offline=True,
-        chartlab_data_dir=tmp_path / "data",
-        universe_file=E2E_DATA / "universe.toml",
-        fixtures_dir=E2E_DATA,
-        strategies_dir=folder,
-    )
-    with TestClient(create_app(settings)) as client:
-        yield client
 
 
 def _signals(api: TestClient, strategy: dict[str, Any], **extra: Any) -> Any:

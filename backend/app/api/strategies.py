@@ -6,6 +6,7 @@ would enter and leave (long and short), shown as markers on the chart.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from http import HTTPStatus
 from typing import Annotated, Any, cast
@@ -17,12 +18,12 @@ from app.api.deps import get_bar_service, get_python_strategies, get_strategies
 from app.backtest.examples import EXAMPLES
 from app.backtest.profiles import PROFILES, TraderProfile
 from app.backtest.python_loader import PythonStrategies, python_signals
-from app.backtest.signals import IndicatorSource, rule_signals
+from app.backtest.signals import IndicatorSource, Signals, rule_signals
 from app.backtest.strategy import PythonStrategy, RulesStrategy, Strategy
-from app.data.bar_service import BarService
+from app.data.bar_service import BarService, BarsResult
 from app.errors import ChartLabError
 from app.indicators.registry import ParamValue
-from app.models.bars import BarFrame, Interval, ts_to_iso_dates
+from app.models.bars import BarFrame, IntArray, Interval, ts_to_iso_dates
 from app.models.layouts import DocumentName
 from app.storage.documents import SCHEMA_VERSION, Document, DocumentStore
 
@@ -217,13 +218,18 @@ def delete_strategy(
     store.delete(name, revision)
 
 
-@router.post("/strategies/signals", response_model=SignalsResponse)
-def strategy_signals(
-    body: SignalsRequest,
-    service: Annotated[BarService, Depends(get_bar_service)],
-    files: Annotated[PythonStrategies, Depends(get_python_strategies)],
-) -> SignalsResponse:
-    """Where the strategy enters and leaves, long and short, on the symbol's decision bars."""
+@dataclass(frozen=True, slots=True, eq=False)
+class Evaluated:
+    """A strategy's signals on a symbol's decision bars (the whole history up to ``until``)."""
+
+    bars: BarsResult
+    interval: Interval
+    profile: TraderProfile
+    signals: Signals
+
+
+def evaluate(body: SignalsRequest, service: BarService, files: PythonStrategies) -> Evaluated:
+    """The signals of ``body.strategy`` on ``body.symbol`` (shared with ``/backtest``)."""
     strategy = body.strategy
     profile = PROFILES[strategy.profile]
     interval = body.interval or profile.decision_intervals[0]
@@ -236,25 +242,40 @@ def strategy_signals(
     # to its decision intervals (tested); an equal one is the decision bars (1M context, 1M bars).
     context = profile.context_for(interval)
     result = service.get_bars(body.symbol, interval, until=body.until, limit=HISTORY_LIMIT)
-    frame = result.frame
 
     def context_bars(iv: Interval) -> BarFrame:
         return service.get_bars(body.symbol, iv, until=body.until, limit=HISTORY_LIMIT).frame
 
-    source = IndicatorSource(frame, interval, context_bars, context)
+    source = IndicatorSource(result.frame, interval, context_bars, context)
     signals = (
         rule_signals(strategy, source)
         if isinstance(strategy, RulesStrategy)
         else python_signals(files.load(strategy.module), strategy.params, source)
     )
+    return Evaluated(result, interval, profile, signals)
+
+
+def bar_times(times: IntArray, interval: Interval) -> Times:
+    """Bar times as ``/api/bars`` gives them ('YYYY-MM-DD' daily and longer, epoch intraday)."""
+    return [int(t) for t in times] if interval.is_intraday else ts_to_iso_dates(times)
+
+
+@router.post("/strategies/signals", response_model=SignalsResponse)
+def strategy_signals(
+    body: SignalsRequest,
+    service: Annotated[BarService, Depends(get_bar_service)],
+    files: Annotated[PythonStrategies, Depends(get_python_strategies)],
+) -> SignalsResponse:
+    """Where the strategy enters and leaves, long and short, on the symbol's decision bars."""
+    ev = evaluate(body, service, files)
+    frame = ev.bars.frame
 
     def times(name: str) -> Times:
-        picked = frame.time[getattr(signals, name)]
-        return [int(t) for t in picked] if interval.is_intraday else ts_to_iso_dates(picked)
+        return bar_times(frame.time[getattr(ev.signals, name)], ev.interval)
 
     return SignalsResponse(
-        symbol=result.symbol.symbol,
-        interval=interval,
+        symbol=ev.bars.symbol.symbol,
+        interval=ev.interval,
         bars=len(frame),
         long_entry=times("long_entry"),
         long_exit=times("long_exit"),
