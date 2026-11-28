@@ -17,7 +17,7 @@ profile"). **Data only**: ChartLab never trades through Alpaca (see "Safety").
 | 1h | ~730 days | since 2016, 1–23 hours natively (*SDK*) |
 | Seconds | none | no second bars (*SDK*: the smallest unit is the minute); built from the trades |
 | Trades and quotes | none | every trade and every quote with its exchange and conditions (*SDK*: `/v2/stocks/trades`, `/v2/stocks/quotes`) |
-| Live | polled every 60 s, a few minutes late | a websocket stream of trades, quotes and bars (*SDK*) |
+| Live | polled every 60 s (ADR 0017) | a websocket stream of trades, quotes and bars (*SDK*) |
 | Extended hours | not used (regular hours only) | included in the bars (*web*); overnight trading from the BOATS feed (*SDK*) |
 | Corporate actions | from Yahoo's adjusted closes | an API with 13 action types (splits, dividends, spin-offs, mergers, name changes, ...) (*SDK*) |
 | Coverage | indices, TASE, FX, futures, crypto, US stocks | US stocks and ETFs (plus crypto and US options, not in this phase); **no indices** (`^GSPC`: use SPY), **no TASE**, no FX, no futures |
@@ -55,13 +55,15 @@ facts below come from two places, marked in the tables:
 ## The decision that sets everything: which feed the account may use
 - **SIP** is the consolidated tape: every US exchange and off-exchange trade, the same picture as Yahoo but to the
   trade. With SIP, Alpaca is both **deeper and more precise** than Yahoo.
-- **IEX** is one exchange, a few percent of US volume. Its minute bars are other bars: sparse minutes, a fraction of
+- **IEX** is one exchange, a few percent of US volume (an estimate, not from the sources above). Its minute bars are other bars: sparse minutes, a fraction of
   the volume, highs and lows that miss the other venues. With IEX only, Alpaca is **deeper but less precise** than
   Yahoo, and second bars built from IEX trades would be thinner still.
 - Which one the user gets depends on the account (the user's sign-up link was `signup/pending`):
   - a **paper-only account** (open to everyone): IEX only, by the terms (*web*);
-  - a **live account approved, Basic plan** (free): SIP history older than 15 minutes, IEX live (*web*);
-  - **Algo Trader Plus** ($99/month): SIP history and SIP live (*web*).
+  - a **live account approved, Basic plan** (free): SIP history older than 15 minutes, IEX live (*web*): **the
+    consolidated data is always 15 minutes behind**;
+  - **Algo Trader Plus** ($99/month): SIP history and SIP live (*web*). If the paid plan does not lift the paper-only
+    restriction (one guide says it does not), an account that stays paper-only has **no way to SIP at all**.
 - **What the user checks in the dashboard** (A0): is the account paper-only or approved for live trading, and which
   data plan does "Plans & Features" show?
 - **The trade-off of the keys:** paper keys cannot move money, but may mean IEX only. Live keys may unlock SIP history,
@@ -115,23 +117,32 @@ ChartLab), account or position reads.
   (`iex` | `sip`) in `Settings` and `.env.example` (empty); `alpaca` in `DATA_PROVIDERS`.
 - `scripts/alpaca-probe.ps1` (and `.sh`), run by the user: checks the keys; for AAPL and SPY asks 1m bars on `iex`,
   on `sip` ending more than 15 minutes ago, on `sip` inside the last 15 minutes and on `delayed_sip`; finds the first
-  1m bar; reads the rate-limit headers; opens the test stream and the IEX stream for a few seconds; writes a report
+  1m bar of each feed (IEX may start later than SIP); reads the rate-limit headers; runs once per key set the user
+  has (paper, live); opens the test stream and the IEX stream for a few seconds; writes a report
   (no keys, no account id) to `data/alpaca-probe.txt` for the user to paste back.
 - `scripts/make-alpaca-fixtures.ps1`: records a few responses (1m/5m/1h bars, a page with a `next_page_token`, trades,
-  quotes, a 403, a 429, stream messages) into `backend/tests/fixtures/alpaca/`, with the headers removed.
+  quotes, a 403, a 429, stream messages) into `backend/tests/fixtures/alpaca/`, with the headers removed. First an
+  A0 check: may recorded Alpaca data be committed (the repository's visibility, Alpaca's data terms on
+  redistribution)? If not, the tests use hand-made payloads of the same shape.
 - Tests: the hosts test (no Alpaca host other than the two data hosts anywhere in the code), the key never in a log
   line or a response, the settings.
 - **Exit:** the probe's report decides the feed for A1–A3, and the user decides whether to go on (and on which plan).
 
 ### A1 — Minute and hour bars from Alpaca (M)
-- `providers/alpaca.py`: bars for `1m`, `5m`, `1h` by pages of 10,000 (an estimated ~100 calls, under a minute at
-  200/min, for ten years of one symbol's 1m bars in regular hours), regular hours only (09:30–16:00 New York, the
+- `providers/alpaca.py`: bars for `1m`, `5m`, `1h` by pages of 10,000 (an estimate for ten years of one symbol's 1m
+  bars: ~100 calls for the regular hours alone, two to three times that because the response also carries the
+  extended hours, cut afterwards; one to a few minutes at 200/min), regular hours only (09:30–16:00 New York, the
   half days included), split-adjusted, the feed explicit; `INTRADAY_MAX_DAYS` becomes per provider (Alpaca: from
   2016-01-01).
 - Provider order for intraday: Alpaca first for the US stocks and ETFs it covers, Yahoo for the rest and as the
   fallback when Alpaca fails; daily stays Yahoo.
 - **With SIP:** Alpaca's bars become the intraday series of those symbols. **With IEX only:** they are offered as a
   separate, labelled source (the user's choice at A0), never spliced into Yahoo's consolidated bars.
+- **The newest 15 minutes on Basic:** a SIP request ends at now − 15 minutes (clamped before it is sent, so a 403
+  inside the delay never happens and never counts as a failure). The chart draws the minutes after it from Yahoo's
+  polled bars as a labelled provisional tail (both are consolidated), which is never written into the Alpaca series
+  and is replaced as the SIP minutes become readable. The fallback to Yahoo is for a whole request when Alpaca fails;
+  the chart then shows Yahoo's series, labelled, and the cache mixes nothing.
 - History on demand: scrolling back fetches older pages (the cache keeps them); `collect` gets `--backfill SINCE` for
   the watchlist and the daily run tops Alpaca's bases up. Storage estimate: ~1 M rows a symbol for ten years of 1m
   bars (some 60–100 MB in `bars.db`), so the backfill is per symbol, not the whole market.
@@ -160,8 +171,9 @@ ChartLab), account or position reads.
   one connection of its own (server-sent events: one way, no new frontend library); reconnects with backoff, and
   answers 405/406/407 with a clear status line.
 - The chart's last bar moves with every trade (the chart engine's update, not a reload); the watchlist's prices too.
-- **With IEX live:** the live bar is labelled IEX, and once the SIP bars of those minutes may be read (15 minutes
-  later) they replace it, so the history stays consolidated.
+- **With IEX live:** the live bars are a labelled provisional tail (as A1's, from IEX instead of Yahoo), never written
+  into the cached series; once the SIP bars of those minutes may be read (15 minutes later) they take their place, so
+  the stored history stays consolidated and from one source.
 - Tests: recorded stream messages (no network), a fake clock; the test stream (`v2/test`) for a manual check outside
   market hours.
 
