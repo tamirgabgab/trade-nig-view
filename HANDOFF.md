@@ -2097,10 +2097,10 @@
   - תיקון הבדיקה הלא יציבה `U3: compare`: זה היה באג אמיתי. שינוי שהמשתמש עשה מיד אחרי reload נדרס כשה-layout השמור הגיע. עכשיו השינוי המקומי גובר ונשמר. ‏50 הרצות רצופות עברו.
   - עובדות מס: מס היסף (‏3% מעל ‏721,560 ₪ בשנה, ועוד ‏2% על הכנסה הונית) ותקרת הפטור על שכר דירה (‏5,654 ₪ לחודש) אומתו בלוח העזר של רשות המסים ל-2026. אין שינוי במספרים. ‏FIFO נשאר ממקורות משניים (חמישה שמסכימים): את נוסח תקנה 5 אי אפשר לקרוא מהענן.
 - **מדריך: הרצה של Phase H על נתונים אמיתיים (במחשב שלך, ב-PowerShell משורש הריפו):**
-  1. ‏`.\scripts\update.ps1` (משיכה של `main`).
-  2. ‏`.\scripts\make-fixtures.ps1`: מוריד מ-Yahoo נרות יומיים ושעתיים לכל סימול ב-universe, בודק אותם, ועושה commit ו-push רק ל-`backend/fixtures` (כמה דקות; בפעם הראשונה ייתכן חלון התחברות ל-GitHub).
-  3. ‏`cd backend; uv run python ..\scripts\make_macro_fixtures.py`: מוריד את סדרות בנק ישראל ל-`backend/fixtures/macro`. אחר כך `git add backend/fixtures/macro`, ‏commit ו-push.
-  4. ‏`.\scripts\test.ps1`: עכשיו ירוצו גם בדיקות ה-fixtures שהיו מדולגות (‏`test_committed_fixtures`).
-  5. ‏`.\scripts\dev.ps1 -Open`, ואז ב-Planner: השוואה בסיסית עם ערך וריביות היסטוריים, "Over history" ו-"Simulate". לשמור צילומי מסך ו-CSV של מה שנראה מוזר (אזהרות, מספרים קיצוניים, שגיאות), ולהעביר לסשן הבא.
+  ‏1. `.\scripts\update.ps1` (משיכה של `main`).
+  ‏2. `.\scripts\make-fixtures.ps1`: מוריד מ-Yahoo נרות יומיים ושעתיים לכל סימול ב-universe, בודק אותם, ועושה commit ו-push רק ל-`backend/fixtures` (כמה דקות; בפעם הראשונה ייתכן חלון התחברות ל-GitHub).
+  ‏3. `cd backend; uv run python ..\scripts\make_macro_fixtures.py`: מוריד את סדרות בנק ישראל ל-`backend/fixtures/macro`. אחר כך `git add backend/fixtures/macro`, ‏commit ו-push.
+  ‏4. `.\scripts\test.ps1`: עכשיו ירוצו גם בדיקות ה-fixtures שהיו מדולגות (‏`test_committed_fixtures`).
+  ‏5. `.\scripts\dev.ps1 -Open`, ואז ב-Planner: השוואה בסיסית עם ערך וריביות היסטוריים, "Over history" ו-"Simulate". לשמור צילומי מסך ו-CSV של מה שנראה מוזר (אזהרות, מספרים קיצוניים, שגיאות), ולהעביר לסשן הבא.
 - **בדיקות:** מנוע (מכירה מוקדמת, מכירה עם חוב, מכירה אחרי הסוף, מכירה מוקדמת בלי תמהיל), ‏API (שישה מקרים, כולל זהות לבקשה הישנה בשלוש נקודות הקצה ומסלולי שווי), ‏Vitest (הבקשה, הטעינה, הגרף, הסנכרון), ‏E2E (גודל הטקסט, הגרף החדש).
 
