@@ -72,6 +72,7 @@ are the ones below with :math:`\sigma_t = \sigma`, and there is no volume.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import date
 from functools import lru_cache
 
@@ -81,6 +82,7 @@ import pandas as pd
 from app.analysis.synthetic import VOLUME_BASE, VOLUME_PROFILE, log_path, volume_skew
 from app.data.sessions import session_days
 from app.data.synthetic_returns import parametric_returns
+from app.data.synthetic_shuffle import shuffled
 from app.macro.series import MacroSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, FloatArray, IntArray, date_to_ts
 from app.models.synthetic import (
@@ -88,6 +90,7 @@ from app.models.synthetic import (
     DwellingDefinition,
     ParametricDefinition,
     ScenarioDefinition,
+    ShuffleDefinition,
 )
 from app.planner.deposits import add_months
 
@@ -128,6 +131,35 @@ def parametric_hourly(definition: ParametricDefinition) -> BarFrame:
 def parametric_daily(definition: ParametricDefinition) -> BarFrame:
     """The daily bars of a parametric symbol: each the aggregate of its session's 1h bars."""
     return _parametric_daily(definition.model_dump_json())
+
+
+def shuffle_hourly(definition: ShuffleDefinition, source: BarFrame) -> BarFrame:
+    """The 1h bars of a shuffled copy: seven a day, landing on its daily bar exactly."""
+    return _shuffle_hourly(definition.model_dump_json(), _Slice(source))
+
+
+def shuffle_daily(definition: ShuffleDefinition, source: BarFrame) -> BarFrame:
+    """The daily bars of a shuffled copy of ``source`` (its dividend-adjusted bars in the
+    definition's range, ``app.data.synthetic_shuffle``)."""
+    return _shuffle_daily(definition.model_dump_json(), _Slice(source))
+
+
+class _Slice:
+    """A source's bars as a memo key: compared and hashed by a digest of their values (a revised
+    bar or a new adjustment is a new key; the key holds no copy of the arrays)."""
+
+    __slots__ = ("digest", "frame")
+
+    def __init__(self, frame: BarFrame) -> None:
+        self.frame = frame
+        columns = (frame.time, frame.open, frame.high, frame.low, frame.close, frame.volume)
+        self.digest = hashlib.sha256(b"".join(c.tobytes() for c in columns)).hexdigest()
+
+    def __hash__(self) -> int:
+        return hash(self.digest)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, _Slice) and other.digest == self.digest
 
 
 # Memoised by the whole definition (its JSON) and, for a dwelling symbol, its index's values: an
@@ -176,6 +208,20 @@ def _parametric_hourly(key: str) -> BarFrame:
     log_move = np.abs(np.log(close / np.concatenate((close[:1], close[:-1]))))
     day_volume = VOLUME_BASE * np.exp(0.3 * draws[:, 2] + 20 * log_move)
     return _sessions(_session_days(definition), day_open, close, sigma, draws, day_volume)
+
+
+@lru_cache(maxsize=MAX_DEFINITIONS)
+def _shuffle_daily(key: str, source: _Slice) -> BarFrame:
+    definition = ShuffleDefinition.model_validate_json(key)
+    return _read_only(shuffled(source.frame, definition.block_days, definition.seed))
+
+
+@lru_cache(maxsize=4)
+def _shuffle_hourly(key: str, source: _Slice) -> BarFrame:
+    daily = _shuffle_daily(key, source)
+    seed = ShuffleDefinition.model_validate_json(key).seed
+    days = daily.time // SECONDS_PER_DAY
+    return _sessions_within(days, daily, np.random.default_rng([seed, 6]))
 
 
 _DwellingKey = tuple[str, tuple[int, ...], tuple[float, ...], int]
@@ -289,6 +335,39 @@ def _sessions(
             open=bar_open.ravel(),
             high=high.ravel(),
             low=low.ravel(),
+            close=bar_close.ravel(),
+            volume=volume.ravel(),
+        )
+    )
+
+
+def _sessions_within(days: IntArray, daily: BarFrame, rng: np.random.Generator) -> BarFrame:
+    """Seven 1h bars a day that land exactly on the day's bar: a bridge from the open to the close
+    kept inside ``[low, high]``, every wick inside it too, one hour touching the high and one
+    (possibly the same) the low."""
+    n = len(days)
+    o, h, low, c = (col[:, None] for col in (daily.open, daily.high, daily.low, daily.close))
+    ends = np.cumsum(WEIGHTS)
+    walk = np.cumsum(np.sqrt(WEIGHTS) * rng.standard_normal((n, SESSION_BARS)), axis=1)
+    bridge = walk - ends * walk[:, -1:]
+    level = np.log(o) + ends * np.log(c / o) + np.log(h / low) / 2 * bridge
+    bar_close = np.clip(np.exp(level), low, h)
+    bar_close[:, -1] = c[:, 0]  # exact
+    bar_open = np.concatenate([o, bar_close[:, :-1]], axis=1)
+    top, bottom = np.maximum(bar_open, bar_close), np.minimum(bar_open, bar_close)
+    up, down = rng.uniform(0, 0.5, (2, n, SESSION_BARS))
+    bar_high = np.minimum(top + up * (h - top), h)
+    bar_low = np.maximum(bottom - down * (bottom - low), low)
+    rows = np.arange(n)
+    bar_high[rows, rng.integers(0, SESSION_BARS, n)] = h[:, 0]
+    bar_low[rows, rng.integers(0, SESSION_BARS, n)] = low[:, 0]
+    volume = daily.volume[:, None] * VOLUME_PROFILE / VOLUME_PROFILE.sum()
+    return _read_only(
+        BarFrame.from_columns(
+            time=_hour_starts(days).ravel(),
+            open=bar_open.ravel(),
+            high=bar_high.ravel(),
+            low=bar_low.ravel(),
             close=bar_close.ravel(),
             volume=volume.ravel(),
         )

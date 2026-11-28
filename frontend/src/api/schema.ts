@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/synthetic/shuffle/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Shuffle
+         * @description What a shuffled copy draws: the source against the copy, and their sequences.
+         */
+        post: operations["preview_shuffle_api_synthetic_shuffle_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic": {
         parameters: {
             query?: never;
@@ -101,7 +121,9 @@ export interface paths {
          * @description Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.
          *
          *     The symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already
-         *     taken is a 409 too (the stored revision is not 0). The last bar must be before today.
+         *     taken is a 409 too (the stored revision is not 0). The last bar must be before today. A
+         *     shuffled copy's source must be a market symbol with enough bars in the range; its currency,
+         *     volume and decimals are copied into the definition.
          */
         put: operations["put_synthetic_api_synthetic__symbol__put"];
         post?: never;
@@ -1675,17 +1697,17 @@ export interface components {
          */
         DwellingDefinition: {
             /**
+             * First Price
+             * @default 100
+             */
+            first_price: number;
+            /**
              * Name
              * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
              */
             name: string;
             /** Full Name */
             full_name: string;
-            /**
-             * First Price
-             * @default 100
-             */
-            first_price: number;
             /**
              * Kind
              * @default dwelling
@@ -3578,17 +3600,17 @@ export interface components {
              */
             currency: "USD" | "ILS";
             /**
+             * First Price
+             * @default 100
+             */
+            first_price: number;
+            /**
              * Name
              * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
              */
             name: string;
             /** Full Name */
             full_name: string;
-            /**
-             * First Price
-             * @default 100
-             */
-            first_price: number;
             /**
              * Kind
              * @default parametric
@@ -4474,17 +4496,17 @@ export interface components {
              */
             currency: "USD" | "ILS";
             /**
+             * First Price
+             * @default 100
+             */
+            first_price: number;
+            /**
              * Name
              * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
              */
             name: string;
             /** Full Name */
             full_name: string;
-            /**
-             * First Price
-             * @default 100
-             */
-            first_price: number;
             /**
              * Kind
              * @default scenario
@@ -4591,6 +4613,139 @@ export interface components {
              * @description Balance-weighted yearly rate of the month
              */
             rate: number;
+        };
+        /**
+         * SequenceOut
+         * @description A path's sequence measures (``app.data.synthetic_shuffle.Measures``), in %.
+         */
+        SequenceOut: {
+            /** Total Return Pct */
+            total_return_pct: number;
+            /** Max Drawdown Pct */
+            max_drawdown_pct: number;
+            /** Worst Year */
+            worst_year: number;
+            /** Worst Year Pct */
+            worst_year_pct: number;
+            /** Longest Losing Streak */
+            longest_losing_streak: number;
+        };
+        /**
+         * ShuffleDefinition
+         * @description A copy of a market symbol's daily bars in ``[start, end]`` with its blocks of
+         *     ``block_days`` bars put in another order (K3, ``app.data.synthetic_shuffle``).
+         *
+         *     Each bar after the first is kept as its ratios to the previous close, so the copy has the
+         *     source's dates, first bar, total return and set of daily bars; only their order changes.
+         *     Prices are dividend-adjusted (the source's adjustment sets the level). ``currency``,
+         *     ``has_volume`` and ``decimals`` are the source's, set by the API when it is saved.
+         */
+        ShuffleDefinition: {
+            /**
+             * Name
+             * @description The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)
+             */
+            name: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Kind
+             * @default shuffle
+             * @constant
+             */
+            kind: "shuffle";
+            /**
+             * Source
+             * @description A market symbol
+             */
+            source: string;
+            /**
+             * Start
+             * Format: date
+             * @description The first bar's date, from 1970
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             * @description The last bar's date (inclusive), before today
+             */
+            end: string;
+            /**
+             * Block Days
+             * @description Bars in a block
+             * @default 21
+             */
+            block_days: number;
+            /** Seed */
+            seed: number;
+            /**
+             * Currency
+             * @description The source's, set when saved
+             * @default USD
+             */
+            currency: string;
+            /**
+             * Has Volume
+             * @description The source's, set when saved
+             * @default true
+             */
+            has_volume: boolean;
+            /**
+             * Decimals
+             * @description The source's, set when saved
+             * @default 2
+             */
+            decimals: number;
+        };
+        /**
+         * ShufflePreviewOut
+         * @description The range used, its bars and blocks, the closes of the source and of the copy at up to 400
+         *     dates (the first and the last among them), and both paths' sequence measures.
+         */
+        ShufflePreviewOut: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Bars */
+            bars: number;
+            /** Blocks */
+            blocks: number;
+            /** Dates */
+            dates: string[];
+            /** Source Close */
+            source_close: number[];
+            /** Copy Close */
+            copy_close: number[];
+            source_measures: components["schemas"]["SequenceOut"];
+            copy_measures: components["schemas"]["SequenceOut"];
+        };
+        /**
+         * ShufflePreviewRequest
+         * @description A shuffled copy's source, range (null: the source's whole history from 1970 to its last bar
+         *     before today), block length and seed.
+         */
+        ShufflePreviewRequest: {
+            /** Source */
+            source: string;
+            /** Start */
+            start?: string | null;
+            /** End */
+            end?: string | null;
+            /**
+             * Block Days
+             * @default 21
+             */
+            block_days: number;
+            /** Seed */
+            seed: number;
         };
         /** SimulateRequest */
         SimulateRequest: {
@@ -5026,7 +5181,7 @@ export interface components {
              */
             last_date: string | null;
             /** Definition */
-            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"] | components["schemas"]["ParametricDefinition"];
+            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"] | components["schemas"]["ParametricDefinition"] | components["schemas"]["ShuffleDefinition"];
         };
         /**
          * SyntheticReferences
@@ -5092,7 +5247,7 @@ export interface components {
             /** Revision */
             revision: number;
             /** Definition */
-            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"] | components["schemas"]["ParametricDefinition"];
+            definition: components["schemas"]["ScenarioDefinition"] | components["schemas"]["DwellingDefinition"] | components["schemas"]["ParametricDefinition"] | components["schemas"]["ShuffleDefinition"];
         };
         /**
          * TaxBase
@@ -6060,6 +6215,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_shuffle_api_synthetic_shuffle_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShufflePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShufflePreviewOut"];
                 };
             };
             /** @description Validation Error */

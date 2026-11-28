@@ -17,15 +17,31 @@ from fastapi import APIRouter, Depends, Path, Query, Response
 from pydantic import BaseModel, Field
 
 from app.api.deps import (
+    get_bar_service,
     get_drawings,
     get_layouts,
     get_scenarios,
     get_synthetic,
+    get_universe,
     get_watchlists,
 )
+from app.data.adjust import dividend_adjust
+from app.data.bar_service import BarService
+from app.data.synthetic import shuffle_daily
 from app.data.synthetic_returns import preview
+from app.data.synthetic_shuffle import chart_points, measures, source_slice
+from app.data.universe import Universe
 from app.errors import ChartLabError
-from app.models.synthetic import DwellingDefinition, ReturnShape, SyntheticDefinition
+from app.models.bars import SECONDS_PER_DAY, BarFrame
+from app.models.symbols import SymbolInfo
+from app.models.synthetic import (
+    FIRST_DAY,
+    DwellingDefinition,
+    ReturnShape,
+    ShuffleDefinition,
+    SyntheticDefinition,
+    is_synthetic,
+)
 from app.storage.documents import Document, DocumentStore
 from app.storage.drawings import DrawingsRepository
 from app.storage.synthetic import SyntheticNotFoundError, SyntheticSymbols
@@ -145,6 +161,99 @@ def preview_synthetic(body: PreviewRequest) -> PreviewOut:
     return PreviewOut.model_validate(asdict(preview(body, body.bars - 1, body.seed)))
 
 
+class ShufflePreviewRequest(BaseModel):
+    """A shuffled copy's source, range (null: the source's whole history from 1970 to its last bar
+    before today), block length and seed."""
+
+    source: Annotated[str, Field(min_length=1, max_length=20)]
+    start: dt.date | None = None
+    end: dt.date | None = None
+    block_days: Annotated[int, Field(ge=1, le=1000)] = 21
+    seed: Annotated[int, Field(ge=0, le=1_000_000)]
+
+
+class SequenceOut(BaseModel):
+    """A path's sequence measures (``app.data.synthetic_shuffle.Measures``), in %."""
+
+    total_return_pct: float
+    max_drawdown_pct: float
+    worst_year: int
+    worst_year_pct: float
+    longest_losing_streak: int
+
+
+class ShufflePreviewOut(BaseModel):
+    """The range used, its bars and blocks, the closes of the source and of the copy at up to 400
+    dates (the first and the last among them), and both paths' sequence measures."""
+
+    start: dt.date
+    end: dt.date
+    bars: int
+    blocks: int
+    dates: list[dt.date]
+    source_close: list[float]
+    copy_close: list[float]
+    source_measures: SequenceOut
+    copy_measures: SequenceOut
+
+
+def _market_daily(source: str, universe: Universe, bars: BarService) -> tuple[SymbolInfo, BarFrame]:
+    """A market symbol's dividend-adjusted daily bars, or a 422 for anything else."""
+    info = universe.resolve(source)
+    if info is None or is_synthetic(info):
+        raise InvalidSyntheticError(
+            f"{source} is not a market symbol in the universe: a copy shuffles a market's bars"
+        )
+    return info, dividend_adjust(bars.daily(info).frame)
+
+
+@router.post("/synthetic/shuffle/preview", response_model=ShufflePreviewOut)
+def preview_shuffle(
+    body: ShufflePreviewRequest,
+    universe: Annotated[Universe, Depends(get_universe)],
+    bars: Annotated[BarService, Depends(get_bar_service)],
+) -> ShufflePreviewOut:
+    """What a shuffled copy draws: the source against the copy, and their sequences."""
+    _, frame = _market_daily(body.source, universe, bars)
+    days = frame.time // SECONDS_PER_DAY
+    today = dt.datetime.now(dt.UTC).date()
+    before_today = days[days < (today - dt.date(1970, 1, 1)).days]
+    if len(before_today) == 0:
+        raise InvalidSyntheticError(f"{body.source} has no daily bars before today")
+    first = max(_date(int(before_today[0])), FIRST_DAY)
+    start, end = body.start or first, body.end or _date(int(before_today[-1]))
+    try:
+        definition = ShuffleDefinition(
+            name="PREVIEW",
+            full_name="Preview",
+            source=body.source,
+            start=start,
+            end=end,
+            block_days=body.block_days,
+            seed=body.seed,
+        )
+        source = source_slice(definition, frame)
+    except ValueError as exc:
+        raise InvalidSyntheticError(str(exc)) from exc
+    copy = shuffle_daily(definition, source)
+    points = chart_points(len(source))
+    return ShufflePreviewOut(
+        start=_date(int(source.time[0] // SECONDS_PER_DAY)),
+        end=_date(int(source.time[-1] // SECONDS_PER_DAY)),
+        bars=len(source),
+        blocks=-(-(len(source) - 1) // body.block_days),
+        dates=[_date(int(t // SECONDS_PER_DAY)) for t in source.time[points]],
+        source_close=source.close[points].tolist(),
+        copy_close=copy.close[points].tolist(),
+        source_measures=SequenceOut.model_validate(asdict(measures(source.time, source.close))),
+        copy_measures=SequenceOut.model_validate(asdict(measures(copy.time, copy.close))),
+    )
+
+
+def _date(day: int) -> dt.date:
+    return dt.date(1970, 1, 1) + dt.timedelta(days=day)
+
+
 @router.get("/synthetic", response_model=list[SyntheticOut])
 def list_synthetic(
     store: Annotated[SyntheticSymbols, Depends(get_synthetic)],
@@ -197,11 +306,15 @@ def put_synthetic(
     symbol: SymbolPath,
     body: SyntheticUpdate,
     store: Annotated[SyntheticSymbols, Depends(get_synthetic)],
+    universe: Annotated[Universe, Depends(get_universe)],
+    bars: Annotated[BarService, Depends(get_bar_service)],
 ) -> SyntheticOut:
     """Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.
 
     The symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already
-    taken is a 409 too (the stored revision is not 0). The last bar must be before today.
+    taken is a 409 too (the stored revision is not 0). The last bar must be before today. A
+    shuffled copy's source must be a market symbol with enough bars in the range; its currency,
+    volume and decimals are copied into the definition.
     """
     definition = body.definition
     if symbol.strip().upper() != definition.symbol:
@@ -209,11 +322,34 @@ def put_synthetic(
     today = dt.datetime.now(dt.UTC).date()
     # Before today: today's hours would still be in the future somewhere in the day. (A dwelling
     # symbol's dates come from its index; a causal one stops before today by itself.)
-    if not isinstance(definition, DwellingDefinition) and definition.last_date >= today:
-        raise InvalidSyntheticError(
-            f"{definition.bars} bars from {definition.first_date} end on {definition.last_date},"
-            f" not before today ({today}): start earlier or use fewer bars"
-        )
+    match definition:
+        case DwellingDefinition():
+            pass
+        case ShuffleDefinition():
+            if definition.end >= today:
+                raise InvalidSyntheticError(
+                    f"The range ends on {definition.end}, not before today ({today})"
+                )
+            info, frame = _market_daily(definition.source, universe, bars)
+            try:
+                source_slice(definition, frame)
+            except ValueError as exc:
+                raise InvalidSyntheticError(str(exc)) from exc
+            definition = definition.model_copy(
+                update={
+                    "currency": info.currency,
+                    "has_volume": info.has_volume,
+                    "decimals": info.decimals,
+                }
+            )
+        case _ if definition.last_date >= today:
+            raise InvalidSyntheticError(
+                f"{definition.bars} bars from {definition.first_date} end on"
+                f" {definition.last_date}, not before today ({today}): start earlier or use fewer"
+                " bars"
+            )
+        case _:
+            pass
     return _out(store.put(definition, body.revision), definition)
 
 

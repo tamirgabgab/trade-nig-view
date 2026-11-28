@@ -7,6 +7,7 @@ module must not create ``data/bars.db`` (tech debt T1), so ``app`` is built lazi
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,7 +42,7 @@ from app.api import (
 from app.config import Settings, get_settings
 from app.data.bar_service import BarService
 from app.data.cache.bar_cache import BarCache
-from app.data.providers.base import DataProvider
+from app.data.providers.base import DataProvider, ProviderError
 from app.data.providers.fixtures import FixtureProvider
 from app.data.providers.synthetic import SyntheticProvider
 from app.data.providers.tiingo import TiingoProvider
@@ -51,6 +52,8 @@ from app.errors import register_error_handlers
 from app.macro.boi import BoiSource
 from app.macro.fixtures import MacroFixtureSource
 from app.macro.service import MacroCache, MacroService
+from app.models.bars import BarFrame
+from app.models.synthetic import is_synthetic
 from app.storage.documents import DocumentStore
 from app.storage.drawings import DrawingsRepository
 from app.storage.synthetic import SyntheticSymbols
@@ -115,13 +118,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         [MacroFixtureSource(settings.fixtures_dir)] if settings.offline else [BoiSource()],
         ttl_s=settings.macro_ttl_s,
     )
+
+    def source_daily(symbol: str) -> tuple[BarFrame, bool, tuple[str, ...]]:
+        """A shuffled copy's source: a market symbol's daily history (resolved again each time)."""
+        info = universe.resolve(symbol)
+        if info is None or is_synthetic(info):
+            raise ProviderError(f"{symbol} is not a market symbol in the universe")
+        cached = cast("BarService", app.state.bar_service).daily(info)
+        return cached.frame, cached.stale, cached.warnings
+
     app.state.bar_service = BarService(
         universe,
         BarCache(settings.chartlab_data_dir / "bars.db"),
         build_providers(settings),
         refresh_ttl_s=settings.refresh_ttl_s,
         provider_limits=not settings.offline,
-        synthetic=SyntheticProvider(synthetic_symbols.definition, macro_service.get),
+        synthetic=SyntheticProvider(synthetic_symbols.definition, macro_service.get, source_daily),
     )
     app.state.drawings = DrawingsRepository(app_db)
     app.state.layouts = DocumentStore(app_db, "layouts", layouts.LayoutNotFoundError)

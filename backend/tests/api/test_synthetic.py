@@ -504,3 +504,104 @@ def test_the_preview_draws_what_the_symbol_would(client: TestClient) -> None:
     assert preview["floored"] == 0
     bad = client.post(f"{URL}/preview", json={**body, "jumps_per_year": 40, "jump_sd_pct": 10})
     assert bad.status_code == 422
+
+
+# K3: a shuffled copy of a market symbol (the e2e universe: AAPL has 6,500 daily bars).
+
+COPY_SYMBOL = "SYN:CP"
+COPY: dict[str, Any] = {
+    "kind": "shuffle",
+    "name": "CP",
+    "full_name": "AAPL shuffled",
+    "source": "AAPL",
+    "start": "2010-01-04",
+    "end": "2019-12-31",
+    "block_days": 21,
+    "seed": 1,
+}
+
+
+def put_copy(client: TestClient, **changes: Any) -> Any:
+    return client.put(
+        f"{URL}/{COPY_SYMBOL}", json={"revision": 0, "definition": {**COPY, **changes}}
+    )
+
+
+def bars_of(client: TestClient, symbol: str, interval: str, **params: Any) -> list[dict[str, Any]]:
+    query = {"symbol": symbol, "interval": interval, "limit": 50_000, **params}
+    response = client.get("/api/bars", params=query)
+    assert response.status_code == 200, response.text
+    return response.json()["bars"]
+
+
+def test_a_shuffled_copy_has_the_sources_dates_ends_and_volume(e2e_client: TestClient) -> None:
+    created = put_copy(e2e_client, currency="ILS", has_volume=False)
+    assert created.status_code == 200, created.text
+    stored = created.json()["definition"]
+    # The source's, whatever the body said.
+    assert (stored["currency"], stored["has_volume"], stored["decimals"]) == ("USD", True, 2)
+    assert created.json()["last_date"] == "2019-12-31"
+    window = {"start": "2010-01-04", "end": "2019-12-31"}
+    source = bars_of(e2e_client, "AAPL", "1D", **window)
+    copy = bars_of(e2e_client, COPY_SYMBOL, "1D")
+    assert [b["time"] for b in copy] == [b["time"] for b in source]
+    assert copy[0] == source[0]
+    assert copy[-1]["close"] == pytest.approx(source[-1]["close"], rel=1e-9)
+    assert [b["close"] for b in copy] != [b["close"] for b in source]
+    hours = bars_of(e2e_client, COPY_SYMBOL, "1h")
+    assert len(hours) == 7 * len(copy)
+    info = e2e_client.get("/api/symbols", params={"query": "AAPL shuffled"}).json()[0]
+    assert (info["has_volume"], info["currency"], info["type"]) == (True, "USD", "synthetic")
+
+
+def test_a_copy_of_an_index_has_no_volume(e2e_client: TestClient) -> None:
+    assert put_copy(e2e_client, source="^gspc", start="2016-01-04").status_code == 200
+    info = e2e_client.get("/api/symbols", params={"query": "AAPL shuffled"}).json()[0]
+    assert info["has_volume"] is False
+
+
+def test_replay_sees_only_bars_up_to_the_cursor_of_a_copy(e2e_client: TestClient) -> None:
+    put_copy(e2e_client)
+    for interval in ("1h", "4h", "1D"):
+        full = bars_of(e2e_client, COPY_SYMBOL, interval)
+        cut = bars_of(e2e_client, COPY_SYMBOL, interval, until="2015-06-15")
+        assert 0 < len(cut) < len(full)
+        assert cut == full[: len(cut)]
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"source": "SYN:WALK"}, "market symbol"),
+        ({"source": "ZZZZ"}, "not a market symbol"),
+        ({"end": "2100-01-01"}, "before today"),
+        ({"end": "2010-03-01"}, "needs 100"),
+        ({"end": "2010-12-31", "block_days": 300}, "nothing to shuffle"),
+        ({"end": "2009-01-01"}, "after start"),
+    ],
+)
+def test_a_copy_that_cannot_be_made_is_a_422(
+    e2e_client: TestClient, changes: dict[str, Any], message: str
+) -> None:
+    response = put_copy(e2e_client, **changes)
+    assert response.status_code == 422, response.text
+    assert message in response.text
+
+
+def test_the_shuffle_preview_fills_the_range_and_keeps_the_ends(e2e_client: TestClient) -> None:
+    response = e2e_client.post(f"{URL}/shuffle/preview", json={"source": "AAPL", "seed": 2})
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert preview["start"] == "2001-12-24"
+    assert preview["end"] == "2026-11-20"  # the last bar before today
+    assert preview["bars"] == 6500
+    assert preview["blocks"] == -(-6499 // 21)
+    assert len(preview["dates"]) == 400
+    assert (preview["dates"][0], preview["dates"][-1]) == ("2001-12-24", "2026-11-20")
+    assert preview["source_close"][0] == preview["copy_close"][0]
+    assert preview["copy_close"][-1] == pytest.approx(preview["source_close"][-1], rel=1e-9)
+    source, copy = preview["source_measures"], preview["copy_measures"]
+    assert copy["total_return_pct"] == pytest.approx(source["total_return_pct"], rel=1e-9)
+    assert copy["max_drawdown_pct"] != source["max_drawdown_pct"]
+    bad = e2e_client.post(f"{URL}/shuffle/preview", json={"source": "SYN:CP", "seed": 2})
+    assert bad.status_code == 422

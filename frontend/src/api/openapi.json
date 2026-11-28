@@ -138,6 +138,48 @@
         }
       }
     },
+    "/api/synthetic/shuffle/preview": {
+      "post": {
+        "tags": [
+          "synthetic"
+        ],
+        "summary": "Preview Shuffle",
+        "description": "What a shuffled copy draws: the source against the copy, and their sequences.",
+        "operationId": "preview_shuffle_api_synthetic_shuffle_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShufflePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShufflePreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/synthetic": {
       "get": {
         "tags": [
@@ -218,7 +260,7 @@
           "synthetic"
         ],
         "summary": "Put Synthetic",
-        "description": "Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.\n\nThe symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already\ntaken is a 409 too (the stored revision is not 0). The last bar must be before today.",
+        "description": "Create (``revision`` 0) or edit a synthetic symbol in place; a stale ``revision`` is a 409.\n\nThe symbol is ``SYN:`` plus the definition's ``name`` and must match the path; a name already\ntaken is a 409 too (the stored revision is not 0). The last bar must be before today. A\nshuffled copy's source must be a market symbol with enough bars in the range; its currency,\nvolume and decimals are copied into the definition.",
         "operationId": "put_synthetic_api_synthetic__symbol__put",
         "parameters": [
           {
@@ -4416,6 +4458,13 @@
       },
       "DwellingDefinition": {
         "properties": {
+          "first_price": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "First Price",
+            "default": 100.0
+          },
           "name": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
@@ -4427,13 +4476,6 @@
             "maxLength": 60,
             "minLength": 1,
             "title": "Full Name"
-          },
-          "first_price": {
-            "type": "number",
-            "maximum": 1000000.0,
-            "exclusiveMinimum": 0.0,
-            "title": "First Price",
-            "default": 100.0
           },
           "kind": {
             "type": "string",
@@ -8336,6 +8378,13 @@
             "title": "Currency",
             "default": "ILS"
           },
+          "first_price": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "First Price",
+            "default": 100.0
+          },
           "name": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
@@ -8347,13 +8396,6 @@
             "maxLength": 60,
             "minLength": 1,
             "title": "Full Name"
-          },
-          "first_price": {
-            "type": "number",
-            "maximum": 1000000.0,
-            "exclusiveMinimum": 0.0,
-            "title": "First Price",
-            "default": 100.0
           },
           "kind": {
             "type": "string",
@@ -10205,6 +10247,13 @@
             "title": "Currency",
             "default": "ILS"
           },
+          "first_price": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "First Price",
+            "default": 100.0
+          },
           "name": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
@@ -10216,13 +10265,6 @@
             "maxLength": 60,
             "minLength": 1,
             "title": "Full Name"
-          },
-          "first_price": {
-            "type": "number",
-            "maximum": 1000000.0,
-            "exclusiveMinimum": 0.0,
-            "title": "First Price",
-            "default": 100.0
           },
           "kind": {
             "type": "string",
@@ -10428,6 +10470,244 @@
           "rate"
         ],
         "title": "ScheduleRow"
+      },
+      "SequenceOut": {
+        "properties": {
+          "total_return_pct": {
+            "type": "number",
+            "title": "Total Return Pct"
+          },
+          "max_drawdown_pct": {
+            "type": "number",
+            "title": "Max Drawdown Pct"
+          },
+          "worst_year": {
+            "type": "integer",
+            "title": "Worst Year"
+          },
+          "worst_year_pct": {
+            "type": "number",
+            "title": "Worst Year Pct"
+          },
+          "longest_losing_streak": {
+            "type": "integer",
+            "title": "Longest Losing Streak"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_return_pct",
+          "max_drawdown_pct",
+          "worst_year",
+          "worst_year_pct",
+          "longest_losing_streak"
+        ],
+        "title": "SequenceOut",
+        "description": "A path's sequence measures (``app.data.synthetic_shuffle.Measures``), in %."
+      },
+      "ShuffleDefinition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9._\\-]{0,11}$",
+            "title": "Name",
+            "description": "The part after 'SYN:': 1-12 of A-Z, 0-9, '.', '-', '_', starting with a letter (upper-cased on input)"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "kind": {
+            "type": "string",
+            "const": "shuffle",
+            "title": "Kind",
+            "default": "shuffle"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Source",
+            "description": "A market symbol"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start",
+            "description": "The first bar's date, from 1970"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End",
+            "description": "The last bar's date (inclusive), before today"
+          },
+          "block_days": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Block Days",
+            "description": "Bars in a block",
+            "default": 21
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "The source's, set when saved",
+            "default": "USD"
+          },
+          "has_volume": {
+            "type": "boolean",
+            "title": "Has Volume",
+            "description": "The source's, set when saved",
+            "default": true
+          },
+          "decimals": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 0.0,
+            "title": "Decimals",
+            "description": "The source's, set when saved",
+            "default": 2
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "full_name",
+          "source",
+          "start",
+          "end",
+          "seed"
+        ],
+        "title": "ShuffleDefinition",
+        "description": "A copy of a market symbol's daily bars in ``[start, end]`` with its blocks of\n``block_days`` bars put in another order (K3, ``app.data.synthetic_shuffle``).\n\nEach bar after the first is kept as its ratios to the previous close, so the copy has the\nsource's dates, first bar, total return and set of daily bars; only their order changes.\nPrices are dividend-adjusted (the source's adjustment sets the level). ``currency``,\n``has_volume`` and ``decimals`` are the source's, set by the API when it is saved."
+      },
+      "ShufflePreviewOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          },
+          "bars": {
+            "type": "integer",
+            "title": "Bars"
+          },
+          "blocks": {
+            "type": "integer",
+            "title": "Blocks"
+          },
+          "dates": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Dates"
+          },
+          "source_close": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Source Close"
+          },
+          "copy_close": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Copy Close"
+          },
+          "source_measures": {
+            "$ref": "#/components/schemas/SequenceOut"
+          },
+          "copy_measures": {
+            "$ref": "#/components/schemas/SequenceOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "bars",
+          "blocks",
+          "dates",
+          "source_close",
+          "copy_close",
+          "source_measures",
+          "copy_measures"
+        ],
+        "title": "ShufflePreviewOut",
+        "description": "The range used, its bars and blocks, the closes of the source and of the copy at up to 400\ndates (the first and the last among them), and both paths' sequence measures."
+      },
+      "ShufflePreviewRequest": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "block_days": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Block Days",
+            "default": 21
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Seed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "seed"
+        ],
+        "title": "ShufflePreviewRequest",
+        "description": "A shuffled copy's source, range (null: the source's whole history from 1970 to its last bar\nbefore today), block length and seed."
       },
       "SimulateRequest": {
         "properties": {
@@ -11361,6 +11641,9 @@
               },
               {
                 "$ref": "#/components/schemas/ParametricDefinition"
+              },
+              {
+                "$ref": "#/components/schemas/ShuffleDefinition"
               }
             ],
             "title": "Definition"
@@ -11485,6 +11768,9 @@
               },
               {
                 "$ref": "#/components/schemas/ParametricDefinition"
+              },
+              {
+                "$ref": "#/components/schemas/ShuffleDefinition"
               }
             ],
             "title": "Definition"

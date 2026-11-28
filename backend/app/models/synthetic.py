@@ -1,7 +1,8 @@
 """Synthetic symbols: invented series served like market data (Phase K, ADR 0031).
 
-A definition (a lab scenario, K0, a dwelling price index, K1, or the user's statistics, K2) is
-stored in ``app.db`` and turned into bars by ``app.data.synthetic``. Its symbol is ``SYN:`` plus
+A definition (a lab scenario, K0, a dwelling price index, K1, the user's statistics, K2, or a
+shuffled copy of a market symbol, K3) is stored in ``app.db`` and turned into bars by
+``app.data.synthetic`` (``app.data.synthetic_shuffle`` for a copy). Its symbol is ``SYN:`` plus
 a ticker-like name the user chooses, so it can never shadow a real ticker (the Planner accepts any
 Yahoo ticker, not only the universe's).
 """
@@ -45,13 +46,12 @@ TickerName = Annotated[
 
 
 class _Definition(BaseModel):
-    """What every kind of synthetic symbol has: a name, a full name, a first price."""
+    """What every kind of synthetic symbol has: a name and a full name."""
 
     model_config = ConfigDict(frozen=True)
 
     name: TickerName
     full_name: Annotated[str, Field(min_length=1, max_length=60)]
-    first_price: Annotated[float, Field(gt=0, le=1_000_000)] = 100.0
 
     @field_validator("name", mode="before")
     @classmethod
@@ -70,7 +70,7 @@ class _Definition(BaseModel):
     def symbol(self) -> str:
         return PREFIX + self.name
 
-    def _info(self, currency: str, has_volume: bool) -> SymbolInfo:
+    def _info(self, currency: str, has_volume: bool, decimals: int = 2) -> SymbolInfo:
         """How the symbol shows in the API: its own group and exchange, US stock hours."""
         return SymbolInfo(
             symbol=self.symbol,
@@ -81,7 +81,16 @@ class _Definition(BaseModel):
             exchange="Synthetic",
             currency=currency,
             has_volume=has_volume,
+            decimals=decimals,
         )
+
+
+class _Priced(BaseModel):
+    """The user's first price (every kind but a shuffled copy, which starts at its source's)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    first_price: Annotated[float, Field(gt=0, le=1_000_000)] = 100.0
 
 
 class _Dated(BaseModel):
@@ -101,7 +110,7 @@ class _Dated(BaseModel):
         return date.fromisoformat(str(last))
 
 
-class ScenarioDefinition(_Definition, _Dated):
+class ScenarioDefinition(_Definition, _Priced, _Dated):
     """A synthetic symbol drawn from one of the learn lab's scenarios (``app.analysis.synthetic``).
 
     The series has ``bars`` daily sessions, Monday to Friday from ``first_date`` (rolled forward
@@ -128,7 +137,7 @@ DwellingSeries = Literal[
 ]
 
 
-class DwellingDefinition(_Definition):
+class DwellingDefinition(_Definition, _Priced):
     """A synthetic symbol whose close is a CBS dwelling price index (``app.macro``, K1).
 
     The index's first value is ``first_price``; ``noise_pct`` is the daily standard deviation of
@@ -206,7 +215,7 @@ class ReturnShape(BaseModel):
         return self
 
 
-class ParametricDefinition(_Definition, _Dated, ReturnShape):
+class ParametricDefinition(_Definition, _Priced, _Dated, ReturnShape):
     """A synthetic symbol whose daily returns are drawn from the user's statistics (K2)."""
 
     kind: Literal["parametric"] = "parametric"
@@ -214,6 +223,47 @@ class ParametricDefinition(_Definition, _Dated, ReturnShape):
 
     def info(self) -> SymbolInfo:
         return self._info(self.currency, has_volume=True)
+
+
+class ShuffleDefinition(_Definition):
+    """A copy of a market symbol's daily bars in ``[start, end]`` with its blocks of
+    ``block_days`` bars put in another order (K3, ``app.data.synthetic_shuffle``).
+
+    Each bar after the first is kept as its ratios to the previous close, so the copy has the
+    source's dates, first bar, total return and set of daily bars; only their order changes.
+    Prices are dividend-adjusted (the source's adjustment sets the level). ``currency``,
+    ``has_volume`` and ``decimals`` are the source's, set by the API when it is saved.
+    """
+
+    kind: Literal["shuffle"] = "shuffle"
+    source: Annotated[str, Field(min_length=1, max_length=20, description="A market symbol")]
+    start: Annotated[date, Field(ge=FIRST_DAY, description="The first bar's date, from 1970")]
+    end: Annotated[date, Field(description="The last bar's date (inclusive), before today")]
+    block_days: Annotated[int, Field(ge=1, le=1000, description="Bars in a block")] = 21
+    seed: Annotated[int, Field(ge=0, le=1_000_000)]
+    currency: Annotated[str, Field(description="The source's, set when saved")] = "USD"
+    has_volume: Annotated[bool, Field(description="The source's, set when saved")] = True
+    decimals: Annotated[int, Field(ge=0, le=8, description="The source's, set when saved")] = 2
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def _source_upper(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def _range(self) -> Self:
+        if self.source.startswith(PREFIX):
+            raise ValueError("The source must be a market symbol, not a synthetic one")
+        if self.end <= self.start:
+            raise ValueError("end must be after start")
+        return self
+
+    @property
+    def last_date(self) -> date:
+        return self.end
+
+    def info(self) -> SymbolInfo:
+        return self._info(self.currency, self.has_volume, self.decimals)
 
 
 def _kind(value: object) -> str:
@@ -226,13 +276,14 @@ def _kind(value: object) -> str:
 SyntheticDefinition = Annotated[
     Annotated[ScenarioDefinition, Tag("scenario")]
     | Annotated[DwellingDefinition, Tag("dwelling")]
-    | Annotated[ParametricDefinition, Tag("parametric")],
+    | Annotated[ParametricDefinition, Tag("parametric")]
+    | Annotated[ShuffleDefinition, Tag("shuffle")],
     Discriminator(_kind),
 ]
 #: Parses a stored or sent definition of any kind.
-DEFINITION: TypeAdapter[ScenarioDefinition | DwellingDefinition | ParametricDefinition] = (
-    TypeAdapter(SyntheticDefinition)
-)
+DEFINITION: TypeAdapter[
+    ScenarioDefinition | DwellingDefinition | ParametricDefinition | ShuffleDefinition
+] = TypeAdapter(SyntheticDefinition)
 
 
 def is_synthetic(info: SymbolInfo) -> bool:

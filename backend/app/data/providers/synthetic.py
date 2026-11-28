@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 
+from app.data.adjust import dividend_adjust
 from app.data.providers.base import ProviderError
 from app.data.synthetic import (
     daily_bars,
@@ -18,7 +19,10 @@ from app.data.synthetic import (
     hourly_bars,
     parametric_daily,
     parametric_hourly,
+    shuffle_daily,
+    shuffle_hourly,
 )
+from app.data.synthetic_shuffle import source_slice
 from app.macro.service import CachedSeries
 from app.models.bars import SECONDS_PER_DAY, BarFrame, Interval, date_to_ts
 from app.models.symbols import SymbolInfo
@@ -26,14 +30,19 @@ from app.models.synthetic import (
     DwellingDefinition,
     ParametricDefinition,
     ScenarioDefinition,
+    ShuffleDefinition,
     SyntheticDefinition,
     is_synthetic,
 )
 
+#: A market symbol's cached daily history (split-adjusted, with ``adj_close``) and its freshness.
+SourceDaily = Callable[[str], tuple[BarFrame, bool, tuple[str, ...]]]
+
 
 class SyntheticProvider:
     """``DataProvider`` for ``SYN:`` symbols: daily and 1h bars from their saved definitions (and,
-    for a dwelling symbol, its index from the macro service)."""
+    for a dwelling symbol, its index from the macro service; for a shuffled copy, its source's
+    daily bars from the bar service)."""
 
     id = "synthetic"
 
@@ -41,10 +50,12 @@ class SyntheticProvider:
         self,
         definition: Callable[[str], SyntheticDefinition | None],
         index: Callable[[str], CachedSeries],
+        source_daily: SourceDaily,
         today: Callable[[], date] = lambda: datetime.now(UTC).date(),
     ) -> None:
         self._definition = definition
         self._index = index
+        self._source_daily = source_daily
         self._today = today
 
     def supports(self, symbol: SymbolInfo) -> bool:
@@ -64,13 +75,17 @@ class SyntheticProvider:
         return _between(self._bars(symbol, hourly=True), start, end)
 
     def freshness(self, symbol: SymbolInfo) -> tuple[bool, tuple[str, ...]]:
-        """Whether the data behind ``symbol`` is a stale copy, and why (a dwelling symbol's index
-        when its refresh failed)."""
-        definition = self._lookup(symbol)
-        if not isinstance(definition, DwellingDefinition):
-            return False, ()  # generated from the definition alone
-        cached = self._index(definition.series)
-        return cached.stale, cached.warnings
+        """Whether the data behind ``symbol`` is a stale copy, and why (a dwelling symbol's index,
+        a shuffled copy's source, when its refresh failed)."""
+        match self._lookup(symbol):
+            case DwellingDefinition() as definition:
+                cached = self._index(definition.series)
+                return cached.stale, cached.warnings
+            case ShuffleDefinition() as definition:
+                _, stale, warnings = self._source_daily(definition.source)
+                return stale, warnings
+            case _:
+                return False, ()  # generated from the definition alone
 
     def _bars(self, symbol: SymbolInfo, *, hourly: bool) -> BarFrame:
         definition = self._lookup(symbol)
@@ -83,6 +98,13 @@ class SyntheticProvider:
                 return bars(definition, index, self._today())
             case ParametricDefinition():
                 return parametric_hourly(definition) if hourly else parametric_daily(definition)
+            case ShuffleDefinition():
+                frame, _, _ = self._source_daily(definition.source)
+                try:
+                    source = source_slice(definition, dividend_adjust(frame))
+                except ValueError as exc:
+                    raise ProviderError(str(exc)) from exc
+                return (shuffle_hourly if hourly else shuffle_daily)(definition, source)
 
     def _lookup(self, symbol: SymbolInfo) -> SyntheticDefinition:
         definition = self._definition(symbol.symbol)

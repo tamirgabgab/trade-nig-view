@@ -255,7 +255,7 @@ def test_online_the_bar_service_never_asks_the_market(tmp_path: Path) -> None:
         BarCache(tmp_path / "bars.db"),
         [_Refuses()],
         provider_limits=True,
-        synthetic=SyntheticProvider(store.definition, _no_index),
+        synthetic=SyntheticProvider(store.definition, _no_index, _no_source),
     )
     hours = service.get_bars(spec.symbol, Interval.H1)
     assert (hours.source, hours.provider_window_days, len(hours.frame)) == ("synthetic", None, 840)
@@ -269,3 +269,7 @@ def test_online_the_bar_service_never_asks_the_market(tmp_path: Path) -> None:
 def test_the_shared_frames_are_read_only() -> None:
     with pytest.raises(ValueError, match="read-only"):
         daily_bars(definition()).close[0] = 1.0
+
+
+def _no_source(symbol: str) -> tuple[BarFrame, bool, tuple[str, ...]]:
+    raise AssertionError(f"a scenario symbol needs no source ({symbol})")

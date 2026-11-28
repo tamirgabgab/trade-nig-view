@@ -28,7 +28,7 @@ from app.data.synthetic import (
 from app.data.validate import validate_bars
 from app.macro.fixtures import read_macro_fixture
 from app.macro.series import MacroSeries
-from app.models.bars import SECONDS_PER_DAY, date_to_ts
+from app.models.bars import SECONDS_PER_DAY, BarFrame, date_to_ts
 from app.models.synthetic import DwellingDefinition
 from app.planner.deposits import add_months
 
@@ -244,9 +244,15 @@ def test_the_provider_reads_today_from_its_clock_not_from_the_window() -> None:
 
     definition = spec(causal=True)
     cached = CachedSeries(SERIES["dwelling"], INDEX, "fixtures", True, 0.0, ("refresh failed",))
-    provider = SyntheticProvider(lambda _: definition, lambda _: cached, lambda: TODAY)
+    provider = SyntheticProvider(
+        lambda _: definition, lambda _: cached, _no_source, today=lambda: TODAY
+    )
     info = definition.info()
     # An earlier inclusive end keeps its own bar (2026-09-15 is a Tuesday).
     window = provider.fetch_daily(info, date(2026, 9, 1), date(2026, 9, 15))
     assert day(window.time[-1] // SECONDS_PER_DAY) == date(2026, 9, 15)
     assert provider.freshness(info) == (True, ("refresh failed",))
+
+
+def _no_source(symbol: str) -> tuple[BarFrame, bool, tuple[str, ...]]:
+    raise AssertionError(f"a dwelling symbol needs no source ({symbol})")
