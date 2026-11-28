@@ -27,7 +27,8 @@ export type SidebarTab =
   | 'volatility'
   | 'tradeplan'
   | 'risk'
-  | 'regime';
+  | 'regime'
+  | 'strategy';
 
 /** The modal dialogs; at most one is open, so they can never stack. */
 export type Modal =

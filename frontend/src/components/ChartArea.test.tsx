@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { useChartStore } from '../store/chartStore.ts';
 import { useSettingsStore } from '../store/settingsStore.ts';
+import { useStrategyStore } from '../store/strategyStore.ts';
 import { engines, liveEngine } from '../test/fakeChartEngine.ts';
 import {
   AAPL_BARS,
@@ -229,6 +230,66 @@ describe('ChartArea', () => {
 
     unmount();
     expect(engine.disposed).toBe(true);
+  });
+
+  it('marks the Strategy tab signals on their bars, only on a decision interval', async () => {
+    stubApi({
+      '/api/symbols': { body: SYMBOLS },
+      '/api/quotes': { body: QUOTES },
+      '/api/bars': (url) =>
+        jsonResponse(barsBody('AAPL', url.searchParams.get('interval') ?? '', AAPL_BARS)),
+      '/api/strategies/profiles': {
+        body: [
+          {
+            id: 'position',
+            label: 'Position',
+            description: '',
+            decision_intervals: ['1D'],
+            context_intervals: ['1W'],
+            cap_period: 'month',
+            default_max_trades: 10,
+            overnight: true,
+          },
+        ],
+      },
+      '/api/strategies/signals': {
+        body: {
+          symbol: 'AAPL',
+          interval: '1D',
+          bars: 3,
+          long_entry: ['2026-11-19', '2001-01-02'], // the second is not a loaded bar
+          long_exit: [],
+          short_entry: [],
+          short_exit: [],
+          conflict: ['2026-11-20'],
+          warnings: [],
+        },
+      },
+    });
+    useStrategyStore.setState({
+      profile: 'position',
+      show: true,
+      current: {
+        source: 'example',
+        name: 'x',
+        revision: 0,
+        strategy: { kind: 'python', profile: 'position', module: 'm', description: '' },
+      },
+    });
+    renderWithQuery(<ChartArea />);
+    await waitFor(() => {
+      expect(liveEngine().signals).toEqual([
+        { index: 1, kind: 'long_entry' },
+        { index: 2, kind: 'conflict' },
+      ]);
+    });
+    act(() => {
+      useChartStore.getState().setInterval('1W');
+    });
+    await waitFor(() => {
+      expect(liveEngine().signals).toEqual([]);
+    });
+    useStrategyStore.setState(useStrategyStore.getInitialState());
   });
 
   describe('history paging', () => {

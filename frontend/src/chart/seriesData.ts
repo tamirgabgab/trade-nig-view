@@ -217,8 +217,9 @@ export interface MarkerSource {
   color: string;
   upColor?: string | undefined;
   downColor?: string | undefined;
-  /** A fixed look (pivots: a dot above or below the bar) instead of arrows by sign. */
-  shape?: 'circle' | undefined;
+  /** A fixed look (pivots: a dot above or below the bar; strategy signals) instead of arrows by
+   *  sign. */
+  shape?: 'circle' | 'square' | 'arrowUp' | 'arrowDown' | undefined;
   position?: 'belowBar' | 'aboveBar' | undefined;
   /** Draw each marker this many bars to the left of its value's bar. */
   shift?: number | undefined;
@@ -227,7 +228,7 @@ export interface MarkerSource {
 export interface MarkerPoint {
   time: ChartTime;
   position: 'belowBar' | 'aboveBar';
-  shape: 'arrowUp' | 'arrowDown' | 'circle';
+  shape: 'arrowUp' | 'arrowDown' | 'circle' | 'square';
   color: string;
 }
 

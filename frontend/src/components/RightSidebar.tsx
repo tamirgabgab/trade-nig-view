@@ -5,6 +5,7 @@ import {
   CalendarRange,
   ChartColumnBig,
   ChartSpline,
+  FlaskConical,
   List,
   ListTree,
   ShieldAlert,
@@ -31,6 +32,7 @@ import { RegimePanel } from './RegimePanel.tsx';
 import { usePanelWidthStore } from '../store/panelWidthStore.ts';
 import { ResizeHandle } from './ResizeHandle.tsx';
 import { RiskPanel } from './RiskPanel.tsx';
+import { StrategyPanel } from './StrategyPanel.tsx';
 import { TradePlanPanel } from './TradePlanPanel.tsx';
 import { VolatilityPanel } from './VolatilityPanel.tsx';
 import { Watchlist } from './Watchlist.tsx';
@@ -50,6 +52,7 @@ const TABS: { tab: SidebarTab; title: string; icon: typeof List }[] = [
   { tab: 'tradeplan', title: 'Trade plan', icon: Target },
   { tab: 'risk', title: 'Risk', icon: ShieldAlert },
   { tab: 'regime', title: 'Regime', icon: Waves },
+  { tab: 'strategy', title: 'Strategy', icon: FlaskConical },
 ];
 
 /**
@@ -120,6 +123,7 @@ export function RightSidebar({ className }: RightSidebarProps) {
             {panel.shown === 'tradeplan' && <TradePlanPanel />}
             {panel.shown === 'risk' && <RiskPanel />}
             {panel.shown === 'regime' && <RegimePanel />}
+            {panel.shown === 'strategy' && <StrategyPanel />}
           </div>
           {panel.shown === 'watchlist' && <SymbolCard />}
         </section>

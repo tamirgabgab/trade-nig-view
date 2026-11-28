@@ -64,6 +64,7 @@ import { BackgroundLayer, backgroundRuns } from './backgroundLayer.ts';
 import { GapLayer, type GapZone } from './gapLayer.ts';
 import { ReplayLayer } from './replayLayer.ts';
 import { readChartTheme, withAlpha, type ChartTheme } from './theme.ts';
+import { signalSources, type SignalMark } from './signalMarkers.ts';
 import { barSeconds } from './visibleRange.ts';
 import { DISPLAY_TIME_ZONE } from './timeZone.ts';
 
@@ -313,6 +314,8 @@ export class ChartEngine {
   /** Pane heights to give own-pane indicators (by group) when their pane is created. */
   private stretches = new Map<string, number>();
   private times: ChartTime[] = [];
+  private indicatorMarkers: readonly MarkerSource[] = [];
+  private signalMarks: readonly SignalMark[] = [];
   private timeZone = DISPLAY_TIME_ZONE;
   /** Compare: other symbols' bars, drawn as lines (on the % scale) in this order. */
   private compareBars: readonly CompareBars[] = [];
@@ -656,8 +659,16 @@ export class ChartEngine {
 
   /** Marker outputs sit on the main series, so they follow the candles' highs and lows. */
   private setMarkers(lines: readonly MarkerSource[]): void {
-    this.markerData = withTime(toMarkers(lines, this.times));
+    this.indicatorMarkers = lines;
+    const signals = signalSources(this.signalMarks, this.times.length, this.theme);
+    this.markerData = withTime(toMarkers([...lines, ...signals], this.times));
     this.renderMarkers();
+  }
+
+  /** Mark where a strategy enters and leaves (P4 B0), by bar index; [] removes the marks. */
+  setSignals(marks: readonly SignalMark[]): void {
+    this.signalMarks = marks;
+    this.setMarkers(this.indicatorMarkers);
   }
 
   private renderMarkers(): void {

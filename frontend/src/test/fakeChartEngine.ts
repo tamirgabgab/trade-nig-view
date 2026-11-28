@@ -1,5 +1,6 @@
 import type { ForecastView } from '../chart/forecastLayer.ts';
 import type { GapZone } from '../chart/gapLayer.ts';
+import type { SignalMark } from '../chart/signalMarkers.ts';
 import type { Anchor, DrawingView, Point } from '../drawings/types.ts';
 /**
  * Test double for chart/ChartEngine.ts (jsdom has no canvas). Use with
@@ -194,6 +195,12 @@ export class FakeChartEngine {
 
   setGaps(zones: readonly GapZone[]): void {
     this.gapZones = zones;
+  }
+
+  signals: readonly SignalMark[] = [];
+
+  setSignals(marks: readonly SignalMark[]): void {
+    this.signals = marks;
   }
 
   forecast: ForecastView | null = null;

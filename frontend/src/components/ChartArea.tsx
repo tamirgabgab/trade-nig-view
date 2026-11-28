@@ -4,12 +4,14 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { isIntraday, useBarHistory, useCompareBars, type Bar } from '../api/bars.ts';
 import { useSymbols } from '../api/market.ts';
 import { isSynthetic, PLACEHOLDER_PREFIX } from '../api/synthetic.ts';
+import { SIGNAL_KINDS } from '../api/strategies.ts';
 import { transformFor } from '../chart/chartTypes.ts';
 import { useGaps } from '../api/analysis.ts';
 import type { ChartEngine, ChartPointer, CompareBars, PaneLayout } from '../chart/ChartEngine.ts';
 import type { ForecastView } from '../chart/forecastLayer.ts';
 import type { GapZone } from '../chart/gapLayer.ts';
 import type { LogicalRange } from '../chart/seriesData.ts';
+import type { SignalMark } from '../chart/signalMarkers.ts';
 import { barSeconds, logicalRangeFrom, RANGE_INTERVAL, rangeStart } from '../chart/visibleRange.ts';
 import { DEFAULT_SYMBOL, useChartStore } from '../store/chartStore.ts';
 import { useIndicatorStore } from '../store/indicatorStore.ts';
@@ -39,6 +41,7 @@ import { historyDepth } from './historyDepth.ts';
 import { ForecastTooltip } from './ForecastTooltip.tsx';
 import { forecastView } from './forecastView.ts';
 import { useChartForecast } from './useChartForecast.ts';
+import { useChartSignals } from './useChartSignals.ts';
 import { RemoveConfirm } from './RemoveConfirm.tsx';
 import { LegendOHLC } from './LegendOHLC.tsx';
 import { MarketStatus } from './MarketStatus.tsx';
@@ -102,6 +105,7 @@ export function ChartArea({ className }: ChartAreaProps) {
   const gapZonesRef = useRef<readonly GapZone[]>([]);
   const forecastRef = useRef<ForecastView | null>(null);
   const compareRef = useRef<readonly CompareBars[]>([]);
+  const signalMarksRef = useRef<readonly SignalMark[]>([]);
   // The forecast candle under the pointer (its tooltip); a click on the fan opens the Forecast tab.
   const [forecastHover, setForecastHover] = useState<{
     h: number;
@@ -125,6 +129,7 @@ export function ChartArea({ className }: ChartAreaProps) {
       engine?.setGaps(gapZonesRef.current);
       engine?.setForecast(forecastRef.current);
       engine?.setCompare(compareRef.current);
+      engine?.setSignals(signalMarksRef.current);
       unsubscribeForecast.current();
       if (engine === null) return;
       const offPointer = engine.onPointer((at) => {
@@ -404,6 +409,22 @@ export function ChartArea({ className }: ChartAreaProps) {
     }));
     engineRef.current?.setGaps(gapZonesRef.current);
   }, [gaps, barIndex]);
+
+  // The Strategy tab's signals (P4 B0): computed over the whole history, so in a replay only those
+  // up to the cursor have a bar here (a signal never depends on later bars).
+  const signals = useChartSignals().result.data;
+  useEffect(() => {
+    signalMarksRef.current =
+      signals === undefined
+        ? []
+        : SIGNAL_KINDS.flatMap((kind) =>
+            signals.times[kind].flatMap((time) => {
+              const index = barIndex.get(time);
+              return index === undefined ? [] : [{ index, kind }];
+            }),
+          );
+    engineRef.current?.setSignals(signalMarksRef.current);
+  }, [signals, barIndex]);
 
   // The forecast (Structure menu), one query shared with the Forecast tab; drawn from its origin
   // bar (the last one, the frozen replay origin or a past bar), so a stale symbol's forecast is

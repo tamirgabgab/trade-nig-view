@@ -181,6 +181,7 @@ export function usePaletteCommands(): Command[] {
         ['tradeplan', 'trade plan', 'open tab stop target position size'],
         ['risk', 'risk', 'open tab var es value at risk'],
         ['regime', 'regime', 'open tab trend mean reversion hurst variance ratio'],
+        ['strategy', 'strategy', 'open tab backtest signals rules profile day swing position'],
       ] as const
     ).map(([tab, name, keywords]) => ({
       id: `sidebar-${tab}`,

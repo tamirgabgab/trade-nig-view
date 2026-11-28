@@ -644,6 +644,28 @@ describe('ChartEngine', () => {
 
     chart.setIndicatorLines([{ ...markers, visible: false }]);
     expect(moved?.markers).toEqual([]);
+
+    // Strategy signals (P4 B0) join the indicator markers, in bar order, and survive a redraw.
+    chart.setIndicatorLines([markers]);
+    chart.setSignals([
+      { index: 0, kind: 'short_entry' },
+      { index: 3, kind: 'conflict' },
+    ]);
+    const shapes = () =>
+      moved?.markers.map((m) => [(m as { time: string }).time, (m as { shape: string }).shape]);
+    expect(shapes()).toEqual([
+      ['2026-01-01', 'arrowDown'],
+      ['2026-01-02', 'arrowUp'],
+      ['2026-01-04', 'arrowDown'],
+      ['2026-01-04', 'square'],
+    ]);
+    chart.setIndicatorLines([]);
+    expect(shapes()).toEqual([
+      ['2026-01-01', 'arrowDown'],
+      ['2026-01-04', 'square'],
+    ]);
+    chart.setSignals([]);
+    expect(moved?.markers).toEqual([]);
   });
 
   it('puts each own-pane indicator in its own pane with levels, and closes the pane on removal', () => {
