@@ -54,6 +54,21 @@ export function currentLayout(): LayoutState {
   };
 }
 
+/** What the user changes in a layout, as one string (the view moves by itself as bars load). */
+function choices(): string {
+  const c = useChartStore.getState();
+  const chart = [
+    c.symbol,
+    c.interval,
+    c.chartType,
+    c.scaleMode,
+    c.autoScale,
+    c.adjusted,
+    c.compare,
+  ];
+  return JSON.stringify([chart, useIndicatorStore.getState().instances]);
+}
+
 /** Show a saved layout: chart settings and indicators now, view once its bars are in. */
 export function applyLayout(layout: SavedLayout): void {
   // Another chart: a replay of this one ends.
@@ -201,13 +216,20 @@ export function startLayoutSync(retryMs = [2000, 5000, 10_000, 30_000]): () => v
   let stopped = false;
   let retry: number | undefined;
   // Until the stored layout is read, nothing is saved (the backend may still be starting).
+  // The chart starts from this browser's copy; a change made on it before the stored layout
+  // arrives (a compared symbol removed right after a reload, say) wins over the stored one and is
+  // saved on top of its revision, as after a save in another window.
+  const before = choices();
   const load = (attempt: number) => {
     fetchLayout(name)
       .then((layout) => {
         if (stopped) return;
+        const kept = layout !== null && choices() !== before;
         if (layout === null) useLayoutStore.setState({ revision: 0, status: 'saved' });
+        else if (kept) useLayoutStore.setState({ revision: layout.revision, status: 'saved' });
         else applyLayout(layout);
         loaded = true;
+        if (kept) scheduleSave();
       })
       .catch(() => {
         if (stopped) return;

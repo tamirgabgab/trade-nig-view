@@ -85,6 +85,23 @@ describe('layout sync', () => {
     expect(useLayoutStore.getState()).toMatchObject({ revision: 6, status: 'saved' });
   });
 
+  it('keeps a change made before the stored layout arrived, and saves it on top', async () => {
+    const revisions = { Unnamed: 3 };
+    backend(revisions);
+    useChartStore.setState({ compare: ['SPY', 'MSFT'] });
+    const stop = startLayoutSync();
+    // Removed right after the reload, while the stored layout (NVDA, no compares) is on its way.
+    useChartStore.getState().removeCompare('MSFT');
+    await waitFor(() => {
+      expect(useLayoutStore.getState().revision).toBe(3);
+    });
+    expect(useChartStore.getState()).toMatchObject({ symbol: 'AAPL', compare: ['SPY'] });
+    await saveNow();
+    stop();
+    expect(puts).toHaveLength(1);
+    expect(puts[0]?.body).toMatchObject({ revision: 3, compare: ['SPY'] });
+  });
+
   it('saves nothing until the stored layout could be read, then retries the read', async () => {
     let up = false;
     puts = [];
