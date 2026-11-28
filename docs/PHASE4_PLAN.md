@@ -107,7 +107,7 @@ way, for the user to decide. Phase A ([ALPACA_PLAN.md](ALPACA_PLAN.md), planned 
   arrays); a strategy round-trips through storage; bad rules are a 422.
 - **Output:** signals as markers on the chart (no trades yet).
 
-### B1 — The backtest engine, one symbol (L)
+### B1 — The backtest engine, one symbol (L) — ✅ done 2026-11-28 (ADR 0037)
 - A **bar loop** in Python (25 years of daily bars is about 6,300 iterations; a year of 5m bars about 20,000: fast
   enough; vectorise later only if B4's sweeps need it): position state (flat, long, short), pending orders, fills at
   the next open, stop and target and trailing exits inside the bar by the conventions above, mark-to-market at each

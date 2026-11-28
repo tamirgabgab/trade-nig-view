@@ -31,7 +31,7 @@
 | PJ | Withdrawals: a starting capital (an account, an apartment or both), a fixed or a percent withdrawal rule, what is left over time, the unknown-basis tax bounds, history and simulated worlds, rounds J0–J4 ([WITHDRAWAL_PLAN.md](WITHDRAWAL_PLAN.md)) | L | ✅ J0–J4 (2026-11-27): Phase J closed |
 | PK | Synthetic symbols (a dwelling-price symbol, a parametric one, a shuffled copy of a real one) and the open completions of Phases H and J, rounds K0–K4 (below); after PJ, before P4 | L | K0 ✅, K1 ✅, K2 ✅ (2026-11-27), K3 ✅, K4 ✅ (2026-11-28, approved; ADR 0031 to 0035): Phase K closed; open for the user: the run on real data, regulation 5 |
 | PA | Market data from Alpaca (data only): years of minute bars, bars to the second from trades, quotes and spreads, live prices; rounds A0–A4 ([ALPACA_PLAN.md](ALPACA_PLAN.md)); recommended before P4 | XL | planned (2026-11-28); A0 is a gate: the probe decides the feed, the user approves the §10 amendment |
-| P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | B0 ✅ (2026-11-28, ADR 0036) |
+| P4 | Strategies and backtesting by trader profile (Day, Swing, Position, Long-term), rounds B0–B7 ([PHASE4_PLAN.md](PHASE4_PLAN.md)) | XL | B0 ✅, B1 ✅ (2026-11-28, ADR 0036, 0037) |
 
 ---
 
@@ -365,6 +365,10 @@ Phase-2 plan.
 - [x] B0: trader profiles, the strategy document (rules as OR-of-AND groups for long and short, or a Python file in
   `strategies/`), causal signals with context intervals, `/api/strategies`, the Strategy tab with the signals on the
   chart (ADR 0036, 2026-11-28).
+- [x] B1: the backtest engine (fills at the next open, stops and targets inside the bar, the trade cap per period,
+  a cost per fill, whole-equity compounding, the Day session end, reversal and conflict decisions learned from the
+  past, the hindsight ceiling), the net metrics against buy-and-hold, `POST /api/backtest` and a results table in the
+  Strategy tab (ADR 0037, 2026-11-28).
 - [x] D0: minute intervals (1m, 2m, 5m, 10m, 15m, 30m, 90m), accumulated intraday history and the daily collector
   (ADR 0017, 2026-11-26).
 - The round-by-round plan is in [PHASE4_PLAN.md](PHASE4_PLAN.md) (2026-11-26): intraday data for the Day profile (D0),

@@ -5,7 +5,8 @@ gap detection and bar replay — built so that education pages, custom indicator
 trading agent can plug in later.
 
 > **Status (2026-11-28):** Phases 1–3 are complete and the Phase-1 review is done; **Phase 4 (backtesting) has
-> started** ([docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md)): B0, the trader profiles, strategies and their signals.
+> started** ([docs/PHASE4_PLAN.md](docs/PHASE4_PLAN.md)): B0, the trader profiles, strategies and their signals; B1,
+> the backtest engine.
 > - **Charting:** candles and other chart types, 35 indicators (each verified like a DUT against scalar golden
 >   models, TA-Lib and property tests incl. no lookahead), 20+ drawing tools (lines, Fib, channels, measuring and
 >   statistics tools, the trade plan, patterns, icons), market structure, compare, layouts, undo/redo, bar replay.
@@ -75,7 +76,8 @@ The screenshot uses the synthetic end-to-end fixtures; real data comes from Yaho
 | A parametric synthetic symbol (Phase K, K2; ADR 0033): a `SYN:` symbol drawn from statistics of your own: the expected yearly return and volatility, a distribution for the daily return (normal, Student-t, uniform, Laplace, skew-normal), in the distribution or exact in the path, and optional layers (AR(1) memory, Merton jumps, GARCH(1,1) volatility clusters) that keep the mean and the volatility; a live preview in the dialog (the drawn daily returns over the family's density, the drawn mean, volatility, skewness and kurtosis next to the asked ones); 1h to monthly bars with volume; the formulas on the synthetic-symbols learn page | ✅ Done |
 | A shuffled copy of a market symbol (Phase K, K3; ADR 0034): a `SYN:` symbol made of a real symbol's days in a frozen range, cut into blocks of a length of your own and put in another order, on the source's dates, from its dividend-adjusted prices: the same first bar, last close, total return and set of days, another path; 1h bars that land exactly on each real daily bar; a preview in the dialog of the source against the copy with both paths' sequence measures (total return, deepest drawdown, worst year, longest losing streak); the copy opens next to its source in Compare; without the source's bars a stored copy shows a flat placeholder at 100 and says so | ✅ Done |
 | Strategies and their signals (Phase 4, B0; ADR 0036): a Strategy tab with four trader profiles (Day, Swing, Position, Long-term: the bars a profile decides on, the longer bars it may read once they have closed, and the period its trade cap counts over, a parameter), strategies as rules (OR of AND groups for long and short entries and exits, filters, exits) or as Python files in `strategies/` (checked for lookahead on every run), two examples and a Python example, saved strategies, and the signals on the chart: arrows for entries, dots for exits, a square where both entries fire | ✅ Done |
-| The backtest engine, results, costs, honest evaluation, portfolio, final models per profile (Phase 4, B1–B7), paper agent (Phase 5) | 🗺️ Roadmap |
+| The backtest engine (Phase 4, B1; ADR 0037): a strategy run on a symbol's history from the Strategy tab, filled at the next open, stops, targets and trailing stops inside the bar (a gap fills at the open, the stop before the target), the profile's trade cap per period, a cost per fill so every number is net, the Day profile flat at the close, opposite entries reversed, closed or held by what that earned before, conflicts settled by the closed trades; the net profit and net annual return, drawdown, Sharpe, trades and win rate beside buy-and-hold over the same bars, and a hindsight ceiling (not achievable) | ✅ Done |
+| Results charts, the full cost and sizing models, honest evaluation, portfolio, final models per profile (Phase 4, B2–B7), paper agent (Phase 5) | 🗺️ Roadmap |
 
 ## Quick start
 

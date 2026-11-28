@@ -41,3 +41,4 @@ rewritten after acceptance — supersede with a new ADR instead.
 | [0034](0034-synthetic-shuffled-copies.md) | A shuffled copy of a market symbol | Accepted |
 | [0035](0035-open-completions.md) | The open completions of Phases H and J (K4) | Accepted |
 | [0036](0036-strategy-model-and-signals.md) | Trader profiles, the strategy model and causal signals (B0) | Accepted |
+| [0037](0037-backtest-engine.md) | The backtest engine: fills, exits, decisions and metrics (B1) | Accepted |
