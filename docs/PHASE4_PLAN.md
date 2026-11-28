@@ -218,3 +218,18 @@ B6 M, B7 L.
    over, and a higher cap that earns more out of sample may be chosen (B4, B7).
 9. **Both entries on one bar:** take the side whose closed trades so far earned more per unit of time (net annual
    return), causally; neither while it cannot tell (B1).
+
+## The user's answers before B1 (2026-11-28)
+1. **An opposite entry while in a position:** chosen from the past. After each earlier opposite entry whose window
+   of H bars has ended, the engine scores reversing, closing and holding by the net annual return over that window;
+   the best average decides. Until 5 such windows have ended it reverses. H is a parameter (by default the profile's
+   long horizon: Day 12, Swing 70, Position 20, Long-term 12 decision bars). A **hindsight ceiling** (the same run
+   deciding with the future window) is shown beside it, for comparison only.
+2. **Both entries on one bar while flat:** the side whose closed trades earned the higher net annual return, after 5
+   closed trades on each side; neither before.
+3. **Size:** 100 % of equity, compounding (B3 adds the other sizing rules).
+4. **Costs:** a simple cost per side as a percent of the traded value (0.05 % by default) from B1, so every number
+   is net (B3 adds the full cost model).
+5. **UI:** a minimal results table in the Strategy tab (B2 adds the equity curve and the trades on the chart).
+6. **Sharpe and Sortino:** a risk-free rate of 0.
+
