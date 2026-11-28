@@ -1,7 +1,7 @@
 import { niceTicks, scale } from '../components/plotScale.ts';
 import styles from './Planner.module.css';
+import { useChartWidth } from './useChartWidth.ts';
 
-const W = 640;
 const TOP = 12;
 const PLOT = 130;
 const AXIS = 24;
@@ -29,6 +29,7 @@ interface PlannerBandChartProps {
 
 /** A line over the years with bands around it: a share still paying, an income fan. */
 export function PlannerBandChart({ label, points, top, format, legend }: PlannerBandChartProps) {
+  const [box, W] = useChartWidth();
   const last = points.at(-1)?.year ?? 1;
   const first = points[0]?.year ?? 0;
   const highest = top ?? Math.max(...points.flatMap((p) => [p.value, ...p.bands.flat()]), 1) * 1.06;
@@ -39,7 +40,7 @@ export function PlannerBandChart({ label, points, top, format, legend }: Planner
   const depth = points[0]?.bands.length ?? 0;
 
   return (
-    <figure className={styles.histogram}>
+    <figure className={styles.histogram} ref={box}>
       <svg viewBox={`0 0 ${String(W)} ${String(H)}`} role="img" aria-label={label}>
         <g className={styles.lineX}>
           {niceTicks(0, highest, 3)

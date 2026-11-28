@@ -5,8 +5,8 @@ import styles from './Planner.module.css';
 import { PlannerField } from './PlannerField.tsx';
 import { percent } from './plannerFormat.ts';
 import { bins, intervalProbability, quantile } from './sampleStats.ts';
+import { useChartWidth } from './useChartWidth.ts';
 
-const W = 640;
 const PANEL = 84;
 const GAP = 16;
 const TOP = 18;
@@ -36,6 +36,7 @@ interface PlannerHistogramProps {
  * arrow keys); the fields under the chart set them exactly.
  */
 export function PlannerHistogram({ x, y, names, measure, format, step }: PlannerHistogramProps) {
+  const [box, W] = useChartWidth();
   const pooled = useMemo(() => [...x, ...y].sort((p, q) => p - q), [x, y]);
   // The outer half percent on each side would flatten everything else: it joins the end bins.
   const lo = quantile(pooled, 0.005);
@@ -133,7 +134,7 @@ export function PlannerHistogram({ x, y, names, measure, format, step }: Planner
   const typed = (value: number) => Number(value.toFixed(step < 1 ? 2 : 0));
 
   return (
-    <figure className={`${styles.histogram ?? ''} ${styles.draggable ?? ''}`}>
+    <figure className={`${styles.histogram ?? ''} ${styles.draggable ?? ''}`} ref={box}>
       <svg
         ref={svg}
         viewBox={`0 0 ${String(W)} ${String(H)}`}

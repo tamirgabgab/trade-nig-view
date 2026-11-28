@@ -2,6 +2,7 @@ import type { ScenarioResult } from '../api/planner.ts';
 import { extent, niceTicks, scale } from '../components/plotScale.ts';
 import styles from './Planner.module.css';
 import { plainPercent, shekels } from './plannerFormat.ts';
+import { useChartWidth } from './useChartWidth.ts';
 
 type Point = ScenarioResult['average']['points'][number];
 type Series = 'x' | 'y' | 'x_forced' | 'y_forced';
@@ -20,7 +21,6 @@ const KEY: Record<Series, string | undefined> = {
   y_forced: styles.keyYForced,
 };
 
-const W = 640;
 const H = 240;
 const LEFT = 10;
 const RIGHT = 160;
@@ -45,6 +45,7 @@ interface PlannerLeadChartProps {
  * side also in a forced sale, and the month from which the leader at the end stays ahead.
  */
 export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadChartProps) {
+  const [box, W] = useChartWidth();
   const off = `forced sale at −${plainPercent(discount)}`;
   const label: Record<Series, string> = {
     x: names[0],
@@ -90,7 +91,7 @@ export function PlannerLeadChart({ points, lead, names, discount }: PlannerLeadC
   }
 
   return (
-    <figure className={styles.histogram}>
+    <figure className={styles.histogram} ref={box}>
       <svg
         viewBox={`0 0 ${String(W)} ${String(H)}`}
         role="img"

@@ -582,3 +582,28 @@ test('planner: withdrawals from the Market plan’s own lots, and two plans side
   await expect(table.getByRole('row')).toHaveCount(3);
   await expect(withdraw.getByRole('heading', { name: /^Option B: withdrawals/ })).toBeVisible();
 });
+
+test('planner: the charts draw their text at its own size in the narrow column at 960 px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 960, height: 800 });
+  await page.getByRole('button', { name: 'Planner: home vs market' }).click();
+  const planner = page.getByRole('region', { name: 'Planner' });
+  await planner.getByLabel('Ticker 1').fill('aapl');
+  await planner.getByLabel('Convert dollar assets by the USD/ILS rate').uncheck();
+  await planner.getByRole('tab', { name: 'Compare' }).click();
+  const compare = planner.getByRole('tabpanel', { name: 'Compare' });
+  await compare.getByRole('button', { name: 'Compare' }).click();
+  const lead = compare.getByRole('img', { name: 'End value by exit month: Apartment and Market' });
+  await expect(lead).toBeVisible();
+  // One SVG unit is one pixel: a 12 px label is 12 px, not shrunk with the chart (about 8 before).
+  const size = await lead
+    .locator('text')
+    .first()
+    .evaluate((el) => {
+      const svg = el.ownerSVGElement;
+      const scale = svg ? svg.getBoundingClientRect().width / svg.viewBox.baseVal.width : 0;
+      return parseFloat(getComputedStyle(el).fontSize) * scale;
+    });
+  expect(size).toBeGreaterThanOrEqual(11.5);
+});

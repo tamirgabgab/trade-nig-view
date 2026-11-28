@@ -3,6 +3,7 @@ import { scale } from '../components/plotScale.ts';
 import styles from './Planner.module.css';
 import { inline, signedShekels } from './plannerFormat.ts';
 import { PlannerTable, type PlannerColumn } from './PlannerTable.tsx';
+import { useChartWidth } from './useChartWidth.ts';
 
 type Move = ScenarioResult['sensitivity'][number];
 
@@ -24,7 +25,6 @@ function unit(move: Move): string {
     : points;
 }
 
-const W = 640;
 const LABEL = 250;
 const ROW = 30;
 const TOP = 6;
@@ -51,6 +51,7 @@ interface PlannerTornadoProps {
  * holds the same numbers.
  */
 export function PlannerTornado({ moves, names }: PlannerTornadoProps) {
+  const [box, W] = useChartWidth();
   if (moves.length === 0) {
     return <p className={styles.note}>No input of this comparison can be moved.</p>;
   }
@@ -61,7 +62,7 @@ export function PlannerTornado({ moves, names }: PlannerTornadoProps) {
   const what = `${inline(names[0])} minus ${inline(names[1])}`;
   return (
     <>
-      <figure className={styles.histogram}>
+      <figure className={styles.histogram} ref={box}>
         <svg
           viewBox={`0 0 ${String(W)} ${String(height)}`}
           role="img"

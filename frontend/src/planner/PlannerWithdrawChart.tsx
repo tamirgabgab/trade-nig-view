@@ -2,8 +2,8 @@ import type { WithdrawRow } from '../api/planner.ts';
 import { extent, niceTicks, scale } from '../components/plotScale.ts';
 import styles from './Planner.module.css';
 import { shekels } from './plannerFormat.ts';
+import { useChartWidth } from './useChartWidth.ts';
 
-const W = 640;
 const SIDE = 10;
 const TITLE = 18;
 const BALANCE = 150;
@@ -44,6 +44,7 @@ interface PlannerWithdrawChartProps {
  * and what the apartment's sale would leave.
  */
 export function PlannerWithdrawChart({ rows, real, depleted, home }: PlannerWithdrawChartProps) {
+  const [box, W] = useChartWidth();
   const last = rows.at(-1)?.month ?? 1;
   const px = scale([0, last], [SIDE, W - SIDE]);
   const deflate = (row: WithdrawRow) => (real ? row.prices : 1);
@@ -77,7 +78,7 @@ export function PlannerWithdrawChart({ rows, real, depleted, home }: PlannerWith
   const slot = (W - 2 * SIDE) / Math.max(last, 1);
 
   return (
-    <figure className={styles.histogram}>
+    <figure className={styles.histogram} ref={box}>
       <svg
         viewBox={`0 0 ${String(W)} ${String(H)}`}
         role="img"

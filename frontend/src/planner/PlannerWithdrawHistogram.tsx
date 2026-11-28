@@ -2,8 +2,8 @@ import { niceTicks, scale } from '../components/plotScale.ts';
 import styles from './Planner.module.css';
 import { wholePercent } from './plannerFormat.ts';
 import { bins, quantile } from './sampleStats.ts';
+import { useChartWidth } from './useChartWidth.ts';
 
-const W = 640;
 const TOP = 34;
 const PLOT = 120;
 const AXIS = 24;
@@ -39,6 +39,7 @@ export function PlannerWithdrawHistogram({
   unit,
   format,
 }: PlannerWithdrawHistogramProps) {
+  const [box, W] = useChartWidth();
   const total = values.length + ranOut;
   const sorted = [...values].sort((a, b) => a - b);
   // The outer half percent on each side would flatten everything else: it joins the end bins.
@@ -89,7 +90,7 @@ export function PlannerWithdrawHistogram({
   }
 
   return (
-    <figure className={styles.histogram}>
+    <figure className={styles.histogram} ref={box}>
       <svg
         viewBox={`0 0 ${String(W)} ${String(H)}`}
         role="img"
