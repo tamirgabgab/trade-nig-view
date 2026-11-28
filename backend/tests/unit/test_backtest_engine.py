@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import date
 
 import numpy as np
@@ -231,3 +232,50 @@ def test_a_short_that_loses_everything_stops_trading() -> None:
     r = run(m, signals(5, short_entry=[0, 3]), Exits(), 10, Settings(cost=0))
     assert [t.reason for t in r.trades] == ["ruin"]
     assert r.equity[-1] == r.equity[2] <= 0
+
+
+def test_a_gap_that_takes_all_the_equity_stops_trading() -> None:
+    # Short at 10 with a 5 % stop (10.5); the next open gaps to 25 and fills there: the cash left is
+    # 2 E - 2.5 E < 0, with no position held. Nothing trades after that.
+    m = market([flat(10), flat(10), (25, 25, 25, 25), flat(25), flat(25), flat(25)])
+    sig = signals(6, short_entry=[0], long_entry=[3])
+    r = run(m, sig, Exits(stop=Level(kind="percent", value=5)), 10, Settings(cost=0))
+    assert [(t.reason, t.exit_price) for t in r.trades] == [("stop", 25)]
+    assert r.equity[2] == pytest.approx(-0.5 * CAPITAL)
+    assert (r.equity[2:] == r.equity[2]).all()
+
+
+def test_annual_rates_too_large_for_a_float_do_not_fail() -> None:
+    rows = [flat(10), flat(10), flat(12), flat(12), flat(11), flat(11), flat(11), flat(11)]
+    m = market(rows)
+    fast = replace(m, bars_per_year=1e9)
+    sig = signals(8, long_entry=[0, 6], long_exit=[1], short_entry=[2, 6], short_exit=[3])
+    r = run(fast, sig, Exits(), 10, Settings(cost=0, decide_after=1))
+    assert r.decisions.conflict_long == 1  # long +20 % beat short +8.3 %, compared by log rate
+
+
+def test_a_new_session_cancels_the_order_of_the_last_one() -> None:
+    m = market([flat(10)] * 5, session_open=[2])
+    r = run(m, signals(5, long_entry=[1]), Exits(), 10, Settings())
+    assert r.trades == []  # bar 1's entry would have filled at the next session's open
+
+
+def test_the_scores_count_every_ended_window() -> None:
+    # Two opposite entries while long, never decided (on_opposite off): both windows end.
+    # Windows of one bar: open 10 -> close 11, then open 11 -> close 12: holding the long won.
+    m = market([flat(10), flat(10), (10, 11, 10, 11), (11, 12, 11, 12), flat(12), flat(12)])
+    sig = signals(6, long_entry=[0], short_entry=[1, 2])
+    r = run(m, sig, Exits(on_opposite=False), 10, Settings(cost=0, reversal_window=1))
+    assert r.decisions.opposite == 0
+    assert set(r.decisions.scores) == {"reverse", "close", "hold"}
+    assert r.decisions.scores["hold"] > 0 > r.decisions.scores["reverse"]
+
+
+def test_the_hindsight_conflict_pays_a_round_trip() -> None:
+    # +0.07 % ahead beats one fill's 0.05 % but not the entry and the exit: no side.
+    rows = [flat(10), flat(10), flat(10.007), flat(10.007)]
+    sig = signals(4, long_entry=[0], short_entry=[0])
+    r = run(
+        market(rows), sig, Exits(), 10, Settings(cost=0.0005, reversal_window=1), hindsight=True
+    )
+    assert r.decisions.conflict_none == 1

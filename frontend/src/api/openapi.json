@@ -4455,11 +4455,18 @@
           },
           "scores": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "type": "object",
             "title": "Scores",
-            "description": "Net annual return of reversing, closing and holding over the ended windows"
+            "description": "Net annual return of reversing, closing and holding over the ended windows (null: beyond any number)"
           }
         },
         "type": "object",

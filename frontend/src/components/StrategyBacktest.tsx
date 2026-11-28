@@ -125,7 +125,8 @@ export function StrategyBacktest({ strategy }: { strategy: Strategy }) {
             </p>
           )}
           <p className={f.note}>
-            Over {data.bars} {data.interval} bars, {cost}% a fill, the whole equity in each trade
+            Over {data.bars} {data.interval} bars, {query?.settings.cost_pct}% a fill, the whole
+            equity in each trade
             {data.openAtEnd ? '; the trade still open is closed at the last close' : ''}.
           </p>
         </>

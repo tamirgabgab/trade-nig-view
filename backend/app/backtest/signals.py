@@ -55,7 +55,7 @@ class Signals:
 SIGNAL_NAMES = ("long_entry", "long_exit", "short_entry", "short_exit")
 
 
-def _days(frame: BarFrame, interval: Interval) -> IntArray:
+def bar_days(frame: BarFrame, interval: Interval) -> IntArray:
     """Day number of each bar's date (its session's for intraday bars)."""
     if interval.is_intraday and frame.session is not None:
         return frame.session
@@ -77,7 +77,7 @@ def align_context(
         now = decision.time + decision_interval.seconds
         return np.searchsorted(ends, now, side="right").astype(np.int64) - 1
     ctx = _period(context.time // SECONDS_PER_DAY, context_interval)
-    now = _period(_days(decision, decision_interval), context_interval)
+    now = _period(bar_days(decision, decision_interval), context_interval)
     return np.searchsorted(ctx, now, side="left").astype(np.int64) - 1
 
 

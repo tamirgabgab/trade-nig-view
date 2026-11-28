@@ -12,29 +12,33 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import numpy as np
 
 from app.data.resample import period_keys
 from app.data.sessions import local_wall_seconds
 from app.indicators.catalog import get_spec
-from app.models.bars import SECONDS_PER_DAY, BarFrame, Interval
+from app.models.bars import SECONDS_PER_DAY, BarFrame, Interval, date_to_ts
 from app.models.symbols import SymbolInfo, parse_session_start
 
 from .engine import BoolArray, Market
 from .profiles import TraderProfile
+from .signals import bar_days
 
 US_CASH_HOURS = "09:30-16:00"
 FRIDAY = 4  # Monday = 0
 YEAR_SECONDS = 365.25 * SECONDS_PER_DAY
 
 
+def first_bar(frame: BarFrame, interval: Interval, day: date) -> int:
+    """Index of the first bar of ``day``'s session or later (a start date is a session date)."""
+    return int(np.searchsorted(bar_days(frame, interval), date_to_ts(day) // SECONDS_PER_DAY))
+
+
 def cap_periods(frame: BarFrame, interval: Interval, period: str) -> np.ndarray:
     """Integer key of each bar's period (equal keys: the same day, week, month or year)."""
-    days = (
-        frame.session
-        if interval.is_intraday and frame.session is not None
-        else frame.time // SECONDS_PER_DAY
-    )
+    days = bar_days(frame, interval)
     if period == "day":
         return days
     if period == "week":

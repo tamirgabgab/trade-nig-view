@@ -30,10 +30,14 @@ on, :math:`g = p_1 / p_0`):
 The best mean decides once ``decide_after`` windows have ended; before, it reverses. Flat, when
 both entries fire (a **conflict**), the side whose closed trades earned the higher net annual
 return :math:`\exp\!\big(\tfrac{\sum \ln(1+r_i)}{\sum b_i}\,B\big) - 1` (bars :math:`b_i`, bars a
-year :math:`B`) is taken once each side has ``decide_after`` closed trades; before, neither.
+year :math:`B`; compared by the log rate, which orders them the same) is taken once each side has
+``decide_after`` closed trades; before, neither.
 
 **Hindsight** (``hindsight=True``): the same run, but each reversal and conflict decision is made
-with its own **future** window. Not achievable: a ceiling to compare with, never a result.
+with its own **future** window (a conflict's side pays its entry and its exit). Not achievable: a
+ceiling to compare with, never a result.
+
+**Ruin:** when a fill leaves no equity (a short gapping through its stop), trading stops there.
 
 A position still open after the last bar is closed at its close (``open_at_end``).
 """
@@ -160,8 +164,10 @@ def _best(scores: dict[Action, float]) -> Action:
     return max(ACTIONS, key=lambda a: scores[a])  # max keeps the first of equal ones
 
 
-def _annual(log_sum: float, bars: float, bars_per_year: float) -> float:
-    return math.expm1(log_sum / bars * bars_per_year)
+def annual(log_rate: float, bars_per_year: float) -> float:
+    """``exp(rate B) - 1``, the net annual return of a log rate a bar; inf past a float's range."""
+    x = log_rate * bars_per_year
+    return math.expm1(x) if x < 700 else math.inf  # noqa: PLR2004 - exp(709) is the float limit
 
 
 def run(  # noqa: PLR0912, PLR0915 - one bar loop, one state; the docstring is the map
@@ -272,16 +278,20 @@ def run(  # noqa: PLR0912, PLR0915 - one bar loop, one state; the docstring is t
         elif pos.target is not None and s * (best - pos.target) >= 0:
             close_at(t, pos.target, "target", True)
 
-    def reversal(t: int, held: int) -> Action:
+    def score_ended(t: int) -> None:
+        """Add the opposite entries whose window has ended by bar ``t``'s close to the sums."""
         nonlocal scored
-        if hindsight:
-            g = window(t)
-            return "reverse" if g is None else _best(action_scores(g, held, cost))
         while scored < len(events) and events[scored][0] + horizon <= t:
             s, side = events[scored]
             for a, v in action_scores(float(c[s + horizon] / o[s + 1]), side, cost).items():
                 sums[a] += v
             scored += 1
+
+    def reversal(t: int, held: int) -> Action:
+        if hindsight:
+            g = window(t)
+            return "reverse" if g is None else _best(action_scores(g, held, cost))
+        score_ended(t)
         return "reverse" if scored < settings.decide_after else _best(sums)
 
     def conflict(t: int) -> int:
@@ -289,26 +299,26 @@ def run(  # noqa: PLR0912, PLR0915 - one bar loop, one state; the docstring is t
             g = window(t)
             if g is None:
                 return 0
-            fee = math.log(1.0 - cost)
+            fee = 2 * math.log(1.0 - cost)  # a side costs its entry and its exit
             long_, short = fee + _log_growth(g, 1), fee + _log_growth(g, -1)
             return 0 if max(long_, short) <= 0 else (1 if long_ >= short else -1)
         if min(len(closed[1]), len(closed[-1])) < settings.decide_after:
             return 0
-        annual = {
-            s: _annual(sum(r for r, _ in closed[s]), sum(b for _, b in closed[s]), bpy)
-            for s in (1, -1)
-        }
-        return 0 if annual[1] == annual[-1] else (1 if annual[1] > annual[-1] else -1)
+        # The log rate a bar orders the sides as their annual returns do, without overflowing.
+        rate = {s: sum(r for r, _ in closed[s]) / sum(b for _, b in closed[s]) for s in (1, -1)}
+        return 0 if rate[1] == rate[-1] else (1 if rate[1] > rate[-1] else -1)
 
     for t in range(start, n):
-        if pos is not None and market.session_open[t]:  # held over a close nobody announced
-            close_at(t, float(o[t]), "session", False)
+        if market.session_open[t]:  # after a close nobody announced (Day): nothing carries over
+            if pos is not None:
+                close_at(t, float(o[t]), "session", False)
+            pending = None
         if pending is not None:
             action, side, reason = pending
             pending = None
             if pos is not None and action in ("close", "reverse"):
                 close_at(t, float(o[t]), reason, False)
-            if action in ("open", "reverse"):
+            if action in ("open", "reverse") and cash > 0:  # no equity: ruined at the mark below
                 if cap_used.get(int(market.period[t]), 0) >= max_trades:
                     dec.skipped_by_cap += 1
                 else:
@@ -328,8 +338,9 @@ def run(  # noqa: PLR0912, PLR0915 - one bar loop, one state; the docstring is t
             if market.session_end[t]:
                 close_at(t, float(c[t]), "session", True)
         mark = cash if pos is None else cash + pos.side * pos.units * float(c[t])
-        if pos is not None and mark <= 0:
-            close_at(t, float(c[t]), "ruin", True)
+        if mark <= 0:  # whichever fill lost it all (a gap at the open, or the close)
+            if pos is not None:
+                close_at(t, float(c[t]), "ruin", True)
             ruined = True
             mark = cash
         equity[t - start] = mark
@@ -385,6 +396,8 @@ def run(  # noqa: PLR0912, PLR0915 - one bar loop, one state; the docstring is t
     if pos is not None:
         close_at(n - 1, float(c[n - 1]), "end", True)
         equity[-1] = cash
-    if not hindsight and scored:
-        dec.scores = {a: _annual(sums[a], scored * horizon, bpy) for a in ACTIONS}
+    if not hindsight:
+        score_ended(n - 1)
+        if scored:
+            dec.scores = {a: annual(sums[a] / (scored * horizon), bpy) for a in ACTIONS}
     return Run(equity, in_market, trades, dec, open_at_end)

@@ -140,16 +140,18 @@ def golden_run(  # noqa: PLR0912, PLR0915 - a model is one long, plain loop
         per_period[key] = per_period.get(key, 0) + 1
 
     for t in range(start, n):
-        # 1. A position carried into a new session (Day) closes at its open.
-        if st["pos"] is not None and bool(market.session_open[t]):
-            finish(t, opens[t], "session", False)
+        # 1. A new session (Day): what is held closes at its open, and no order carries over.
+        if bool(market.session_open[t]):
+            if st["pos"] is not None:
+                finish(t, opens[t], "session", False)
+            st["order"] = None
         # 2. Orders made at the last close.
         if st["order"] is not None:
             kind, new_side, why = st["order"]
             st["order"] = None
             if kind in ("close", "reverse") and st["pos"] is not None:
                 finish(t, opens[t], why, False)
-            if kind in ("open", "reverse"):
+            if kind in ("open", "reverse") and st["cash"] > 0:  # no equity, no entry
                 if per_period.get(int(market.period[t]), 0) >= max_trades:
                     counts["skipped"] += 1
                 else:
@@ -205,10 +207,12 @@ def golden_run(  # noqa: PLR0912, PLR0915 - a model is one long, plain loop
             value = st["cash"] + (
                 p["units"] * closes[t] if p["side"] == 1 else -p["units"] * closes[t]
             )
-            if value <= 0:
+        # Ruin, whichever fill lost the equity (with or without a position left).
+        if value <= 0:
+            if st["pos"] is not None:
                 finish(t, closes[t], "ruin", True)
-                ruined = True
-                value = st["cash"]
+            ruined = True
+            value = st["cash"]
         equity.append(value)
         if ruined:
             while len(equity) < n - start:
@@ -262,7 +266,7 @@ def golden_run(  # noqa: PLR0912, PLR0915 - a model is one long, plain loop
                 counts["conflicts"] += 1
                 if hindsight:
                     g = closes[min(t + big_h, n - 1)] / opens[t + 1]
-                    fee = math.log(1.0 - cost)
+                    fee = 2 * math.log(1.0 - cost)  # the side's entry and its exit
                     gl, gs = fee + _side_log(g, 1), fee + _side_log(g, -1)
                     pick = 0 if max(gl, gs) <= 0 else (1 if gl >= gs else -1)
                 elif (
@@ -271,12 +275,13 @@ def golden_run(  # noqa: PLR0912, PLR0915 - a model is one long, plain loop
                 ):
                     pick = 0
                 else:
-                    ann = {}
+                    # The log rate a bar: the same order as the annual return, no overflow.
+                    rate = {}
                     for s in (1, -1):
                         lg = sum(x for x, _ in finished[s])
                         nb = sum(b for _, b in finished[s])
-                        ann[s] = math.exp(lg / nb * market.bars_per_year) - 1.0
-                    pick = 0 if ann[1] == ann[-1] else (1 if ann[1] > ann[-1] else -1)
+                        rate[s] = lg / nb
+                    pick = 0 if rate[1] == rate[-1] else (1 if rate[1] > rate[-1] else -1)
                 counts[{1: "c_long", -1: "c_short", 0: "c_none"}[pick]] += 1
                 if pick != 0:
                     st["order"] = ("open", pick, "")

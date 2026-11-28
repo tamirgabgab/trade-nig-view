@@ -126,6 +126,10 @@ describe('StrategyBacktest', () => {
     expect(screen.getByText(/entries over the cap/)).toHaveTextContent(
       '2 entries over the cap of 10 a month',
     );
+    // Editing the cost without running again leaves the note on the cost of the run shown.
+    await user.clear(cost);
+    await user.type(cost, '0.5{Enter}');
+    expect(screen.getByText(/a fill, the whole equity/)).toHaveTextContent('0.1% a fill');
     expect(posted).toEqual([
       {
         symbol: 'AAPL',

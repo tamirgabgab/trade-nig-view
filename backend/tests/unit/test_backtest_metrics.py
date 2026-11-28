@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from app.backtest.engine import Trade
-from app.backtest.market import cap_periods, session_flags
+from app.backtest.market import cap_periods, first_bar, session_flags
 from app.backtest.metrics import buy_and_hold, compute
 from app.models.bars import BarFrame, Interval, date_to_ts
 from app.models.symbols import SymbolInfo
@@ -121,3 +121,20 @@ def test_no_session_end_for_daily_bars_or_24_hour_markets() -> None:
     fx = US.model_copy(update={"session_start": "17:00"})
     for flags in (session_flags(f, Interval.MIN15, fx, 15), session_flags(f, Interval.D1, US, 15)):
         assert not any(a.any() for a in flags)
+
+
+def test_a_huge_short_gain_has_no_annual_return() -> None:
+    m = compute(np.array([100.0, 1e6]), [], np.zeros(2, dtype=np.bool_), 1e-6, 1e6)
+    assert m.cagr is None
+    assert m.total_return == pytest.approx(9999)
+
+
+def test_a_start_date_is_a_session_date() -> None:
+    # A futures session of 2024-03-05 opens at 18:00 New York on 03-04 (23:00 UTC).
+    day = date_to_ts(date(2024, 3, 5)) // 86_400
+    times = [date_to_ts(date(2024, 3, 4)) + 23 * 3600 + 3600 * i for i in range(4)]
+    f = BarFrame.from_columns(times, *([np.ones(4)] * 4)).with_session(
+        np.array([day - 1, day, day, day], dtype=np.int64)
+    )
+    assert first_bar(f, Interval.H1, date(2024, 3, 5)) == 1
+    assert first_bar(_days(date(2024, 3, 4), date(2024, 3, 5)), Interval.D1, date(2024, 3, 5)) == 1

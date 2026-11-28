@@ -1636,10 +1636,10 @@ export interface components {
             held: number;
             /**
              * Scores
-             * @description Net annual return of reversing, closing and holding over the ended windows
+             * @description Net annual return of reversing, closing and holding over the ended windows (null: beyond any number)
              */
             scores: {
-                [key: string]: number;
+                [key: string]: number | null;
             };
         };
         /**

@@ -8,6 +8,7 @@ and the equity curves.
 
 from __future__ import annotations
 
+import math
 from datetime import date
 from http import HTTPStatus
 from typing import Annotated
@@ -19,12 +20,12 @@ from pydantic import BaseModel, Field
 from app.api.deps import get_bar_service, get_python_strategies
 from app.api.strategies import SignalsRequest, Times, bar_times, evaluate
 from app.backtest.engine import Settings, Trade, run
-from app.backtest.market import YEAR_SECONDS, build_market
+from app.backtest.market import YEAR_SECONDS, build_market, first_bar
 from app.backtest.metrics import Metrics, buy_and_hold, compute
 from app.backtest.python_loader import PythonStrategies
 from app.data.bar_service import BarService
 from app.errors import ChartLabError
-from app.models.bars import Interval, date_to_ts
+from app.models.bars import Interval
 
 router = APIRouter(tags=["backtest"])
 
@@ -86,8 +87,9 @@ class DecisionsOut(BaseModel):
     reversed: int
     closed: int
     held: int
-    scores: dict[str, float] = Field(
-        description="Net annual return of reversing, closing and holding over the ended windows"
+    scores: dict[str, float | None] = Field(
+        description="Net annual return of reversing, closing and holding over the ended windows "
+        "(null: beyond any number)"
     )
 
 
@@ -124,7 +126,7 @@ def backtest(
 ) -> BacktestResponse:
     ev = evaluate(body, service, files)
     frame, strategy, profile = ev.bars.frame, body.strategy, ev.profile
-    start = 0 if body.start is None else int(np.searchsorted(frame.time, date_to_ts(body.start)))
+    start = 0 if body.start is None else first_bar(frame, ev.interval, body.start)
     if len(frame) - start < 2:  # noqa: PLR2004 - a return needs two bars
         raise TooFewBarsError(f"Fewer than two {ev.interval} bars to trade from {body.start}")
     market = build_market(
@@ -181,7 +183,7 @@ def backtest(
             reversed=d.reversed,
             closed=d.closed,
             held=d.held,
-            scores=d.scores,
+            scores={a: v if math.isfinite(v) else None for a, v in d.scores.items()},
         ),
         open_at_end=result.open_at_end,
         trades=[

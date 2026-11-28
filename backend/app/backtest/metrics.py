@@ -27,7 +27,7 @@ import numpy as np
 
 from app.models.bars import FloatArray
 
-from .engine import BoolArray, Trade
+from .engine import BoolArray, Trade, annual
 
 #: A deviation below this is rounding noise (a constant return), not risk.
 TINY = 1e-12
@@ -79,7 +79,8 @@ def compute(
     root = math.sqrt(bars_per_year) if bars_per_year > 0 else math.nan
     dd = equity / np.maximum.accumulate(equity) - 1.0
     mdd = float(dd.min())
-    cagr = (en / e0) ** (1 / years) - 1 if years > 0 and en > 0 else math.nan
+    # (E_N / E_0)^(1/Y) - 1 through the log: a short span of a big gain is inf, not an error.
+    cagr = annual(math.log(en / e0) / years, 1.0) if years > 0 and en > 0 else math.nan
     rets = [t.ret for t in trades]
     wins = sum(t.pnl for t in trades if t.pnl > 0)
     losses = -sum(t.pnl for t in trades if t.pnl < 0)
