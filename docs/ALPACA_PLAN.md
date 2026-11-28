@@ -191,7 +191,7 @@ ChartLab), account or position reads.
 - **Recommended: before Phase 4** (A0 → A1 at least): B0's question 5 ("Day data: the free collection from Yahoo,
   or also a paid data feed?") is answered by A0, and the Day profile gets years of minutes instead of a year of
   collecting. A2 and A3 can also come after B0–B2 (the Swing, Position and Long-term profiles do not need them).
-- Phase K's K4 is still waiting for the user's approval; Phase A starts after it.
+- Phase K closed with K4's approval (2026-11-28); Phase A is next, at the user's request.
 - Sizes: A0 S, A1 M, A2 L, A3 L, A4 M.
 
 ## Questions for the user (asked before A0, in a dialog)
