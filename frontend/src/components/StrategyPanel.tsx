@@ -17,6 +17,7 @@ import { ConfirmDialog } from './ConfirmDialog.tsx';
 import f from './ForecastPanel.module.css';
 import { NumberField } from './NumberField.tsx';
 import styles from './StrategyPanel.module.css';
+import { StrategyBacktest } from './StrategyBacktest.tsx';
 import { StrategyRules } from './StrategyRules.tsx';
 import { useChartSignals } from './useChartSignals.ts';
 
@@ -354,14 +355,15 @@ export function StrategyPanel() {
                 </tbody>
               </table>
               <p className={f.note}>
-                Over {result.data.bars} {result.data.interval} bars, from past bars only. No trades
-                yet: the backtest engine (next round) fills them at the next open, under the cap.
-                “Both entries” are settled by the side whose closed trades earned more a year, net.
+                Over {result.data.bars} {result.data.interval} bars, from past bars only. A signal
+                fills at the next open, under the cap.
               </p>
             </>
           )}
         </div>
       )}
+
+      {strategy !== undefined && <StrategyBacktest strategy={strategy} />}
 
       {strategy !== undefined && (
         <div className={f.section}>

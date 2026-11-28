@@ -27,6 +27,16 @@ test('Strategy tab: a profile, an example and a Python file, their signals, save
   await expect(longEntries).not.toHaveText('0', { timeout: 30_000 });
   await page.screenshot({ path: 'test-results/strategy-signals.png' });
 
+  // B1: the backtest against buy-and-hold, net of costs.
+  await tab.getByRole('button', { name: 'Run backtest' }).click();
+  const results = tab.getByRole('table', { name: 'Backtest results' });
+  const trades = results.getByRole('row', { name: /Trades/ });
+  await expect(trades.getByRole('cell').last()).toHaveText('1', { timeout: 30_000 }); // buy-and-hold
+  await expect(trades.getByRole('cell').first()).not.toHaveText('0');
+  await expect(tab).toContainText('Hindsight ceiling');
+  await results.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/strategy-backtest.png' });
+
   // The Python example in strategies/, with its parameters.
   await select.selectOption({ label: 'breakout_weekly_trend.py' });
   await expect(tab.getByRole('spinbutton', { name: 'Breakout bars' })).toHaveValue('55');
